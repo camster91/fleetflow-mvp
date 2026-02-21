@@ -227,27 +227,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Role Demo Button */}
-              <button 
-                onClick={() => window.location.href = '/role-demo'}
-                className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium touch-target"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Role Demo</span>
-              </button>
-
-              {/* Mobile Role Demo Button */}
-              <button 
-                onClick={() => window.location.href = '/role-demo'}
-                className="sm:hidden p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 touch-target"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-
               {/* Announcement Button */}
               <button 
                 onClick={handleOpenAnnouncementModal}
@@ -762,14 +741,6 @@ export default function Home() {
             <div className="text-sm text-gray-600 text-center sm:text-left">
               <p>© 2026 FleetFlow Pro. MVP Demonstration.</p>
               <p className="mt-1">Built for Joseph's Food Truck Delivery Service</p>
-              <p className="mt-1">
-                <button 
-                  onClick={() => window.location.href = '/role-demo'}
-                  className="text-primary-600 hover:text-primary-800 font-medium"
-                >
-                  Explore role-based features →
-                </button>
-              </p>
             </div>
             <div className="flex items-center space-x-4">
               <button 
