@@ -2,6 +2,7 @@
   "name": "fleetflow-mvp",
   "version": "0.1.0",
   "private": true,
+  "//": "Build trigger: ensure fresh Docker layer cache",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
