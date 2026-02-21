@@ -5,7 +5,7 @@ import {
   Navigation, FileVideo, Image, Map, Wrench,
   MessageSquare, Download, Upload, Settings, Bell,
   Search, Menu, X, ChevronRight, Filter, SortAsc,
-  Phone, Mail, Map as MapIcon, FileText, Home as HomeIcon
+  Phone, Mail, Map as MapIcon, FileText, Home as HomeIcon, DollarSign
 } from 'lucide-react'
 import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
@@ -52,6 +52,12 @@ export default function Home() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
+  // Data state
+  const [vehiclesData, setVehiclesData] = useState(vehicles)
+  const [deliveriesData, setDeliveriesData] = useState(deliveries)
+  const [maintenanceData, setMaintenanceData] = useState(maintenanceTasks)
+  const [sopCategoriesData, setSopCategoriesData] = useState(sopCategories)
+
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000)
     return () => clearTimeout(timer)
@@ -73,7 +79,7 @@ export default function Home() {
   }, [isFilterOpen, filterRef])
 
   // Filter vehicles based on selected filter
-  const filteredVehicles = vehicles.filter(vehicle => {
+  const filteredVehicles = vehiclesData.filter(vehicle => {
     if (vehicleFilter === 'all') return true
     return vehicle.status === vehicleFilter
   })
@@ -165,6 +171,1077 @@ export default function Home() {
     alert(`Tracking delivery to ${customer}\n\nOpening real-time tracking view with:\n• Live vehicle location\n• Delivery progress\n• Customer contact info\n• Delivery notes\n• Photo proof of delivery\n\nSwitching to Deliveries tab for detailed view.`)
     setActiveTab('deliveries')
   }
+
+  // Management content renderer
+  const renderManagementContent = () => {
+    switch (activeTab) {
+      case 'vehicles':
+        const handleAddVehicle = () => {
+          const name = window.prompt('Enter vehicle name:');
+          if (!name) return;
+          
+          const driver = window.prompt('Enter driver name:');
+          const location = window.prompt('Enter current location:');
+          const mileage = parseInt(window.prompt('Enter mileage:') || '0');
+          
+          const newVehicle = {
+            id: vehiclesData.length > 0 ? Math.max(...vehiclesData.map(v => v.id)) + 1 : 1,
+            name,
+            status: 'active' as 'active',
+            driver: driver || 'Unassigned',
+            location: location || 'Depot',
+            eta: 'N/A',
+            mileage,
+            maintenanceDue: false
+          };
+          
+          setVehiclesData([...vehiclesData, newVehicle]);
+          alert(`Vehicle "${name}" added successfully!`);
+        };
+
+        const handleEditVehicle = (vehicle: any) => {
+          const newName = window.prompt('Edit vehicle name:', vehicle.name);
+          if (newName === null) return;
+          
+          const newDriver = window.prompt('Edit driver name:', vehicle.driver);
+          const newLocation = window.prompt('Edit location:', vehicle.location);
+          const newMileage = window.prompt('Edit mileage:', vehicle.mileage.toString());
+          const newStatus = window.prompt('Edit status (active/inactive/delayed):', vehicle.status);
+          
+          const updatedVehicles = vehiclesData.map(v => 
+            v.id === vehicle.id 
+              ? {
+                  ...v,
+                  name: newName || v.name,
+                  driver: newDriver || v.driver,
+                  location: newLocation || v.location,
+                  mileage: newMileage ? parseInt(newMileage) : v.mileage,
+                  status: (newStatus === 'active' || newStatus === 'inactive' || newStatus === 'delayed') ? newStatus : v.status
+                }
+              : v
+          );
+          
+          setVehiclesData(updatedVehicles);
+          alert(`Vehicle "${newName || vehicle.name}" updated!`);
+        };
+
+        const handleDeleteVehicle = (id: number) => {
+          if (window.confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) {
+            setVehiclesData(vehiclesData.filter(v => v.id !== id));
+            alert('Vehicle deleted successfully.');
+          }
+        };
+
+        const handleToggleMaintenance = (id: number) => {
+          setVehiclesData(vehiclesData.map(v => 
+            v.id === id ? { ...v, maintenanceDue: !v.maintenanceDue } : v
+          ));
+        };
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Vehicles Management</h2>
+                <p className="text-gray-600 mt-1">Manage your fleet vehicles, drivers, and status</p>
+              </div>
+              <button
+                onClick={handleAddVehicle}
+                className="mt-4 md:mt-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center space-x-2"
+              >
+                <span>+ Add Vehicle</span>
+              </button>
+            </div>
+
+            {/* Vehicle Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Total Vehicles</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{vehiclesData.length}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">Active</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{vehiclesData.filter(v => v.status === 'active').length}</p>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <p className="text-sm text-red-600 font-medium">Maintenance Due</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{vehiclesData.filter(v => v.maintenanceDue).length}</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-purple-600 font-medium">Average Mileage</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {vehiclesData.length > 0 
+                    ? Math.round(vehiclesData.reduce((sum, v) => sum + v.mileage, 0) / vehiclesData.length).toLocaleString()
+                    : '0'
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Vehicles Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mileage</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Maintenance</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {vehiclesData.map((vehicle) => (
+                    <tr key={vehicle.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                            <Truck className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{vehicle.name}</p>
+                            <p className="text-sm text-gray-600">ETA: {vehicle.eta}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          vehicle.status === 'active' ? 'bg-green-100 text-green-800' :
+                          vehicle.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {vehicle.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-gray-900">{vehicle.driver}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-gray-900">{vehicle.location}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-gray-900">{vehicle.mileage.toLocaleString()} mi</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleToggleMaintenance(vehicle.id)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            vehicle.maintenanceDue 
+                              ? 'bg-red-100 text-red-800 hover:bg-red-200' 
+                              : 'bg-green-100 text-green-800 hover:bg-green-200'
+                          }`}
+                        >
+                          {vehicle.maintenanceDue ? 'Due' : 'OK'}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleEditVehicle(vehicle)}
+                            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVehicle(vehicle.id)}
+                            className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                          >
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedVehicle(vehicle);
+                              setIsVehicleDetailModalOpen(true);
+                            }}
+                            className="p-1.5 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Showing {vehiclesData.length} of {vehiclesData.length} vehicles
+                </p>
+                <button
+                  onClick={() => alert('Exporting vehicles data to CSV...')}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center space-x-2"
+                >
+                  <span>Export CSV</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      case 'deliveries':
+        const handleAddDelivery = () => {
+          const customer = window.prompt('Enter customer name:');
+          if (!customer) return;
+          
+          const address = window.prompt('Enter delivery address:');
+          const items = parseInt(window.prompt('Enter number of items:') || '1');
+          
+          const newDelivery = {
+            id: deliveriesData.length > 0 ? Math.max(...deliveriesData.map(d => d.id)) + 1 : 1,
+            address: address || 'Unknown',
+            customer,
+            status: 'pending' as 'pending',
+            driver: 'Unassigned',
+            items,
+            progress: 0
+          };
+          
+          setDeliveriesData([...deliveriesData, newDelivery]);
+          alert(`Delivery for "${customer}" added successfully!`);
+        };
+
+        const handleEditDelivery = (delivery: any) => {
+          const newCustomer = window.prompt('Edit customer name:', delivery.customer);
+          if (newCustomer === null) return;
+          
+          const newAddress = window.prompt('Edit address:', delivery.address);
+          const newItems = window.prompt('Edit number of items:', delivery.items.toString());
+          const newDriver = window.prompt('Edit driver:', delivery.driver);
+          const newStatus = window.prompt('Edit status (pending/in-transit/delivered):', delivery.status);
+          
+          const updatedDeliveries = deliveriesData.map(d => 
+            d.id === delivery.id 
+              ? {
+                  ...d,
+                  customer: newCustomer || d.customer,
+                  address: newAddress || d.address,
+                  items: newItems ? parseInt(newItems) : d.items,
+                  driver: newDriver || d.driver,
+                  status: (newStatus === 'pending' || newStatus === 'in-transit' || newStatus === 'delivered') ? newStatus : d.status
+                }
+              : d
+          );
+          
+          setDeliveriesData(updatedDeliveries);
+          alert(`Delivery updated!`);
+        };
+
+        const handleDeleteDelivery = (id: number) => {
+          if (window.confirm('Are you sure you want to delete this delivery?')) {
+            setDeliveriesData(deliveriesData.filter(d => d.id !== id));
+            alert('Delivery deleted.');
+          }
+        };
+
+        const handleAssignDriver = (delivery: any) => {
+          const drivers = ['John D.', 'Sarah M.', 'Mike R.', 'Alex T.', 'Unassigned'];
+          const driver = window.prompt('Assign driver:', delivery.driver);
+          if (driver === null) return;
+          
+          setDeliveriesData(deliveriesData.map(d => 
+            d.id === delivery.id ? { ...d, driver } : d
+          ));
+          alert(`Assigned ${driver} to this delivery.`);
+        };
+
+        const handleUpdateProgress = (delivery: any) => {
+          const progress = window.prompt('Update progress (0-100):', delivery.progress.toString());
+          if (progress === null) return;
+          
+          const progressNum = parseInt(progress);
+          if (isNaN(progressNum) || progressNum < 0 || progressNum > 100) {
+            alert('Please enter a number between 0 and 100.');
+            return;
+          }
+          
+          setDeliveriesData(deliveriesData.map(d => 
+            d.id === delivery.id ? { ...d, progress: progressNum } : d
+          ));
+        };
+
+        const handleMarkDelivered = (id: number) => {
+          setDeliveriesData(deliveriesData.map(d => 
+            d.id === id ? { ...d, status: 'delivered', progress: 100 } : d
+          ));
+          alert('Delivery marked as delivered!');
+        };
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Deliveries Management</h2>
+                <p className="text-gray-600 mt-1">Manage delivery assignments, tracking, and status</p>
+              </div>
+              <button
+                onClick={handleAddDelivery}
+                className="mt-4 md:mt-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center space-x-2"
+              >
+                <span>+ Add Delivery</span>
+              </button>
+            </div>
+
+            {/* Delivery Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Total Deliveries</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{deliveriesData.length}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">In Transit</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{deliveriesData.filter(d => d.status === 'in-transit').length}</p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-sm text-orange-600 font-medium">Pending</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{deliveriesData.filter(d => d.status === 'pending').length}</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-purple-600 font-medium">Delivered Today</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{deliveriesData.filter(d => d.status === 'delivered').length}</p>
+              </div>
+            </div>
+
+            {/* Deliveries Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {deliveriesData.map((delivery) => (
+                    <tr key={delivery.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-green-100 rounded-lg mr-3">
+                            <Package className="h-4 w-4 text-green-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{delivery.customer}</p>
+                            <p className="text-sm text-gray-600">ID: #{delivery.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-gray-900">{delivery.address}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            delivery.driver === 'Unassigned' ? 'bg-gray-100 text-gray-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {delivery.driver}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          delivery.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                          delivery.status === 'in-transit' ? 'bg-blue-100 text-blue-800' :
+                          'bg-orange-100 text-orange-800'
+                        }`}>
+                          {delivery.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-gray-900">{delivery.items} items</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-24 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-600 h-2 rounded-full" 
+                              style={{ width: `${delivery.progress}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-600">{delivery.progress}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleAssignDriver(delivery)}
+                              className="px-3 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium hover:bg-blue-200"
+                            >
+                              Assign
+                            </button>
+                            <button
+                              onClick={() => handleEditDelivery(delivery)}
+                              className="px-3 py-1 bg-gray-100 text-gray-800 rounded text-xs font-medium hover:bg-gray-200"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleUpdateProgress(delivery)}
+                              className="px-3 py-1 bg-green-100 text-green-800 rounded text-xs font-medium hover:bg-green-200"
+                            >
+                              Progress
+                            </button>
+                            {delivery.status !== 'delivered' && (
+                              <button
+                                onClick={() => handleMarkDelivered(delivery.id)}
+                                className="px-3 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium hover:bg-purple-200"
+                              >
+                                Deliver
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteDelivery(delivery.id)}
+                              className="px-3 py-1 bg-red-100 text-red-800 rounded text-xs font-medium hover:bg-red-200"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  Showing {deliveriesData.length} deliveries
+                </p>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => alert('Exporting deliveries data...')}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('vehicles')}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  >
+                    View Vehicles
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'sops':
+        const handleAddSOPCategory = () => {
+          const name = window.prompt('Enter SOP category name:');
+          if (!name) return;
+          
+          const iconName = window.prompt('Enter icon name (Package, Wrench, AlertTriangle, Users, FileText, etc.):', 'FileText');
+          const count = parseInt(window.prompt('Enter initial SOP count:', '5') || '0');
+          
+          // Find the actual icon component from imports (simplify)
+          let IconComponent = FileText;
+          
+          const newCategory = {
+            name,
+            count,
+            icon: IconComponent // In reality we'd map string to component
+          };
+          
+          setSopCategoriesData([...sopCategoriesData, newCategory]);
+          alert(`SOP category "${name}" added!`);
+        };
+
+        const handleEditSOPCategory = (category: any) => {
+          const newName = window.prompt('Edit category name:', category.name);
+          if (newName === null) return;
+          
+          const newCount = window.prompt('Edit SOP count:', category.count.toString());
+          
+          const updatedCategories = sopCategoriesData.map(c => 
+            c.name === category.name 
+              ? { ...c, name: newName || c.name, count: newCount ? parseInt(newCount) : c.count }
+              : c
+          );
+          
+          setSopCategoriesData(updatedCategories);
+          alert('Category updated!');
+        };
+
+        const handleDeleteSOPCategory = (categoryName: string) => {
+          if (window.confirm(`Delete category "${categoryName}" and all its SOPs?`)) {
+            setSopCategoriesData(sopCategoriesData.filter(c => c.name !== categoryName));
+            alert('Category deleted.');
+          }
+        };
+
+        const handleViewSOPs = (category: any) => {
+          alert(`Viewing SOPs in "${category.name}"\n\nThis would open a detailed view with:\n• List of all SOP documents\n• Search and filter\n• Document preview\n• Version history\n• Training completion tracking\n\nTotal SOPs: ${category.count}`);
+        };
+
+        const handleAddSOPDocument = (category: any) => {
+          const title = window.prompt(`Add new SOP document to "${category.name}":`);
+          if (!title) return;
+          
+          alert(`SOP "${title}" added to ${category.name}!\n\nIn production, this would:\n• Create a new SOP document\n• Upload PDF/Word file\n• Set version number\n• Assign reviewers\n• Notify team members`);
+        };
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Standard Operating Procedures</h2>
+                <p className="text-gray-600 mt-1">Manage safety protocols, delivery procedures, and training materials</p>
+              </div>
+              <button
+                onClick={handleAddSOPCategory}
+                className="mt-4 md:mt-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center space-x-2"
+              >
+                <span>+ Add Category</span>
+              </button>
+            </div>
+
+            {/* SOP Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Total Categories</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{sopCategoriesData.length}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">Total SOPs</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {sopCategoriesData.reduce((sum, cat) => sum + cat.count, 0)}
+                </p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-purple-600 font-medium">Avg per Category</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {sopCategoriesData.length > 0 
+                    ? Math.round(sopCategoriesData.reduce((sum, cat) => sum + cat.count, 0) / sopCategoriesData.length)
+                    : '0'
+                  }
+                </p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-sm text-orange-600 font-medium">Training Required</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {sopCategoriesData.reduce((sum, cat) => sum + cat.count, 0) * 2} hrs
+                </p>
+              </div>
+            </div>
+
+            {/* SOP Categories Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sopCategoriesData.map((category) => {
+                const Icon = category.icon;
+                return (
+                  <div key={category.name} className="border rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-3 bg-primary-100 rounded-lg">
+                          {Icon && <Icon className="h-6 w-6 text-primary-600" />}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                          <p className="text-sm text-gray-600">{category.count} SOPs</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleEditSOPCategory(category)}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSOPCategory(category.name)}
+                          className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 space-y-3">
+                      <button
+                        onClick={() => handleViewSOPs(category)}
+                        className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                      >
+                        View All SOPs
+                      </button>
+                      <button
+                        onClick={() => handleAddSOPDocument(category)}
+                        className="w-full py-2.5 bg-primary-600 text-white hover:bg-primary-700 rounded-lg text-sm font-medium"
+                      >
+                        + Add SOP Document
+                      </button>
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Last updated: Today</span>
+                        <span>{Math.ceil(category.count * 0.3)} trained</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                <div>
+                  <h4 className="font-medium text-gray-900">SOP Library Features</h4>
+                  <p className="text-sm text-gray-600 mt-1">Version control, training tracking, document approval workflows</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => alert('Importing SOP documents...')}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    Import SOPs
+                  </button>
+                  <button
+                    onClick={() => alert('Generating training report...')}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  >
+                    Training Report
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'maintenance':
+        const handleAddMaintenanceTask = () => {
+          const vehicle = window.prompt('Enter vehicle name:');
+          if (!vehicle) return;
+          
+          const type = window.prompt('Enter maintenance type (Oil Change, Brake Inspection, Tire Rotation, etc.):');
+          const dueDate = window.prompt('Enter due date (YYYY-MM-DD):', '2026-03-01');
+          const priority = window.prompt('Enter priority (high/medium/low):', 'medium');
+          
+          const newTask = {
+            id: maintenanceData.length > 0 ? Math.max(...maintenanceData.map(t => t.id)) + 1 : 1,
+            vehicle,
+            type: type || 'General Maintenance',
+            dueDate: dueDate || '2026-03-01',
+            priority: (priority === 'high' || priority === 'medium' || priority === 'low') ? priority : 'medium'
+          };
+          
+          setMaintenanceData([...maintenanceData, newTask]);
+          alert(`Maintenance task for ${vehicle} added!`);
+        };
+
+        const handleEditMaintenanceTask = (task: any) => {
+          const newVehicle = window.prompt('Edit vehicle:', task.vehicle);
+          if (newVehicle === null) return;
+          
+          const newType = window.prompt('Edit type:', task.type);
+          const newDueDate = window.prompt('Edit due date:', task.dueDate);
+          const newPriority = window.prompt('Edit priority:', task.priority);
+          
+          const updatedTasks = maintenanceData.map(t => 
+            t.id === task.id 
+              ? {
+                  ...t,
+                  vehicle: newVehicle || t.vehicle,
+                  type: newType || t.type,
+                  dueDate: newDueDate || t.dueDate,
+                  priority: (newPriority === 'high' || newPriority === 'medium' || newPriority === 'low') ? newPriority : t.priority
+                }
+              : t
+          );
+          
+          setMaintenanceData(updatedTasks);
+          alert('Task updated!');
+        };
+
+        const handleDeleteMaintenanceTask = (id: number) => {
+          if (window.confirm('Delete this maintenance task?')) {
+            setMaintenanceData(maintenanceData.filter(t => t.id !== id));
+            alert('Task deleted.');
+          }
+        };
+
+        const handleMarkCompleted = (id: number) => {
+          if (window.confirm('Mark this task as completed?')) {
+            setMaintenanceData(maintenanceData.filter(t => t.id !== id));
+            alert('Task marked as completed and removed from list.');
+          }
+        };
+
+        const handleScheduleMaintenance = (task: any) => {
+          const date = window.prompt('Schedule maintenance date (YYYY-MM-DD):', task.dueDate);
+          if (date) {
+            setMaintenanceData(maintenanceData.map(t => 
+              t.id === task.id ? { ...t, dueDate: date } : t
+            ));
+            alert(`Scheduled for ${date}`);
+          }
+        };
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Maintenance Management</h2>
+                <p className="text-gray-600 mt-1">Schedule, track, and manage vehicle maintenance tasks</p>
+              </div>
+              <div className="flex items-center space-x-3 mt-4 md:mt-0">
+                <button
+                  onClick={handleAddMaintenanceTask}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center space-x-2"
+                >
+                  <span>+ Add Task</span>
+                </button>
+                <button
+                  onClick={() => alert('Generating maintenance report...')}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Report
+                </button>
+              </div>
+            </div>
+
+            {/* Maintenance Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Total Tasks</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{maintenanceData.length}</p>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <p className="text-sm text-red-600 font-medium">High Priority</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">{maintenanceData.filter(t => t.priority === 'high').length}</p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-sm text-orange-600 font-medium">Due This Week</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {maintenanceData.filter(t => {
+                    const dueDate = new Date(t.dueDate);
+                    const today = new Date();
+                    const nextWeek = new Date(today);
+                    nextWeek.setDate(today.getDate() + 7);
+                    return dueDate >= today && dueDate <= nextWeek;
+                  }).length}
+                </p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">Completed Today</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">0</p>
+              </div>
+            </div>
+
+            {/* Maintenance Tasks Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Maintenance Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {maintenanceData.map((task) => (
+                    <tr key={task.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                            <Truck className="h-4 w-4 text-blue-600" />
+                          </div>
+                          <span className="font-medium text-gray-900">{task.vehicle}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-gray-900">{task.type}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                          <span className="text-gray-900">{task.dueDate}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          task.priority === 'high' ? 'bg-red-100 text-red-800' : 
+                          task.priority === 'medium' ? 'bg-orange-100 text-orange-800' : 
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {task.priority}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Pending
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => handleScheduleMaintenance(task)}
+                            className="px-3 py-1.5 bg-blue-100 text-blue-800 rounded text-xs font-medium hover:bg-blue-200"
+                          >
+                            Schedule
+                          </button>
+                          <button
+                            onClick={() => handleEditMaintenanceTask(task)}
+                            className="px-3 py-1.5 bg-gray-100 text-gray-800 rounded text-xs font-medium hover:bg-gray-200"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleMarkCompleted(task.id)}
+                            className="px-3 py-1.5 bg-green-100 text-green-800 rounded text-xs font-medium hover:bg-green-200"
+                          >
+                            Complete
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMaintenanceTask(task.id)}
+                            className="px-3 py-1.5 bg-red-100 text-red-800 rounded text-xs font-medium hover:bg-red-200"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                <div>
+                  <h4 className="font-medium text-gray-900">Maintenance Features</h4>
+                  <p className="text-sm text-gray-600 mt-1">Preventive scheduling, parts inventory, work order tracking</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setActiveTab('vehicles')}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    View Vehicles
+                  </button>
+                  <button
+                    onClick={() => alert('Generating maintenance schedule...')}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  >
+                    Generate Schedule
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      case 'reports':
+        // Calculate report statistics
+        const totalVehicles = vehiclesData.length;
+        const activeVehicles = vehiclesData.filter(v => v.status === 'active').length;
+        const maintenanceDueCount = vehiclesData.filter(v => v.maintenanceDue).length;
+        const totalDeliveries = deliveriesData.length;
+        const deliveredCount = deliveriesData.filter(d => d.status === 'delivered').length;
+        const pendingDeliveries = deliveriesData.filter(d => d.status === 'pending').length;
+        const totalSOPs = sopCategoriesData.reduce((sum, cat) => sum + cat.count, 0);
+        const totalMaintenanceTasks = maintenanceData.length;
+        const highPriorityTasks = maintenanceData.filter(t => t.priority === 'high').length;
+
+        const handleGenerateReport = (type: string) => {
+          alert(`Generating ${type} report...\n\nThis would create a comprehensive PDF/Excel report with:\n• Executive summary\n• Detailed analytics\n• Charts and graphs\n• Recommendations\n• Export options\n\nReport type: ${type}\nDate range: Last 30 days\nFormat: PDF & Excel`);
+        };
+
+        const handleExportData = () => {
+          alert('Exporting all data...\n\nPreparing CSV files for:\n• Vehicles\n• Deliveries\n• Maintenance tasks\n• SOP categories\n\nFiles will be downloaded as a ZIP archive.');
+        };
+
+        const handleScheduleReport = () => {
+          const email = window.prompt('Enter email for scheduled reports:', 'admin@fleetflow.com');
+          if (email) {
+            alert(`Scheduled reports configured!\n\nDaily reports will be sent to: ${email}\n\nReport types:\n• Daily delivery summary\n• Weekly maintenance schedule\n• Monthly financial overview\n• Quarterly safety compliance`);
+          }
+        };
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Reports & Analytics</h2>
+                <p className="text-gray-600 mt-1">Comprehensive analytics and reporting for fleet operations</p>
+              </div>
+              <div className="flex items-center space-x-3 mt-4 md:mt-0">
+                <button
+                  onClick={() => handleGenerateReport('daily')}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                >
+                  Generate Report
+                </button>
+                <button
+                  onClick={handleExportData}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Export Data
+                </button>
+              </div>
+            </div>
+
+            {/* Key Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-600 font-medium">Fleet Utilization</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {totalVehicles > 0 ? Math.round((activeVehicles / totalVehicles) * 100) : 0}%
+                </p>
+                <p className="text-xs text-gray-600 mt-1">{activeVehicles} of {totalVehicles} active</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-600 font-medium">Delivery Success</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {totalDeliveries > 0 ? Math.round((deliveredCount / totalDeliveries) * 100) : 0}%
+                </p>
+                <p className="text-xs text-gray-600 mt-1">{deliveredCount} of {totalDeliveries} delivered</p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-sm text-orange-600 font-medium">Maintenance Health</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {totalVehicles > 0 ? Math.round(((totalVehicles - maintenanceDueCount) / totalVehicles) * 100) : 0}%
+                </p>
+                <p className="text-xs text-gray-600 mt-1">{maintenanceDueCount} vehicles due</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-purple-600 font-medium">Compliance Score</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {totalSOPs > 0 ? Math.min(100, Math.round(totalSOPs * 5)) : 0}%
+                </p>
+                <p className="text-xs text-gray-600 mt-1">{totalSOPs} SOPs tracked</p>
+              </div>
+            </div>
+
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Vehicle Status Chart */}
+              <div className="border rounded-xl p-5">
+                <h3 className="font-semibold text-gray-900 mb-4">Vehicle Status Distribution</h3>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Active', count: vehiclesData.filter(v => v.status === 'active').length, color: 'bg-green-500' },
+                    { label: 'Inactive', count: vehiclesData.filter(v => v.status === 'inactive').length, color: 'bg-gray-500' },
+                    { label: 'Delayed', count: vehiclesData.filter(v => v.status === 'delayed').length, color: 'bg-orange-500' },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center">
+                      <div className="w-24 text-sm text-gray-600">{item.label}</div>
+                      <div className="flex-1 h-6 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${item.color} rounded-full`}
+                          style={{ width: `${totalVehicles > 0 ? (item.count / totalVehicles) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <div className="w-12 text-right text-sm font-medium">{item.count}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Delivery Status Chart */}
+              <div className="border rounded-xl p-5">
+                <h3 className="font-semibold text-gray-900 mb-4">Delivery Status</h3>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Delivered', count: deliveriesData.filter(d => d.status === 'delivered').length, color: 'bg-green-500' },
+                    { label: 'In Transit', count: deliveriesData.filter(d => d.status === 'in-transit').length, color: 'bg-blue-500' },
+                    { label: 'Pending', count: deliveriesData.filter(d => d.status === 'pending').length, color: 'bg-orange-500' },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center">
+                      <div className="w-24 text-sm text-gray-600">{item.label}</div>
+                      <div className="flex-1 h-6 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${item.color} rounded-full`}
+                          style={{ width: `${totalDeliveries > 0 ? (item.count / totalDeliveries) * 100 : 0}%` }}
+                        ></div>
+                      </div>
+                      <div className="w-12 text-right text-sm font-medium">{item.count}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Report Types */}
+            <div className="mb-8">
+              <h3 className="font-semibold text-gray-900 mb-4">Available Reports</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  { title: 'Daily Delivery Summary', desc: 'Daily delivery performance and metrics', icon: Package },
+                  { title: 'Weekly Maintenance Report', desc: 'Maintenance schedule and completed tasks', icon: Wrench },
+                  { title: 'Monthly Financial Overview', desc: 'Revenue, expenses, and profitability', icon: DollarSign },
+                  { title: 'Vehicle Utilization Analysis', desc: 'Fleet usage and optimization opportunities', icon: Truck },
+                  { title: 'Driver Performance Report', desc: 'Driver metrics and safety scores', icon: Users },
+                  { title: 'Safety Compliance Report', desc: 'SOP adherence and incident tracking', icon: AlertTriangle },
+                ].map((report) => {
+                  const Icon = report.icon;
+                  return (
+                    <div key={report.title} className="border rounded-xl p-4 hover:border-primary-300 hover:shadow-sm transition">
+                      <div className="flex items-start space-x-3">
+                        <div className="p-2 bg-primary-100 rounded-lg">
+                          <Icon className="h-5 w-5 text-primary-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{report.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{report.desc}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleGenerateReport(report.title)}
+                        className="w-full mt-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium"
+                      >
+                        Generate
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Report Scheduling */}
+            <div className="p-5 bg-gray-50 rounded-xl">
+              <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+                <div>
+                  <h4 className="font-medium text-gray-900">Automated Report Scheduling</h4>
+                  <p className="text-sm text-gray-600 mt-1">Schedule regular reports to be sent automatically via email</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={handleScheduleReport}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                  >
+                    Schedule Reports
+                  </button>
+                  <button
+                    onClick={() => alert('Viewing report history...')}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                  >
+                    View History
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -733,26 +1810,7 @@ export default function Home() {
             </div>
           </div>
         </div>
-      {activeTab !== 'overview' && (
-        <div className="bg-white rounded-xl shadow-sm p-8 my-8">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-3">{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Management</h2>
-          <p className="text-gray-600 mb-4">This feature is under development. Here you'll be able to manage {activeTab}.</p>
-          <div className="flex space-x-4">
-            <button 
-              onClick={handleExploreDemoData}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
-            >
-              Explore Demo Data
-            </button>
-            <button 
-              onClick={handleViewDocumentation}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-            >
-              View Documentation
-            </button>
-          </div>
-        </div>
-      )}
+      {activeTab !== 'overview' && renderManagementContent()}
       </main>
 
       {/* Footer */}
