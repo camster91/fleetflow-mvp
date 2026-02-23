@@ -5,6 +5,7 @@ import {
   CheckCircle, AlertTriangle, Clock, Download,
   Edit, Trash2, Plus, Search, Filter
 } from 'lucide-react';
+import { notify, confirmAction, promptAction } from '../../services/notifications';
 
 interface User {
   id: string;
@@ -56,33 +57,45 @@ const AdminDashboard: React.FC = () => {
     const role = window.prompt('Enter role (admin, fleet_manager, dispatch, driver, maintenance, safety_officer, finance):');
     
     if (name && email && role) {
-      alert(`User ${name} added successfully!\n\nEmail: ${email}\nRole: ${role}\n\nIn production, this would create a user account and send invitation email.`);
+      notify.info(
+        `User ${name} added successfully!\n\nEmail: ${email}\nRole: ${role}\n\nIn production, this would create a user account and send invitation email.`,
+        { duration: 5000 }
+      );
     }
   };
 
   const handleEditUser = (user: User) => {
     const newRole = window.prompt(`Edit role for ${user.name}:`, user.role);
     if (newRole) {
-      alert(`Updated ${user.name}'s role to ${newRole}`);
+      notify.info(`Updated ${user.name}'s role to ${newRole}`, { duration: 3000 });
     }
   };
 
   const handleDeleteUser = (user: User) => {
     if (window.confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`)) {
-      alert(`User ${user.name} deleted successfully.`);
+      notify.info(`User ${user.name} deleted successfully.`, { duration: 3000 });
     }
   };
 
   const handleSystemSettings = () => {
-    alert('System Settings Panel\n\nThis would include:\n• Company information\n• Billing settings\n• API configuration\n• Integration settings\n• Security settings\n• Notification preferences');
+    notify.info(
+      'System Settings Panel\n\nThis would include:\n• Company information\n• Billing settings\n• API configuration\n• Integration settings\n• Security settings\n• Notification preferences',
+      { duration: 5000 }
+    );
   };
 
   const handleExportData = (type: string) => {
-    alert(`Exporting ${type} data...\n\nPreparing CSV file with all ${type} records. This may take a moment for large datasets.\n\nIn production, this would generate and download a CSV/Excel file.`);
+    notify.info(
+      `Exporting ${type} data...\n\nPreparing CSV file with all ${type} records. This may take a moment for large datasets.\n\nIn production, this would generate and download a CSV/Excel file.`,
+      { duration: 5000 }
+    );
   };
 
   const handleRunBackup = () => {
-    alert('Starting system backup...\n\nBackup process initiated. This may take several minutes.\n\n• Database backup ✓\n• File storage backup ✓\n• Configuration backup ✓\n\nBackup completed successfully!');
+    notify.info(
+      'Starting system backup...\n\nBackup process initiated. This may take several minutes.\n\n• Database backup ✓\n• File storage backup ✓\n• Configuration backup ✓\n\nBackup completed successfully!',
+      { duration: 5000 }
+    );
   };
 
   return (

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Truck, MapPin, Battery, Calendar, Wrench, Navigation, Phone, Mail, FileText } from 'lucide-react'
+import { notify } from '../services/notifications'
 
 interface Vehicle {
   id: number
@@ -23,12 +24,24 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle }: Vehicle
 
   const handleNavigate = () => {
     if (!vehicle) return
-    alert(`Navigating to ${vehicle.location}\n\nVehicle: ${vehicle.name}\nDriver: ${vehicle.driver}\nETA: ${vehicle.eta}\n\nIn production, this would open Google Maps with real-time navigation to the vehicle's current location.`)
+    notify.info(
+      `Navigating to ${vehicle.location}\n\n` +
+      `Vehicle: ${vehicle.name}\n` +
+      `Driver: ${vehicle.driver}\n` +
+      `ETA: ${vehicle.eta}\n\n` +
+      'In production, this would open Google Maps with real-time navigation to the vehicle\'s current location.',
+      { duration: 5000 }
+    )
   }
 
   const handleCallDriver = () => {
     if (!vehicle) return
-    alert(`Calling ${vehicle.driver} (${vehicle.name})\n\nPhone: +1 (555) 123-4567\n\nIn production, this would dial the driver's registered phone number and log the call for compliance.`)
+    notify.info(
+      `Calling ${vehicle.driver} (${vehicle.name})\n\n` +
+      'Phone: +1 (555) 123-4567\n\n' +
+      'In production, this would dial the driver\'s registered phone number and log the call for compliance.',
+      { duration: 5000 }
+    )
   }
 
   if (!isOpen || !vehicle) return null

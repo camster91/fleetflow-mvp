@@ -5,28 +5,41 @@ import {
   Navigation, FileVideo, Image, Map, Wrench,
   MessageSquare, Download, Upload, Settings, Bell,
   Search, Menu, X, ChevronRight, Filter, SortAsc,
-  Phone, Mail, Map as MapIcon, FileText, Home as HomeIcon, DollarSign,
-  Camera, MapPin as MapPinIcon, Building, Car
+  Phone, Mail, Map as MapIcon, FileText, Home as HomeIcon, DollarSign
 } from 'lucide-react'
 import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
 import MobileMenu from '../components/MobileMenu'
-import * as dataService from '../services/dataService'
-import { 
-  notify,
-  vehicleNotifications,
-  deliveryNotifications,
-  sopNotifications,
-  maintenanceNotifications,
-  announcementNotifications,
-  reportNotifications,
-  confirmAction,
-  promptAction
-} from '../services/notifications'
 
 
 
-// Data will be loaded from dataService
+// Mock data for the MVP
+const vehicles = [
+  { id: 1, name: 'Food Truck 1', status: 'active', driver: 'John D.', location: 'Downtown', eta: '10 min', mileage: 45230, maintenanceDue: false },
+  { id: 2, name: 'Van 2', status: 'active', driver: 'Sarah M.', location: 'East Side', eta: '25 min', mileage: 38920, maintenanceDue: true },
+  { id: 3, name: 'Truck 3', status: 'inactive', driver: 'Mike R.', location: 'Depot', eta: 'N/A', mileage: 51200, maintenanceDue: false },
+  { id: 4, name: 'Van 4', status: 'delayed', driver: 'Alex T.', location: 'West End', eta: '45 min', mileage: 42100, maintenanceDue: true },
+]
+
+const deliveries = [
+  { id: 1, address: '123 Main St', customer: 'Restaurant A', status: 'in-transit', driver: 'John D.', items: 15, progress: 65 },
+  { id: 2, address: '456 Oak Ave', customer: 'Cafe B', status: 'pending', driver: 'Sarah M.', items: 8, progress: 0 },
+  { id: 3, address: '789 Pine Rd', customer: 'Hotel C', status: 'delivered', driver: 'Mike R.', items: 22, progress: 100 },
+  { id: 4, address: '321 Elm St', customer: 'Office D', status: 'in-transit', driver: 'Alex T.', items: 12, progress: 30 },
+]
+
+const maintenanceTasks = [
+  { id: 1, vehicle: 'Van 2', type: 'Oil Change', dueDate: '2026-02-25', priority: 'high' },
+  { id: 2, vehicle: 'Van 4', type: 'Brake Inspection', dueDate: '2026-02-28', priority: 'medium' },
+  { id: 3, vehicle: 'Food Truck 1', type: 'Tire Rotation', dueDate: '2026-03-05', priority: 'low' },
+]
+
+const sopCategories = [
+  { name: 'Delivery Procedures', count: 12, icon: Package },
+  { name: 'Vehicle Maintenance', count: 8, icon: Wrench },
+  { name: 'Safety Protocols', count: 6, icon: AlertTriangle },
+  { name: 'Customer Service', count: 10, icon: Users },
+]
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('overview')
@@ -40,32 +53,14 @@ export default function Home() {
   const filterRef = useRef<HTMLDivElement>(null)
 
   // Data state
-  const [vehiclesData, setVehiclesData] = useState<dataService.Vehicle[]>([])
-  const [deliveriesData, setDeliveriesData] = useState<dataService.Delivery[]>([])
-  const [maintenanceData, setMaintenanceData] = useState<dataService.MaintenanceTask[]>([])
-  const [sopCategoriesData, setSopCategoriesData] = useState<dataService.SOPCategory[]>([])
-  const [announcements, setAnnouncements] = useState<dataService.Announcement[]>([])
-  const [clients, setClients] = useState<dataService.Client[]>([])
+  const [vehiclesData, setVehiclesData] = useState(vehicles)
+  const [deliveriesData, setDeliveriesData] = useState(deliveries)
+  const [maintenanceData, setMaintenanceData] = useState(maintenanceTasks)
+  const [sopCategoriesData, setSopCategoriesData] = useState(sopCategories)
 
-  // Load data on component mount
   useEffect(() => {
-    const loadData = () => {
-      try {
-        setVehiclesData(dataService.getVehicles())
-        setDeliveriesData(dataService.getDeliveries())
-        setMaintenanceData(dataService.getMaintenanceTasks())
-        setSopCategoriesData(dataService.getSOPCategories())
-        setAnnouncements(dataService.getAnnouncements())
-        // Clients not yet implemented in dataService
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Failed to load data:', error)
-        notify.error('Failed to load data. Please refresh the page.')
-        setIsLoading(false)
-      }
-    }
-    
-    loadData()
+    const timer = setTimeout(() => setIsLoading(false), 1000)
+    return () => clearTimeout(timer)
   }, [])
 
   // Close filter dropdown when clicking outside
@@ -89,44 +84,15 @@ export default function Home() {
     return vehicle.status === vehicleFilter
   })
 
-  // Calculate stats from data
   const stats = [
-    { 
-      label: 'Active Vehicles', 
-      value: vehiclesData.filter(v => v.status === 'active').length.toString(), 
-      icon: Truck, 
-      color: 'text-green-600', 
-      bgColor: 'bg-green-100', 
-      change: '+0' 
-    },
-    { 
-      label: 'Today\'s Deliveries', 
-      value: deliveriesData.filter(d => d.status === 'in-transit' || d.status === 'pending').length.toString(), 
-      icon: Package, 
-      color: 'text-blue-600', 
-      bgColor: 'bg-blue-100', 
-      change: '+0' 
-    },
-    { 
-      label: 'Pending SOPs', 
-      value: sopCategoriesData.reduce((sum, cat) => sum + cat.count, 0).toString(), 
-      icon: FileVideo, 
-      color: 'text-purple-600', 
-      bgColor: 'bg-purple-100', 
-      change: '+0' 
-    },
-    { 
-      label: 'Maintenance Due', 
-      value: maintenanceData.filter(t => !t.completed && new Date(t.dueDate) <= new Date()).length.toString(), 
-      icon: AlertTriangle, 
-      color: 'text-orange-600', 
-      bgColor: 'bg-orange-100', 
-      change: '+0' 
-    },
+    { label: 'Active Vehicles', value: '3', icon: Truck, color: 'text-green-600', bgColor: 'bg-green-100', change: '+1' },
+    { label: 'Today\'s Deliveries', value: '8', icon: Package, color: 'text-blue-600', bgColor: 'bg-blue-100', change: '+2' },
+    { label: 'Pending SOPs', value: '5', icon: FileVideo, color: 'text-purple-600', bgColor: 'bg-purple-100', change: '-1' },
+    { label: 'Maintenance Due', value: '2', icon: AlertTriangle, color: 'text-orange-600', bgColor: 'bg-orange-100', change: '+1' },
   ]
 
   const handleQuickAction = (action: string) => {
-    notify.info(`Quick action: ${action}`, { duration: 3000 })
+    alert(`Action: ${action}`)
   }
 
   const handleOpenAnnouncementModal = () => {
@@ -138,19 +104,8 @@ export default function Home() {
   }
 
   const handleSendAnnouncement = (message: string, priority: string, recipients: string) => {
-    try {
-      dataService.addAnnouncement({
-        message,
-        priority: priority as 'low' | 'normal' | 'high' | 'urgent',
-        recipients,
-      })
-      announcementNotifications.sent(recipients)
-      setIsAnnouncementModalOpen(false)
-      // Refresh announcements
-      setAnnouncements(dataService.getAnnouncements())
-    } catch (error) {
-      announcementNotifications.error(error instanceof Error ? error.message : 'Unknown error')
-    }
+    alert(`Announcement sent!\nMessage: ${message}\nPriority: ${priority}\nRecipients: ${recipients}`)
+    setIsAnnouncementModalOpen(false)
   }
 
   const handleOpenVehicleDetailModal = (vehicle: any) => {
@@ -164,67 +119,27 @@ export default function Home() {
   }
 
   const handleHelpSupport = () => {
-    notify.info(
-      'FleetFlow Pro Support\n\n' +
-      'Email: support@fleetflow.com\n' +
-      'Phone: 1-800-FLEETFLOW\n' +
-      'Hours: Mon-Fri 8am-6pm EST\n\n' +
-      'Visit our documentation: docs.fleetflow.com',
-      { duration: 5000 }
-    )
+    alert('FleetFlow Pro Support\n\nEmail: support@fleetflow.com\nPhone: 1-800-FLEETFLOW\nHours: Mon-Fri 8am-6pm EST\n\nVisit our documentation: docs.fleetflow.com')
   }
 
   const handleSettings = () => {
-    notify.info(
-      'Settings feature coming soon!\n\n' +
-      'You\'ll be able to customize:\n' +
-      '• Dashboard preferences\n' +
-      '• Notification settings\n' +
-      '• User permissions\n' +
-      '• Integration settings',
-      { duration: 5000 }
-    )
+    alert('Settings feature coming soon!\n\nYou\'ll be able to customize:\n• Dashboard preferences\n• Notification settings\n• User permissions\n• Integration settings')
   }
 
   const handleGoogleMapsDemo = () => {
     const demoAddress = '1600+Amphitheatre+Parkway,+Mountain+View,+CA'
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${demoAddress}&travelmode=driving`
-    notify.info(
-      'Opening Google Maps demo with navigation to:\n\n' +
-      'Google Headquarters\n' +
-      '1600 Amphitheatre Parkway\n' +
-      'Mountain View, CA\n\n' +
-      'Note: In a production app, this would integrate with real vehicle GPS data.',
-      { duration: 5000 }
-    )
+    alert(`Opening Google Maps demo with navigation to:\n\nGoogle Headquarters\n1600 Amphitheatre Parkway\nMountain View, CA\n\nNote: In a production app, this would integrate with real vehicle GPS data.`)
     // In a real app, we would window.open(mapsUrl, '_blank')
-    // For demo purposes, we'll just show the notification
+    // For demo purposes, we'll just show the alert
   }
 
   const handleUploadSOP = () => {
-    notify.info(
-      'SOP Upload Demo\n\n' +
-      'In a production app, this would:\n' +
-      '1. Open file picker for PDF/Word/Video files\n' +
-      '2. Upload to cloud storage\n' +
-      '3. Parse and categorize content\n' +
-      '4. Notify relevant team members\n\n' +
-      'For now, try the "SOP Library" section to view existing procedures.',
-      { duration: 5000 }
-    )
+    alert('SOP Upload Demo\n\nIn a production app, this would:\n1. Open file picker for PDF/Word/Video files\n2. Upload to cloud storage\n3. Parse and categorize content\n4. Notify relevant team members\n\nFor now, try the "SOP Library" section to view existing procedures.')
   }
 
   const handlePlanRoute = () => {
-    notify.info(
-      'Route Planning Demo\n\n' +
-      'This feature would integrate with:\n' +
-      '• Google Maps API for optimal routing\n' +
-      '• Real-time traffic data\n' +
-      '• Delivery time windows\n' +
-      '• Vehicle capacity constraints\n\n' +
-      'Try the "Google Maps Integration" demo above for navigation.',
-      { duration: 5000 }
-    )
+    alert('Route Planning Demo\n\nThis feature would integrate with:\n• Google Maps API for optimal routing\n• Real-time traffic data\n• Delivery time windows\n• Vehicle capacity constraints\n\nTry the "Google Maps Integration" demo above for navigation.')
   }
 
   const handleNotifyDrivers = () => {
@@ -233,180 +148,94 @@ export default function Home() {
 
   const handleViewReports = () => {
     setActiveTab('reports')
-    notify.info(
-      'Reports Dashboard\n\n' +
-      'Switching to Reports tab. In production, you would see:\n' +
-      '• Delivery performance metrics\n' +
-      '• Vehicle utilization reports\n' +
-      '• Driver safety scores\n' +
-      '• Maintenance cost analysis\n' +
-      '• Custom report builder',
-      { duration: 5000 }
-    )
+    alert('Reports Dashboard\n\nSwitching to Reports tab. In production, you would see:\n• Delivery performance metrics\n• Vehicle utilization reports\n• Driver safety scores\n• Maintenance cost analysis\n• Custom report builder')
   }
 
   const handleExploreDemoData = () => {
-    notify.info(
-      `Loading demo data for ${activeTab}...\n\n` +
-      `This would load sample data including:\n` +
-      `• Mock ${activeTab} entries\n` +
-      `• Sample reports and analytics\n` +
-      `• Interactive charts and visualizations\n` +
-      `• Historical data for testing\n\n` +
-      `Try clicking on individual items to see detailed views.`,
-      { duration: 5000 }
-    )
+    alert(`Loading demo data for ${activeTab}...\n\nThis would load sample data including:\n• Mock ${activeTab} entries\n• Sample reports and analytics\n• Interactive charts and visualizations\n• Historical data for testing\n\nTry clicking on individual items to see detailed views.`)
   }
 
   const handleViewDocumentation = () => {
-    notify.info(
-      'FleetFlow Pro Documentation\n\n' +
-      'Access our comprehensive guides:\n' +
-      '• User Manual: docs.fleetflow.com/user\n' +
-      '• API Reference: docs.fleetflow.com/api\n' +
-      '• Integration Guide: docs.fleetflow.com/integrate\n' +
-      '• Troubleshooting: docs.fleetflow.com/help\n\n' +
-      'Contact support for personalized training.',
-      { duration: 5000 }
-    )
+    alert('FleetFlow Pro Documentation\n\nAccess our comprehensive guides:\n• User Manual: docs.fleetflow.com/user\n• API Reference: docs.fleetflow.com/api\n• Integration Guide: docs.fleetflow.com/integrate\n• Troubleshooting: docs.fleetflow.com/help\n\nContact support for personalized training.')
   }
 
   const handleCallDriver = (driverName: string) => {
-    notify.info(
-      `Calling ${driverName}...\n\n` +
-      'In a production app, this would:\n' +
-      '• Dial the driver\'s registered phone number\n' +
-      '• Log the call for compliance\n' +
-      '• Record call duration and purpose\n' +
-      '• Update driver communication history\n\n' +
-      'Phone: +1 (555) 123-4567',
-      { duration: 5000 }
-    )
+    alert(`Calling ${driverName}...\n\nIn a production app, this would:\n• Dial the driver's registered phone number\n• Log the call for compliance\n• Record call duration and purpose\n• Update driver communication history\n\nPhone: +1 (555) 123-4567`)
   }
 
   const handleNavigateToAddress = (address: string) => {
-    notify.info(
-      `Navigating to ${address}\n\n` +
-      'This would open Google Maps with:\n' +
-      '• Turn-by-turn navigation\n' +
-      '• Real-time traffic updates\n' +
-      '• Estimated arrival time\n' +
-      '• Delivery instructions\n\n' +
-      'Try the "Google Maps Integration" demo for a navigation example.',
-      { duration: 5000 }
-    )
+    alert(`Navigating to ${address}\n\nThis would open Google Maps with:\n• Turn-by-turn navigation\n• Real-time traffic updates\n• Estimated arrival time\n• Delivery instructions\n\nTry the "Google Maps Integration" demo for a navigation example.`)
   }
 
   const handleTrackDelivery = (customer: string) => {
-    notify.info(
-      `Tracking delivery to ${customer}\n\n` +
-      'Opening real-time tracking view with:\n' +
-      '• Live vehicle location\n' +
-      '• Delivery progress\n' +
-      '• Customer contact info\n' +
-      '• Delivery notes\n' +
-      '• Photo proof of delivery\n\n' +
-      'Switching to Deliveries tab for detailed view.',
-      { duration: 5000 }
-    )
+    alert(`Tracking delivery to ${customer}\n\nOpening real-time tracking view with:\n• Live vehicle location\n• Delivery progress\n• Customer contact info\n• Delivery notes\n• Photo proof of delivery\n\nSwitching to Deliveries tab for detailed view.`)
     setActiveTab('deliveries')
-  }
-
-  // Refresh all data from dataService
-  const refreshData = () => {
-    setVehiclesData(dataService.getVehicles())
-    setDeliveriesData(dataService.getDeliveries())
-    setMaintenanceData(dataService.getMaintenanceTasks())
-    setSopCategoriesData(dataService.getSOPCategories())
-    setAnnouncements(dataService.getAnnouncements())
   }
 
   // Management content renderer
   const renderManagementContent = () => {
     switch (activeTab) {
       case 'vehicles':
-        const handleAddVehicle = async () => {
-          const name = await promptAction('Enter vehicle name:');
+        const handleAddVehicle = () => {
+          const name = window.prompt('Enter vehicle name:');
           if (!name) return;
           
-          const driver = await promptAction('Enter driver name:');
-          const location = await promptAction('Enter current location:');
-          const mileageInput = await promptAction('Enter mileage:', '0');
-          const mileage = parseInt(mileageInput || '0');
+          const driver = window.prompt('Enter driver name:');
+          const location = window.prompt('Enter current location:');
+          const mileage = parseInt(window.prompt('Enter mileage:') || '0');
           
-          try {
-            const newVehicle = dataService.addVehicle({
-              name,
-              status: 'active',
-              driver: driver || 'Unassigned',
-              location: location || 'Depot',
-              eta: 'N/A',
-              mileage,
-              maintenanceDue: false
-            });
-            vehicleNotifications.added(name);
-            refreshData();
-          } catch (error) {
-            vehicleNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
+          const newVehicle = {
+            id: vehiclesData.length > 0 ? Math.max(...vehiclesData.map(v => v.id)) + 1 : 1,
+            name,
+            status: 'active' as 'active',
+            driver: driver || 'Unassigned',
+            location: location || 'Depot',
+            eta: 'N/A',
+            mileage,
+            maintenanceDue: false
+          };
+          
+          setVehiclesData([...vehiclesData, newVehicle]);
+          alert(`Vehicle "${name}" added successfully!`);
         };
 
-        const handleEditVehicle = async (vehicle: dataService.Vehicle) => {
-          const newName = await promptAction('Edit vehicle name:', vehicle.name);
+        const handleEditVehicle = (vehicle: any) => {
+          const newName = window.prompt('Edit vehicle name:', vehicle.name);
           if (newName === null) return;
           
-          const newDriver = await promptAction('Edit driver name:', vehicle.driver);
-          const newLocation = await promptAction('Edit location:', vehicle.location);
-          const newMileage = await promptAction('Edit mileage:', vehicle.mileage.toString());
-          const newStatus = await promptAction('Edit status (active/inactive/delayed):', vehicle.status);
+          const newDriver = window.prompt('Edit driver name:', vehicle.driver);
+          const newLocation = window.prompt('Edit location:', vehicle.location);
+          const newMileage = window.prompt('Edit mileage:', vehicle.mileage.toString());
+          const newStatus = window.prompt('Edit status (active/inactive/delayed):', vehicle.status);
           
-          try {
-            const updated = dataService.updateVehicle(vehicle.id, {
-              name: newName || vehicle.name,
-              driver: newDriver || vehicle.driver,
-              location: newLocation || vehicle.location,
-              mileage: newMileage ? parseInt(newMileage) : vehicle.mileage,
-              status: (newStatus === 'active' || newStatus === 'inactive' || newStatus === 'delayed') ? newStatus as 'active' | 'inactive' | 'delayed' : vehicle.status
-            });
-            
-            if (updated) {
-              vehicleNotifications.updated(updated.name);
-              refreshData();
-            }
-          } catch (error) {
-            vehicleNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
+          const updatedVehicles = vehiclesData.map(v => 
+            v.id === vehicle.id 
+              ? {
+                  ...v,
+                  name: newName || v.name,
+                  driver: newDriver || v.driver,
+                  location: newLocation || v.location,
+                  mileage: newMileage ? parseInt(newMileage) : v.mileage,
+                  status: (newStatus === 'active' || newStatus === 'inactive' || newStatus === 'delayed') ? newStatus : v.status
+                }
+              : v
+          );
+          
+          setVehiclesData(updatedVehicles);
+          alert(`Vehicle "${newName || vehicle.name}" updated!`);
         };
 
-        const handleDeleteVehicle = async (id: number) => {
-          const confirmed = await confirmAction(
-            'Are you sure you want to delete this vehicle? This action cannot be undone.',
-            'Delete Vehicle'
-          );
-          if (confirmed) {
-            try {
-              const vehicle = vehiclesData.find(v => v.id === id);
-              const success = dataService.deleteVehicle(id);
-              if (success) {
-                vehicleNotifications.deleted(vehicle?.name || 'Vehicle');
-                refreshData();
-              }
-            } catch (error) {
-              vehicleNotifications.error('delete', error instanceof Error ? error.message : undefined);
-            }
+        const handleDeleteVehicle = (id: number) => {
+          if (window.confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) {
+            setVehiclesData(vehiclesData.filter(v => v.id !== id));
+            alert('Vehicle deleted successfully.');
           }
         };
 
         const handleToggleMaintenance = (id: number) => {
-          try {
-            const vehicle = vehiclesData.find(v => v.id === id);
-            if (vehicle) {
-              dataService.updateVehicle(id, { maintenanceDue: !vehicle.maintenanceDue });
-              refreshData();
-            }
-          } catch (error) {
-            vehicleNotifications.error('update maintenance status', error instanceof Error ? error.message : undefined);
-          }
+          setVehiclesData(vehiclesData.map(v => 
+            v.id === id ? { ...v, maintenanceDue: !v.maintenanceDue } : v
+          ));
         };
 
         return (
@@ -547,7 +376,7 @@ export default function Home() {
                   Showing {vehiclesData.length} of {vehiclesData.length} vehicles
                 </p>
                 <button
-                  onClick={() => reportNotifications.exported()}
+                  onClick={() => alert('Exporting vehicles data to CSV...')}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center space-x-2"
                 >
                   <span>Export CSV</span>
@@ -557,127 +386,91 @@ export default function Home() {
           </div>
         );
       case 'deliveries':
-        const handleAddDelivery = async () => {
-          const customer = await promptAction('Enter customer name:');
+        const handleAddDelivery = () => {
+          const customer = window.prompt('Enter customer name:');
           if (!customer) return;
           
-          const address = await promptAction('Enter delivery address:');
-          const itemsInput = await promptAction('Enter number of items:', '1');
-          const items = parseInt(itemsInput || '1');
+          const address = window.prompt('Enter delivery address:');
+          const items = parseInt(window.prompt('Enter number of items:') || '1');
           
-          try {
-            const newDelivery = dataService.addDelivery({
-              address: address || 'Unknown',
-              customer,
-              status: 'pending',
-              driver: 'Unassigned',
-              items,
-              progress: 0
-            });
-            deliveryNotifications.added(customer);
-            refreshData();
-          } catch (error) {
-            deliveryNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
+          const newDelivery = {
+            id: deliveriesData.length > 0 ? Math.max(...deliveriesData.map(d => d.id)) + 1 : 1,
+            address: address || 'Unknown',
+            customer,
+            status: 'pending' as 'pending',
+            driver: 'Unassigned',
+            items,
+            progress: 0
+          };
+          
+          setDeliveriesData([...deliveriesData, newDelivery]);
+          alert(`Delivery for "${customer}" added successfully!`);
         };
 
-        const handleEditDelivery = async (delivery: dataService.Delivery) => {
-          const newCustomer = await promptAction('Edit customer name:', delivery.customer);
+        const handleEditDelivery = (delivery: any) => {
+          const newCustomer = window.prompt('Edit customer name:', delivery.customer);
           if (newCustomer === null) return;
           
-          const newAddress = await promptAction('Edit address:', delivery.address);
-          const newItems = await promptAction('Edit number of items:', delivery.items.toString());
-          const newDriver = await promptAction('Edit driver:', delivery.driver);
-          const newStatus = await promptAction('Edit status (pending/in-transit/delivered):', delivery.status);
+          const newAddress = window.prompt('Edit address:', delivery.address);
+          const newItems = window.prompt('Edit number of items:', delivery.items.toString());
+          const newDriver = window.prompt('Edit driver:', delivery.driver);
+          const newStatus = window.prompt('Edit status (pending/in-transit/delivered):', delivery.status);
           
-          try {
-            const updated = dataService.updateDelivery(delivery.id, {
-              customer: newCustomer || delivery.customer,
-              address: newAddress || delivery.address,
-              items: newItems ? parseInt(newItems) : delivery.items,
-              driver: newDriver || delivery.driver,
-              status: (newStatus === 'pending' || newStatus === 'in-transit' || newStatus === 'delivered') ? newStatus as 'pending' | 'in-transit' | 'delivered' : delivery.status
-            });
-            
-            if (updated) {
-              deliveryNotifications.updated(updated.customer);
-              refreshData();
-            }
-          } catch (error) {
-            deliveryNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleDeleteDelivery = async (id: number) => {
-          const confirmed = await confirmAction(
-            'Are you sure you want to delete this delivery?',
-            'Delete Delivery'
+          const updatedDeliveries = deliveriesData.map(d => 
+            d.id === delivery.id 
+              ? {
+                  ...d,
+                  customer: newCustomer || d.customer,
+                  address: newAddress || d.address,
+                  items: newItems ? parseInt(newItems) : d.items,
+                  driver: newDriver || d.driver,
+                  status: (newStatus === 'pending' || newStatus === 'in-transit' || newStatus === 'delivered') ? newStatus : d.status
+                }
+              : d
           );
-          if (confirmed) {
-            try {
-              const delivery = deliveriesData.find(d => d.id === id);
-              const success = dataService.deleteDelivery(id);
-              if (success) {
-                deliveryNotifications.deleted(delivery?.customer || 'Delivery');
-                refreshData();
-              }
-            } catch (error) {
-              deliveryNotifications.error('delete', error instanceof Error ? error.message : undefined);
-            }
+          
+          setDeliveriesData(updatedDeliveries);
+          alert(`Delivery updated!`);
+        };
+
+        const handleDeleteDelivery = (id: number) => {
+          if (window.confirm('Are you sure you want to delete this delivery?')) {
+            setDeliveriesData(deliveriesData.filter(d => d.id !== id));
+            alert('Delivery deleted.');
           }
         };
 
-        const handleAssignDriver = async (delivery: dataService.Delivery) => {
+        const handleAssignDriver = (delivery: any) => {
           const drivers = ['John D.', 'Sarah M.', 'Mike R.', 'Alex T.', 'Unassigned'];
-          const driver = await promptAction('Assign driver:', delivery.driver);
+          const driver = window.prompt('Assign driver:', delivery.driver);
           if (driver === null) return;
           
-          try {
-            const updated = dataService.updateDelivery(delivery.id, { driver });
-            if (updated) {
-              deliveryNotifications.assigned(driver);
-              refreshData();
-            }
-          } catch (error) {
-            deliveryNotifications.error('assign driver', error instanceof Error ? error.message : undefined);
-          }
+          setDeliveriesData(deliveriesData.map(d => 
+            d.id === delivery.id ? { ...d, driver } : d
+          ));
+          alert(`Assigned ${driver} to this delivery.`);
         };
 
-        const handleUpdateProgress = async (delivery: dataService.Delivery) => {
-          const progress = await promptAction('Update progress (0-100):', delivery.progress.toString());
+        const handleUpdateProgress = (delivery: any) => {
+          const progress = window.prompt('Update progress (0-100):', delivery.progress.toString());
           if (progress === null) return;
           
           const progressNum = parseInt(progress);
           if (isNaN(progressNum) || progressNum < 0 || progressNum > 100) {
-            notify.error('Please enter a number between 0 and 100.');
+            alert('Please enter a number between 0 and 100.');
             return;
           }
           
-          try {
-            const updated = dataService.updateDelivery(delivery.id, { progress: progressNum });
-            if (updated) {
-              refreshData();
-            }
-          } catch (error) {
-            deliveryNotifications.error('update progress', error instanceof Error ? error.message : undefined);
-          }
+          setDeliveriesData(deliveriesData.map(d => 
+            d.id === delivery.id ? { ...d, progress: progressNum } : d
+          ));
         };
 
         const handleMarkDelivered = (id: number) => {
-          try {
-            const delivery = deliveriesData.find(d => d.id === id);
-            if (delivery) {
-              dataService.updateDelivery(id, { 
-                status: 'delivered', 
-                progress: 100,
-                completedTime: new Date().toISOString()
-              });
-              deliveryNotifications.delivered(delivery.customer);
-              refreshData();
-            }
-          } catch (error) {
-            deliveryNotifications.error('mark as delivered', error instanceof Error ? error.message : undefined);
-          }
+          setDeliveriesData(deliveriesData.map(d => 
+            d.id === id ? { ...d, status: 'delivered', progress: 100 } : d
+          ));
+          alert('Delivery marked as delivered!');
         };
 
         return (
@@ -831,7 +624,7 @@ export default function Home() {
                 </p>
                 <div className="flex items-center space-x-3">
                   <button
-                    onClick={() => reportNotifications.exported()}
+                    onClick={() => alert('Exporting deliveries data...')}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                   >
                     Export CSV
@@ -848,80 +641,58 @@ export default function Home() {
           </div>
         );
       case 'sops':
-        const handleAddSOPCategory = async () => {
-          const name = await promptAction('Enter SOP category name:');
+        const handleAddSOPCategory = () => {
+          const name = window.prompt('Enter SOP category name:');
           if (!name) return;
           
-          const countInput = await promptAction('Enter initial SOP count:', '5');
-          const count = parseInt(countInput || '0');
+          const iconName = window.prompt('Enter icon name (Package, Wrench, AlertTriangle, Users, FileText, etc.):', 'FileText');
+          const count = parseInt(window.prompt('Enter initial SOP count:', '5') || '0');
           
-          try {
-            const newCategory = dataService.addSOPCategory({
-              name,
-              count,
-              description: ''
-            });
-            sopNotifications.categoryAdded(name);
-            refreshData();
-          } catch (error) {
-            sopNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
+          // Find the actual icon component from imports (simplify)
+          let IconComponent = FileText;
+          
+          const newCategory = {
+            name,
+            count,
+            icon: IconComponent // In reality we'd map string to component
+          };
+          
+          setSopCategoriesData([...sopCategoriesData, newCategory]);
+          alert(`SOP category "${name}" added!`);
         };
 
-        const handleEditSOPCategory = async (category: dataService.SOPCategory) => {
-          const newName = await promptAction('Edit category name:', category.name);
+        const handleEditSOPCategory = (category: any) => {
+          const newName = window.prompt('Edit category name:', category.name);
           if (newName === null) return;
           
-          const newCount = await promptAction('Edit SOP count:', category.count.toString());
+          const newCount = window.prompt('Edit SOP count:', category.count.toString());
           
-          try {
-            const updated = dataService.updateSOPCategory(category.id, {
-              name: newName || category.name,
-              count: newCount ? parseInt(newCount) : category.count
-            });
-            if (updated) {
-              sopNotifications.categoryUpdated(updated.name);
-              refreshData();
-            }
-          } catch (error) {
-            sopNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
+          const updatedCategories = sopCategoriesData.map(c => 
+            c.name === category.name 
+              ? { ...c, name: newName || c.name, count: newCount ? parseInt(newCount) : c.count }
+              : c
+          );
+          
+          setSopCategoriesData(updatedCategories);
+          alert('Category updated!');
         };
 
-        const handleDeleteSOPCategory = async (category: dataService.SOPCategory) => {
-          const confirmed = await confirmAction(
-            `Delete category "${category.name}" and all its SOPs?`,
-            'Delete SOP Category'
-          );
-          if (confirmed) {
-            try {
-              const success = dataService.deleteSOPCategory(category.id);
-              if (success) {
-                sopNotifications.categoryDeleted(category.name);
-                refreshData();
-              }
-            } catch (error) {
-              sopNotifications.error('delete', error instanceof Error ? error.message : undefined);
-            }
+        const handleDeleteSOPCategory = (categoryName: string) => {
+          if (window.confirm(`Delete category "${categoryName}" and all its SOPs?`)) {
+            setSopCategoriesData(sopCategoriesData.filter(c => c.name !== categoryName));
+            alert('Category deleted.');
           }
         };
 
         const handleViewSOPs = (category: any) => {
-          notify.info(
-            `Viewing SOPs in "${category.name}"\n\nThis would open a detailed view with:\n• List of all SOP documents\n• Search and filter\n• Document preview\n• Version history\n• Training completion tracking\n\nTotal SOPs: ${category.count}`,
-            { duration: 5000 }
-          );
+          alert(`Viewing SOPs in "${category.name}"\n\nThis would open a detailed view with:\n• List of all SOP documents\n• Search and filter\n• Document preview\n• Version history\n• Training completion tracking\n\nTotal SOPs: ${category.count}`);
         };
 
         const handleAddSOPDocument = (category: any) => {
           const title = window.prompt(`Add new SOP document to "${category.name}":`);
           if (!title) return;
           
-          sopNotifications.sopAdded(title);
-          notify.info(
-            `SOP "${title}" added to ${category.name}!\n\nIn production, this would:\n• Create a new SOP document\n• Upload PDF/Word file\n• Set version number\n• Assign reviewers\n• Notify team members`,
-            { duration: 5000 }
-          );
+          alert(`SOP "${title}" added to ${category.name}!\n\nIn production, this would:\n• Create a new SOP document\n• Upload PDF/Word file\n• Set version number\n• Assign reviewers\n• Notify team members`);
         };
 
         return (
@@ -971,7 +742,7 @@ export default function Home() {
             {/* SOP Categories Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sopCategoriesData.map((category) => {
-                const Icon = FileText; // Default icon, could map based on category name
+                const Icon = category.icon;
                 return (
                   <div key={category.name} className="border rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition">
                     <div className="flex items-start justify-between">
@@ -992,7 +763,7 @@ export default function Home() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDeleteSOPCategory(category)}
+                          onClick={() => handleDeleteSOPCategory(category.name)}
                           className="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded"
                         >
                           Delete
@@ -1034,13 +805,13 @@ export default function Home() {
                 </div>
                 <div className="flex items-center space-x-3">
                   <button
-                    onClick={() => notify.info('Importing SOP documents...', { duration: 3000 })}
+                    onClick={() => alert('Importing SOP documents...')}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                   >
                     Import SOPs
                   </button>
                   <button
-                    onClick={() => reportNotifications.generating('training')}
+                    onClick={() => alert('Generating training report...')}
                     className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
                   >
                     Training Report
@@ -1051,27 +822,24 @@ export default function Home() {
           </div>
         );
       case 'maintenance':
-        const handleAddMaintenanceTask = async () => {
-          const vehicle = await promptAction('Enter vehicle name:');
+        const handleAddMaintenanceTask = () => {
+          const vehicle = window.prompt('Enter vehicle name:');
           if (!vehicle) return;
           
-          const type = await promptAction('Enter maintenance type (Oil Change, Brake Inspection, Tire Rotation, etc.):');
-          const dueDate = await promptAction('Enter due date (YYYY-MM-DD):', '2026-03-01');
-          const priorityInput = await promptAction('Enter priority (high/medium/low):', 'medium');
-          const priority = (priorityInput === 'high' || priorityInput === 'medium' || priorityInput === 'low') ? priorityInput as 'low' | 'medium' | 'high' : 'medium';
+          const type = window.prompt('Enter maintenance type (Oil Change, Brake Inspection, Tire Rotation, etc.):');
+          const dueDate = window.prompt('Enter due date (YYYY-MM-DD):', '2026-03-01');
+          const priority = window.prompt('Enter priority (high/medium/low):', 'medium');
           
-          try {
-            const newTask = dataService.addMaintenanceTask({
-              vehicle,
-              type: type || 'General Maintenance',
-              dueDate: dueDate || '2026-03-01',
-              priority
-            });
-            maintenanceNotifications.taskAdded(vehicle);
-            refreshData();
-          } catch (error) {
-            maintenanceNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
+          const newTask = {
+            id: maintenanceData.length > 0 ? Math.max(...maintenanceData.map(t => t.id)) + 1 : 1,
+            vehicle,
+            type: type || 'General Maintenance',
+            dueDate: dueDate || '2026-03-01',
+            priority: (priority === 'high' || priority === 'medium' || priority === 'low') ? priority : 'medium'
+          };
+          
+          setMaintenanceData([...maintenanceData, newTask]);
+          alert(`Maintenance task for ${vehicle} added!`);
         };
 
         const handleEditMaintenanceTask = (task: any) => {
@@ -1095,20 +863,20 @@ export default function Home() {
           );
           
           setMaintenanceData(updatedTasks);
-          maintenanceNotifications.taskUpdated();
+          alert('Task updated!');
         };
 
         const handleDeleteMaintenanceTask = (id: number) => {
           if (window.confirm('Delete this maintenance task?')) {
             setMaintenanceData(maintenanceData.filter(t => t.id !== id));
-            maintenanceNotifications.taskDeleted();
+            alert('Task deleted.');
           }
         };
 
         const handleMarkCompleted = (id: number) => {
           if (window.confirm('Mark this task as completed?')) {
             setMaintenanceData(maintenanceData.filter(t => t.id !== id));
-            maintenanceNotifications.taskCompleted();
+            alert('Task marked as completed and removed from list.');
           }
         };
 
@@ -1118,7 +886,7 @@ export default function Home() {
             setMaintenanceData(maintenanceData.map(t => 
               t.id === task.id ? { ...t, dueDate: date } : t
             ));
-            maintenanceNotifications.taskScheduled(date);
+            alert(`Scheduled for ${date}`);
           }
         };
 
@@ -1137,7 +905,7 @@ export default function Home() {
                   <span>+ Add Task</span>
                 </button>
                 <button
-                  onClick={() => reportNotifications.generating('maintenance')}
+                  onClick={() => alert('Generating maintenance report...')}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                 >
                   Report
@@ -1268,7 +1036,7 @@ export default function Home() {
                     View Vehicles
                   </button>
                   <button
-                    onClick={() => reportNotifications.generating('maintenance schedule')}
+                    onClick={() => alert('Generating maintenance schedule...')}
                     className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
                   >
                     Generate Schedule
@@ -1291,29 +1059,17 @@ export default function Home() {
         const highPriorityTasks = maintenanceData.filter(t => t.priority === 'high').length;
 
         const handleGenerateReport = (type: string) => {
-          reportNotifications.generating(type);
-          notify.info(
-            `Generating ${type} report...\n\nThis would create a comprehensive PDF/Excel report with:\n• Executive summary\n• Detailed analytics\n• Charts and graphs\n• Recommendations\n• Export options\n\nReport type: ${type}\nDate range: Last 30 days\nFormat: PDF & Excel`,
-            { duration: 5000 }
-          );
+          alert(`Generating ${type} report...\n\nThis would create a comprehensive PDF/Excel report with:\n• Executive summary\n• Detailed analytics\n• Charts and graphs\n• Recommendations\n• Export options\n\nReport type: ${type}\nDate range: Last 30 days\nFormat: PDF & Excel`);
         };
 
         const handleExportData = () => {
-          reportNotifications.exported();
-          notify.info(
-            'Exporting all data...\n\nPreparing CSV files for:\n• Vehicles\n• Deliveries\n• Maintenance tasks\n• SOP categories\n\nFiles will be downloaded as a ZIP archive.',
-            { duration: 5000 }
-          );
+          alert('Exporting all data...\n\nPreparing CSV files for:\n• Vehicles\n• Deliveries\n• Maintenance tasks\n• SOP categories\n\nFiles will be downloaded as a ZIP archive.');
         };
 
         const handleScheduleReport = () => {
           const email = window.prompt('Enter email for scheduled reports:', 'admin@fleetflow.com');
           if (email) {
-            reportNotifications.scheduled(email);
-            notify.info(
-              `Scheduled reports configured!\n\nDaily reports will be sent to: ${email}\n\nReport types:\n• Daily delivery summary\n• Weekly maintenance schedule\n• Monthly financial overview\n• Quarterly safety compliance`,
-              { duration: 5000 }
-            );
+            alert(`Scheduled reports configured!\n\nDaily reports will be sent to: ${email}\n\nReport types:\n• Daily delivery summary\n• Weekly maintenance schedule\n• Monthly financial overview\n• Quarterly safety compliance`);
           }
         };
 
@@ -1472,7 +1228,7 @@ export default function Home() {
                     Schedule Reports
                   </button>
                   <button
-                    onClick={() => notify.info('Viewing report history...', { duration: 3000 })}
+                    onClick={() => alert('Viewing report history...')}
                     className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
                   >
                     View History
@@ -1766,8 +1522,8 @@ export default function Home() {
               </div>
               <div className="p-4 sm:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  {sopCategoriesData.map((category) => {
-                    const Icon = FileText // Default icon
+                  {sopCategories.map((category) => {
+                    const Icon = category.icon
                     return (
                       <div 
                         key={category.name} 
@@ -1849,12 +1605,12 @@ export default function Home() {
                 <div className="flex items-center justify-between">
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900">Active Deliveries</h2>
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {deliveriesData.filter(d => d.status === 'in-transit').length} in progress
+                    {deliveries.filter(d => d.status === 'in-transit').length} in progress
                   </span>
                 </div>
               </div>
               <div className="divide-y">
-                {deliveriesData.map((delivery) => (
+                {deliveries.map((delivery) => (
                   <div 
                     key={delivery.id} 
                     className="p-4 sm:p-6 hover:bg-gray-50 transition touch-target"
