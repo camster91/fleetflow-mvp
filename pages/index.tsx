@@ -1074,41 +1074,64 @@ export default function Home() {
           }
         };
 
-        const handleEditMaintenanceTask = (task: any) => {
-          const newVehicle = window.prompt('Edit vehicle:', task.vehicle);
+        const handleEditMaintenanceTask = async (task: dataService.MaintenanceTask) => {
+          const newVehicle = await promptAction('Edit vehicle:', task.vehicle);
           if (newVehicle === null) return;
           
-          const newType = window.prompt('Edit type:', task.type);
-          const newDueDate = window.prompt('Edit due date:', task.dueDate);
-          const newPriority = window.prompt('Edit priority:', task.priority);
+          const newType = await promptAction('Edit type:', task.type);
+          const newDueDate = await promptAction('Edit due date:', task.dueDate);
+          const newPriorityInput = await promptAction('Edit priority:', task.priority);
+          const newPriority = (newPriorityInput === 'high' || newPriorityInput === 'medium' || newPriorityInput === 'low') ? newPriorityInput as 'low' | 'medium' | 'high' : task.priority;
           
-          const updatedTasks = maintenanceData.map(t => 
-            t.id === task.id 
-              ? {
-                  ...t,
-                  vehicle: newVehicle || t.vehicle,
-                  type: newType || t.type,
-                  dueDate: newDueDate || t.dueDate,
-                  priority: (newPriority === 'high' || newPriority === 'medium' || newPriority === 'low') ? newPriority : t.priority
-                }
-              : t
-          );
-          
-          setMaintenanceData(updatedTasks);
-          maintenanceNotifications.taskUpdated();
-        };
-
-        const handleDeleteMaintenanceTask = (id: number) => {
-          if (window.confirm('Delete this maintenance task?')) {
-            setMaintenanceData(maintenanceData.filter(t => t.id !== id));
-            maintenanceNotifications.taskDeleted();
+          try {
+            const updated = dataService.updateMaintenanceTask(task.id, {
+              vehicle: newVehicle || task.vehicle,
+              type: newType || task.type,
+              dueDate: newDueDate || task.dueDate,
+              priority: newPriority
+            });
+            if (updated) {
+              maintenanceNotifications.taskUpdated();
+              refreshData();
+            }
+          } catch (error) {
+            maintenanceNotifications.error('update', error instanceof Error ? error.message : undefined);
           }
         };
 
-        const handleMarkCompleted = (id: number) => {
-          if (window.confirm('Mark this task as completed?')) {
-            setMaintenanceData(maintenanceData.filter(t => t.id !== id));
-            maintenanceNotifications.taskCompleted();
+        const handleDeleteMaintenanceTask = async (id: number) => {
+          const confirmed = await confirmAction(
+            'Delete this maintenance task?',
+            'Delete Maintenance Task'
+          );
+          if (confirmed) {
+            try {
+              const success = dataService.deleteMaintenanceTask(id);
+              if (success) {
+                maintenanceNotifications.taskDeleted();
+                refreshData();
+              }
+            } catch (error) {
+              maintenanceNotifications.error('delete', error instanceof Error ? error.message : undefined);
+            }
+          }
+        };
+
+        const handleMarkCompleted = async (id: number) => {
+          const confirmed = await confirmAction(
+            'Mark this task as completed?',
+            'Complete Maintenance Task'
+          );
+          if (confirmed) {
+            try {
+              const success = dataService.updateMaintenanceTask(id, { completed: true, completedDate: new Date().toISOString() });
+              if (success) {
+                maintenanceNotifications.taskCompleted();
+                refreshData();
+              }
+            } catch (error) {
+              maintenanceNotifications.error('complete', error instanceof Error ? error.message : undefined);
+            }
           }
         };
 
