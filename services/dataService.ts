@@ -160,6 +160,113 @@ const defaultMaintenanceTasks: MaintenanceTask[] = [
   { id: 3, vehicle: 'Food Truck 1', type: 'Tire Rotation', dueDate: '2026-03-05', priority: 'low' },
 ]
 
+const defaultClients: Client[] = [
+  {
+    id: 1,
+    name: 'Restaurant A',
+    businessName: 'Downtown Bistro',
+    type: 'restaurant',
+    address: '123 Main St, Cityville, ST 12345',
+    contactPerson: { name: 'John Smith', phone: '(555) 123-4567', email: 'john@restauranta.com' },
+    phone: '(555) 123-4567',
+    email: 'info@restauranta.com',
+    website: 'www.restauranta.com',
+    preferredDeliveryTimes: ['10:00-11:00 AM', '2:00-3:00 PM'],
+    parkingInstructions: 'Use back alley parking lot',
+    dropoffInstructions: 'Deliver to back kitchen door',
+    accessCodes: ['#1234 for back door'],
+    specialRequirements: ['No delivery after 4 PM', 'Call upon arrival'],
+    notes: 'Excellent customer, always tips drivers',
+    lastDeliveryDate: '2026-02-20',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    primaryLocation: { lat: 40.7128, lng: -74.0060, address: '123 Main St' },
+    parkingLocation: { lat: 40.7127, lng: -74.0061, notes: 'Back alley parking' },
+    dropoffLocation: { lat: 40.7128, lng: -74.0059, notes: 'Kitchen entrance' },
+    locationPhotos: [],
+    created: '2026-01-15',
+    updated: '2026-02-20'
+  },
+  {
+    id: 2,
+    name: 'Hotel C',
+    businessName: 'Grand Hotel & Suites',
+    type: 'hotel',
+    address: '789 Pine Rd, Townsville, ST 67890',
+    contactPerson: { name: 'Maria Garcia', phone: '(555) 987-6543', email: 'maria@grandhotel.com' },
+    phone: '(555) 987-6543',
+    email: 'receiving@grandhotel.com',
+    website: 'www.grandhotel.com',
+    preferredDeliveryTimes: ['8:00-10:00 AM', '3:00-5:00 PM'],
+    parkingInstructions: 'Use loading dock at rear',
+    dropoffInstructions: 'Deliver to receiving department, basement level',
+    accessCodes: ['Call extension 345 for receiving'],
+    specialRequirements: ['Must check in with security', 'Use service elevator'],
+    notes: 'Large deliveries every Monday',
+    lastDeliveryDate: '2026-02-22',
+    deliveryFrequency: 'weekly',
+    rating: 4,
+    primaryLocation: { lat: 40.7580, lng: -73.9855, address: '789 Pine Rd' },
+    parkingLocation: { lat: 40.7579, lng: -73.9856, notes: 'Loading dock area' },
+    dropoffLocation: { lat: 40.7580, lng: -73.9854, notes: 'Basement receiving' },
+    locationPhotos: [],
+    created: '2026-01-20',
+    updated: '2026-02-22'
+  },
+  {
+    id: 3,
+    name: 'Office D',
+    businessName: 'TechCorp Headquarters',
+    type: 'office',
+    address: '321 Elm St, Tech Park, ST 54321',
+    contactPerson: { name: 'David Chen', phone: '(555) 456-7890', email: 'david@techcorp.com' },
+    phone: '(555) 456-7890',
+    email: 'facilities@techcorp.com',
+    website: 'www.techcorp.com',
+    preferredDeliveryTimes: ['9:00 AM-12:00 PM'],
+    parkingInstructions: 'Visitor parking, level P2',
+    dropoffInstructions: 'Front desk, building lobby',
+    accessCodes: ['Badge required for parking garage'],
+    specialRequirements: ['Security clearance needed', 'Must sign in at front desk'],
+    notes: 'New client, first delivery scheduled',
+    lastDeliveryDate: '2026-02-18',
+    deliveryFrequency: 'as-needed',
+    rating: 3,
+    primaryLocation: { lat: 40.7420, lng: -74.0040, address: '321 Elm St' },
+    parkingLocation: { lat: 40.7419, lng: -74.0041, notes: 'Visitor parking P2' },
+    dropoffLocation: { lat: 40.7421, lng: -74.0039, notes: 'Main lobby' },
+    locationPhotos: [],
+    created: '2026-02-10',
+    updated: '2026-02-18'
+  },
+  {
+    id: 4,
+    name: 'Cafe B',
+    businessName: 'Morning Brew Cafe',
+    type: 'restaurant',
+    address: '456 Oak Ave, Village Center, ST 45678',
+    contactPerson: { name: 'Sarah Johnson', phone: '(555) 234-5678', email: 'sarah@morningbrew.com' },
+    phone: '(555) 234-5678',
+    email: 'orders@morningbrew.com',
+    website: 'www.morningbrew.com',
+    preferredDeliveryTimes: ['7:00-8:00 AM', '1:00-2:00 PM'],
+    parkingInstructions: 'Street parking only, 15-minute limit',
+    dropoffInstructions: 'Side entrance next to dumpster',
+    accessCodes: ['Knock on metal door 3 times'],
+    specialRequirements: ['Quiet delivery before 8 AM', 'No horn honking'],
+    notes: 'Early morning deliveries only',
+    lastDeliveryDate: '2026-02-21',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    primaryLocation: { lat: 40.7282, lng: -74.0030, address: '456 Oak Ave' },
+    parkingLocation: { lat: 40.7281, lng: -74.0031, notes: 'Street parking zone' },
+    dropoffLocation: { lat: 40.7283, lng: -74.0029, notes: 'Side alley entrance' },
+    locationPhotos: [],
+    created: '2026-01-25',
+    updated: '2026-02-21'
+  }
+]
+
 // Storage keys
 const STORAGE_KEYS = {
   VEHICLES: 'fleetflow-vehicles',
@@ -167,6 +274,7 @@ const STORAGE_KEYS = {
   SOP_CATEGORIES: 'fleetflow-sop-categories',
   MAINTENANCE_TASKS: 'fleetflow-maintenance-tasks',
   ANNOUNCEMENTS: 'fleetflow-announcements',
+  CLIENTS: 'fleetflow-clients',
 }
 
 // Initialize data
@@ -185,6 +293,9 @@ const initializeData = () => {
   }
   if (!localStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS)) {
     localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify([]))
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.CLIENTS)) {
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(defaultClients))
   }
 }
 
@@ -217,6 +328,12 @@ export const getAnnouncements = (): Announcement[] => {
   initializeData()
   const data = localStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS)
   return data ? JSON.parse(data) : []
+}
+
+export const getClients = (): Client[] => {
+  initializeData()
+  const data = localStorage.getItem(STORAGE_KEYS.CLIENTS)
+  return data ? JSON.parse(data) : defaultClients
 }
 
 // CRUD operations for Vehicles
@@ -381,6 +498,63 @@ export const addAnnouncement = (announcement: Omit<Announcement, 'id' | 'timesta
   return newAnnouncement
 }
 
+// CRUD operations for Clients
+export const addClient = (client: Omit<Client, 'id' | 'created' | 'updated'>): Client => {
+  const clients = getClients()
+  const newId = clients.length > 0 ? Math.max(...clients.map(c => c.id)) + 1 : 1
+  const now = new Date().toISOString()
+  const newClient: Client = {
+    ...client,
+    id: newId,
+    created: now,
+    updated: now,
+  }
+  const updatedClients = [...clients, newClient]
+  localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(updatedClients))
+  return newClient
+}
+
+export const updateClient = (id: number, updates: Partial<Omit<Client, 'id' | 'created'>>): Client | null => {
+  const clients = getClients()
+  const index = clients.findIndex(c => c.id === id)
+  if (index === -1) return null
+  
+  const updatedClient = {
+    ...clients[index],
+    ...updates,
+    updated: new Date().toISOString(),
+  }
+  clients[index] = updatedClient
+  localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(clients))
+  return updatedClient
+}
+
+export const deleteClient = (id: number): boolean => {
+  const clients = getClients()
+  const filtered = clients.filter(c => c.id !== id)
+  if (filtered.length === clients.length) return false
+  
+  localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(filtered))
+  return true
+}
+
+export const searchClients = (query: string): Client[] => {
+  const clients = getClients()
+  const lowerQuery = query.toLowerCase()
+  return clients.filter(client => 
+    client.name.toLowerCase().includes(lowerQuery) ||
+    client.businessName?.toLowerCase().includes(lowerQuery) ||
+    client.address.toLowerCase().includes(lowerQuery) ||
+    client.contactPerson?.name.toLowerCase().includes(lowerQuery) ||
+    client.type.toLowerCase().includes(lowerQuery)
+  )
+}
+
+export const getClientById = (id: number): Client | null => {
+  const clients = getClients()
+  return clients.find(client => client.id === id) || null
+}
+
 // Statistics
 export const getStats = () => {
   const vehicles = getVehicles()
@@ -406,6 +580,7 @@ export const resetToDefault = () => {
   localStorage.removeItem(STORAGE_KEYS.SOP_CATEGORIES)
   localStorage.removeItem(STORAGE_KEYS.MAINTENANCE_TASKS)
   localStorage.removeItem(STORAGE_KEYS.ANNOUNCEMENTS)
+  localStorage.removeItem(STORAGE_KEYS.CLIENTS)
   initializeData()
   return true
 }

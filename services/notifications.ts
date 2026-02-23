@@ -120,6 +120,16 @@ export const announcementNotifications = {
   error: (error?: string) => notify.error(`Failed to send announcement. ${error ? `Error: ${error}` : 'Please try again.'}`),
 };
 
+export const clientNotifications = {
+  added: (name: string) => notify.success(`Client "${name}" added successfully!`),
+  updated: (name: string) => notify.success(`Client "${name}" updated!`),
+  deleted: (name: string) => notify.success(`Client "${name}" deleted successfully.`),
+  locationPhotoAdded: (location: string) => notify.success(`Location photo added for ${location}!`),
+  locationPinAdded: (location: string) => notify.success(`Location pin added for ${location}!`),
+  error: (action: string, error?: string) => 
+    notify.error(`Failed to ${action} client. ${error ? `Error: ${error}` : 'Please try again.'}`),
+};
+
 export const reportNotifications = {
   generating: (type: string) => notify.loading(`Generating ${type} report...`),
   generated: (type: string) => notify.success(`${type} report generated successfully!`),

@@ -6,7 +6,7 @@ import {
   MessageSquare, Download, Upload, Settings, Bell,
   Search, Menu, X, ChevronRight, Filter, SortAsc,
   Phone, Mail, Map as MapIcon, FileText, Home as HomeIcon, DollarSign,
-  Camera, MapPin as MapPinIcon, Building, Car
+  Camera, MapPin as MapPinIcon, Building, Car, Star
 } from 'lucide-react'
 import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
@@ -19,6 +19,7 @@ import {
   sopNotifications,
   maintenanceNotifications,
   announcementNotifications,
+  clientNotifications,
   reportNotifications,
   confirmAction,
   promptAction
@@ -56,7 +57,7 @@ export default function Home() {
         setMaintenanceData(dataService.getMaintenanceTasks())
         setSopCategoriesData(dataService.getSOPCategories())
         setAnnouncements(dataService.getAnnouncements())
-        // Clients not yet implemented in dataService
+        setClients(dataService.getClients())
         setIsLoading(false)
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -319,6 +320,7 @@ export default function Home() {
     setMaintenanceData(dataService.getMaintenanceTasks())
     setSopCategoriesData(dataService.getSOPCategories())
     setAnnouncements(dataService.getAnnouncements())
+    setClients(dataService.getClients())
   }
 
   // Management content renderer
@@ -1306,6 +1308,340 @@ export default function Home() {
             </div>
           </div>
         );
+      case 'clients':
+        const handleAddClient = async () => {
+          const name = await promptAction('Enter client name:');
+          if (!name) return;
+          
+          const businessName = await promptAction('Enter business name (optional):', '');
+          if (businessName === null) return; // User cancelled
+          
+          const typeInput = await promptAction('Enter client type (restaurant/hotel/office/retail/warehouse/other):', 'restaurant');
+          if (typeInput === null) return;
+          
+          const address = await promptAction('Enter client address:');
+          if (address === null) return;
+          
+          const phone = await promptAction('Enter phone number (optional):', '');
+          if (phone === null) return;
+          
+          const email = await promptAction('Enter email (optional):', '');
+          if (email === null) return;
+          
+          // Validate type
+          const validTypes = ['restaurant', 'hotel', 'office', 'retail', 'warehouse', 'other'] as const;
+          const type = validTypes.includes(typeInput as any) ? typeInput as dataService.Client['type'] : 'other';
+          
+          try {
+            const newClient = dataService.addClient({
+              name,
+              businessName: businessName || undefined,
+              type,
+              address,
+              phone: phone || undefined,
+              email: email || undefined,
+              // Default values for other fields
+              deliveryFrequency: 'as-needed',
+              rating: 3,
+            });
+            clientNotifications.added(name);
+            refreshData();
+          } catch (error) {
+            clientNotifications.error('add', error instanceof Error ? error.message : undefined);
+          }
+        };
+
+        const handleEditClient = async (client: dataService.Client) => {
+          const newName = await promptAction('Edit client name:', client.name);
+          if (newName === null) return;
+          
+          const newBusinessName = await promptAction('Edit business name:', client.businessName || '');
+          const newTypeInput = await promptAction('Edit client type:', client.type);
+          const newAddress = await promptAction('Edit address:', client.address);
+          const newPhone = await promptAction('Edit phone:', client.phone || '');
+          const newEmail = await promptAction('Edit email:', client.email || '');
+          
+          // If user cancels any prompt (returns null), keep original value
+          // For optional fields, empty string is allowed
+          const updates: Partial<dataService.Client> = {
+            name: newName || client.name,
+          };
+          
+          if (newBusinessName !== null) {
+            updates.businessName = newBusinessName || client.businessName;
+          }
+          
+          if (newTypeInput !== null) {
+            const validTypes = ['restaurant', 'hotel', 'office', 'retail', 'warehouse', 'other'] as const;
+            updates.type = validTypes.includes(newTypeInput as any) ? newTypeInput as dataService.Client['type'] : client.type;
+          }
+          
+          if (newAddress !== null) {
+            updates.address = newAddress || client.address;
+          }
+          
+          if (newPhone !== null) {
+            updates.phone = newPhone || client.phone;
+          }
+          
+          if (newEmail !== null) {
+            updates.email = newEmail || client.email;
+          }
+          
+          try {
+            const updated = dataService.updateClient(client.id, updates);
+            
+            if (updated) {
+              clientNotifications.updated(updated.name);
+              refreshData();
+            }
+          } catch (error) {
+            clientNotifications.error('update', error instanceof Error ? error.message : undefined);
+          }
+        };
+
+        const handleDeleteClient = async (id: number) => {
+          const confirmed = await confirmAction(
+            'Are you sure you want to delete this client? This action cannot be undone.',
+            'Delete Client'
+          );
+          if (confirmed) {
+            try {
+              const client = clients.find(c => c.id === id);
+              const success = dataService.deleteClient(id);
+              if (success) {
+                clientNotifications.deleted(client?.name || 'Client');
+                refreshData();
+              }
+            } catch (error) {
+              clientNotifications.error('delete', error instanceof Error ? error.message : undefined);
+            }
+          }
+        };
+
+        const handleViewClientDetails = (client: dataService.Client) => {
+          notify.info(
+            `Client Details: ${client.name}\n\n` +
+            `Business: ${client.businessName || 'N/A'}\n` +
+            `Type: ${client.type}\n` +
+            `Address: ${client.address}\n` +
+            `Phone: ${client.phone || 'N/A'}\n` +
+            `Email: ${client.email || 'N/A'}\n` +
+            `Delivery Frequency: ${client.deliveryFrequency || 'as-needed'}\n` +
+            `Rating: ${client.rating || 'Not rated'}\n` +
+            `Last Delivery: ${client.lastDeliveryDate || 'Never'}`,
+            { duration: 5000 }
+          );
+        };
+
+        const handleAddLocationPhoto = async (client: dataService.Client) => {
+          const caption = await promptAction('Enter caption for location photo:', 'Front entrance');
+          if (caption) {
+            // In production, this would open file picker and upload
+            clientNotifications.locationPhotoAdded(client.name);
+            notify.info(
+              `Location photo upload for ${client.name}\n\n` +
+              `Caption: ${caption}\n\n` +
+              `In production, this would:\n` +
+              `• Open file picker for image\n` +
+              `• Capture GPS coordinates\n` +
+              `• Upload to cloud storage\n` +
+              `• Link to client profile`,
+              { duration: 5000 }
+            );
+          }
+        };
+
+        const handleAddLocationPin = async (client: dataService.Client) => {
+          const notes = await promptAction('Enter notes for location pin:', 'Parking spot');
+          if (notes) {
+            // In production, this would open map for pin placement
+            clientNotifications.locationPinAdded(client.name);
+            notify.info(
+              `Location pin for ${client.name}\n\n` +
+              `Notes: ${notes}\n\n` +
+              `In production, this would:\n` +
+              `• Open interactive map\n` +
+              `• Allow pin placement\n` +
+              `• Capture GPS coordinates\n` +
+              `• Save to client profile`,
+              { duration: 5000 }
+            );
+          }
+        };
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Client Database</h2>
+                <p className="text-gray-600 mt-1">Manage client information, delivery preferences, and location data</p>
+              </div>
+              <button
+                onClick={handleAddClient}
+                className="mt-4 md:mt-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center space-x-2"
+              >
+                <span>+ Add Client</span>
+              </button>
+            </div>
+
+            {/* Client Statistics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-700">Total Clients</p>
+                <p className="text-2xl font-bold text-blue-900 mt-1">{clients.length}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-700">Restaurants</p>
+                <p className="text-2xl font-bold text-green-900 mt-1">
+                  {clients.filter(c => c.type === 'restaurant').length}
+                </p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm text-purple-700">Hotels</p>
+                <p className="text-2xl font-bold text-purple-900 mt-1">
+                  {clients.filter(c => c.type === 'hotel').length}
+                </p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-sm text-orange-700">Avg. Rating</p>
+                <p className="text-2xl font-bold text-orange-900 mt-1">
+                  {clients.length > 0 
+                    ? (clients.reduce((sum, c) => sum + (c.rating || 0), 0) / clients.length).toFixed(1)
+                    : '0.0'}
+                </p>
+              </div>
+            </div>
+
+            {/* Client List */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Client</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Type</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Address</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Last Delivery</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Rating</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clients.map((client) => (
+                    <tr key={client.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        <div>
+                          <p className="font-medium text-gray-900">{client.name}</p>
+                          <p className="text-sm text-gray-600">{client.businessName || 'No business name'}</p>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          client.type === 'restaurant' ? 'bg-blue-100 text-blue-800' :
+                          client.type === 'hotel' ? 'bg-purple-100 text-purple-800' :
+                          client.type === 'office' ? 'bg-green-100 text-green-800' :
+                          client.type === 'retail' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {client.type}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate">{client.address}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600">
+                        {client.lastDeliveryDate ? new Date(client.lastDeliveryDate).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center">
+                          {[1,2,3,4,5].map((star) => (
+                            <Star 
+                              key={star} 
+                              className={`h-4 w-4 ${star <= (client.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
+                            />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleViewClientDetails(client)}
+                            className="px-3 py-1 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleEditClient(client)}
+                            className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClient(client.id)}
+                            className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                          >
+                            Delete
+                          </button>
+                          <div className="relative group">
+                            <button className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                              More
+                            </button>
+                            <div className="absolute right-0 mt-1 w-48 bg-white border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                              <button
+                                onClick={() => handleAddLocationPhoto(client)}
+                                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                              >
+                                Add Location Photo
+                              </button>
+                              <button
+                                onClick={() => handleAddLocationPin(client)}
+                                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                              >
+                                Add Location Pin
+                              </button>
+                              <button
+                                onClick={() => notify.info(`Opening delivery history for ${client.name}`)}
+                                className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                              >
+                                View Delivery History
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Client Features */}
+            <div className="mt-8 p-6 bg-blue-50 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-medium text-blue-900">Client Location Features</h3>
+              <p className="text-blue-700 mt-2">
+                The client database supports location intelligence for better deliveries:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="bg-white p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 flex items-center">
+                    <Camera className="h-5 w-5 text-blue-600 mr-2" />
+                    Location Photos
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Drivers can upload photos of parking spots, entrances, and delivery areas for each client location.
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-lg">
+                  <h4 className="font-medium text-gray-900 flex items-center">
+                    <MapPin className="h-5 w-5 text-blue-600 mr-2" />
+                    Location Pins
+                  </h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Dispatchers can place precise GPS pins on maps for exact delivery locations and parking spots.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       case 'reports':
         // Calculate report statistics
         const totalVehicles = vehiclesData.length;
@@ -1640,7 +1976,7 @@ export default function Home() {
           {/* Navigation Tabs - Responsive */}
           <nav className="mt-4 overflow-x-auto scroll-container">
             <div className="flex space-x-1 sm:space-x-6 min-w-max pb-1">
-              {['overview', 'vehicles', 'deliveries', 'sops', 'maintenance', 'reports'].map((tab) => (
+              {['overview', 'vehicles', 'deliveries', 'sops', 'maintenance', 'clients', 'reports'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
