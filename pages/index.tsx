@@ -913,8 +913,8 @@ export default function Home() {
           );
         };
 
-        const handleAddSOPDocument = (category: any) => {
-          const title = window.prompt(`Add new SOP document to "${category.name}":`);
+        const handleAddSOPDocument = async (category: dataService.SOPCategory) => {
+          const title = await promptAction(`Add new SOP document to "${category.name}":`);
           if (!title) return;
           
           sopNotifications.sopAdded(title);
@@ -1135,13 +1135,18 @@ export default function Home() {
           }
         };
 
-        const handleScheduleMaintenance = (task: any) => {
-          const date = window.prompt('Schedule maintenance date (YYYY-MM-DD):', task.dueDate);
+        const handleScheduleMaintenance = async (task: dataService.MaintenanceTask) => {
+          const date = await promptAction('Schedule maintenance date (YYYY-MM-DD):', task.dueDate);
           if (date) {
-            setMaintenanceData(maintenanceData.map(t => 
-              t.id === task.id ? { ...t, dueDate: date } : t
-            ));
-            maintenanceNotifications.taskScheduled(date);
+            try {
+              const updated = dataService.updateMaintenanceTask(task.id, { dueDate: date });
+              if (updated) {
+                maintenanceNotifications.taskScheduled(date);
+                refreshData();
+              }
+            } catch (error) {
+              maintenanceNotifications.error('schedule', error instanceof Error ? error.message : undefined);
+            }
           }
         };
 
@@ -1329,8 +1334,8 @@ export default function Home() {
           );
         };
 
-        const handleScheduleReport = () => {
-          const email = window.prompt('Enter email for scheduled reports:', 'admin@fleetflow.com');
+        const handleScheduleReport = async () => {
+          const email = await promptAction('Enter email for scheduled reports:', 'admin@fleetflow.com');
           if (email) {
             reportNotifications.scheduled(email);
             notify.info(
@@ -1956,7 +1961,7 @@ export default function Home() {
               </div>
               <div className="p-4 sm:p-6">
                 <div className="space-y-3">
-                  {maintenanceTasks.map((task) => (
+                  {maintenanceData.map((task) => (
                     <div 
                       key={task.id} 
                       className="border rounded-lg p-4 hover:border-orange-300 transition touch-target"

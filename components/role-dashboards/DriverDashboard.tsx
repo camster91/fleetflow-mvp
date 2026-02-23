@@ -4,6 +4,7 @@ import {
   CheckCircle, AlertTriangle, Phone, MessageSquare,
   FileText, Battery, Wrench, Shield, Home
 } from 'lucide-react';
+import { notify, confirmAction, promptAction } from '../../services/notifications';
 
 interface DeliveryAssignment {
   id: number;
@@ -61,17 +62,24 @@ const DriverDashboard: React.FC = () => {
     }
   };
 
-  const handleSOS = () => {
+  const handleSOS = async () => {
     if (!sosActive) {
-      if (window.confirm('Activate emergency SOS? This will notify dispatch and emergency contacts.')) {
+      const confirmed = await confirmAction(
+        'Activate emergency SOS? This will notify dispatch and emergency contacts.',
+        'Emergency SOS'
+      );
+      if (confirmed) {
         setSosActive(true);
         setTimeout(() => {
-          alert('SOS Activated! Help is on the way.\n\nDispatch has been notified.\nEmergency contacts have been alerted.\nYour location is being tracked.');
+          notify.info(
+            'SOS Activated! Help is on the way.\n\nDispatch has been notified.\nEmergency contacts have been alerted.\nYour location is being tracked.',
+            { duration: 5000 }
+          );
         }, 100);
       }
     } else {
       setSosActive(false);
-      alert('SOS Deactivated. Emergency services notified.');
+      notify.info('SOS Deactivated. Emergency services notified.', { duration: 3000 });
     }
   };
 
@@ -79,16 +87,22 @@ const DriverDashboard: React.FC = () => {
     if (currentDelivery) {
       const address = encodeURIComponent(currentDelivery.address);
       const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${address}&travelmode=driving`;
-      alert(`Starting navigation to:\n${currentDelivery.address}\n\nCustomer: ${currentDelivery.customer}\nTime Window: ${currentDelivery.timeWindow}\nItems: ${currentDelivery.items}\n\nIn production, this would open Google Maps with turn-by-turn navigation.`);
+      notify.info(
+        `Starting navigation to:\n${currentDelivery.address}\n\nCustomer: ${currentDelivery.customer}\nTime Window: ${currentDelivery.timeWindow}\nItems: ${currentDelivery.items}\n\nIn production, this would open Google Maps with turn-by-turn navigation.`,
+        { duration: 5000 }
+      );
       // window.open(mapsUrl, '_blank');
     }
   };
 
-  const handleCompleteDelivery = () => {
+  const handleCompleteDelivery = async () => {
     if (currentDelivery) {
-      const signature = window.prompt('Customer signature (type name for demo):');
+      const signature = await promptAction('Customer signature (type name for demo):');
       if (signature) {
-        alert(`Delivery completed!\n\nCustomer: ${currentDelivery.customer}\nSignature: ${signature}\nTime: ${new Date().toLocaleTimeString()}\n\nProof of delivery recorded.`);
+        notify.info(
+          `Delivery completed!\n\nCustomer: ${currentDelivery.customer}\nSignature: ${signature}\nTime: ${new Date().toLocaleTimeString()}\n\nProof of delivery recorded.`,
+          { duration: 5000 }
+        );
         setCurrentDelivery({
           ...currentDelivery,
           status: 'completed'
@@ -97,10 +111,13 @@ const DriverDashboard: React.FC = () => {
     }
   };
 
-  const handleReportIssue = () => {
-    const issue = window.prompt('Describe the issue:');
+  const handleReportIssue = async () => {
+    const issue = await promptAction('Describe the issue:');
     if (issue) {
-      alert(`Issue reported:\n"${issue}"\n\nDispatch has been notified. Maintenance ticket created.`);
+      notify.info(
+        `Issue reported:\n"${issue}"\n\nDispatch has been notified. Maintenance ticket created.`,
+        { duration: 5000 }
+      );
     }
   };
 

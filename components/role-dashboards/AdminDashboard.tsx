@@ -51,10 +51,10 @@ const AdminDashboard: React.FC = () => {
     { id: 5, action: 'Security audit', user: 'Admin', time: '2 days ago', details: 'Completed quarterly security review' },
   ];
 
-  const handleAddUser = () => {
-    const name = window.prompt('Enter user name:');
-    const email = window.prompt('Enter user email:');
-    const role = window.prompt('Enter role (admin, fleet_manager, dispatch, driver, maintenance, safety_officer, finance):');
+  const handleAddUser = async () => {
+    const name = await promptAction('Enter user name:');
+    const email = await promptAction('Enter user email:');
+    const role = await promptAction('Enter role (admin, fleet_manager, dispatch, driver, maintenance, safety_officer, finance):');
     
     if (name && email && role) {
       notify.info(
@@ -64,15 +64,19 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleEditUser = (user: User) => {
-    const newRole = window.prompt(`Edit role for ${user.name}:`, user.role);
+  const handleEditUser = async (user: User) => {
+    const newRole = await promptAction(`Edit role for ${user.name}:`, user.role);
     if (newRole) {
       notify.info(`Updated ${user.name}'s role to ${newRole}`, { duration: 3000 });
     }
   };
 
-  const handleDeleteUser = (user: User) => {
-    if (window.confirm(`Are you sure you want to delete ${user.name}? This action cannot be undone.`)) {
+  const handleDeleteUser = async (user: User) => {
+    const confirmed = await confirmAction(
+      `Are you sure you want to delete ${user.name}? This action cannot be undone.`,
+      'Delete User'
+    );
+    if (confirmed) {
       notify.info(`User ${user.name} deleted successfully.`, { duration: 3000 });
     }
   };

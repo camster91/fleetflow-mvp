@@ -1,4 +1,5 @@
 // Notification service using react-hot-toast
+import React from 'react';
 import toast from 'react-hot-toast';
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning' | 'loading';
@@ -6,7 +7,7 @@ type NotificationType = 'success' | 'error' | 'info' | 'warning' | 'loading';
 export interface NotificationOptions {
   duration?: number;
   position?: 'top-left' | 'top-center' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
-  icon?: string | React.ReactNode;
+  icon?: string | React.ReactElement;
   style?: React.CSSProperties;
   className?: string;
 }
