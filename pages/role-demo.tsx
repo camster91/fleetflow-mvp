@@ -3,6 +3,7 @@ import { RoleProvider } from '../context/RoleContext';
 import RoleSwitcher from '../components/RoleSwitcher';
 import AdminDashboard from '../components/role-dashboards/AdminDashboard';
 import DriverDashboard from '../components/role-dashboards/DriverDashboard';
+import DispatchDashboard from '../components/role-dashboards/DispatchDashboard';
 import { useRole } from '../context/RoleContext';
 
 // We'll create simplified versions of other dashboards for now
@@ -44,35 +45,7 @@ const FleetManagerDashboard: React.FC = () => {
   );
 };
 
-const DispatchDashboard: React.FC = () => {
-  return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dispatch Dashboard</h1>
-              <p className="text-gray-600 mt-1">Delivery assignments, route optimization, driver communication</p>
-            </div>
-            <div className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-              Dispatch View
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="col-span-2 p-4 border rounded-lg">
-              <h3 className="font-semibold text-gray-900 mb-3">Assignment Board</h3>
-              <p className="text-gray-600">Drag-and-drop interface for assigning deliveries to drivers</p>
-            </div>
-            <div className="p-4 border rounded-lg">
-              <h3 className="font-semibold text-gray-900 mb-3">Driver Availability</h3>
-              <p className="text-gray-600">Real-time status of all drivers</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+
 
 const MaintenanceDashboard: React.FC = () => {
   return (
