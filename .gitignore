@@ -45,3 +45,4 @@ dev2.err
 # temp files
 *.tmp
 *.temp
+/generated/prisma
