@@ -113,6 +113,8 @@ export interface Client {
   dropoffInstructions?: string
   accessCodes?: string[]
   specialRequirements?: string[]
+  businessHours?: string
+  securityNotes?: string
   
   // Notes and history
   notes?: string
@@ -176,6 +178,8 @@ const defaultClients: Client[] = [
     dropoffInstructions: 'Deliver to back kitchen door',
     accessCodes: ['#1234 for back door'],
     specialRequirements: ['No delivery after 4 PM', 'Call upon arrival'],
+    businessHours: 'Mon-Sun 11am-10pm',
+    securityNotes: 'Back door requires code after 6pm',
     notes: 'Excellent customer, always tips drivers',
     lastDeliveryDate: '2026-02-20',
     deliveryFrequency: 'daily',
@@ -202,6 +206,8 @@ const defaultClients: Client[] = [
     dropoffInstructions: 'Deliver to receiving department, basement level',
     accessCodes: ['Call extension 345 for receiving'],
     specialRequirements: ['Must check in with security', 'Use service elevator'],
+    businessHours: '24/7 receiving',
+    securityNotes: 'Security desk must be notified before entry',
     notes: 'Large deliveries every Monday',
     lastDeliveryDate: '2026-02-22',
     deliveryFrequency: 'weekly',
@@ -228,6 +234,8 @@ const defaultClients: Client[] = [
     dropoffInstructions: 'Front desk, building lobby',
     accessCodes: ['Badge required for parking garage'],
     specialRequirements: ['Security clearance needed', 'Must sign in at front desk'],
+    businessHours: 'Mon-Fri 8am-6pm',
+    securityNotes: 'All deliveries must be logged at front desk',
     notes: 'New client, first delivery scheduled',
     lastDeliveryDate: '2026-02-18',
     deliveryFrequency: 'as-needed',
@@ -254,6 +262,8 @@ const defaultClients: Client[] = [
     dropoffInstructions: 'Side entrance next to dumpster',
     accessCodes: ['Knock on metal door 3 times'],
     specialRequirements: ['Quiet delivery before 8 AM', 'No horn honking'],
+    businessHours: 'Mon-Fri 6am-4pm, Sat 7am-3pm, Sun closed',
+    securityNotes: 'Alley gate may be locked after 3pm',
     notes: 'Early morning deliveries only',
     lastDeliveryDate: '2026-02-21',
     deliveryFrequency: 'daily',

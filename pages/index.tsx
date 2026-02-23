@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
+import ClientDetailModal from '../components/ClientDetailModal'
 import MobileMenu from '../components/MobileMenu'
 import * as dataService from '../services/dataService'
 import { 
@@ -36,6 +37,9 @@ export default function Home() {
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false)
   const [isVehicleDetailModalOpen, setIsVehicleDetailModalOpen] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
+  const [isClientDetailModalOpen, setIsClientDetailModalOpen] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<dataService.Client | null>(null)
+  const [clientModalEditMode, setClientModalEditMode] = useState(false)
   const [vehicleFilter, setVehicleFilter] = useState('all')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
@@ -162,6 +166,22 @@ export default function Home() {
   const handleCloseVehicleDetailModal = () => {
     setIsVehicleDetailModalOpen(false)
     setSelectedVehicle(null)
+  }
+
+  const handleOpenClientDetailModal = (client: dataService.Client, editMode: boolean = false) => {
+    setSelectedClient(client)
+    setClientModalEditMode(editMode)
+    setIsClientDetailModalOpen(true)
+  }
+
+  const handleCloseClientDetailModal = () => {
+    setIsClientDetailModalOpen(false)
+    setSelectedClient(null)
+    setClientModalEditMode(false)
+  }
+
+  const handleClientUpdated = () => {
+    refreshData()
   }
 
   const handleHelpSupport = () => {
@@ -1420,18 +1440,7 @@ export default function Home() {
         };
 
         const handleViewClientDetails = (client: dataService.Client) => {
-          notify.info(
-            `Client Details: ${client.name}\n\n` +
-            `Business: ${client.businessName || 'N/A'}\n` +
-            `Type: ${client.type}\n` +
-            `Address: ${client.address}\n` +
-            `Phone: ${client.phone || 'N/A'}\n` +
-            `Email: ${client.email || 'N/A'}\n` +
-            `Delivery Frequency: ${client.deliveryFrequency || 'as-needed'}\n` +
-            `Rating: ${client.rating || 'Not rated'}\n` +
-            `Last Delivery: ${client.lastDeliveryDate || 'Never'}`,
-            { duration: 5000 }
-          );
+          handleOpenClientDetailModal(client);
         };
 
         const handleAddLocationPhoto = async (client: dataService.Client) => {
@@ -1569,7 +1578,7 @@ export default function Home() {
                             View
                           </button>
                           <button
-                            onClick={() => handleEditClient(client)}
+                            onClick={() => handleOpenClientDetailModal(client, true)}
                             className="px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
                           >
                             Edit
@@ -2493,6 +2502,13 @@ export default function Home() {
         isOpen={isVehicleDetailModalOpen}
         onClose={handleCloseVehicleDetailModal}
         vehicle={selectedVehicle}
+      />
+      <ClientDetailModal
+        isOpen={isClientDetailModalOpen}
+        onClose={handleCloseClientDetailModal}
+        client={selectedClient}
+        onClientUpdated={handleClientUpdated}
+        initialEditing={clientModalEditMode}
       />
 
       {/* Global Styles for Mobile Optimization */}
