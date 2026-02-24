@@ -186,24 +186,15 @@ export default function Home() {
 
   const handleHelpSupport = () => {
     notify.info(
-      'FleetFlow Pro Support\n\n' +
-      'Email: support@fleetflow.com\n' +
-      'Phone: 1-800-FLEETFLOW\n' +
-      'Hours: Mon-Fri 8am-6pm EST\n\n' +
-      'Visit our documentation: docs.fleetflow.com',
-      { duration: 5000 }
+      'Support contact information would be displayed here.',
+      { duration: 3000 }
     )
   }
 
   const handleSettings = () => {
     notify.info(
-      'Settings feature coming soon!\n\n' +
-      'You\'ll be able to customize:\n' +
-      '• Dashboard preferences\n' +
-      '• Notification settings\n' +
-      '• User permissions\n' +
-      '• Integration settings',
-      { duration: 5000 }
+      'Settings panel would open here.',
+      { duration: 3000 }
     )
   }
 
@@ -211,12 +202,8 @@ export default function Home() {
     const demoAddress = '1600+Amphitheatre+Parkway,+Mountain+View,+CA'
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${demoAddress}&travelmode=driving`
     notify.info(
-      'Opening Google Maps demo with navigation to:\n\n' +
-      'Google Headquarters\n' +
-      '1600 Amphitheatre Parkway\n' +
-      'Mountain View, CA\n\n' +
-      'Note: In a production app, this would integrate with real vehicle GPS data.',
-      { duration: 5000 }
+      'Google Maps integration demo - navigation would open in new tab.',
+      { duration: 3000 }
     )
     // In a real app, we would window.open(mapsUrl, '_blank')
     // For demo purposes, we'll just show the notification
@@ -224,27 +211,15 @@ export default function Home() {
 
   const handleUploadSOP = () => {
     notify.info(
-      'SOP Upload Demo\n\n' +
-      'In a production app, this would:\n' +
-      '1. Open file picker for PDF/Word/Video files\n' +
-      '2. Upload to cloud storage\n' +
-      '3. Parse and categorize content\n' +
-      '4. Notify relevant team members\n\n' +
-      'For now, try the "SOP Library" section to view existing procedures.',
-      { duration: 5000 }
+      'SOP upload feature would open file dialog.',
+      { duration: 3000 }
     )
   }
 
   const handlePlanRoute = () => {
     notify.info(
-      'Route Planning Demo\n\n' +
-      'This feature would integrate with:\n' +
-      '• Google Maps API for optimal routing\n' +
-      '• Real-time traffic data\n' +
-      '• Delivery time windows\n' +
-      '• Vehicle capacity constraints\n\n' +
-      'Try the "Google Maps Integration" demo above for navigation.',
-      { duration: 5000 }
+      'Route planning feature would open planning interface.',
+      { duration: 3000 }
     )
   }
 
@@ -294,27 +269,15 @@ export default function Home() {
 
   const handleCallDriver = (driverName: string) => {
     notify.info(
-      `Calling ${driverName}...\n\n` +
-      'In a production app, this would:\n' +
-      '• Dial the driver\'s registered phone number\n' +
-      '• Log the call for compliance\n' +
-      '• Record call duration and purpose\n' +
-      '• Update driver communication history\n\n' +
-      'Phone: +1 (555) 123-4567',
-      { duration: 5000 }
+      `Call driver feature would dial ${driverName}.`,
+      { duration: 3000 }
     )
   }
 
   const handleNavigateToAddress = (address: string) => {
     notify.info(
-      `Navigating to ${address}\n\n` +
-      'This would open Google Maps with:\n' +
-      '• Turn-by-turn navigation\n' +
-      '• Real-time traffic updates\n' +
-      '• Estimated arrival time\n' +
-      '• Delivery instructions\n\n' +
-      'Try the "Google Maps Integration" demo for a navigation example.',
-      { duration: 5000 }
+      `Navigation to ${address} would open Google Maps.`,
+      { duration: 3000 }
     )
   }
 
@@ -1885,7 +1848,12 @@ export default function Home() {
                   <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">FleetFlow Pro</h1>
+                  <div className="flex items-baseline space-x-2">
+                    <h1 className="text-lg sm:text-xl font-bold text-gray-900">FleetFlow Pro</h1>
+                    <span className="text-xs px-1.5 py-0.5 bg-primary-100 text-primary-800 rounded-full font-medium">
+                      v{process.env.NEXT_PUBLIC_APP_VERSION || '0.1.0'}
+                    </span>
+                  </div>
                   <p className="text-xs sm:text-sm text-gray-600">Fleet Management</p>
                 </div>
               </div>
@@ -2437,6 +2405,10 @@ export default function Home() {
             <div className="text-sm text-gray-600 text-center sm:text-left">
               <p>© 2026 FleetFlow Pro. MVP Demonstration.</p>
               <p className="mt-1">Built for Joseph's Food Truck Delivery Service</p>
+              <p className="mt-1 text-xs opacity-75">
+                Version {process.env.NEXT_PUBLIC_APP_VERSION || '0.1.0'} • 
+                {process.env.NEXT_PUBLIC_BUILD_DATE ? ` Built ${process.env.NEXT_PUBLIC_BUILD_DATE}` : ''}
+              </p>
               <p className="mt-1">
                 <button 
                   onClick={() => window.location.href = '/role-demo'}
