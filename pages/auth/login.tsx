@@ -42,9 +42,9 @@ export default function LoginPage() {
   const handleDemoLogin = (role: string) => {
     const demoCredentials: Record<string, { email: string; password: string }> = {
       admin: { email: 'admin@fleetflow.com', password: 'demo123' },
-      fleet_manager: { email: 'manager@fleetflow.com', password: 'demo123' },
-      dispatch: { email: 'dispatch@fleetflow.com', password: 'demo123' },
-      driver: { email: 'driver@fleetflow.com', password: 'demo123' },
+      fleet_manager: { email: 'manager@josephsdelivery.com', password: 'demo123' },
+      dispatch: { email: 'dispatch@josephsdelivery.com', password: 'demo123' },
+      driver: { email: 'driver.mrodriguez@josephsdelivery.com', password: 'demo123' },
     }
 
     const creds = demoCredentials[role] || demoCredentials.fleet_manager

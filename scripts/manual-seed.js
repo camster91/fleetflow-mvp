@@ -71,22 +71,36 @@ async function createAdminUser() {
 async function createDemoUsers() {
   const demoUsers = [
     {
-      email: 'manager@fleetflow.com',
-      name: 'John Fleetman',
+      email: 'manager@josephsdelivery.com',
+      name: 'Joseph Chen',
       password: 'demo123',
       role: 'fleet_manager',
       company: 'Joseph\'s Food Truck Delivery',
     },
     {
-      email: 'dispatch@fleetflow.com',
-      name: 'Sarah Dispatcher',
+      email: 'dispatch@josephsdelivery.com',
+      name: 'Sarah Johnson',
       password: 'demo123',
       role: 'dispatch',
       company: 'Joseph\'s Food Truck Delivery',
     },
     {
-      email: 'driver@fleetflow.com',
-      name: 'Mike Driver',
+      email: 'driver.mrodriguez@josephsdelivery.com',
+      name: 'Michael Rodriguez',
+      password: 'demo123',
+      role: 'driver',
+      company: 'Joseph\'s Food Truck Delivery',
+    },
+    {
+      email: 'driver.sjohnson@josephsdelivery.com',
+      name: 'Sarah Johnson (Driver)',
+      password: 'demo123',
+      role: 'driver',
+      company: 'Joseph\'s Food Truck Delivery',
+    },
+    {
+      email: 'driver.jwilson@josephsdelivery.com',
+      name: 'James Wilson',
       password: 'demo123',
       role: 'driver',
       company: 'Joseph\'s Food Truck Delivery',

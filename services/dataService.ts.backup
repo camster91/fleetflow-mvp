@@ -1,12 +1,5 @@
 // Data service for FleetFlow Pro
 // Uses localStorage for persistence
-import {
-  realWorldVehicles,
-  realWorldDeliveries,
-  realWorldClients,
-  realWorldMaintenanceTasks,
-  realWorldSOPCategories
-} from './real-world-data'
 
 // Types
 export interface Vehicle {
@@ -19,12 +12,6 @@ export interface Vehicle {
   mileage: number
   maintenanceDue: boolean
   lastUpdated?: string
-  vehicleType?: string
-  licensePlate?: string
-  year?: number
-  fuelLevel?: number
-  lastService?: string
-  nextService?: string
 }
 
 export interface LocationCoordinates {
@@ -60,7 +47,6 @@ export interface Delivery {
   progress: number
   notes?: string
   scheduledTime?: string
-  estimatedArrival?: string
   completedTime?: string
   
   // Location details for drivers
@@ -79,7 +65,6 @@ export interface Delivery {
   accessCodes?: string[]
   securityNotes?: string
   businessHours?: string
-  specialRequirements?: string[]
 }
 
 export interface SOPCategory {
@@ -99,10 +84,6 @@ export interface MaintenanceTask {
   completed?: boolean
   completedDate?: string
   notes?: string
-  estimatedDuration?: string
-  partsNeeded?: string[]
-  serviceProvider?: string
-  costEstimate?: number
 }
 
 export interface Announcement {
@@ -119,7 +100,7 @@ export interface Client {
   id: number
   name: string
   businessName?: string
-  type: 'restaurant' | 'hotel' | 'office' | 'retail' | 'warehouse' | 'cafe' | 'institution' | 'other'
+  type: 'restaurant' | 'hotel' | 'office' | 'retail' | 'warehouse' | 'other'
   address: string
   contactPerson?: ContactPerson
   phone?: string
@@ -154,15 +135,147 @@ export interface Client {
 }
 
 // Default data
-const defaultVehicles: Vehicle[] = realWorldVehicles
+const defaultVehicles: Vehicle[] = [
+  { id: 1, name: 'Food Truck 1', status: 'active', driver: 'John D.', location: 'Downtown', eta: '10 min', mileage: 45230, maintenanceDue: false },
+  { id: 2, name: 'Van 2', status: 'active', driver: 'Sarah M.', location: 'East Side', eta: '25 min', mileage: 38920, maintenanceDue: true },
+  { id: 3, name: 'Truck 3', status: 'inactive', driver: 'Mike R.', location: 'Depot', eta: 'N/A', mileage: 51200, maintenanceDue: false },
+  { id: 4, name: 'Van 4', status: 'delayed', driver: 'Alex T.', location: 'West End', eta: '45 min', mileage: 42100, maintenanceDue: true },
+]
 
-const defaultDeliveries: Delivery[] = realWorldDeliveries
+const defaultDeliveries: Delivery[] = [
+  { id: 1, address: '123 Main St', customer: 'Restaurant A', status: 'in-transit', driver: 'John D.', items: 15, progress: 65 },
+  { id: 2, address: '456 Oak Ave', customer: 'Cafe B', status: 'pending', driver: 'Sarah M.', items: 8, progress: 0 },
+  { id: 3, address: '789 Pine Rd', customer: 'Hotel C', status: 'delivered', driver: 'Mike R.', items: 22, progress: 100 },
+  { id: 4, address: '321 Elm St', customer: 'Office D', status: 'in-transit', driver: 'Alex T.', items: 12, progress: 30 },
+]
 
-const defaultSOPCategories: SOPCategory[] = realWorldSOPCategories
+const defaultSOPCategories: SOPCategory[] = [
+  { id: 1, name: 'Delivery Procedures', count: 12 },
+  { id: 2, name: 'Vehicle Maintenance', count: 8 },
+  { id: 3, name: 'Safety Protocols', count: 6 },
+  { id: 4, name: 'Customer Service', count: 10 },
+]
 
-const defaultMaintenanceTasks: MaintenanceTask[] = realWorldMaintenanceTasks
+const defaultMaintenanceTasks: MaintenanceTask[] = [
+  { id: 1, vehicle: 'Van 2', type: 'Oil Change', dueDate: '2026-02-25', priority: 'high' },
+  { id: 2, vehicle: 'Van 4', type: 'Brake Inspection', dueDate: '2026-02-28', priority: 'medium' },
+  { id: 3, vehicle: 'Food Truck 1', type: 'Tire Rotation', dueDate: '2026-03-05', priority: 'low' },
+]
 
-const defaultClients: Client[] = realWorldClients
+const defaultClients: Client[] = [
+  {
+    id: 1,
+    name: 'Restaurant A',
+    businessName: 'Downtown Bistro',
+    type: 'restaurant',
+    address: '123 Main St, Cityville, ST 12345',
+    contactPerson: { name: 'John Smith', phone: '(555) 123-4567', email: 'john@restauranta.com' },
+    phone: '(555) 123-4567',
+    email: 'info@restauranta.com',
+    website: 'www.restauranta.com',
+    preferredDeliveryTimes: ['10:00-11:00 AM', '2:00-3:00 PM'],
+    parkingInstructions: 'Use back alley parking lot',
+    dropoffInstructions: 'Deliver to back kitchen door',
+    accessCodes: ['#1234 for back door'],
+    specialRequirements: ['No delivery after 4 PM', 'Call upon arrival'],
+    businessHours: 'Mon-Sun 11am-10pm',
+    securityNotes: 'Back door requires code after 6pm',
+    notes: 'Excellent customer, always tips drivers',
+    lastDeliveryDate: '2026-02-20',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    primaryLocation: { lat: 40.7128, lng: -74.0060, address: '123 Main St' },
+    parkingLocation: { lat: 40.7127, lng: -74.0061, notes: 'Back alley parking' },
+    dropoffLocation: { lat: 40.7128, lng: -74.0059, notes: 'Kitchen entrance' },
+    locationPhotos: [],
+    created: '2026-01-15',
+    updated: '2026-02-20'
+  },
+  {
+    id: 2,
+    name: 'Hotel C',
+    businessName: 'Grand Hotel & Suites',
+    type: 'hotel',
+    address: '789 Pine Rd, Townsville, ST 67890',
+    contactPerson: { name: 'Maria Garcia', phone: '(555) 987-6543', email: 'maria@grandhotel.com' },
+    phone: '(555) 987-6543',
+    email: 'receiving@grandhotel.com',
+    website: 'www.grandhotel.com',
+    preferredDeliveryTimes: ['8:00-10:00 AM', '3:00-5:00 PM'],
+    parkingInstructions: 'Use loading dock at rear',
+    dropoffInstructions: 'Deliver to receiving department, basement level',
+    accessCodes: ['Call extension 345 for receiving'],
+    specialRequirements: ['Must check in with security', 'Use service elevator'],
+    businessHours: '24/7 receiving',
+    securityNotes: 'Security desk must be notified before entry',
+    notes: 'Large deliveries every Monday',
+    lastDeliveryDate: '2026-02-22',
+    deliveryFrequency: 'weekly',
+    rating: 4,
+    primaryLocation: { lat: 40.7580, lng: -73.9855, address: '789 Pine Rd' },
+    parkingLocation: { lat: 40.7579, lng: -73.9856, notes: 'Loading dock area' },
+    dropoffLocation: { lat: 40.7580, lng: -73.9854, notes: 'Basement receiving' },
+    locationPhotos: [],
+    created: '2026-01-20',
+    updated: '2026-02-22'
+  },
+  {
+    id: 3,
+    name: 'Office D',
+    businessName: 'TechCorp Headquarters',
+    type: 'office',
+    address: '321 Elm St, Tech Park, ST 54321',
+    contactPerson: { name: 'David Chen', phone: '(555) 456-7890', email: 'david@techcorp.com' },
+    phone: '(555) 456-7890',
+    email: 'facilities@techcorp.com',
+    website: 'www.techcorp.com',
+    preferredDeliveryTimes: ['9:00 AM-12:00 PM'],
+    parkingInstructions: 'Visitor parking, level P2',
+    dropoffInstructions: 'Front desk, building lobby',
+    accessCodes: ['Badge required for parking garage'],
+    specialRequirements: ['Security clearance needed', 'Must sign in at front desk'],
+    businessHours: 'Mon-Fri 8am-6pm',
+    securityNotes: 'All deliveries must be logged at front desk',
+    notes: 'New client, first delivery scheduled',
+    lastDeliveryDate: '2026-02-18',
+    deliveryFrequency: 'as-needed',
+    rating: 3,
+    primaryLocation: { lat: 40.7420, lng: -74.0040, address: '321 Elm St' },
+    parkingLocation: { lat: 40.7419, lng: -74.0041, notes: 'Visitor parking P2' },
+    dropoffLocation: { lat: 40.7421, lng: -74.0039, notes: 'Main lobby' },
+    locationPhotos: [],
+    created: '2026-02-10',
+    updated: '2026-02-18'
+  },
+  {
+    id: 4,
+    name: 'Cafe B',
+    businessName: 'Morning Brew Cafe',
+    type: 'restaurant',
+    address: '456 Oak Ave, Village Center, ST 45678',
+    contactPerson: { name: 'Sarah Johnson', phone: '(555) 234-5678', email: 'sarah@morningbrew.com' },
+    phone: '(555) 234-5678',
+    email: 'orders@morningbrew.com',
+    website: 'www.morningbrew.com',
+    preferredDeliveryTimes: ['7:00-8:00 AM', '1:00-2:00 PM'],
+    parkingInstructions: 'Street parking only, 15-minute limit',
+    dropoffInstructions: 'Side entrance next to dumpster',
+    accessCodes: ['Knock on metal door 3 times'],
+    specialRequirements: ['Quiet delivery before 8 AM', 'No horn honking'],
+    businessHours: 'Mon-Fri 6am-4pm, Sat 7am-3pm, Sun closed',
+    securityNotes: 'Alley gate may be locked after 3pm',
+    notes: 'Early morning deliveries only',
+    lastDeliveryDate: '2026-02-21',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    primaryLocation: { lat: 40.7282, lng: -74.0030, address: '456 Oak Ave' },
+    parkingLocation: { lat: 40.7281, lng: -74.0031, notes: 'Street parking zone' },
+    dropoffLocation: { lat: 40.7283, lng: -74.0029, notes: 'Side alley entrance' },
+    locationPhotos: [],
+    created: '2026-01-25',
+    updated: '2026-02-21'
+  }
+]
 
 // Storage keys
 const STORAGE_KEYS = {
