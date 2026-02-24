@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Generate production environment variables for FleetFlow Pro
+
+echo "# 🚀 FleetFlow Pro Production Environment Variables"
+echo "# Generated: $(date)"
+echo "#"
+echo "# Copy these variables to your Coolify application environment"
+echo "#"
+
+# Generate NEXTAUTH_SECRET
+NEXTAUTH_SECRET=$(openssl rand -base64 32 2>/dev/null || echo "fallback-secret-$(date +%s)-$RANDOM")
+
+echo "NEXTAUTH_URL=https://fleet.ashbi.ca"
+echo "NEXTAUTH_SECRET=$NEXTAUTH_SECRET"
+echo "NODE_ENV=production"
+echo "PORT=3000"
+echo ""
+echo "# PostgreSQL Database Connection"
+echo "# Replace HOST and PASSWORD with your actual PostgreSQL credentials"
+echo "DATABASE_URL=postgresql://fleetflow_user:YOUR_PASSWORD@HOST:5432/fleetflow_pro?schema=public"
+echo ""
+echo "# Application Settings"
+echo "NEXT_PUBLIC_APP_NAME=FleetFlow Pro"
+echo "NEXT_PUBLIC_APP_VERSION=1.0.0"
+echo "NEXT_PUBLIC_BUILD_DATE=$(date +%Y-%m-%d)"
+echo ""
+echo "# Feature Flags"
+echo "NEXT_PUBLIC_ENABLE_ANALYTICS=true"
+echo "NEXT_PUBLIC_ENABLE_MAINTENANCE_MODE=false"
+echo ""
+echo "# Security Headers"
+echo "NEXT_PUBLIC_CSP_REPORT_ONLY=false"
+
+echo ""
+echo "# 💾 Save these to Coolify:"
+echo "# 1. Go to FleetFlow Pro application in Coolify"
+echo "# 2. Click 'Environment Variables'"
+echo "# 3. Add each variable (name and value)"
+echo "# 4. Save and redeploy"
+echo ""
+echo "# 🔐 Generated NEXTAUTH_SECRET (keep secure!):"
+echo "# $NEXTAUTH_SECRET"
+echo ""
+echo "# 🐘 PostgreSQL Setup Required:"
+echo "# 1. Create PostgreSQL database in Coolify Resources"
+echo "# 2. Database name: fleetflow_pro"
+echo "# 3. Username: fleetflow_user"
+echo "# 4. Generate and save password"
+echo "# 5. Update DATABASE_URL with actual credentials"
