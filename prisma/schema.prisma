@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // User Roles
@@ -88,6 +87,7 @@ model User {
   assignedVehicles Vehicle[] @relation("VehicleDriver")
   deliveries      Delivery[] @relation("DeliveryDriver")
   maintenanceTasks MaintenanceTask[] @relation("MaintenanceAssignee")
+  announcements   Announcement[]
   
   @@index([email])
   @@index([role])
@@ -163,7 +163,7 @@ model Client {
   // Location Intelligence
   lastDeliveryDate        DateTime?
   deliveryFrequency       String?       @default("as-needed")
-  rating                  Int?          @default(3) @range(1, 5)
+  rating                  Int?          @default(3)
   
   // Coordinates (stored as JSON)
   primaryLocation         Json?         // { lat: number, lng: number, address: string }
@@ -197,7 +197,7 @@ model Delivery {
   vehicleId             String?
   vehicle               Vehicle?        @relation("DeliveryVehicle", fields: [vehicleId], references: [id])
   items                 Int             @default(0)
-  progress              Int             @default(0) @range(0, 100)
+  progress              Int             @default(0)
   notes                 String?
   
   // Timing
