@@ -6,67 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
-// User Roles
-enum UserRole {
-  admin
-  fleet_manager
-  dispatch
-  driver
-  maintenance
-  safety_officer
-  finance
-}
-
-// Vehicle Status
-enum VehicleStatus {
-  active
-  inactive
-  delayed
-  maintenance
-  out_of_service
-}
-
-// Delivery Status
-enum DeliveryStatus {
-  pending
-  in_transit
-  delivered
-  cancelled
-  delayed
-}
-
-// Maintenance Priority
-enum MaintenancePriority {
-  low
-  medium
-  high
-  critical
-}
-
-// Announcement Priority
-enum AnnouncementPriority {
-  low
-  normal
-  high
-  urgent
-}
-
-// Client Types
-enum ClientType {
-  restaurant
-  hotel
-  office
-  retail
-  warehouse
-  cafe
-  institution
-  other
-}
-
-// User Model (Authentication)
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
@@ -82,227 +24,8 @@ model User {
   // Relationships
   sessions       Session[]
   accounts       Account[]
-  
-  // Fleet Management Relationships
-  assignedVehicles Vehicle[] @relation("VehicleDriver")
-  deliveries      Delivery[] @relation("DeliveryDriver")
-  maintenanceTasks MaintenanceTask[] @relation("MaintenanceAssignee")
-  announcements   Announcement[]
-  
-  @@index([email])
-  @@index([role])
-  @@index([company])
 }
 
-// Vehicle Model
-model Vehicle {
-  id              String        @id @default(cuid())
-  name            String
-  status          VehicleStatus @default(active)
-  driverId        String?
-  driver          User?         @relation("VehicleDriver", fields: [driverId], references: [id])
-  location        String?
-  eta             String?
-  mileage         Int           @default(0)
-  maintenanceDue  Boolean       @default(false)
-  vehicleType     String?
-  licensePlate    String?       @unique
-  year            Int?
-  fuelLevel       Int?          @default(100)
-  lastService     DateTime?
-  nextService     DateTime?
-  notes           String?
-  
-  // Technical Details
-  vin             String?       @unique
-  make            String?
-  model           String?
-  color           String?
-  fuelType        String?       @default("diesel")
-  insuranceExpiry DateTime?
-  registrationExpiry DateTime?
-  
-  // Relationships
-  deliveries      Delivery[]    @relation("DeliveryVehicle")
-  maintenanceTasks MaintenanceTask[]
-  
-  // Timestamps
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
-  @@index([status])
-  @@index([driverId])
-  @@index([maintenanceDue])
-  @@index([licensePlate])
-}
-
-// Client Model
-model Client {
-  id                      String        @id @default(cuid())
-  name                    String
-  businessName            String?
-  type                    ClientType    @default(other)
-  address                 String
-  contactPersonName       String?
-  contactPersonPhone      String?
-  contactPersonEmail      String?
-  phone                   String?
-  email                   String?
-  website                 String?
-  
-  // Delivery Preferences
-  preferredDeliveryTimes  String[]      // Stored as JSON array
-  parkingInstructions     String?
-  dropoffInstructions     String?
-  accessCodes             String[]      // Stored as JSON array
-  specialRequirements     String[]      // Stored as JSON array
-  businessHours           String?
-  securityNotes           String?
-  notes                   String?
-  
-  // Location Intelligence
-  lastDeliveryDate        DateTime?
-  deliveryFrequency       String?       @default("as-needed")
-  rating                  Int?          @default(3)
-  
-  // Coordinates (stored as JSON)
-  primaryLocation         Json?         // { lat: number, lng: number, address: string }
-  parkingLocation         Json?         // { lat: number, lng: number, notes: string }
-  dropoffLocation         Json?         // { lat: number, lng: number, notes: string }
-  locationPhotos          String[]      // Array of photo URLs
-  
-  // Relationships
-  deliveries              Delivery[]
-  
-  // Timestamps
-  createdAt               DateTime      @default(now())
-  updatedAt               DateTime      @updatedAt
-  
-  @@index([name])
-  @@index([type])
-  @@index([address])
-  @@unique([name, address])
-}
-
-// Delivery Model
-model Delivery {
-  id                    String          @id @default(cuid())
-  address               String
-  customer              String
-  clientId              String?
-  client                Client?         @relation(fields: [clientId], references: [id])
-  status                DeliveryStatus  @default(pending)
-  driverId              String?
-  driver                User?           @relation("DeliveryDriver", fields: [driverId], references: [id])
-  vehicleId             String?
-  vehicle               Vehicle?        @relation("DeliveryVehicle", fields: [vehicleId], references: [id])
-  items                 Int             @default(0)
-  progress              Int             @default(0)
-  notes                 String?
-  
-  // Timing
-  scheduledTime         DateTime?
-  estimatedArrival      DateTime?
-  completedTime         DateTime?
-  
-  // Location Details (stored as JSON)
-  parkingLocation       Json?           // { lat: number, lng: number, notes: string }
-  dropoffLocation       Json?           // { lat: number, lng: number, notes: string }
-  parkingInstructions   String?
-  dropoffInstructions   String?
-  
-  // Contact Information (stored as JSON)
-  contactPerson         Json?           // { name: string, phone: string, email: string }
-  
-  // Access Information
-  accessCodes           String[]        // Stored as JSON array
-  securityNotes         String?
-  businessHours         String?
-  specialRequirements   String[]        // Stored as JSON array
-  
-  // Photos (stored as JSON array)
-  photos                Json?           // Array of { id: string, url: string, caption: string, timestamp: string }
-  
-  // Relationships
-  maintenanceTasks      MaintenanceTask[]
-  
-  // Timestamps
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  
-  @@index([status])
-  @@index([driverId])
-  @@index([clientId])
-  @@index([vehicleId])
-  @@index([scheduledTime])
-}
-
-// Maintenance Task Model
-model MaintenanceTask {
-  id                String              @id @default(cuid())
-  vehicleId         String
-  vehicle           Vehicle             @relation(fields: [vehicleId], references: [id])
-  type              String
-  dueDate           DateTime
-  priority          MaintenancePriority @default(medium)
-  completed         Boolean             @default(false)
-  completedDate     DateTime?
-  assigneeId        String?
-  assignee          User?               @relation("MaintenanceAssignee", fields: [assigneeId], references: [id])
-  deliveryId        String?
-  delivery          Delivery?           @relation(fields: [deliveryId], references: [id])
-  
-  // Details
-  notes             String?
-  estimatedDuration String?             // e.g., "2 hours"
-  partsNeeded       String[]           // Stored as JSON array
-  serviceProvider   String?
-  costEstimate      Float?
-  actualCost        Float?
-  
-  // Timestamps
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  
-  @@index([vehicleId])
-  @@index([dueDate])
-  @@index([priority])
-  @@index([completed])
-  @@index([assigneeId])
-}
-
-// SOP Category Model
-model SOPCategory {
-  id            String        @id @default(cuid())
-  name          String        @unique
-  count         Int           @default(0)
-  description   String?
-  
-  // Timestamps
-  lastUpdated   DateTime      @default(now())
-  
-  @@index([name])
-}
-
-// Announcement Model
-model Announcement {
-  id            String              @id @default(cuid())
-  message       String
-  priority      AnnouncementPriority @default(normal)
-  recipients    String              // "all", "drivers", "managers", "specific"
-  userId        String?
-  user          User?               @relation(fields: [userId], references: [id])
-  readBy        String[]            // Array of user IDs who read it
-  
-  // Timestamps
-  timestamp     DateTime            @default(now())
-  
-  @@index([priority])
-  @@index([timestamp])
-  @@index([userId])
-}
-
-// NextAuth.js Models (required for authentication)
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -336,4 +59,14 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+enum UserRole {
+  admin
+  fleet_manager
+  dispatch
+  driver
+  maintenance
+  safety_officer
+  finance
 }

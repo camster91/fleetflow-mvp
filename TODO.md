@@ -99,21 +99,27 @@
 14. **✅ Notification system** - react-hot-toast with role-specific utilities
 15. **✅ Build fixes** - TypeScript errors resolved, clean production build
 
-**Next Priority**: PostgreSQL database ready for Coolify setup - follow PRODUCTION-SETUP-GUIDE.md
+**Next Priority**: Simple SQLite setup for single user - follow SIMPLE-PRODUCTION-SETUP.md
 
-### ✅ PostgreSQL Database Schema Complete
+### ✅ Simplified SQLite Schema Complete
 - **Schema validated** with Prisma 7.4.1 compatibility
-- **Models created**: User, Vehicle, Delivery, Client, MaintenanceTask, SOPCategory, Announcement
-- **Relationships defined**: Full relational integrity with proper indexes
-- **Ready for migration**: `npx prisma db push` will create all tables
-- **Seed data prepared**: Real-world data in `services/real-world-data.ts`
+- **Models**: Only User (for authentication)
+- **Fleet data**: Stored in-memory via `dataService.ts` with real-world data
+- **Ready for deployment**: Simple 3-environment variable setup
+- **Seed ready**: User accounts in `services/real-world-data.ts`
 
-### 🚀 Immediate Action Required:
-1. **Create PostgreSQL database** in Coolify Resources
-2. **Set environment variables** with generated NEXTAUTH_SECRET
-3. **Run database migrations** via Coolify terminal
-4. **Seed database** with `npm run seed`
-5. **Test authentication** with real credentials
+### 🚀 Immediate Action Required (5 minutes):
+1. **Set environment variables** in Coolify (NEXTAUTH_URL, NEXTAUTH_SECRET, DATABASE_URL)
+2. **Redeploy application** (automatic after saving variables)
+3. **Run database setup** via Coolify terminal: `npx prisma db push`
+4. **Seed users**: `npm run seed` or visit `/api/seed`
+5. **Login** with demo credentials
+
+### 🎯 Perfect for Single User:
+- No PostgreSQL setup needed
+- SQLite database included in container
+- All fleet data pre-loaded in application
+- Authentication working immediately after setup
 
 ## 👥 User Types & Complete Workflows
 

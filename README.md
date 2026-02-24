@@ -20,28 +20,37 @@ npm run dev
 # The app will be available at http://localhost:3000
 ```
 
-## 🚀 Production Deployment
+## 🚀 Simple Production Setup (Single User)
 
-**⚠️ CRITICAL: Authentication is not working in current deployment**
-The application is deployed at https://fleet.ashbi.ca but authentication requires PostgreSQL setup.
+**⚠️ CRITICAL: Authentication needs 3 environment variables**
+The application is deployed at https://fleet.ashbi.ca but needs NEXTAUTH_SECRET to work.
 
-### Complete Production Setup Required:
-1. **Set up PostgreSQL database** in Coolify (follow [POSTGRES-SETUP.md](POSTGRES-SETUP.md))
-2. **Configure environment variables** (use [PRODUCTION-SETUP-GUIDE.md](PRODUCTION-SETUP-GUIDE.md))
-3. **Run database migrations** to populate with real-world fleet data
-
-### Quick Start for Coolify:
-```bash
-# Use the generated environment variables:
+### Quick 5-Minute Setup for Single User:
+1. **Add these environment variables** in Coolify (Applications → fleetflow-pro → Environment Variables):
+```env
 NEXTAUTH_URL=https://fleet.ashbi.ca
-NEXTAUTH_SECRET=k8eLErhObBcKlxVkExTfeZZu4xLCqcdkfM7Os9A/DCo=
-DATABASE_URL="postgresql://fleetflow_user:PASSWORD@HOST:5432/fleetflow_pro?schema=public"
+NEXTAUTH_SECRET=Rh6rLBvT20Ut6HYUjMTuHOdONFN21baBceOwzW+Yk6I=
+DATABASE_URL="file:./prod.db"
+```
 
-# Then run:
-npx prisma generate
+2. **After redeploy**, run in Coolify terminal:
+```bash
 npx prisma db push
 npm run seed
 ```
+
+3. **Login** with:
+   - Admin: `admin@fleetflow.com` / `demo123`
+   - Fleet Manager: `manager@josephsdelivery.com` / `demo123`
+   - Driver: `driver.mrodriguez@josephsdelivery.com` / `demo123`
+
+### Complete Instructions: [SIMPLE-PRODUCTION-SETUP.md](SIMPLE-PRODUCTION-SETUP.md)
+
+**Why this works for single user:**
+- SQLite database (no PostgreSQL setup needed)
+- All fleet data pre-loaded in application
+- Simple authentication with generated secret
+- Everything self-contained in Docker container
 
 ### Ready-to-Use Credentials:
 - **Admin**: `admin@fleetflow.com` / `demo123`
