@@ -20,6 +20,25 @@ npm run dev
 # The app will be available at http://localhost:3000
 ```
 
+## 🚀 Production Deployment
+
+**Critical Setup Required**: Authentication requires environment variables to be set in production.
+
+### Required Environment Variables:
+```bash
+NEXTAUTH_URL=https://your-domain.com
+NEXTAUTH_SECRET=your-secure-random-string-here
+DATABASE_URL="file:./prod.db"
+```
+
+### Quick Deployment:
+1. Set environment variables in your hosting platform (Coolify, Vercel, etc.)
+2. Deploy from GitHub repository
+3. Seed database: `npm run seed` or visit `/api/seed` after login
+4. Login with demo credentials: `admin@fleetflow.com` / `demo123`
+
+For detailed deployment instructions, see [DEPLOYMENT-SETUP.md](DEPLOYMENT-SETUP.md).
+
 ## 📱 Live Demo
 
 Once deployed, you can:
