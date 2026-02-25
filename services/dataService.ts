@@ -1,12 +1,5 @@
 // Data service for FleetFlow Pro
 // Uses localStorage for persistence
-import {
-  realWorldVehicles,
-  realWorldDeliveries,
-  realWorldClients,
-  realWorldMaintenanceTasks,
-  realWorldSOPCategories
-} from './real-world-data'
 
 // Types
 export interface Vehicle {
@@ -195,16 +188,125 @@ export interface VendingMachine {
   updated: string
 }
 
-// Default data
-const defaultVehicles: Vehicle[] = realWorldVehicles
+// Bump this string whenever you want to wipe old data and re-seed
+const DATA_VERSION = 'v2'
 
-const defaultDeliveries: Delivery[] = realWorldDeliveries
+// Real seed data from TU-RTE #03 route sheet
+const seedVehicles: Vehicle[] = [
+  {
+    id: 1,
+    name: 'Ford Refr. Transit (2018)',
+    status: 'active',
+    driver: 'Gerardo Canabate',
+    location: 'Depot',
+    eta: 'N/A',
+    mileage: 0,
+    maintenanceDue: false,
+    vehicleType: 'cargo_van',
+    year: 2018,
+    fuelLevel: 100,
+  },
+]
 
-const defaultSOPCategories: SOPCategory[] = realWorldSOPCategories
+const seedClients: Client[] = [
+  {
+    id: 1,
+    name: 'Parkwood Institute Hospital - Main',
+    businessName: 'Parkwood Institute Hospital',
+    type: 'institution',
+    address: '801 Commissioners Rd E, London, ON',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    notes: 'Stop 1 on TU-RTE #03',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    name: 'London Health - North Tower',
+    businessName: 'London Health Sciences Centre',
+    type: 'institution',
+    address: '800 Commissioners Rd E, London, ON',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    notes: 'Stop 2 on TU-RTE #03',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  },
+  {
+    id: 3,
+    name: 'London Health - Verspeeten Cancer',
+    businessName: 'London Health Sciences Centre',
+    type: 'institution',
+    address: '800 Commissioners Rd E, London, ON',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    notes: 'Stop 3 on TU-RTE #03',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  },
+  {
+    id: 4,
+    name: 'London Health - Fayes @ Victoria',
+    businessName: 'London Health Sciences Centre',
+    type: 'institution',
+    address: '800 Commissioners Rd E, London, ON',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    notes: 'Stop 4 on TU-RTE #03',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  },
+  {
+    id: 5,
+    name: "St. Joseph's Hospital - Grosvenor",
+    businessName: "St. Joseph's Health Care London",
+    type: 'institution',
+    address: '268 Grosvenor St, London, ON',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    notes: 'Stop 5 on TU-RTE #03',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  },
+  {
+    id: 6,
+    name: 'London Health - University Hospital',
+    businessName: 'London Health Sciences Centre',
+    type: 'institution',
+    address: '339 Windermere Rd, 3rd Floor, London, ON',
+    deliveryFrequency: 'daily',
+    rating: 5,
+    notes: 'Stop 6 on TU-RTE #03',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  },
+]
 
-const defaultMaintenanceTasks: MaintenanceTask[] = realWorldMaintenanceTasks
+const seedDeliveries: Delivery[] = seedClients.map((client, i) => ({
+  id: i + 1,
+  address: client.address,
+  customer: client.name,
+  status: 'pending' as const,
+  driver: 'Gerardo Canabate',
+  items: 0,
+  progress: 0,
+  notes: `TU-RTE #03 — Stop ${i + 1}`,
+}))
 
-const defaultClients: Client[] = realWorldClients
+const seedAnnouncements: Announcement[] = [
+  {
+    id: 1,
+    message:
+      'WINTER IS HERE! IT\'S COLD! WATCH YOUR FRIDGES! STAY WARM!\n\n' +
+      'KEEP VEHICLES CLEAN & FUELLED AT ALL TIMES\n\n' +
+      'DRIVE SAFELY! HAVE A GREAT DAY! KEEP SMILING!',
+    priority: 'high',
+    recipients: 'All Drivers',
+    timestamp: new Date().toISOString(),
+    readBy: [],
+  },
+]
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -217,25 +319,29 @@ const STORAGE_KEYS = {
   VENDING_MACHINES: 'fleetflow-vending-machines',
 }
 
-// Initialize data
+// Initialize data — clears stale data when DATA_VERSION changes
 const initializeData = () => {
+  if (localStorage.getItem('fleetflow-data-version') !== DATA_VERSION) {
+    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key))
+    localStorage.setItem('fleetflow-data-version', DATA_VERSION)
+  }
   if (!localStorage.getItem(STORAGE_KEYS.VEHICLES)) {
-    localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(defaultVehicles))
+    localStorage.setItem(STORAGE_KEYS.VEHICLES, JSON.stringify(seedVehicles))
   }
   if (!localStorage.getItem(STORAGE_KEYS.DELIVERIES)) {
-    localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(defaultDeliveries))
+    localStorage.setItem(STORAGE_KEYS.DELIVERIES, JSON.stringify(seedDeliveries))
   }
   if (!localStorage.getItem(STORAGE_KEYS.SOP_CATEGORIES)) {
-    localStorage.setItem(STORAGE_KEYS.SOP_CATEGORIES, JSON.stringify(defaultSOPCategories))
+    localStorage.setItem(STORAGE_KEYS.SOP_CATEGORIES, JSON.stringify([]))
   }
   if (!localStorage.getItem(STORAGE_KEYS.MAINTENANCE_TASKS)) {
-    localStorage.setItem(STORAGE_KEYS.MAINTENANCE_TASKS, JSON.stringify(defaultMaintenanceTasks))
+    localStorage.setItem(STORAGE_KEYS.MAINTENANCE_TASKS, JSON.stringify([]))
   }
   if (!localStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS)) {
-    localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify([]))
+    localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(seedAnnouncements))
   }
   if (!localStorage.getItem(STORAGE_KEYS.CLIENTS)) {
-    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(defaultClients))
+    localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(seedClients))
   }
   if (!localStorage.getItem(STORAGE_KEYS.VENDING_MACHINES)) {
     localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify([]))
@@ -246,25 +352,25 @@ const initializeData = () => {
 export const getVehicles = (): Vehicle[] => {
   initializeData()
   const data = localStorage.getItem(STORAGE_KEYS.VEHICLES)
-  return data ? JSON.parse(data) : defaultVehicles
+  return data ? JSON.parse(data) : []
 }
 
 export const getDeliveries = (): Delivery[] => {
   initializeData()
   const data = localStorage.getItem(STORAGE_KEYS.DELIVERIES)
-  return data ? JSON.parse(data) : defaultDeliveries
+  return data ? JSON.parse(data) : []
 }
 
 export const getSOPCategories = (): SOPCategory[] => {
   initializeData()
   const data = localStorage.getItem(STORAGE_KEYS.SOP_CATEGORIES)
-  return data ? JSON.parse(data) : defaultSOPCategories
+  return data ? JSON.parse(data) : []
 }
 
 export const getMaintenanceTasks = (): MaintenanceTask[] => {
   initializeData()
   const data = localStorage.getItem(STORAGE_KEYS.MAINTENANCE_TASKS)
-  return data ? JSON.parse(data) : defaultMaintenanceTasks
+  return data ? JSON.parse(data) : []
 }
 
 export const getAnnouncements = (): Announcement[] => {
@@ -276,7 +382,7 @@ export const getAnnouncements = (): Announcement[] => {
 export const getClients = (): Client[] => {
   initializeData()
   const data = localStorage.getItem(STORAGE_KEYS.CLIENTS)
-  return data ? JSON.parse(data) : defaultClients
+  return data ? JSON.parse(data) : []
 }
 
 // CRUD operations for Vehicles
@@ -610,15 +716,9 @@ export const getStats = () => {
   }
 }
 
-// Reset to default (for testing)
+// Reset to seed data
 export const resetToDefault = () => {
-  localStorage.removeItem(STORAGE_KEYS.VEHICLES)
-  localStorage.removeItem(STORAGE_KEYS.DELIVERIES)
-  localStorage.removeItem(STORAGE_KEYS.SOP_CATEGORIES)
-  localStorage.removeItem(STORAGE_KEYS.MAINTENANCE_TASKS)
-  localStorage.removeItem(STORAGE_KEYS.ANNOUNCEMENTS)
-  localStorage.removeItem(STORAGE_KEYS.CLIENTS)
-  localStorage.removeItem(STORAGE_KEYS.VENDING_MACHINES)
+  localStorage.removeItem('fleetflow-data-version')
   initializeData()
   return true
 }
