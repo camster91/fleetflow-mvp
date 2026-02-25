@@ -36,7 +36,7 @@ export default function Home() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
   const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false)
   const [isVehicleDetailModalOpen, setIsVehicleDetailModalOpen] = useState(false)
-  const [selectedVehicle, setSelectedVehicle] = useState<any>(null)
+  const [selectedVehicle, setSelectedVehicle] = useState<dataService.Vehicle | null>(null)
   const [isClientDetailModalOpen, setIsClientDetailModalOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<dataService.Client | null>(null)
   const [clientModalEditMode, setClientModalEditMode] = useState(false)
@@ -193,7 +193,7 @@ export default function Home() {
     }
   }
 
-  const handleOpenVehicleDetailModal = (vehicle: any) => {
+  const handleOpenVehicleDetailModal = (vehicle: dataService.Vehicle) => {
     setSelectedVehicle(vehicle)
     setIsVehicleDetailModalOpen(true)
   }

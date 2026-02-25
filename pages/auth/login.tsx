@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
-import { 
-  Truck, Mail, Lock, AlertCircle, 
-  ArrowRight, Building, User
+import {
+  Truck, Mail, Lock, AlertCircle,
+  ArrowRight
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -36,26 +36,6 @@ export default function LoginPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  // Demo credentials for testing
-  const handleDemoLogin = (role: string) => {
-    const demoCredentials: Record<string, { email: string; password: string }> = {
-      admin: { email: 'admin@fleetflow.com', password: 'demo123' },
-      fleet_manager: { email: 'manager@josephsdelivery.com', password: 'demo123' },
-      dispatch: { email: 'dispatch@josephsdelivery.com', password: 'demo123' },
-      driver: { email: 'driver.mrodriguez@josephsdelivery.com', password: 'demo123' },
-    }
-
-    const creds = demoCredentials[role] || demoCredentials.fleet_manager
-    setEmail(creds.email)
-    setPassword(creds.password)
-    
-    // Auto-submit after a brief delay
-    setTimeout(() => {
-      const form = document.querySelector('form')
-      form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))
-    }, 100)
   }
 
   return (
@@ -146,49 +126,6 @@ export default function LoginPage() {
             </div>
           </form>
 
-          {/* Demo Login Buttons */}
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Quick Demo Logins</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleDemoLogin('admin')}
-                className="inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Admin
-              </button>
-              <button
-                onClick={() => handleDemoLogin('fleet_manager')}
-                className="inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                <Building className="h-4 w-4 mr-2" />
-                Manager
-              </button>
-              <button
-                onClick={() => handleDemoLogin('dispatch')}
-                className="inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                <Truck className="h-4 w-4 mr-2" />
-                Dispatch
-              </button>
-              <button
-                onClick={() => handleDemoLogin('driver')}
-                className="inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Driver
-              </button>
-            </div>
-          </div>
-
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
@@ -203,8 +140,8 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6 text-center">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-sm font-medium text-primary-600 hover:text-primary-500"
           >
             ← Back to home
