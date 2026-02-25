@@ -153,6 +153,48 @@ export interface Client {
   updated: string
 }
 
+// Vending machine note left by a driver or technician for the next person
+export interface VendingMachineNote {
+  id: number
+  authorName: string
+  timestamp: string
+  text: string
+  category: 'restock' | 'maintenance' | 'access' | 'general'
+  resolved: boolean
+}
+
+export interface VendingMachine {
+  id: number
+  name: string           // e.g. "Building A Lobby"
+  machineId: string      // physical serial / asset tag
+  location: string       // street address or building name
+  locationDetail?: string // e.g. "Near main entrance, 2nd floor"
+  type: 'snacks' | 'beverages' | 'combo' | 'coffee' | 'fresh-food' | 'other'
+  status: 'operational' | 'needs-restock' | 'needs-maintenance' | 'offline'
+
+  // Access
+  contactPerson?: ContactPerson
+  accessCodes?: string[]
+  accessInstructions?: string
+
+  // Coordinates
+  primaryLocation?: LocationCoordinates
+
+  // Service tracking
+  lastRestockedDate?: string
+  lastServiceDate?: string
+  nextServiceDue?: string
+
+  // Photos
+  photos?: DeliveryPhoto[]
+
+  // Handoff notes — anyone servicing the machine can leave notes for the next person
+  notes: VendingMachineNote[]
+
+  created: string
+  updated: string
+}
+
 // Default data
 const defaultVehicles: Vehicle[] = realWorldVehicles
 
@@ -172,6 +214,7 @@ const STORAGE_KEYS = {
   MAINTENANCE_TASKS: 'fleetflow-maintenance-tasks',
   ANNOUNCEMENTS: 'fleetflow-announcements',
   CLIENTS: 'fleetflow-clients',
+  VENDING_MACHINES: 'fleetflow-vending-machines',
 }
 
 // Initialize data
@@ -193,6 +236,9 @@ const initializeData = () => {
   }
   if (!localStorage.getItem(STORAGE_KEYS.CLIENTS)) {
     localStorage.setItem(STORAGE_KEYS.CLIENTS, JSON.stringify(defaultClients))
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.VENDING_MACHINES)) {
+    localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify([]))
   }
 }
 
@@ -452,6 +498,100 @@ export const getClientById = (id: number): Client | null => {
   return clients.find(client => client.id === id) || null
 }
 
+// CRUD operations for Vending Machines
+export const getVendingMachines = (): VendingMachine[] => {
+  initializeData()
+  const data = localStorage.getItem(STORAGE_KEYS.VENDING_MACHINES)
+  return data ? JSON.parse(data) : []
+}
+
+export const addVendingMachine = (
+  machine: Omit<VendingMachine, 'id' | 'notes' | 'created' | 'updated'>
+): VendingMachine => {
+  const machines = getVendingMachines()
+  const newId = machines.length > 0 ? Math.max(...machines.map(m => m.id)) + 1 : 1
+  const now = new Date().toISOString()
+  const newMachine: VendingMachine = {
+    ...machine,
+    id: newId,
+    notes: [],
+    created: now,
+    updated: now,
+  }
+  localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify([...machines, newMachine]))
+  return newMachine
+}
+
+export const updateVendingMachine = (
+  id: number,
+  updates: Partial<Omit<VendingMachine, 'id' | 'created'>>
+): VendingMachine | null => {
+  const machines = getVendingMachines()
+  const index = machines.findIndex(m => m.id === id)
+  if (index === -1) return null
+  const updated = { ...machines[index], ...updates, updated: new Date().toISOString() }
+  machines[index] = updated
+  localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify(machines))
+  return updated
+}
+
+export const deleteVendingMachine = (id: number): boolean => {
+  const machines = getVendingMachines()
+  const filtered = machines.filter(m => m.id !== id)
+  if (filtered.length === machines.length) return false
+  localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify(filtered))
+  return true
+}
+
+export const addVendingMachineNote = (
+  machineId: number,
+  note: Omit<VendingMachineNote, 'id' | 'timestamp' | 'resolved'>
+): VendingMachine | null => {
+  const machines = getVendingMachines()
+  const index = machines.findIndex(m => m.id === machineId)
+  if (index === -1) return null
+  const notes = machines[index].notes
+  const newNote: VendingMachineNote = {
+    ...note,
+    id: notes.length > 0 ? Math.max(...notes.map(n => n.id)) + 1 : 1,
+    timestamp: new Date().toISOString(),
+    resolved: false,
+  }
+  machines[index] = {
+    ...machines[index],
+    notes: [newNote, ...machines[index].notes],
+    updated: new Date().toISOString(),
+  }
+  localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify(machines))
+  return machines[index]
+}
+
+export const resolveVendingMachineNote = (machineId: number, noteId: number): VendingMachine | null => {
+  const machines = getVendingMachines()
+  const index = machines.findIndex(m => m.id === machineId)
+  if (index === -1) return null
+  machines[index] = {
+    ...machines[index],
+    notes: machines[index].notes.map(n => n.id === noteId ? { ...n, resolved: true } : n),
+    updated: new Date().toISOString(),
+  }
+  localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify(machines))
+  return machines[index]
+}
+
+export const deleteVendingMachineNote = (machineId: number, noteId: number): VendingMachine | null => {
+  const machines = getVendingMachines()
+  const index = machines.findIndex(m => m.id === machineId)
+  if (index === -1) return null
+  machines[index] = {
+    ...machines[index],
+    notes: machines[index].notes.filter(n => n.id !== noteId),
+    updated: new Date().toISOString(),
+  }
+  localStorage.setItem(STORAGE_KEYS.VENDING_MACHINES, JSON.stringify(machines))
+  return machines[index]
+}
+
 // Statistics
 export const getStats = () => {
   const vehicles = getVehicles()
@@ -478,6 +618,7 @@ export const resetToDefault = () => {
   localStorage.removeItem(STORAGE_KEYS.MAINTENANCE_TASKS)
   localStorage.removeItem(STORAGE_KEYS.ANNOUNCEMENTS)
   localStorage.removeItem(STORAGE_KEYS.CLIENTS)
+  localStorage.removeItem(STORAGE_KEYS.VENDING_MACHINES)
   initializeData()
   return true
 }

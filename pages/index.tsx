@@ -11,6 +11,7 @@ import {
 import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
 import ClientDetailModal from '../components/ClientDetailModal'
+import VendingMachineDetailModal from '../components/VendingMachineDetailModal'
 import MobileMenu from '../components/MobileMenu'
 import * as dataService from '../services/dataService'
 import { 
@@ -21,6 +22,7 @@ import {
   maintenanceNotifications,
   announcementNotifications,
   clientNotifications,
+  vendingMachineNotifications,
   reportNotifications,
   confirmAction,
   promptAction
@@ -40,6 +42,8 @@ export default function Home() {
   const [isClientDetailModalOpen, setIsClientDetailModalOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<dataService.Client | null>(null)
   const [clientModalEditMode, setClientModalEditMode] = useState(false)
+  const [isVendingMachineModalOpen, setIsVendingMachineModalOpen] = useState(false)
+  const [selectedVendingMachine, setSelectedVendingMachine] = useState<dataService.VendingMachine | null>(null)
   const [vehicleFilter, setVehicleFilter] = useState('all')
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
@@ -51,6 +55,7 @@ export default function Home() {
   const [sopCategoriesData, setSopCategoriesData] = useState<dataService.SOPCategory[]>([])
   const [announcements, setAnnouncements] = useState<dataService.Announcement[]>([])
   const [clients, setClients] = useState<dataService.Client[]>([])
+  const [vendingMachines, setVendingMachines] = useState<dataService.VendingMachine[]>([])
 
   // Load data on component mount
   useEffect(() => {
@@ -62,6 +67,7 @@ export default function Home() {
         setSopCategoriesData(dataService.getSOPCategories())
         setAnnouncements(dataService.getAnnouncements())
         setClients(dataService.getClients())
+        setVendingMachines(dataService.getVendingMachines())
         setIsLoading(false)
       } catch (error) {
         console.error('Failed to load data:', error)
@@ -217,6 +223,21 @@ export default function Home() {
 
   const handleClientUpdated = () => {
     refreshData()
+  }
+
+  const handleOpenVendingMachineModal = (machine: dataService.VendingMachine) => {
+    setSelectedVendingMachine(machine)
+    setIsVendingMachineModalOpen(true)
+  }
+
+  const handleCloseVendingMachineModal = () => {
+    setIsVendingMachineModalOpen(false)
+    setSelectedVendingMachine(null)
+  }
+
+  const handleVendingMachineUpdated = (updated: dataService.VendingMachine) => {
+    setVendingMachines(prev => prev.map(m => m.id === updated.id ? updated : m))
+    setSelectedVendingMachine(updated)
   }
 
   const handleHelpSupport = () => {
@@ -392,6 +413,7 @@ export default function Home() {
     setSopCategoriesData(dataService.getSOPCategories())
     setAnnouncements(dataService.getAnnouncements())
     setClients(dataService.getClients())
+    setVendingMachines(dataService.getVendingMachines())
   }
 
   // Management content renderer
@@ -1711,6 +1733,184 @@ export default function Home() {
             </div>
           </div>
         );
+      case 'vending':
+        const handleAddVendingMachine = async () => {
+          const name = await promptAction('Enter a name for this machine location (e.g. "Building A Lobby"):')
+          if (!name) return
+          const machineId = await promptAction('Enter the machine ID or serial number:')
+          if (!machineId) return
+          const location = await promptAction('Enter the address or building name:')
+          if (!location) return
+          const locationDetail = await promptAction('Enter location detail (optional, e.g. "Near main entrance"):',  '')
+          if (locationDetail === null) return
+          const typeInput = await promptAction('Enter machine type (snacks/beverages/combo/coffee/fresh-food/other):', 'combo')
+          if (typeInput === null) return
+          const validTypes = ['snacks', 'beverages', 'combo', 'coffee', 'fresh-food', 'other'] as const
+          const type = validTypes.includes(typeInput as typeof validTypes[number])
+            ? (typeInput as dataService.VendingMachine['type'])
+            : 'other'
+          try {
+            const newMachine = dataService.addVendingMachine({
+              name,
+              machineId,
+              location,
+              locationDetail: locationDetail || undefined,
+              type,
+              status: 'operational',
+            })
+            vendingMachineNotifications.added(name)
+            refreshData()
+          } catch (error) {
+            vendingMachineNotifications.error('add', error instanceof Error ? error.message : undefined)
+          }
+        }
+
+        const handleDeleteVendingMachine = async (id: number) => {
+          const machine = vendingMachines.find(m => m.id === id)
+          const confirmed = await confirmAction(
+            `Delete "${machine?.name}"? All handoff notes will be lost.`,
+            'Delete Vending Machine'
+          )
+          if (!confirmed) return
+          try {
+            dataService.deleteVendingMachine(id)
+            vendingMachineNotifications.deleted(machine?.name || 'Machine')
+            refreshData()
+          } catch (error) {
+            vendingMachineNotifications.error('delete', error instanceof Error ? error.message : undefined)
+          }
+        }
+
+        const STATUS_COLORS: Record<dataService.VendingMachine['status'], string> = {
+          operational: 'bg-green-100 text-green-800',
+          'needs-restock': 'bg-yellow-100 text-yellow-800',
+          'needs-maintenance': 'bg-red-100 text-red-800',
+          offline: 'bg-gray-100 text-gray-800',
+        }
+
+        const STATUS_LABELS: Record<dataService.VendingMachine['status'], string> = {
+          operational: 'Operational',
+          'needs-restock': 'Needs Restock',
+          'needs-maintenance': 'Needs Maintenance',
+          offline: 'Offline',
+        }
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm p-6 my-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Vending Machines</h2>
+                <p className="text-gray-600 mt-1">Track machines, leave handoff notes for the next driver or technician</p>
+              </div>
+              <button
+                onClick={handleAddVendingMachine}
+                className="mt-4 md:mt-0 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition flex items-center space-x-2"
+              >
+                <span>+ Add Machine</span>
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm text-blue-700">Total Machines</p>
+                <p className="text-2xl font-bold text-blue-900 mt-1">{vendingMachines.length}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm text-green-700">Operational</p>
+                <p className="text-2xl font-bold text-green-900 mt-1">
+                  {vendingMachines.filter(m => m.status === 'operational').length}
+                </p>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <p className="text-sm text-yellow-700">Needs Attention</p>
+                <p className="text-2xl font-bold text-yellow-900 mt-1">
+                  {vendingMachines.filter(m => m.status !== 'operational' && m.status !== 'offline').length}
+                </p>
+              </div>
+              <div className="bg-red-50 p-4 rounded-lg">
+                <p className="text-sm text-red-700">Open Notes</p>
+                <p className="text-2xl font-bold text-red-900 mt-1">
+                  {vendingMachines.reduce((sum, m) => sum + m.notes.filter(n => !n.resolved).length, 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Machine list */}
+            {vendingMachines.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p className="text-lg font-medium text-gray-500">No vending machines yet</p>
+                <p className="text-sm mt-1">Add a machine to start tracking handoff notes.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Machine</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Location</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Type</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Open Notes</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendingMachines.map(machine => {
+                      const openNotes = machine.notes.filter(n => !n.resolved)
+                      return (
+                        <tr key={machine.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">
+                            <p className="font-medium text-gray-900">{machine.name}</p>
+                            <p className="text-xs text-gray-400 font-mono">{machine.machineId}</p>
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">
+                            <p>{machine.location}</p>
+                            {machine.locationDetail && (
+                              <p className="text-xs text-gray-400">{machine.locationDetail}</p>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600 capitalize">{machine.type}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[machine.status]}`}>
+                              {STATUS_LABELS[machine.status]}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            {openNotes.length > 0 ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {openNotes.length} open
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">None</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleOpenVendingMachineModal(machine)}
+                                className="px-3 py-1 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => handleDeleteVendingMachine(machine.id)}
+                                className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
       case 'reports':
         // Calculate report statistics
         const totalVehicles = vehiclesData.length;
@@ -1986,27 +2186,6 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Role Demo Button */}
-              <button 
-                onClick={() => window.location.href = '/role-demo'}
-                className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium touch-target"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Role Demo</span>
-              </button>
-
-              {/* Mobile Role Demo Button */}
-              <button 
-                onClick={() => window.location.href = '/role-demo'}
-                className="sm:hidden p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 touch-target"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </button>
-
               {/* Announcement Button */}
               <button 
                 onClick={handleOpenAnnouncementModal}
@@ -2050,7 +2229,7 @@ export default function Home() {
           {/* Navigation Tabs - Responsive */}
           <nav className="mt-4 overflow-x-auto scroll-container">
             <div className="flex space-x-1 sm:space-x-6 min-w-max pb-1">
-              {['overview', 'vehicles', 'deliveries', 'sops', 'maintenance', 'clients', 'reports'].map((tab) => (
+              {['overview', 'vehicles', 'deliveries', 'sops', 'maintenance', 'clients', 'vending', 'reports'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -2060,7 +2239,7 @@ export default function Home() {
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                   }`}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tab === 'vending' ? 'Vending' : tab === 'sops' ? 'SOPs' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
             </div>
@@ -2578,6 +2757,12 @@ export default function Home() {
         client={selectedClient}
         onClientUpdated={handleClientUpdated}
         initialEditing={clientModalEditMode}
+      />
+      <VendingMachineDetailModal
+        isOpen={isVendingMachineModalOpen}
+        onClose={handleCloseVendingMachineModal}
+        machine={selectedVendingMachine}
+        onMachineUpdated={handleVendingMachineUpdated}
       />
 
       {/* Global Styles for Mobile Optimization */}
