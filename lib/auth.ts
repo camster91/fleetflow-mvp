@@ -5,6 +5,10 @@ import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
 import type { UserRole } from "@prisma/client"
 
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error("NEXTAUTH_SECRET environment variable is not set. Set a strong random secret before starting the server.")
+}
+
 // Extend the built-in session types
 declare module "next-auth" {
   interface User {
