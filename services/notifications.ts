@@ -130,6 +130,17 @@ export const clientNotifications = {
     notify.error(`Failed to ${action} client. ${error ? `Error: ${error}` : 'Please try again.'}`),
 };
 
+export const vendingMachineNotifications = {
+  added: (name: string) => notify.success(`Vending machine "${name}" added!`),
+  updated: (name: string) => notify.success(`Vending machine "${name}" updated!`),
+  deleted: (name: string) => notify.success(`Vending machine "${name}" removed.`),
+  noteAdded: (machine: string) => notify.success(`Note added to "${machine}".`),
+  noteResolved: () => notify.success('Note marked as resolved.'),
+  noteDeleted: () => notify.success('Note deleted.'),
+  error: (action: string, error?: string) =>
+    notify.error(`Failed to ${action} vending machine. ${error ? `Error: ${error}` : 'Please try again.'}`),
+};
+
 export const reportNotifications = {
   generating: (type: string) => notify.loading(`Generating ${type} report...`),
   generated: (type: string) => notify.success(`${type} report generated successfully!`),
