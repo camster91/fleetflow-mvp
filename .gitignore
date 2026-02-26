@@ -46,3 +46,9 @@ dev2.err
 *.tmp
 *.temp
 /generated/prisma
+# Environment files
+.env*
+
+# Local database files
+*.db
+*.db-journal
