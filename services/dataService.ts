@@ -189,124 +189,12 @@ export interface VendingMachine {
 }
 
 // Bump this string whenever you want to wipe old data and re-seed
-const DATA_VERSION = 'v2'
+const DATA_VERSION = 'v3'
 
-// Real seed data from TU-RTE #03 route sheet
-const seedVehicles: Vehicle[] = [
-  {
-    id: 1,
-    name: 'Ford Refr. Transit (2018)',
-    status: 'active',
-    driver: 'Gerardo Canabate',
-    location: 'Depot',
-    eta: 'N/A',
-    mileage: 0,
-    maintenanceDue: false,
-    vehicleType: 'cargo_van',
-    year: 2018,
-    fuelLevel: 100,
-  },
-]
-
-const seedClients: Client[] = [
-  {
-    id: 1,
-    name: 'Parkwood Institute Hospital - Main',
-    businessName: 'Parkwood Institute Hospital',
-    type: 'institution',
-    address: '801 Commissioners Rd E, London, ON',
-    deliveryFrequency: 'daily',
-    rating: 5,
-    notes: 'Stop 1 on TU-RTE #03',
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    name: 'London Health - North Tower',
-    businessName: 'London Health Sciences Centre',
-    type: 'institution',
-    address: '800 Commissioners Rd E, London, ON',
-    deliveryFrequency: 'daily',
-    rating: 5,
-    notes: 'Stop 2 on TU-RTE #03',
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  },
-  {
-    id: 3,
-    name: 'London Health - Verspeeten Cancer',
-    businessName: 'London Health Sciences Centre',
-    type: 'institution',
-    address: '800 Commissioners Rd E, London, ON',
-    deliveryFrequency: 'daily',
-    rating: 5,
-    notes: 'Stop 3 on TU-RTE #03',
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  },
-  {
-    id: 4,
-    name: 'London Health - Fayes @ Victoria',
-    businessName: 'London Health Sciences Centre',
-    type: 'institution',
-    address: '800 Commissioners Rd E, London, ON',
-    deliveryFrequency: 'daily',
-    rating: 5,
-    notes: 'Stop 4 on TU-RTE #03',
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  },
-  {
-    id: 5,
-    name: "St. Joseph's Hospital - Grosvenor",
-    businessName: "St. Joseph's Health Care London",
-    type: 'institution',
-    address: '268 Grosvenor St, London, ON',
-    deliveryFrequency: 'daily',
-    rating: 5,
-    notes: 'Stop 5 on TU-RTE #03',
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  },
-  {
-    id: 6,
-    name: 'London Health - University Hospital',
-    businessName: 'London Health Sciences Centre',
-    type: 'institution',
-    address: '339 Windermere Rd, 3rd Floor, London, ON',
-    deliveryFrequency: 'daily',
-    rating: 5,
-    notes: 'Stop 6 on TU-RTE #03',
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  },
-]
-
-const seedDeliveries: Delivery[] = seedClients.map((client, i) => ({
-  id: i + 1,
-  address: client.address,
-  customer: client.name,
-  status: 'pending' as const,
-  driver: 'Gerardo Canabate',
-  items: 0,
-  progress: 0,
-  notes: `TU-RTE #03 — Stop ${i + 1}`,
-}))
-
-const seedAnnouncements: Announcement[] = [
-  {
-    id: 1,
-    message:
-      'WINTER IS HERE! IT\'S COLD! WATCH YOUR FRIDGES! STAY WARM!\n\n' +
-      'KEEP VEHICLES CLEAN & FUELLED AT ALL TIMES\n\n' +
-      'DRIVE SAFELY! HAVE A GREAT DAY! KEEP SMILING!',
-    priority: 'high',
-    recipients: 'All Drivers',
-    timestamp: new Date().toISOString(),
-    readBy: [],
-  },
-]
+const seedVehicles: Vehicle[] = []
+const seedClients: Client[] = []
+const seedDeliveries: Delivery[] = []
+const seedAnnouncements: Announcement[] = []
 
 // Storage keys
 const STORAGE_KEYS = {
