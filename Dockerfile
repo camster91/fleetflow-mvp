@@ -14,11 +14,16 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
+# Generate Prisma client and create empty SQLite DB with schema
+RUN mkdir -p /app/data
+RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma generate
+RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma db push --skip-generate --accept-data-loss
 
 # Build the application
-RUN npm run build
+RUN DATABASE_URL="file:/app/data/fleet.db" \
+    NEXTAUTH_SECRET="build-placeholder-secret" \
+    NEXTAUTH_URL="https://fleet.ashbi.ca" \
+    npm run build
 
 # Production image
 FROM node:20-alpine AS runner
@@ -33,7 +38,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Create persistent data directory
+# Create data directory
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 # Copy necessary files from builder
@@ -41,10 +46,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy Prisma schema + generated client for runtime migrations
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+# Copy the pre-built SQLite database (empty, schema applied)
+COPY --from=builder --chown=nextjs:nodejs /app/data/fleet.db /app/data/fleet.db
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -61,5 +64,5 @@ USER nextjs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
-# Run DB migrations then start the app
-CMD npx prisma db push --skip-generate && node server.js
+# Start the application
+CMD ["node", "server.js"]
