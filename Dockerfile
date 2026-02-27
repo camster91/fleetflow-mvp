@@ -33,10 +33,18 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Create persistent data directory
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+
 # Copy necessary files from builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Copy Prisma schema + generated client for runtime migrations
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -53,5 +61,5 @@ USER nextjs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
-# Start the application
-CMD ["node", "server.js"]
+# Run DB migrations then start the app
+CMD npx prisma db push --skip-generate && node server.js
