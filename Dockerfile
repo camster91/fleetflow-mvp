@@ -14,7 +14,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma client and create the SQLite DB with schema applied
+# Generate Prisma client and create the SQLite DB template with schema applied
 RUN mkdir -p /app/data
 RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma generate
 RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma db push --accept-data-loss
@@ -38,7 +38,7 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Create data directory
+# Create data directory (will be overridden by Docker volume on startup)
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 # Copy necessary files from builder
@@ -50,8 +50,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
-# Copy the pre-built SQLite database (empty schema, tables ready)
-COPY --from=builder --chown=nextjs:nodejs /app/data/fleet.db /app/data/fleet.db
+# Copy the DB as a template (outside /app/data so the volume doesn't shadow it)
+COPY --from=builder --chown=nextjs:nodejs /app/data/fleet.db /app/fleet.db.template
+
+# Copy startup script
+COPY --chown=nextjs:nodejs start.sh /app/start.sh
+RUN chmod +x /app/start.sh
 
 # Set environment variables
 ENV NODE_ENV=production
@@ -68,5 +72,5 @@ USER nextjs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
-# Start the application
-CMD ["node", "server.js"]
+# Start via script that initializes DB if needed
+CMD ["/app/start.sh"]
