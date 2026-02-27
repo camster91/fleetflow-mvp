@@ -14,7 +14,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Generate Prisma client and create empty SQLite DB with schema
+# Generate Prisma client and create the SQLite DB with schema applied
 RUN mkdir -p /app/data
 RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma generate
 RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma db push --accept-data-loss
@@ -46,7 +46,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Copy the pre-built SQLite database (empty, schema applied)
+# Copy the pre-built SQLite database (empty schema, tables ready)
 COPY --from=builder --chown=nextjs:nodejs /app/data/fleet.db /app/data/fleet.db
 
 # Set environment variables
