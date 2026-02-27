@@ -17,7 +17,7 @@ COPY . .
 # Generate Prisma client and create empty SQLite DB with schema
 RUN mkdir -p /app/data
 RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma generate
-RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma db push --skip-generate --accept-data-loss
+RUN DATABASE_URL="file:/app/data/fleet.db" npx prisma db push --accept-data-loss
 
 # Build the application
 RUN DATABASE_URL="file:/app/data/fleet.db" \
