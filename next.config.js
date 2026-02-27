@@ -26,11 +26,6 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  // Expose these to Edge Runtime (middleware) at runtime
-  env: {
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  },
   async headers() {
     return [
       {
