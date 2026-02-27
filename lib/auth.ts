@@ -3,8 +3,6 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { prisma } from "./prisma"
 import bcrypt from "bcryptjs"
-import type { UserRole } from "@prisma/client"
-
 if (!process.env.NEXTAUTH_SECRET) {
   throw new Error("NEXTAUTH_SECRET environment variable is not set. Set a strong random secret before starting the server.")
 }
@@ -12,7 +10,7 @@ if (!process.env.NEXTAUTH_SECRET) {
 // Extend the built-in session types
 declare module "next-auth" {
   interface User {
-    role: UserRole
+    role: string
     company?: string
   }
   
@@ -22,7 +20,7 @@ declare module "next-auth" {
       name?: string | null
       email?: string | null
       image?: string | null
-      role: UserRole
+      role: string
       company?: string | null
     }
   }
@@ -31,7 +29,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string
-    role: UserRole
+    role: string
     company?: string | null
   }
 }
