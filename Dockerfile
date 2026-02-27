@@ -28,8 +28,8 @@ RUN DATABASE_URL="file:/app/data/fleet.db" \
 # Production image
 FROM node:20-alpine AS runner
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install curl for health checks + openssl for Prisma query engine
+RUN apk add --no-cache curl openssl
 
 # Set working directory
 WORKDIR /app
@@ -45,6 +45,10 @@ RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Explicitly copy Prisma engine binaries (query engine for runtime)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Copy the pre-built SQLite database (empty schema, tables ready)
 COPY --from=builder --chown=nextjs:nodejs /app/data/fleet.db /app/data/fleet.db
