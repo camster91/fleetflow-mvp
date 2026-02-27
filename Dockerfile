@@ -2,7 +2,7 @@
 FROM node:20-alpine AS builder
 
 # Install dependencies for building
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat openssl
 
 # Set working directory
 WORKDIR /app
