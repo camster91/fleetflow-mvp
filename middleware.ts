@@ -58,6 +58,8 @@ export default withAuth(
     return NextResponse.next()
   },
   {
+    // Explicitly pass secret so Edge Runtime can verify JWTs
+    secret: process.env.NEXTAUTH_SECRET,
     callbacks: {
       authorized: ({ token }) => {
         // Require authentication for all routes except auth pages and public assets
