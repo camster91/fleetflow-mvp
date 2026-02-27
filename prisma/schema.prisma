@@ -15,7 +15,7 @@ model User {
   email          String    @unique
   name           String?
   password       String?   // Nullable for OAuth users
-  role           UserRole  @default(fleet_manager)
+  role           String    @default("fleet_manager")
   company        String?
   emailVerified  DateTime?
   image          String?
@@ -62,12 +62,3 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-enum UserRole {
-  admin
-  fleet_manager
-  dispatch
-  driver
-  maintenance
-  safety_officer
-  finance
-}
