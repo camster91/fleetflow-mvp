@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/router'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../lib/auth'
+import type { GetServerSidePropsContext } from 'next'
 import { 
   Truck, MapPin, Package, Calendar, AlertTriangle, 
   CheckCircle, Clock, Users, BarChart, Battery,
@@ -2801,4 +2806,16 @@ export default function Home() {
       `}</style>
     </div>
   )
+}
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getServerSession(context.req, context.res, authOptions)
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/auth/login',
+        permanent: false,
+      },
+    }
+  }
+  return { props: {} }
 }
