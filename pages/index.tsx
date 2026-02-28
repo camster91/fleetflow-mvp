@@ -17,6 +17,8 @@ import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
 import ClientDetailModal from '../components/ClientDetailModal'
 import VendingMachineDetailModal from '../components/VendingMachineDetailModal'
+import VehicleFormModal from '../components/VehicleFormModal'
+import DeliveryFormModal from '../components/DeliveryFormModal'
 import MobileMenu from '../components/MobileMenu'
 import * as dataService from '../services/dataService'
 import { 
@@ -50,6 +52,12 @@ export default function Home() {
   const [isVendingMachineModalOpen, setIsVendingMachineModalOpen] = useState(false)
   const [selectedVendingMachine, setSelectedVendingMachine] = useState<dataService.VendingMachine | null>(null)
   const [vehicleFilter, setVehicleFilter] = useState('all')
+  
+  // Form modal states
+  const [isVehicleFormOpen, setIsVehicleFormOpen] = useState(false)
+  const [editingVehicle, setEditingVehicle] = useState<dataService.Vehicle | null>(null)
+  const [isDeliveryFormOpen, setIsDeliveryFormOpen] = useState(false)
+  const [editingDelivery, setEditingDelivery] = useState<dataService.Delivery | null>(null)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
@@ -421,63 +429,50 @@ export default function Home() {
     setVendingMachines(dataService.getVendingMachines())
   }
 
+  // Vehicle form handlers
+  const handleAddVehicle = () => {
+    setEditingVehicle(null)
+    setIsVehicleFormOpen(true)
+  }
+
+  const handleEditVehicle = (vehicle: dataService.Vehicle) => {
+    setEditingVehicle(vehicle)
+    setIsVehicleFormOpen(true)
+  }
+  
+  const handleVehicleFormSubmit = (vehicle: dataService.Vehicle) => {
+    if (editingVehicle) {
+      vehicleNotifications.updated(vehicle.name)
+    } else {
+      vehicleNotifications.added(vehicle.name)
+    }
+    refreshData()
+  }
+
+  // Delivery form handlers
+  const handleAddDelivery = () => {
+    setEditingDelivery(null)
+    setIsDeliveryFormOpen(true)
+  }
+
+  const handleEditDelivery = (delivery: dataService.Delivery) => {
+    setEditingDelivery(delivery)
+    setIsDeliveryFormOpen(true)
+  }
+  
+  const handleDeliveryFormSubmit = (delivery: dataService.Delivery) => {
+    if (editingDelivery) {
+      deliveryNotifications.updated(delivery.customer)
+    } else {
+      deliveryNotifications.added(delivery.customer)
+    }
+    refreshData()
+  }
+
   // Management content renderer
   const renderManagementContent = () => {
     switch (activeTab) {
       case 'vehicles':
-        const handleAddVehicle = async () => {
-          const name = await promptAction('Enter vehicle name:');
-          if (!name) return;
-          
-          const driver = await promptAction('Enter driver name:');
-          const location = await promptAction('Enter current location:');
-          const mileageInput = await promptAction('Enter mileage:', '0');
-          const mileage = parseInt(mileageInput || '0');
-          
-          try {
-            const newVehicle = dataService.addVehicle({
-              name,
-              status: 'active',
-              driver: driver || 'Unassigned',
-              location: location || 'Depot',
-              eta: 'N/A',
-              mileage,
-              maintenanceDue: false
-            });
-            vehicleNotifications.added(name);
-            refreshData();
-          } catch (error) {
-            vehicleNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleEditVehicle = async (vehicle: dataService.Vehicle) => {
-          const newName = await promptAction('Edit vehicle name:', vehicle.name);
-          if (newName === null) return;
-          
-          const newDriver = await promptAction('Edit driver name:', vehicle.driver);
-          const newLocation = await promptAction('Edit location:', vehicle.location);
-          const newMileage = await promptAction('Edit mileage:', vehicle.mileage.toString());
-          const newStatus = await promptAction('Edit status (active/inactive/delayed):', vehicle.status);
-          
-          try {
-            const updated = dataService.updateVehicle(vehicle.id, {
-              name: newName || vehicle.name,
-              driver: newDriver || vehicle.driver,
-              location: newLocation || vehicle.location,
-              mileage: newMileage ? parseInt(newMileage) : vehicle.mileage,
-              status: (newStatus === 'active' || newStatus === 'inactive' || newStatus === 'delayed') ? newStatus as 'active' | 'inactive' | 'delayed' : vehicle.status
-            });
-            
-            if (updated) {
-              vehicleNotifications.updated(updated.name);
-              refreshData();
-            }
-          } catch (error) {
-            vehicleNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
-        };
-
         const handleDeleteVehicle = async (id: number) => {
           const confirmed = await confirmAction(
             'Are you sure you want to delete this vehicle? This action cannot be undone.',
@@ -657,57 +652,6 @@ export default function Home() {
           </div>
         );
       case 'deliveries':
-        const handleAddDelivery = async () => {
-          const customer = await promptAction('Enter customer name:');
-          if (!customer) return;
-          
-          const address = await promptAction('Enter delivery address:');
-          const itemsInput = await promptAction('Enter number of items:', '1');
-          const items = parseInt(itemsInput || '1');
-          
-          try {
-            const newDelivery = dataService.addDelivery({
-              address: address || 'Unknown',
-              customer,
-              status: 'pending',
-              driver: 'Unassigned',
-              items,
-              progress: 0
-            });
-            deliveryNotifications.added(customer);
-            refreshData();
-          } catch (error) {
-            deliveryNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleEditDelivery = async (delivery: dataService.Delivery) => {
-          const newCustomer = await promptAction('Edit customer name:', delivery.customer);
-          if (newCustomer === null) return;
-          
-          const newAddress = await promptAction('Edit address:', delivery.address);
-          const newItems = await promptAction('Edit number of items:', delivery.items.toString());
-          const newDriver = await promptAction('Edit driver:', delivery.driver);
-          const newStatus = await promptAction('Edit status (pending/in-transit/delivered):', delivery.status);
-          
-          try {
-            const updated = dataService.updateDelivery(delivery.id, {
-              customer: newCustomer || delivery.customer,
-              address: newAddress || delivery.address,
-              items: newItems ? parseInt(newItems) : delivery.items,
-              driver: newDriver || delivery.driver,
-              status: (newStatus === 'pending' || newStatus === 'in-transit' || newStatus === 'delivered') ? newStatus as 'pending' | 'in-transit' | 'delivered' : delivery.status
-            });
-            
-            if (updated) {
-              deliveryNotifications.updated(updated.customer);
-              refreshData();
-            }
-          } catch (error) {
-            deliveryNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
-        };
-
         const handleDeleteDelivery = async (id: number) => {
           const confirmed = await confirmAction(
             'Are you sure you want to delete this delivery?',
@@ -2768,6 +2712,22 @@ export default function Home() {
         onClose={handleCloseVendingMachineModal}
         machine={selectedVendingMachine}
         onMachineUpdated={handleVendingMachineUpdated}
+      />
+      
+      {/* Form Modals */}
+      <VehicleFormModal
+        isOpen={isVehicleFormOpen}
+        onClose={() => setIsVehicleFormOpen(false)}
+        onSubmit={handleVehicleFormSubmit}
+        vehicle={editingVehicle}
+      />
+      <DeliveryFormModal
+        isOpen={isDeliveryFormOpen}
+        onClose={() => setIsDeliveryFormOpen(false)}
+        onSubmit={handleDeliveryFormSubmit}
+        delivery={editingDelivery}
+        clients={clients}
+        vehicles={vehiclesData}
       />
 
       {/* Global Styles for Mobile Optimization */}
