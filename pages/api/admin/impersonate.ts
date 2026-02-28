@@ -2,8 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
+import { rateLimit, auditLog } from '../../../lib/security'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Apply rate limiting
+  const allowed = await rateLimit(req, res, 'admin')
+  if (!allowed) return
+
   const session = await getServerSession(req, res, authOptions)
   
   // Check if user is authenticated and is an admin
@@ -55,6 +60,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         startedAt: new Date().toISOString()
       }
       
+      // Audit log
+      await auditLog({
+        type: 'IMPERSONATION_STARTED',
+        userId: session.user.id,
+        targetId: targetUser.id,
+        details: { targetRole: targetUser.role },
+        ip: req.headers['x-forwarded-for'] as string || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent']
+      })
+      
       return res.status(200).json({ 
         success: true,
         impersonation: impersonationData,
@@ -68,6 +83,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // DELETE - Stop impersonating
   if (req.method === 'DELETE') {
+    // Audit log
+    await auditLog({
+      type: 'IMPERSONATION_ENDED',
+      userId: session.user.id,
+      details: {},
+      ip: req.headers['x-forwarded-for'] as string || req.socket.remoteAddress,
+      userAgent: req.headers['user-agent']
+    })
+    
     return res.status(200).json({ 
       success: true,
       message: 'Impersonation ended'
