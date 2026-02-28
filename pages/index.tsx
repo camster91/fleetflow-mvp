@@ -21,6 +21,8 @@ import VehicleFormModal from '../components/VehicleFormModal'
 import DeliveryFormModal from '../components/DeliveryFormModal'
 import MaintenanceTaskFormModal from '../components/MaintenanceTaskFormModal'
 import SOPCategoryFormModal from '../components/SOPCategoryFormModal'
+import ClientFormModal from '../components/ClientFormModal'
+import VendingMachineFormModal from '../components/VendingMachineFormModal'
 import ConfirmModal from '../components/ConfirmModal'
 import MobileMenu from '../components/MobileMenu'
 import * as dataService from '../services/dataService'
@@ -65,6 +67,10 @@ export default function Home() {
   const [editingMaintenanceTask, setEditingMaintenanceTask] = useState<dataService.MaintenanceTask | null>(null)
   const [isSOPCategoryFormOpen, setIsSOPCategoryFormOpen] = useState(false)
   const [editingSOPCategory, setEditingSOPCategory] = useState<dataService.SOPCategory | null>(null)
+  const [isClientFormOpen, setIsClientFormOpen] = useState(false)
+  const [editingClient, setEditingClient] = useState<dataService.Client | null>(null)
+  const [isVendingMachineFormOpen, setIsVendingMachineFormOpen] = useState(false)
+  const [editingVendingMachine, setEditingVendingMachine] = useState<dataService.VendingMachine | null>(null)
   
   // Confirm modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -527,6 +533,46 @@ export default function Home() {
       sopNotifications.categoryUpdated(category.name)
     } else {
       sopNotifications.categoryAdded(category.name)
+    }
+    refreshData()
+  }
+
+  // Client form handlers
+  const handleAddClient = () => {
+    setEditingClient(null)
+    setIsClientFormOpen(true)
+  }
+
+  const handleEditClient = (client: dataService.Client) => {
+    setEditingClient(client)
+    setIsClientFormOpen(true)
+  }
+  
+  const handleClientFormSubmit = (client: dataService.Client) => {
+    if (editingClient) {
+      clientNotifications.updated(client.name)
+    } else {
+      clientNotifications.added(client.name)
+    }
+    refreshData()
+  }
+
+  // Vending Machine form handlers
+  const handleAddVendingMachine = () => {
+    setEditingVendingMachine(null)
+    setIsVendingMachineFormOpen(true)
+  }
+
+  const handleEditVendingMachine = (machine: dataService.VendingMachine) => {
+    setEditingVendingMachine(machine)
+    setIsVendingMachineFormOpen(true)
+  }
+  
+  const handleVendingMachineFormSubmit = (machine: dataService.VendingMachine) => {
+    if (editingVendingMachine) {
+      vendingMachineNotifications.updated(machine.name)
+    } else {
+      vendingMachineNotifications.added(machine.name)
     }
     refreshData()
   }
@@ -1395,115 +1441,25 @@ export default function Home() {
             </div>
           </div>
         );
-      case 'clients':
-        const handleAddClient = async () => {
-          const name = await promptAction('Enter client name:');
-          if (!name) return;
-          
-          const businessName = await promptAction('Enter business name (optional):', '');
-          if (businessName === null) return; // User cancelled
-          
-          const typeInput = await promptAction('Enter client type (restaurant/hotel/office/retail/warehouse/other):', 'restaurant');
-          if (typeInput === null) return;
-          
-          const address = await promptAction('Enter client address:');
-          if (address === null) return;
-          
-          const phone = await promptAction('Enter phone number (optional):', '');
-          if (phone === null) return;
-          
-          const email = await promptAction('Enter email (optional):', '');
-          if (email === null) return;
-          
-          // Validate type
-          const validTypes = ['restaurant', 'hotel', 'office', 'retail', 'warehouse', 'other'] as const;
-          const type = validTypes.includes(typeInput as any) ? typeInput as dataService.Client['type'] : 'other';
-          
-          try {
-            const newClient = dataService.addClient({
-              name,
-              businessName: businessName || undefined,
-              type,
-              address,
-              phone: phone || undefined,
-              email: email || undefined,
-              // Default values for other fields
-              deliveryFrequency: 'as-needed',
-              rating: 3,
-            });
-            clientNotifications.added(name);
-            refreshData();
-          } catch (error) {
-            clientNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleEditClient = async (client: dataService.Client) => {
-          const newName = await promptAction('Edit client name:', client.name);
-          if (newName === null) return;
-          
-          const newBusinessName = await promptAction('Edit business name:', client.businessName || '');
-          const newTypeInput = await promptAction('Edit client type:', client.type);
-          const newAddress = await promptAction('Edit address:', client.address);
-          const newPhone = await promptAction('Edit phone:', client.phone || '');
-          const newEmail = await promptAction('Edit email:', client.email || '');
-          
-          // If user cancels any prompt (returns null), keep original value
-          // For optional fields, empty string is allowed
-          const updates: Partial<dataService.Client> = {
-            name: newName || client.name,
-          };
-          
-          if (newBusinessName !== null) {
-            updates.businessName = newBusinessName || client.businessName;
-          }
-          
-          if (newTypeInput !== null) {
-            const validTypes = ['restaurant', 'hotel', 'office', 'retail', 'warehouse', 'other'] as const;
-            updates.type = validTypes.includes(newTypeInput as any) ? newTypeInput as dataService.Client['type'] : client.type;
-          }
-          
-          if (newAddress !== null) {
-            updates.address = newAddress || client.address;
-          }
-          
-          if (newPhone !== null) {
-            updates.phone = newPhone || client.phone;
-          }
-          
-          if (newEmail !== null) {
-            updates.email = newEmail || client.email;
-          }
-          
-          try {
-            const updated = dataService.updateClient(client.id, updates);
-            
-            if (updated) {
-              clientNotifications.updated(updated.name);
-              refreshData();
-            }
-          } catch (error) {
-            clientNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleDeleteClient = async (id: number) => {
-          const confirmed = await confirmAction(
-            'Are you sure you want to delete this client? This action cannot be undone.',
-            'Delete Client'
-          );
-          if (confirmed) {
-            try {
-              const client = clients.find(c => c.id === id);
-              const success = dataService.deleteClient(id);
-              if (success) {
-                clientNotifications.deleted(client?.name || 'Client');
-                refreshData();
+      case 'clients': {
+        const handleDeleteClient = (id: number) => {
+          const client = clients.find(c => c.id === id);
+          showConfirmModal({
+            title: 'Delete Client',
+            message: `Are you sure you want to delete "${client?.name}"? This action cannot be undone.`,
+            variant: 'danger',
+            onConfirm: () => {
+              try {
+                const success = dataService.deleteClient(id);
+                if (success) {
+                  clientNotifications.deleted(client?.name || 'Client');
+                  refreshData();
+                }
+              } catch (error) {
+                clientNotifications.error('delete', error instanceof Error ? error.message : undefined);
               }
-            } catch (error) {
-              clientNotifications.error('delete', error instanceof Error ? error.message : undefined);
             }
-          }
+          });
         };
 
         const handleViewClientDetails = (client: dataService.Client) => {
@@ -1718,52 +1674,24 @@ export default function Home() {
             </div>
           </div>
         );
-      case 'vending':
-        const handleAddVendingMachine = async () => {
-          const name = await promptAction('Enter a name for this machine location (e.g. "Building A Lobby"):')
-          if (!name) return
-          const machineId = await promptAction('Enter the machine ID or serial number:')
-          if (!machineId) return
-          const location = await promptAction('Enter the address or building name:')
-          if (!location) return
-          const locationDetail = await promptAction('Enter location detail (optional, e.g. "Near main entrance"):',  '')
-          if (locationDetail === null) return
-          const typeInput = await promptAction('Enter machine type (snacks/beverages/combo/coffee/fresh-food/other):', 'combo')
-          if (typeInput === null) return
-          const validTypes = ['snacks', 'beverages', 'combo', 'coffee', 'fresh-food', 'other'] as const
-          const type = validTypes.includes(typeInput as typeof validTypes[number])
-            ? (typeInput as dataService.VendingMachine['type'])
-            : 'other'
-          try {
-            const newMachine = dataService.addVendingMachine({
-              name,
-              machineId,
-              location,
-              locationDetail: locationDetail || undefined,
-              type,
-              status: 'operational',
-            })
-            vendingMachineNotifications.added(name)
-            refreshData()
-          } catch (error) {
-            vendingMachineNotifications.error('add', error instanceof Error ? error.message : undefined)
-          }
-        }
-
-        const handleDeleteVendingMachine = async (id: number) => {
+      }
+      case 'vending': {
+        const handleDeleteVendingMachine = (id: number) => {
           const machine = vendingMachines.find(m => m.id === id)
-          const confirmed = await confirmAction(
-            `Delete "${machine?.name}"? All handoff notes will be lost.`,
-            'Delete Vending Machine'
-          )
-          if (!confirmed) return
-          try {
-            dataService.deleteVendingMachine(id)
-            vendingMachineNotifications.deleted(machine?.name || 'Machine')
-            refreshData()
-          } catch (error) {
-            vendingMachineNotifications.error('delete', error instanceof Error ? error.message : undefined)
-          }
+          showConfirmModal({
+            title: 'Delete Vending Machine',
+            message: `Delete "${machine?.name}"? All handoff notes will be lost.`,
+            variant: 'danger',
+            onConfirm: () => {
+              try {
+                dataService.deleteVendingMachine(id)
+                vendingMachineNotifications.deleted(machine?.name || 'Machine')
+                refreshData()
+              } catch (error) {
+                vendingMachineNotifications.error('delete', error instanceof Error ? error.message : undefined)
+              }
+            }
+          })
         }
 
         const STATUS_COLORS: Record<dataService.VendingMachine['status'], string> = {
@@ -1896,7 +1824,8 @@ export default function Home() {
             )}
           </div>
         );
-      case 'reports':
+      }
+      case 'reports': {
         // Calculate report statistics
         const totalVehicles = vehiclesData.length;
         const activeVehicles = vehiclesData.filter(v => v.status === 'active').length;
@@ -2100,6 +2029,7 @@ export default function Home() {
             </div>
           </div>
         );
+      }
       default:
         return null;
     }
@@ -2777,6 +2707,18 @@ export default function Home() {
         onClose={() => setIsSOPCategoryFormOpen(false)}
         onSubmit={handleSOPCategoryFormSubmit}
         category={editingSOPCategory}
+      />
+      <ClientFormModal
+        isOpen={isClientFormOpen}
+        onClose={() => setIsClientFormOpen(false)}
+        onSubmit={handleClientFormSubmit}
+        client={editingClient}
+      />
+      <VendingMachineFormModal
+        isOpen={isVendingMachineFormOpen}
+        onClose={() => setIsVendingMachineFormOpen(false)}
+        onSubmit={handleVendingMachineFormSubmit}
+        machine={editingVendingMachine}
       />
       <ConfirmModal
         isOpen={confirmModal.isOpen}
