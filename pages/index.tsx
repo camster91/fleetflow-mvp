@@ -25,6 +25,11 @@ import ClientFormModal from '../components/ClientFormModal'
 import VendingMachineFormModal from '../components/VendingMachineFormModal'
 import ConfirmModal from '../components/ConfirmModal'
 import MobileMenu from '../components/MobileMenu'
+import NotificationsCenter from '../components/NotificationsCenter'
+import QuickActions from '../components/QuickActions'
+import CommandPalette from '../components/CommandPalette'
+import ActivityFeed from '../components/ActivityFeed'
+import KeyboardShortcutsHelp from '../components/KeyboardShortcutsHelp'
 import * as dataService from '../services/dataService'
 import { 
   notify,
@@ -90,6 +95,11 @@ export default function Home() {
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
+  // New UX components state
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false)
+
   // Data state
   const [vehiclesData, setVehiclesData] = useState<dataService.Vehicle[]>([])
   const [deliveriesData, setDeliveriesData] = useState<dataService.Delivery[]>([])
@@ -135,6 +145,39 @@ export default function Home() {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isFilterOpen, filterRef])
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Command palette: Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        setIsCommandPaletteOpen(prev => !prev)
+      }
+      
+      // Notifications: N key (when not in input)
+      if (e.key === 'n' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault()
+        setIsNotificationsOpen(prev => !prev)
+      }
+      
+      // Keyboard shortcuts help: ? key (when not in input)
+      if (e.key === '?' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
+        e.preventDefault()
+        setIsKeyboardShortcutsOpen(true)
+      }
+      
+      // Close panels on Escape
+      if (e.key === 'Escape') {
+        setIsNotificationsOpen(false)
+        setIsCommandPaletteOpen(false)
+        setIsKeyboardShortcutsOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Filter vehicles based on selected filter
   const filteredVehicles = vehiclesData.filter(vehicle => {
@@ -2096,11 +2139,24 @@ export default function Home() {
 
               {/* Notifications */}
               <div className="relative">
-                <button className="p-2 rounded-lg hover:bg-gray-100 relative touch-target">
+                <button 
+                  onClick={() => setIsNotificationsOpen(true)}
+                  className="p-2 rounded-lg hover:bg-gray-100 relative touch-target"
+                >
                   <Bell className="h-5 w-5 text-gray-600" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
               </div>
+
+              {/* Command Palette Toggle */}
+              <button 
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="hidden md:flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition text-sm"
+                title="Command Palette (Ctrl+K)"
+              >
+                <Search className="h-4 w-4" />
+                <kbd className="hidden lg:block px-1.5 py-0.5 text-xs bg-gray-200 rounded">Ctrl K</kbd>
+              </button>
 
               {/* Admin Link - Only for admins */}
               {session?.user?.role === 'admin' && (
@@ -2596,6 +2652,9 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* Activity Feed */}
+            <ActivityFeed limit={5} />
           </div>
         </div>
       {activeTab !== 'overview' && renderManagementContent()}
@@ -2742,6 +2801,54 @@ export default function Home() {
         title={confirmModal.title}
         message={confirmModal.message}
         variant={confirmModal.variant}
+      />
+
+      {/* New UX Components */}
+      <NotificationsCenter
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onAddVehicle={() => {
+          setEditingVehicle(null)
+          setIsVehicleFormOpen(true)
+        }}
+        onAddDelivery={() => {
+          setEditingDelivery(null)
+          setIsDeliveryFormOpen(true)
+        }}
+        onAddClient={() => {
+          setEditingClient(null)
+          setIsClientFormOpen(true)
+        }}
+        onAddMaintenance={() => {
+          setEditingMaintenanceTask(null)
+          setIsMaintenanceFormOpen(true)
+        }}
+      />
+      <KeyboardShortcutsHelp
+        isOpen={isKeyboardShortcutsOpen}
+        onClose={() => setIsKeyboardShortcutsOpen(false)}
+      />
+      <QuickActions
+        onAddVehicle={() => {
+          setEditingVehicle(null)
+          setIsVehicleFormOpen(true)
+        }}
+        onAddDelivery={() => {
+          setEditingDelivery(null)
+          setIsDeliveryFormOpen(true)
+        }}
+        onAddClient={() => {
+          setEditingClient(null)
+          setIsClientFormOpen(true)
+        }}
+        onAddMaintenance={() => {
+          setEditingMaintenanceTask(null)
+          setIsMaintenanceFormOpen(true)
+        }}
       />
 
       {/* Global Styles for Mobile Optimization */}
