@@ -11,7 +11,7 @@ import {
   MessageSquare, Download, Upload, Settings, Bell,
   Search, Menu, X, ChevronRight, Filter, SortAsc,
   Phone, Mail, Map as MapIcon, FileText, Home as HomeIcon, DollarSign,
-  Camera, MapPin as MapPinIcon, Building, Car, Star
+  Camera, MapPin as MapPinIcon, Building, Car, Star, Shield
 } from 'lucide-react'
 import AnnouncementModal from '../components/AnnouncementModal'
 import VehicleDetailModal from '../components/VehicleDetailModal'
@@ -45,6 +45,7 @@ import {
 // Data will be loaded from dataService
 
 export default function Home() {
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('overview')
   const [isLoading, setIsLoading] = useState(true)
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false)
@@ -2100,6 +2101,17 @@ export default function Home() {
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
               </div>
+
+              {/* Admin Link - Only for admins */}
+              {session?.user?.role === 'admin' && (
+                <a
+                  href="/admin/users"
+                  className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium touch-target"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>Admin</span>
+                </a>
+              )}
 
               {/* Announcement Button */}
               <button 

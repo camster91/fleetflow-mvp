@@ -23,6 +23,16 @@ declare module "next-auth" {
       role: string
       company?: string | null
     }
+    impersonation?: {
+      isImpersonating: boolean
+      originalUserId: string
+      originalUserRole: string
+      impersonatedUserId: string
+      impersonatedUserRole: string
+      impersonatedUserName?: string
+      impersonatedUserEmail?: string
+      startedAt: string
+    } | null
   }
 }
 
@@ -31,6 +41,16 @@ declare module "next-auth/jwt" {
     id: string
     role: string
     company?: string | null
+    impersonation?: {
+      isImpersonating: boolean
+      originalUserId: string
+      originalUserRole: string
+      impersonatedUserId: string
+      impersonatedUserRole: string
+      impersonatedUserName?: string
+      impersonatedUserEmail?: string
+      startedAt: string
+    } | null
   }
 }
 
@@ -85,12 +105,24 @@ export const authOptions: NextAuthOptions = {
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
         token.role = user.role
         token.company = user.company
       }
+      
+      // Handle impersonation update from client
+      if (trigger === "update" && session?.impersonation) {
+        token.impersonation = session.impersonation
+      }
+      
+      // If impersonating, swap the user data
+      if (token.impersonation?.isImpersonating) {
+        token.id = token.impersonation.impersonatedUserId
+        token.role = token.impersonation.impersonatedUserRole
+      }
+      
       return token
     },
     async session({ session, token }) {
@@ -98,6 +130,16 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id
         session.user.role = token.role
         session.user.company = token.company || null
+        
+        // Include impersonation info in session
+        if (token.impersonation?.isImpersonating) {
+          session.impersonation = token.impersonation
+          // Update displayed user info to impersonated user
+          session.user.id = token.impersonation.impersonatedUserId
+          session.user.role = token.impersonation.impersonatedUserRole
+          session.user.name = token.impersonation.impersonatedUserName || session.user.name
+          session.user.email = token.impersonation.impersonatedUserEmail || session.user.email
+        }
       }
       return session
     }
