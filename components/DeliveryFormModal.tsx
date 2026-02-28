@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Package, MapPin, User, Calendar, Clock, FileText, Phone, Mail, Building, Camera, Navigation } from 'lucide-react'
 import FormModal from './FormModal'
 import * as dataService from '../services/dataService'
+import * as recentItems from '../services/recentItems'
+import AutocompleteInput from './AutocompleteInput'
 
 interface DeliveryFormModalProps {
   isOpen: boolean
@@ -21,6 +23,7 @@ const STATUS_OPTIONS = [
 
 export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery, clients = [], vehicles = [] }: DeliveryFormModalProps) {
   const isEditing = !!delivery
+  const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
   
   const [formData, setFormData] = useState<{
     customer: string
@@ -202,6 +205,15 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
         result = dataService.addDelivery(deliveryData)
       }
       
+      // Save to recent items for autofill
+      recentItems.addRecentDelivery({
+        customer: formData.customer,
+        address: formData.address,
+        contactName: formData.contactName,
+        contactPhone: formData.contactPhone,
+        contactEmail: formData.contactEmail
+      })
+      
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -281,18 +293,13 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Customer Name <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.customer}
-                  onChange={(e) => handleChange('customer', e.target.value)}
-                  placeholder="e.g., Acme Corporation"
-                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition ${
-                    errors.customer ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-              </div>
+              <AutocompleteInput
+                value={formData.customer}
+                onChange={(value) => handleChange('customer', value)}
+                recentItems={recents.customerNames}
+                placeholder="e.g., Acme Corporation"
+                icon={<Building className="h-4 w-4" />}
+              />
               {errors.customer && <p className="mt-1 text-sm text-red-600">{errors.customer}</p>}
             </div>
 
@@ -321,18 +328,13 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Delivery Address <span className="text-red-500">*</span>
               </label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.address}
-                  onChange={(e) => handleChange('address', e.target.value)}
-                  placeholder="Full street address"
-                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition ${
-                    errors.address ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-              </div>
+              <AutocompleteInput
+                value={formData.address}
+                onChange={(value) => handleChange('address', value)}
+                recentItems={recents.addresses}
+                placeholder="Full street address"
+                icon={<MapPin className="h-4 w-4" />}
+              />
               {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
             </div>
           </div>

@@ -19,6 +19,9 @@ import ClientDetailModal from '../components/ClientDetailModal'
 import VendingMachineDetailModal from '../components/VendingMachineDetailModal'
 import VehicleFormModal from '../components/VehicleFormModal'
 import DeliveryFormModal from '../components/DeliveryFormModal'
+import MaintenanceTaskFormModal from '../components/MaintenanceTaskFormModal'
+import SOPCategoryFormModal from '../components/SOPCategoryFormModal'
+import ConfirmModal from '../components/ConfirmModal'
 import MobileMenu from '../components/MobileMenu'
 import * as dataService from '../services/dataService'
 import { 
@@ -58,6 +61,25 @@ export default function Home() {
   const [editingVehicle, setEditingVehicle] = useState<dataService.Vehicle | null>(null)
   const [isDeliveryFormOpen, setIsDeliveryFormOpen] = useState(false)
   const [editingDelivery, setEditingDelivery] = useState<dataService.Delivery | null>(null)
+  const [isMaintenanceFormOpen, setIsMaintenanceFormOpen] = useState(false)
+  const [editingMaintenanceTask, setEditingMaintenanceTask] = useState<dataService.MaintenanceTask | null>(null)
+  const [isSOPCategoryFormOpen, setIsSOPCategoryFormOpen] = useState(false)
+  const [editingSOPCategory, setEditingSOPCategory] = useState<dataService.SOPCategory | null>(null)
+  
+  // Confirm modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    onConfirm: () => void
+    variant?: 'danger' | 'warning' | 'info'
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  })
+  
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const filterRef = useRef<HTMLDivElement>(null)
 
@@ -469,27 +491,85 @@ export default function Home() {
     refreshData()
   }
 
+  // Maintenance form handlers
+  const handleAddMaintenanceTask = () => {
+    setEditingMaintenanceTask(null)
+    setIsMaintenanceFormOpen(true)
+  }
+
+  const handleEditMaintenanceTask = (task: dataService.MaintenanceTask) => {
+    setEditingMaintenanceTask(task)
+    setIsMaintenanceFormOpen(true)
+  }
+  
+  const handleMaintenanceFormSubmit = (task: dataService.MaintenanceTask) => {
+    if (editingMaintenanceTask) {
+      maintenanceNotifications.taskUpdated()
+    } else {
+      maintenanceNotifications.taskAdded(task.vehicle)
+    }
+    refreshData()
+  }
+
+  // SOP Category form handlers
+  const handleAddSOPCategory = () => {
+    setEditingSOPCategory(null)
+    setIsSOPCategoryFormOpen(true)
+  }
+
+  const handleEditSOPCategory = (category: dataService.SOPCategory) => {
+    setEditingSOPCategory(category)
+    setIsSOPCategoryFormOpen(true)
+  }
+  
+  const handleSOPCategoryFormSubmit = (category: dataService.SOPCategory) => {
+    if (editingSOPCategory) {
+      sopNotifications.categoryUpdated(category.name)
+    } else {
+      sopNotifications.categoryAdded(category.name)
+    }
+    refreshData()
+  }
+
+  // Confirm modal helper
+  const showConfirmModal = (options: {
+    title: string
+    message: string
+    onConfirm: () => void
+    variant?: 'danger' | 'warning' | 'info'
+  }) => {
+    setConfirmModal({
+      isOpen: true,
+      ...options
+    })
+  }
+
+  const handleCloseConfirmModal = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }))
+  }
+
   // Management content renderer
   const renderManagementContent = () => {
     switch (activeTab) {
       case 'vehicles':
-        const handleDeleteVehicle = async (id: number) => {
-          const confirmed = await confirmAction(
-            'Are you sure you want to delete this vehicle? This action cannot be undone.',
-            'Delete Vehicle'
-          );
-          if (confirmed) {
-            try {
-              const vehicle = vehiclesData.find(v => v.id === id);
-              const success = dataService.deleteVehicle(id);
-              if (success) {
-                vehicleNotifications.deleted(vehicle?.name || 'Vehicle');
-                refreshData();
+        const handleDeleteVehicle = (id: number) => {
+          const vehicle = vehiclesData.find(v => v.id === id);
+          showConfirmModal({
+            title: 'Delete Vehicle',
+            message: `Are you sure you want to delete "${vehicle?.name}"? This action cannot be undone.`,
+            variant: 'danger',
+            onConfirm: () => {
+              try {
+                const success = dataService.deleteVehicle(id);
+                if (success) {
+                  vehicleNotifications.deleted(vehicle?.name || 'Vehicle');
+                  refreshData();
+                }
+              } catch (error) {
+                vehicleNotifications.error('delete', error instanceof Error ? error.message : undefined);
               }
-            } catch (error) {
-              vehicleNotifications.error('delete', error instanceof Error ? error.message : undefined);
             }
-          }
+          });
         };
 
         const handleToggleMaintenance = (id: number) => {
@@ -652,23 +732,24 @@ export default function Home() {
           </div>
         );
       case 'deliveries':
-        const handleDeleteDelivery = async (id: number) => {
-          const confirmed = await confirmAction(
-            'Are you sure you want to delete this delivery?',
-            'Delete Delivery'
-          );
-          if (confirmed) {
-            try {
-              const delivery = deliveriesData.find(d => d.id === id);
-              const success = dataService.deleteDelivery(id);
-              if (success) {
-                deliveryNotifications.deleted(delivery?.customer || 'Delivery');
-                refreshData();
+        const handleDeleteDelivery = (id: number) => {
+          const delivery = deliveriesData.find(d => d.id === id);
+          showConfirmModal({
+            title: 'Delete Delivery',
+            message: `Are you sure you want to delete the delivery for "${delivery?.customer}"?`,
+            variant: 'danger',
+            onConfirm: () => {
+              try {
+                const success = dataService.deleteDelivery(id);
+                if (success) {
+                  deliveryNotifications.deleted(delivery?.customer || 'Delivery');
+                  refreshData();
+                }
+              } catch (error) {
+                deliveryNotifications.error('delete', error instanceof Error ? error.message : undefined);
               }
-            } catch (error) {
-              deliveryNotifications.error('delete', error instanceof Error ? error.message : undefined);
             }
-          }
+          });
         };
 
         const handleAssignDriver = async (delivery: dataService.Delivery) => {
@@ -932,22 +1013,23 @@ export default function Home() {
           }
         };
 
-        const handleDeleteSOPCategory = async (category: dataService.SOPCategory) => {
-          const confirmed = await confirmAction(
-            `Delete category "${category.name}" and all its SOPs?`,
-            'Delete SOP Category'
-          );
-          if (confirmed) {
-            try {
-              const success = dataService.deleteSOPCategory(category.id);
-              if (success) {
-                sopNotifications.categoryDeleted(category.name);
-                refreshData();
+        const handleDeleteSOPCategory = (category: dataService.SOPCategory) => {
+          showConfirmModal({
+            title: 'Delete SOP Category',
+            message: `Delete "${category.name}" and all ${category.count} SOP document${category.count !== 1 ? 's' : ''}?`,
+            variant: 'danger',
+            onConfirm: () => {
+              try {
+                const success = dataService.deleteSOPCategory(category.id);
+                if (success) {
+                  sopNotifications.categoryDeleted(category.name);
+                  refreshData();
+                }
+              } catch (error) {
+                sopNotifications.error('delete', error instanceof Error ? error.message : undefined);
               }
-            } catch (error) {
-              sopNotifications.error('delete', error instanceof Error ? error.message : undefined);
             }
-          }
+          });
         };
 
         const handleViewSOPs = (category: any) => {
@@ -1104,70 +1186,24 @@ export default function Home() {
           </div>
         );
       case 'maintenance':
-        const handleAddMaintenanceTask = async () => {
-          const vehicle = await promptAction('Enter vehicle name:');
-          if (!vehicle) return;
-          
-          const type = await promptAction('Enter maintenance type (Oil Change, Brake Inspection, Tire Rotation, etc.):');
-          const dueDate = await promptAction('Enter due date (YYYY-MM-DD):', '2026-03-01');
-          const priorityInput = await promptAction('Enter priority (high/medium/low):', 'medium');
-          const priority = (priorityInput === 'high' || priorityInput === 'medium' || priorityInput === 'low') ? priorityInput as 'low' | 'medium' | 'high' : 'medium';
-          
-          try {
-            const newTask = dataService.addMaintenanceTask({
-              vehicle,
-              type: type || 'General Maintenance',
-              dueDate: dueDate || '2026-03-01',
-              priority
-            });
-            maintenanceNotifications.taskAdded(vehicle);
-            refreshData();
-          } catch (error) {
-            maintenanceNotifications.error('add', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleEditMaintenanceTask = async (task: dataService.MaintenanceTask) => {
-          const newVehicle = await promptAction('Edit vehicle:', task.vehicle);
-          if (newVehicle === null) return;
-          
-          const newType = await promptAction('Edit type:', task.type);
-          const newDueDate = await promptAction('Edit due date:', task.dueDate);
-          const newPriorityInput = await promptAction('Edit priority:', task.priority);
-          const newPriority = (newPriorityInput === 'high' || newPriorityInput === 'medium' || newPriorityInput === 'low') ? newPriorityInput as 'low' | 'medium' | 'high' : task.priority;
-          
-          try {
-            const updated = dataService.updateMaintenanceTask(task.id, {
-              vehicle: newVehicle || task.vehicle,
-              type: newType || task.type,
-              dueDate: newDueDate || task.dueDate,
-              priority: newPriority
-            });
-            if (updated) {
-              maintenanceNotifications.taskUpdated();
-              refreshData();
-            }
-          } catch (error) {
-            maintenanceNotifications.error('update', error instanceof Error ? error.message : undefined);
-          }
-        };
-
-        const handleDeleteMaintenanceTask = async (id: number) => {
-          const confirmed = await confirmAction(
-            'Delete this maintenance task?',
-            'Delete Maintenance Task'
-          );
-          if (confirmed) {
-            try {
-              const success = dataService.deleteMaintenanceTask(id);
-              if (success) {
-                maintenanceNotifications.taskDeleted();
-                refreshData();
+        const handleDeleteMaintenanceTask = (id: number) => {
+          const task = maintenanceData.find(t => t.id === id);
+          showConfirmModal({
+            title: 'Delete Maintenance Task',
+            message: `Delete the ${task?.type} task for ${task?.vehicle}?`,
+            variant: 'warning',
+            onConfirm: () => {
+              try {
+                const success = dataService.deleteMaintenanceTask(id);
+                if (success) {
+                  maintenanceNotifications.taskDeleted();
+                  refreshData();
+                }
+              } catch (error) {
+                maintenanceNotifications.error('delete', error instanceof Error ? error.message : undefined);
               }
-            } catch (error) {
-              maintenanceNotifications.error('delete', error instanceof Error ? error.message : undefined);
             }
-          }
+          });
         };
 
         const handleMarkCompleted = async (id: number) => {
@@ -2728,6 +2764,30 @@ export default function Home() {
         delivery={editingDelivery}
         clients={clients}
         vehicles={vehiclesData}
+      />
+      <MaintenanceTaskFormModal
+        isOpen={isMaintenanceFormOpen}
+        onClose={() => setIsMaintenanceFormOpen(false)}
+        onSubmit={handleMaintenanceFormSubmit}
+        task={editingMaintenanceTask}
+        vehicles={vehiclesData}
+      />
+      <SOPCategoryFormModal
+        isOpen={isSOPCategoryFormOpen}
+        onClose={() => setIsSOPCategoryFormOpen(false)}
+        onSubmit={handleSOPCategoryFormSubmit}
+        category={editingSOPCategory}
+      />
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={handleCloseConfirmModal}
+        onConfirm={() => {
+          confirmModal.onConfirm()
+          handleCloseConfirmModal()
+        }}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        variant={confirmModal.variant}
       />
 
       {/* Global Styles for Mobile Optimization */}
