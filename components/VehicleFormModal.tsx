@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Truck, User, MapPin, Gauge, Calendar, FileText, Fuel } from 'lucide-react'
 import FormModal from './FormModal'
 import * as dataService from '../services/dataService'
+import * as recentItems from '../services/recentItems'
+import AutocompleteInput from './AutocompleteInput'
 
 interface VehicleFormModalProps {
   isOpen: boolean
@@ -28,6 +30,7 @@ const STATUS_OPTIONS = [
 
 export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }: VehicleFormModalProps) {
   const isEditing = !!vehicle
+  const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
   
   const [formData, setFormData] = useState<{
     name: string
@@ -150,6 +153,15 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
         })
       }
       
+      // Save to recent items for autofill
+      recentItems.addRecentVehicle({
+        name: formData.name,
+        vehicleType: formData.vehicleType,
+        driver: formData.driver,
+        location: formData.location,
+        licensePlate: formData.licensePlate
+      })
+      
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -188,14 +200,13 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Vehicle Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <AutocompleteInput
                 value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
+                onChange={(value) => handleChange('name', value)}
+                recentItems={recents.vehicleNames}
                 placeholder="e.g., Delivery Van 1"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition ${
-                  errors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                }`}
+                icon={<Truck className="h-4 w-4" />}
+                className={errors.name ? 'border-red-300' : ''}
               />
               {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
             </div>
@@ -263,16 +274,13 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Assigned Driver
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.driver}
-                  onChange={(e) => handleChange('driver', e.target.value)}
-                  placeholder="e.g., John Smith"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
-                />
-              </div>
+              <AutocompleteInput
+                value={formData.driver}
+                onChange={(value) => handleChange('driver', value)}
+                recentItems={recents.drivers}
+                placeholder="e.g., John Smith"
+                icon={<User className="h-4 w-4" />}
+              />
             </div>
 
             {/* Location */}
@@ -280,16 +288,13 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Current Location
               </label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  placeholder="e.g., Depot, Main Warehouse"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
-                />
-              </div>
+              <AutocompleteInput
+                value={formData.location}
+                onChange={(value) => handleChange('location', value)}
+                recentItems={recents.locations}
+                placeholder="e.g., Depot, Main Warehouse"
+                icon={<MapPin className="h-4 w-4" />}
+              />
             </div>
 
             {/* Status */}
