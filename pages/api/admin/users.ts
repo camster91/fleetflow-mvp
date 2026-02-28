@@ -2,8 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
+import { rateLimit, auditLog, validateInput } from '../../../lib/security'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Apply rate limiting
+  const allowed = await rateLimit(req, res, 'admin')
+  if (!allowed) return
+
   const session = await getServerSession(req, res, authOptions)
   
   // Check if user is authenticated and is an admin
@@ -65,6 +70,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
       
+      // Audit log
+      await auditLog({
+        type: 'USER_ROLE_CHANGED',
+        userId: session.user.id,
+        targetId: userId,
+        details: { newRole: role },
+        ip: req.headers['x-forwarded-for'] as string || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent']
+      })
+      
       return res.status(200).json({ user: updatedUser })
     } catch (error) {
       console.error('Error updating user role:', error)
@@ -88,6 +103,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       await prisma.user.delete({
         where: { id: userId }
+      })
+      
+      // Audit log
+      await auditLog({
+        type: 'USER_DELETED',
+        userId: session.user.id,
+        targetId: userId,
+        details: {},
+        ip: req.headers['x-forwarded-for'] as string || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent']
       })
       
       return res.status(200).json({ success: true })
