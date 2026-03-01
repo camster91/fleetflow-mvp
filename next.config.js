@@ -27,6 +27,9 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   
+  // Ensure static files in public are served
+  poweredByHeader: false,
+  
   // Performance optimizations
   images: {
     formats: ['image/webp', 'image/avif'],
