@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>FleetFlow Vehicles</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', system-ui, sans-serif; }</style>
+</head>
+<body class="bg-gray-50">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div class="p-6 border-b border-gray-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-900 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="text-xl font-bold text-gray-900">FleetFlow</span>
+        </div>
+      </div>
+      <nav class="flex-1 p-4 space-y-1">
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-blue-50 text-blue-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+          <span class="font-medium">Vehicles</span>
+        </a>
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          <span>Deliveries</span>
+        </a>
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Maintenance</span>
+        </a>
+      </nav>
+      <div class="p-4 border-t border-gray-200">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-semibold">JD</div>
+          <div>
+            <p class="text-sm font-medium text-gray-900">John Doe</p>
+            <p class="text-xs text-gray-500">Fleet Manager</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto">
+      <header class="bg-white border-b border-gray-200 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Vehicles</h1>
+            <p class="text-gray-500">Manage your fleet vehicles, drivers, and status</p>
+          </div>
+          <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">+ Add Vehicle</button>
+        </div>
+      </header>
+      
+      <div class="p-8">
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-6 mb-8">
+          <div class="bg-blue-50 p-4 rounded-lg">
+            <p class="text-sm text-blue-600 font-medium">Total Vehicles</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">28</p>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg">
+            <p class="text-sm text-green-600 font-medium">Active</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">24</p>
+          </div>
+          <div class="bg-red-50 p-4 rounded-lg">
+            <p class="text-sm text-red-600 font-medium">Maintenance Due</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">3</p>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-lg">
+            <p class="text-sm text-purple-600 font-medium">Average Mileage</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">45,231</p>
+          </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center space-x-4">
+            <div class="relative">
+              <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" placeholder="Search vehicles..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <select class="px-4 py-2 border border-gray-200 rounded-lg text-gray-600">
+              <option>All Status</option>
+              <option>Active</option>
+              <option>Inactive</option>
+              <option>Maintenance</option>
+            </select>
+            <select class="px-4 py-2 border border-gray-200 rounded-lg text-gray-600">
+              <option>All Types</option>
+              <option>Truck</option>
+              <option>Van</option>
+              <option>Car</option>
+            </select>
+          </div>
+          <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">Export CSV</button>
+        </div>
+        
+        <!-- Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mileage</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Maintenance</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Truck 101</p>
+                      <p class="text-sm text-gray-500">Ford F-150 • 2022</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">active</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">Mike Johnson</p></td>
+                <td class="px-6 py-4"><div class="flex items-center"><svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-gray-900">Downtown Depot</span></div></td>
+                <td class="px-6 py-4"><p class="text-gray-900">42,350 mi</p></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span></td>
+                <td class="px-6 py-4"><div class="flex items-center space-x-2"><button class="text-blue-600 hover:text-blue-800">Edit</button><button class="text-red-600 hover:text-red-800">Delete</button></div></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Van 205</p>
+                      <p class="text-sm text-gray-500">Mercedes Sprinter • 2023</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">active</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">Sarah Chen</p></td>
+                <td class="px-6 py-4"><div class="flex items-center"><svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-gray-900">North Hub</span></div></td>
+                <td class="px-6 py-4"><p class="text-gray-900">18,420 mi</p></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Due</span></td>
+                <td class="px-6 py-4"><div class="flex items-center space-x-2"><button class="text-blue-600 hover:text-blue-800">Edit</button><button class="text-red-600 hover:text-red-800">Delete</button></div></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-orange-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Truck 103</p>
+                      <p class="text-sm text-gray-500">Chevy Silverado • 2021</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">maintenance</span></td>
+                <td class="px-6 py-4"><p class="text-gray-500">Unassigned</p></td>
+                <td class="px-6 py-4"><div class="flex items-center"><svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-gray-900">Service Center</span></div></td>
+                <td class="px-6 py-4"><p class="text-gray-900">67,890 mi</p></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Overdue</span></td>
+                <td class="px-6 py-4"><div class="flex items-center space-x-2"><button class="text-blue-600 hover:text-blue-800">Edit</button><button class="text-red-600 hover:text-red-800">Delete</button></div></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Car 301</p>
+                      <p class="text-sm text-gray-500">Toyota Camry • 2023</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">active</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">Alex Rivera</p></td>
+                <td class="px-6 py-4"><div class="flex items-center"><svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-gray-900">West District</span></div></td>
+                <td class="px-6 py-4"><p class="text-gray-900">12,560 mi</p></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span></td>
+                <td class="px-6 py-4"><div class="flex items-center space-x-2"><button class="text-blue-600 hover:text-blue-800">Edit</button><button class="text-red-600 hover:text-red-800">Delete</button></div></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-purple-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Van 208</p>
+                      <p class="text-sm text-gray-500">Ford Transit • 2022</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">inactive</span></td>
+                <td class="px-6 py-4"><p class="text-gray-500">Unassigned</p></td>
+                <td class="px-6 py-4"><div class="flex items-center"><svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-gray-900">South Depot</span></div></td>
+                <td class="px-6 py-4"><p class="text-gray-900">34,120 mi</p></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span></td>
+                <td class="px-6 py-4"><div class="flex items-center space-x-2"><button class="text-blue-600 hover:text-blue-800">Edit</button><button class="text-red-600 hover:text-red-800">Delete</button></div></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Truck 105</p>
+                      <p class="text-sm text-gray-500">RAM 2500 • 2023</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">active</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">David Kim</p></td>
+                <td class="px-6 py-4"><div class="flex items-center"><svg class="h-4 w-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span class="text-gray-900">East Hub</span></div></td>
+                <td class="px-6 py-4"><p class="text-gray-900">28,940 mi</p></td>
+                <td class="px-6 py-4"><span class="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span></td>
+                <td class="px-6 py-4"><div class="flex items-center space-x-2"><button class="text-blue-600 hover:text-blue-800">Edit</button><button class="text-red-600 hover:text-red-800">Delete</button></div></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div class="flex items-center justify-between">
+              <p class="text-sm text-gray-600">Showing 6 of 28 vehicles</p>
+              <div class="flex items-center space-x-2">
+                <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-white">Previous</button>
+                <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm">1</button>
+                <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-white">2</button>
+                <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-white">3</button>
+                <button class="px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-white">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

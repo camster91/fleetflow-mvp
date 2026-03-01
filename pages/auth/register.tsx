@@ -1,25 +1,41 @@
-import { useState } from 'react'
-import { useRouter } from 'next/router'
-import { 
-  Truck, Mail, Lock, AlertCircle, 
-  ArrowRight, Building, User, Phone, Globe
-} from 'lucide-react'
-import Link from 'next/link'
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { Mail, Lock, AlertCircle, ArrowRight, Building, User, Check } from 'lucide-react';
+import Link from 'next/link';
+import { AuthLayout } from '../../components/layouts/AuthLayout';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+
+const roles = [
+  { value: 'fleet_manager', label: 'Fleet Manager', description: 'Manage vehicles and maintenance' },
+  { value: 'dispatch', label: 'Dispatch Operator', description: 'Assign deliveries and optimize routes' },
+  { value: 'driver', label: 'Driver', description: 'Complete deliveries and track progress' },
+  { value: 'maintenance', label: 'Maintenance Technician', description: 'Handle vehicle repairs and inspections' },
+  { value: 'safety_officer', label: 'Safety Officer', description: 'Monitor compliance and safety protocols' },
+  { value: 'finance', label: 'Finance/HR', description: 'Handle payroll and financial reporting' },
+];
 
 export default function RegisterPage() {
-  const router = useRouter()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [company, setCompany] = useState('')
-  const [role, setRole] = useState('fleet_manager')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [company, setCompany] = useState('');
+  const [role, setRole] = useState('fleet_manager');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    
+    if (!agreedToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
 
     try {
       const response = await fetch('/api/auth/register', {
@@ -34,245 +50,186 @@ export default function RegisterPage() {
           company,
           role,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
+        throw new Error(data.error || 'Registration failed');
       }
 
-      // Redirect to login page after successful registration
-      router.push('/auth/login?registered=true')
+      router.push('/auth/login?registered=true');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
-
-  const roles = [
-    { value: 'fleet_manager', label: 'Fleet Manager', description: 'Manage vehicles and maintenance' },
-    { value: 'dispatch', label: 'Dispatch Operator', description: 'Assign deliveries and optimize routes' },
-    { value: 'driver', label: 'Driver', description: 'Complete deliveries and track progress' },
-    { value: 'maintenance', label: 'Maintenance Technician', description: 'Handle vehicle repairs and inspections' },
-    { value: 'safety_officer', label: 'Safety Officer', description: 'Monitor compliance and safety protocols' },
-    { value: 'finance', label: 'Finance/HR', description: 'Handle payroll and financial reporting' },
-  ]
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="p-3 bg-primary-600 rounded-lg">
-            <Truck className="h-12 w-12 text-white" />
-          </div>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          Create your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Join FleetFlow Pro to streamline your operations
+    <AuthLayout
+      title="Create Account"
+      subtitle="Join FleetFlow Pro to streamline your operations"
+    >
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-slate-900">Create your account</h2>
+        <p className="mt-2 text-sm text-slate-600">
+          Start your 14-day free trial today
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-                <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3 animate-fade-in">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                  Full Name
-                </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="name"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="John Doe"
-                  />
-                </div>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Full Name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            leftIcon={<User className="h-5 w-5" />}
+            placeholder="John Doe"
+            required
+            autoComplete="name"
+          />
 
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="you@company.com"
-                  />
-                </div>
-              </div>
+          <Input
+            label="Email address"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            leftIcon={<Mail className="h-5 w-5" />}
+            placeholder="you@company.com"
+            required
+            autoComplete="email"
+          />
+        </div>
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="••••••••"
-                  />
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  At least 8 characters with letters and numbers
-                </p>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            leftIcon={<Lock className="h-5 w-5" />}
+            placeholder="••••••••"
+            required
+            autoComplete="new-password"
+            helperText="At least 8 characters with letters and numbers"
+          />
 
-              <div>
-                <label htmlFor="company" className="block text-sm font-medium text-gray-700">
-                  Company
-                </label>
-                <div className="mt-1 relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Building className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="company"
-                    name="company"
-                    type="text"
-                    autoComplete="organization"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    placeholder="Your Company LLC"
-                  />
-                </div>
-              </div>
-            </div>
+          <Input
+            label="Company"
+            type="text"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            leftIcon={<Building className="h-5 w-5" />}
+            placeholder="Your Company LLC"
+            autoComplete="organization"
+          />
+        </div>
 
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-3">
-                What is your role?
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {roles.map((r) => (
-                  <div
-                    key={r.value}
-                    className={`relative border rounded-lg p-4 cursor-pointer transition ${
-                      role === r.value
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                    onClick={() => setRole(r.value)}
-                  >
-                    <div className="flex items-start">
-                      <div className={`h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5 ${
-                        role === r.value
-                          ? 'border-primary-500 bg-primary-500'
-                          : 'border-gray-400'
-                      }`}>
-                        {role === r.value && (
-                          <div className="h-2 w-2 rounded-full bg-white" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{r.label}</p>
-                        <p className="text-xs text-gray-600 mt-1">{r.description}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                id="terms"
-                name="terms"
-                type="checkbox"
-                required
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
-              <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                I agree to the{' '}
-                <Link href="/terms" className="font-medium text-primary-600 hover:text-primary-500">
-                  Terms of Service
-                </Link>{' '}
-                and{' '}
-                <Link href="/privacy" className="font-medium text-primary-600 hover:text-primary-500">
-                  Privacy Policy
-                </Link>
-              </label>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">
+            What is your role?
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {roles.map((r) => (
+              <div
+                key={r.value}
+                onClick={() => setRole(r.value)}
+                className={`
+                  relative border rounded-lg p-4 cursor-pointer transition-all
+                  ${role === r.value
+                    ? 'border-blue-900 bg-blue-50 ring-1 ring-blue-900'
+                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  }
+                `}
               >
-                {loading ? (
-                  'Creating account...'
-                ) : (
-                  <>
-                    <span>Create account</span>
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-8 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{' '}
-              <Link href="/auth/login" className="font-medium text-primary-600 hover:text-primary-500">
-                Sign in
-              </Link>
-            </p>
-            <p className="mt-4 text-xs text-gray-500">
-              Admin accounts require manual approval. Contact support for admin access.
-            </p>
+                <div className="flex items-start">
+                  <div className={`
+                    h-5 w-5 rounded-full border flex items-center justify-center mr-3 mt-0.5
+                    ${role === r.value ? 'border-blue-900 bg-blue-900' : 'border-slate-300'}
+                  `}>
+                    {role === r.value && <Check className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900">{r.label}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{r.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="mt-6 text-center">
-          <Link 
-            href="/" 
-            className="text-sm font-medium text-primary-600 hover:text-primary-500"
-          >
-            ← Back to home
+        <label className="flex items-start space-x-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => setAgreedToTerms(e.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900"
+          />
+          <span className="text-sm text-slate-600">
+            I agree to the{' '}
+            <Link href="/terms" className="font-medium text-blue-900 hover:underline">
+              Terms of Service
+            </Link>{' '}
+            and{' '}
+            <Link href="/privacy" className="font-medium text-blue-900 hover:underline">
+              Privacy Policy
+            </Link>
+          </span>
+        </label>
+
+        <Button
+          type="submit"
+          variant="primary"
+          fullWidth
+          size="lg"
+          loading={loading}
+          iconRight={!loading ? <ArrowRight className="h-4 w-4" /> : undefined}
+        >
+          Create account
+        </Button>
+      </form>
+
+      <div className="mt-8">
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-slate-500">Already have an account?</span>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <Link href="/auth/login">
+            <Button variant="outline" fullWidth size="lg">
+              Sign in instead
+            </Button>
           </Link>
         </div>
       </div>
-    </div>
-  )
+
+      <p className="mt-6 text-center text-xs text-slate-500">
+        Admin accounts require manual approval. Contact support for admin access.
+      </p>
+
+      <div className="mt-4 text-center">
+        <Link
+          href="/"
+          className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+        >
+          ← Back to home
+        </Link>
+      </div>
+    </AuthLayout>
+  );
 }
