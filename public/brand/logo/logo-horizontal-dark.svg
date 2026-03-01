@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40" width="200" height="40">
+  <defs>
+    <linearGradient id="dhIconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#60A5FA"/>
+    </linearGradient>
+    <linearGradient id="dhAccentGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#34D399"/>
+      <stop offset="100%" style="stop-color:#10B981"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Icon (32x32) -->
+  <g transform="translate(4, 4)">
+    <!-- Background -->
+    <rect x="0" y="0" width="32" height="32" rx="6" fill="url(#dhIconGradient)"/>
+    
+    <!-- Flow Arrows -->
+    <g fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 11 L16 8 L24 11"/>
+      <path d="M16 8 L16 14"/>
+      <path d="M8 18 L16 15 L24 18" stroke="url(#dhAccentGradient)" stroke-width="2.5"/>
+      <path d="M16 15 L16 21" stroke="url(#dhAccentGradient)" stroke-width="2.5"/>
+      <path d="M8 25 L16 22 L24 25"/>
+      <path d="M16 22 L16 25"/>
+    </g>
+  </g>
+  
+  <!-- Wordmark: FleetFlow (white for dark bg) -->
+  <text x="44" y="26" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="700" fill="white" letter-spacing="-0.5">Fleet</text>
+  <text x="82" y="26" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="18" font-weight="700" fill="#60A5FA" letter-spacing="-0.5">Flow</text>
+  
+  <!-- Subtle dot accent -->
+  <circle cx="126" cy="28" r="2.5" fill="#34D399"/>
+</svg>

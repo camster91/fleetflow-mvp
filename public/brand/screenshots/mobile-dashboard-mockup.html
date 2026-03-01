@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FleetFlow Mobile</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-gray-50 w-[390px] mx-auto">
+  <!-- iPhone Frame -->
+  <div class="relative bg-black rounded-[50px] p-3 w-[390px] h-[844px] overflow-hidden">
+    <!-- Notch -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[160px] h-[35px] bg-black rounded-b-[20px] z-50"></div>
+    
+    <!-- Screen -->
+    <div class="bg-gray-50 w-full h-full rounded-[40px] overflow-hidden flex flex-col">
+      <!-- Status Bar -->
+      <div class="h-12 bg-white flex items-center justify-between px-6 pt-2">
+        <span class="text-sm font-semibold">9:41</span>
+        <div class="flex items-center space-x-1">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/></svg>
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          <div class="w-6 h-3 border border-gray-400 rounded-sm relative"><div class="absolute inset-0.5 bg-gray-800 w-4"></div></div>
+        </div>
+      </div>
+      
+      <!-- App Header -->
+      <div class="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-900 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <span class="font-bold text-lg text-gray-900">FleetFlow</span>
+        </div>
+        <button class="p-2 relative">
+          <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+        </button>
+      </div>
+      
+      <!-- Scrollable Content -->
+      <div class="flex-1 overflow-y-auto hide-scrollbar pb-20">
+        <!-- Greeting -->
+        <div class="px-4 py-4">
+          <p class="text-gray-500 text-sm">Good morning,</p>
+          <h1 class="text-xl font-bold text-gray-900">John Doe</h1>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="px-4 pb-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-blue-500 rounded-2xl p-4 text-white">
+              <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+              </div>
+              <p class="text-blue-100 text-xs">Active Vehicles</p>
+              <p class="text-2xl font-bold">24</p>
+            </div>
+            <div class="bg-green-500 rounded-2xl p-4 text-white">
+              <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </div>
+              <p class="text-green-100 text-xs">Today's Deliveries</p>
+              <p class="text-2xl font-bold">18</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Today's Deliveries -->
+        <div class="px-4 pb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-semibold text-gray-900">Today's Deliveries</h2>
+            <button class="text-blue-600 text-sm">View All</button>
+          </div>
+          <div class="space-y-3">
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-900 text-sm">Acme Corporation</p>
+                    <p class="text-xs text-gray-500">12 items • 2:30 PM</p>
+                  </div>
+                </div>
+                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">In Transit</span>
+              </div>
+              <div class="flex items-center space-x-2 mt-3">
+                <div class="flex-1 bg-gray-200 rounded-full h-1.5">
+                  <div class="bg-blue-500 h-1.5 rounded-full" style="width: 75%"></div>
+                </div>
+                <span class="text-xs text-gray-500">75%</span>
+              </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl p-4 shadow-sm">
+              <div class="flex items-start justify-between mb-2">
+                <div class="flex items-center space-x-3">
+                  <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                  </div>
+                  <div>
+                    <p class="font-medium text-gray-900 text-sm">TechStart Inc</p>
+                    <p class="text-xs text-gray-500">8 items • 4:00 PM</p>
+                  </div>
+                </div>
+                <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">Pending</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="px-4 pb-4">
+          <h2 class="font-semibold text-gray-900 mb-3">Quick Actions</h2>
+          <div class="grid grid-cols-4 gap-3">
+            <button class="flex flex-col items-center space-y-2">
+              <div class="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              </div>
+              <span class="text-xs text-gray-600">Add Vehicle</span>
+            </button>
+            <button class="flex flex-col items-center space-y-2">
+              <div class="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+              </div>
+              <span class="text-xs text-gray-600">New Delivery</span>
+            </button>
+            <button class="flex flex-col items-center space-y-2">
+              <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 01-.553-.894L15 21m0 0V7m0 0L9 7m0 0V7"/></svg>
+              </div>
+              <span class="text-xs text-gray-600">Navigate</span>
+            </button>
+            <button class="flex flex-col items-center space-y-2">
+              <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <span class="text-xs text-gray-600">Reports</span>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Alerts -->
+        <div class="px-4 pb-4">
+          <h2 class="font-semibold text-gray-900 mb-3">Alerts</h2>
+          <div class="space-y-3">
+            <div class="bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center space-x-3">
+              <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-red-900 text-sm">Maintenance Due</p>
+                <p class="text-xs text-red-600">Van 205 needs brake inspection</p>
+              </div>
+            </div>
+            <div class="bg-orange-50 border border-orange-100 rounded-2xl p-4 flex items-center space-x-3">
+              <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-orange-900 text-sm">Delivery Delayed</p>
+                <p class="text-xs text-orange-600">Route A running 15 min behind</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Bottom Navigation -->
+      <div class="bg-white border-t border-gray-100 px-6 py-3 flex items-center justify-around">
+        <button class="flex flex-col items-center space-y-1">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span class="text-xs text-blue-600 font-medium">Home</span>
+        </button>
+        <button class="flex flex-col items-center space-y-1">
+          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+          <span class="text-xs text-gray-400">Vehicles</span>
+        </button>
+        <button class="flex flex-col items-center space-y-1">
+          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          <span class="text-xs text-gray-400">Deliveries</span>
+        </button>
+        <button class="flex flex-col items-center space-y-1">
+          <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <span class="text-xs text-gray-400">Profile</span>
+        </button>
+      </div>
+      
+      <!-- Home Indicator -->
+      <div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-gray-800 rounded-full"></div>
+    </div>
+  </div>
+</body>
+</html>

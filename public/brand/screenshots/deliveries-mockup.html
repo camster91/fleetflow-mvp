@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>FleetFlow Deliveries</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd',
+              400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8',
+              800: '#1e40af', 900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>body { font-family: 'Inter', system-ui, sans-serif; }</style>
+</head>
+<body class="bg-gray-50">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <div class="p-6 border-b border-gray-100">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-900 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="text-xl font-bold text-gray-900">FleetFlow</span>
+        </div>
+      </div>
+      <nav class="flex-1 p-4 space-y-1">
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
+          <span>Vehicles</span>
+        </a>
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-blue-50 text-blue-600">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          <span class="font-medium">Deliveries</span>
+        </a>
+        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Maintenance</span>
+        </a>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto">
+      <header class="bg-white border-b border-gray-200 px-8 py-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Deliveries</h1>
+            <p class="text-gray-500">Track and manage all delivery operations</p>
+          </div>
+          <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">+ New Delivery</button>
+        </div>
+      </header>
+      
+      <div class="p-8">
+        <!-- Stats -->
+        <div class="grid grid-cols-4 gap-6 mb-8">
+          <div class="bg-blue-50 p-4 rounded-lg">
+            <p class="text-sm text-blue-600 font-medium">Total Deliveries</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">142</p>
+          </div>
+          <div class="bg-green-50 p-4 rounded-lg">
+            <p class="text-sm text-green-600 font-medium">In Transit</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">18</p>
+          </div>
+          <div class="bg-orange-50 p-4 rounded-lg">
+            <p class="text-sm text-orange-600 font-medium">Pending</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">24</p>
+          </div>
+          <div class="bg-purple-50 p-4 rounded-lg">
+            <p class="text-sm text-purple-600 font-medium">Delivered Today</p>
+            <p class="text-2xl font-bold text-gray-900 mt-1">47</p>
+          </div>
+        </div>
+        
+        <!-- Map View Toggle & Filters -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center space-x-4">
+            <div class="relative">
+              <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="text" placeholder="Search deliveries..." class="pl-10 pr-4 py-2 border border-gray-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <select class="px-4 py-2 border border-gray-200 rounded-lg text-gray-600">
+              <option>All Status</option>
+              <option>Pending</option>
+              <option>In Transit</option>
+              <option>Delivered</option>
+            </select>
+            <select class="px-4 py-2 border border-gray-200 rounded-lg text-gray-600">
+              <option>Today</option>
+              <option>Yesterday</option>
+              <option>This Week</option>
+              <option>This Month</option>
+            </select>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center space-x-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0121 18.382V7.618a1 1 0 01-.806-.984A1 1 0 0020 7.618V18.382a1 1 0 01-.553.894L15 21m0 0V7m0 0L9 7m0 0V7"/></svg>
+              <span>Map View</span>
+            </button>
+            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600">List View</button>
+          </div>
+        </div>
+        
+        <!-- Delivery Table -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ETA</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Acme Corporation</p>
+                      <p class="text-sm text-gray-500">ID: #DEL-2024-0892</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900">123 Business Ave, Suite 400</p><p class="text-sm text-gray-500">New York, NY 10001</p></td>
+                <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Mike Johnson</span></td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">in-transit</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">12 items</p></td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-24 bg-gray-200 rounded-full h-2"><div class="bg-green-600 h-2 rounded-full" style="width: 75%"></div></div>
+                    <span class="text-sm text-gray-600">75%</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900 font-medium">2:30 PM</p></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-blue-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">TechStart Inc</p>
+                      <p class="text-sm text-gray-500">ID: #DEL-2024-0891</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900">456 Innovation Blvd</p><p class="text-sm text-gray-500">San Francisco, CA 94105</p></td>
+                <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Sarah Chen</span></td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">pending</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">8 items</p></td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-24 bg-gray-200 rounded-full h-2"><div class="bg-gray-400 h-2 rounded-full" style="width: 0%"></div></div>
+                    <span class="text-sm text-gray-600">0%</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900 font-medium">4:00 PM</p></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-green-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Global Logistics Ltd</p>
+                      <p class="text-sm text-gray-500">ID: #DEL-2024-0890</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900">789 Warehouse District</p><p class="text-sm text-gray-500">Chicago, IL 60607</p></td>
+                <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">David Kim</span></td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">delivered</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">25 items</p></td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-24 bg-gray-200 rounded-full h-2"><div class="bg-green-600 h-2 rounded-full" style="width: 100%"></div></div>
+                    <span class="text-sm text-gray-600">100%</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-500 text-sm">Delivered 11:30 AM</p></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-purple-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Metro Retail Group</p>
+                      <p class="text-sm text-gray-500">ID: #DEL-2024-0889</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900">321 Commerce Street</p><p class="text-sm text-gray-500">Austin, TX 78701</p></td>
+                <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Alex Rivera</span></td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">in-transit</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">15 items</p></td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-24 bg-gray-200 rounded-full h-2"><div class="bg-green-600 h-2 rounded-full" style="width: 45%"></div></div>
+                    <span class="text-sm text-gray-600">45%</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900 font-medium">3:15 PM</p></td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                  <div class="flex items-center">
+                    <div class="p-2 bg-orange-100 rounded-lg mr-3">
+                      <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900">Express Delivery Co</p>
+                      <p class="text-sm text-gray-500">ID: #DEL-2024-0888</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900">555 Shipping Lane</p><p class="text-sm text-gray-500">Miami, FL 33132</p></td>
+                <td class="px-6 py-4"><span class="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Unassigned</span></td>
+                <td class="px-6 py-4"><span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">pending</span></td>
+                <td class="px-6 py-4"><p class="text-gray-900">6 items</p></td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-24 bg-gray-200 rounded-full h-2"><div class="bg-gray-400 h-2 rounded-full" style="width: 0%"></div></div>
+                    <span class="text-sm text-gray-600">0%</span>
+                  </div>
+                </td>
+                <td class="px-6 py-4"><p class="text-gray-900 font-medium">5:30 PM</p></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

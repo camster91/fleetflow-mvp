@@ -1,0 +1,24 @@
+{
+  "name": "FleetFlow - Fleet Management",
+  "short_name": "FleetFlow",
+  "description": "Modern fleet management SaaS platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E3A5F",
+  "theme_color": "#1E3A5F",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/brand/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

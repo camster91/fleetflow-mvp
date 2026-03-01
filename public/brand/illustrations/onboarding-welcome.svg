@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400" width="500" height="400">
+  <defs>
+    <linearGradient id="celebrationBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#eff6ff"/>
+      <stop offset="100%" style="stop-color:#ffffff"/>
+    </linearGradient>
+    <linearGradient id="primaryGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#1E3A5F"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect x="0" y="0" width="500" height="400" fill="url(#celebrationBg)"/>
+  
+  <!-- Decorative confetti -->
+  <g opacity="0.6">
+    <!-- Blue confetti -->
+    <rect x="50" y="60" width="8" height="8" fill="#3B82F6" transform="rotate(15, 54, 64)"/>
+    <rect x="420" y="80" width="6" height="12" fill="#1E3A5F" transform="rotate(-20, 423, 86)"/>
+    <rect x="100" y="40" width="10" height="6" fill="#60a5fa" transform="rotate(45, 105, 43)"/>
+    
+    <!-- Green confetti -->
+    <rect x="380" y="50" width="8" height="8" fill="#10B981" transform="rotate(30, 384, 54)"/>
+    <rect x="80" y="100" width="6" height="10" fill="#34d399" transform="rotate(-10, 83, 105)"/>
+    
+    <!-- Gold confetti -->
+    <rect x="450" y="120" width="8" height="8" fill="#fbbf24" transform="rotate(25, 454, 124)"/>
+    <rect x="40" y="140" width="10" height="6" fill="#f59e0b" transform="rotate(-35, 45, 143)"/>
+    <circle cx="200" cy="45" r="4" fill="#fbbf24"/>
+    <circle cx="350" cy="35" r="5" fill="#f59e0b"/>
+  </g>
+  
+  <!-- Dashboard preview frame -->
+  <g transform="translate(100, 90)">
+    <!-- Browser/app window chrome -->
+    <rect x="0" y="0" width="300" height="200" rx="12" fill="#1e293b"/>
+    <rect x="0" y="0" width="300" height="28" rx="12" fill="#334155"/>
+    <rect x="0" y="14" width="300" height="14" fill="#334155"/>
+    
+    <!-- Window controls -->
+    <circle cx="20" cy="14" r="5" fill="#ef4444"/>
+    <circle cx="35" cy="14" r="5" fill="#fbbf24"/>
+    <circle cx="50" cy="14" r="5" fill="#10B981"/>
+    
+    <!-- Dashboard content preview -->
+    <!-- Sidebar -->
+    <rect x="8" y="36" width="60" height="156" rx="4" fill="#1e3a5f"/>
+    <rect x="16" y="48" width="44" height="8" rx="2" fill="#3B82F6" opacity="0.5"/>
+    <rect x="16" y="64" width="36" height="6" rx="2" fill="#64748B" opacity="0.5"/>
+    <rect x="16" y="78" width="40" height="6" rx="2" fill="#64748B" opacity="0.5"/>
+    <rect x="16" y="92" width="32" height="6" rx="2" fill="#64748B" opacity="0.5"/>
+    
+    <!-- Main content area -->
+    <rect x="76" y="36" width="216" height="156" rx="4" fill="#f8fafc"/>
+    
+    <!-- Stats cards in preview -->
+    <rect x="84" y="44" width="46" height="40" rx="6" fill="#dbeafe"/>
+    <rect x="90" y="52" width="20" height="6" rx="2" fill="#3B82F6"/>
+    <rect x="90" y="62" width="30" height="8" rx="2" fill="#1E3A5F"/>
+    
+    <rect x="136" y="44" width="46" height="40" rx="6" fill="#d1fae5"/>
+    <rect x="142" y="52" width="20" height="6" rx="2" fill="#10B981"/>
+    <rect x="142" y="62" width="30" height="8" rx="2" fill="#1E3A5F"/>
+    
+    <rect x="188" y="44" width="46" height="40" rx="6" fill="#fef3c7"/>
+    <rect x="194" y="52" width="20" height="6" rx="2" fill="#f59e0b"/>
+    <rect x="194" y="62" width="30" height="8" rx="2" fill="#1E3A5F"/>
+    
+    <rect x="240" y="44" width="44" height="40" rx="6" fill="#fee2e2"/>
+    <rect x="246" y="52" width="20" height="6" rx="2" fill="#ef4444"/>
+    <rect x="246" y="62" width="30" height="8" rx="2" fill="#1E3A5F"/>
+    
+    <!-- Chart preview -->
+    <rect x="84" y="92" width="140" height="92" rx="6" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+    <rect x="92" y="104" width="60" height="6" rx="2" fill="#1E3A5F"/>
+    <!-- Chart bars -->
+    <rect x="92" y="120" width="16" height="50" rx="2" fill="#3B82F6" opacity="0.3"/>
+    <rect x="112" y="135" width="16" height="35" rx="2" fill="#3B82F6" opacity="0.5"/>
+    <rect x="132" y="110" width="16" height="60" rx="2" fill="#3B82F6"/>
+    <rect x="152" y="125" width="16" height="45" rx="2" fill="#3B82F6" opacity="0.7"/>
+    <rect x="172" y="140" width="16" height="30" rx="2" fill="#3B82F6" opacity="0.4"/>
+    <rect x="192" y="115" width="16" height="55" rx="2" fill="#3B82F6" opacity="0.6"/>
+    
+    <!-- Recent activity -->
+    <rect x="232" y="92" width="52" height="92" rx="6" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+    <rect x="238" y="104" width="40" height="6" rx="2" fill="#1E3A5F"/>
+    <rect x="238" y="118" width="36" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="238" y="128" width="30" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="238" y="142" width="36" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="238" y="152" width="32" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="238" y="166" width="36" height="4" rx="2" fill="#cbd5e1"/>
+    <rect x="238" y="176" width="28" height="4" rx="2" fill="#cbd5e1"/>
+  </g>
+  
+  <!-- Fleet vehicles illustration -->
+  <g transform="translate(50, 300)">
+    <!-- Vehicle 1 -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="15" width="70" height="35" rx="6" fill="url(#primaryGradient)"/>
+      <rect x="-20" y="25" width="25" height="25" rx="4" fill="#1E3A5F"/>
+      <rect x="-15" y="30" width="15" height="12" rx="2" fill="#93c5fd"/>
+      <circle cx="5" cy="50" r="10" fill="#334155"/>
+      <circle cx="5" cy="50" r="5" fill="#64748B"/>
+      <circle cx="50" cy="50" r="10" fill="#334155"/>
+      <circle cx="50" cy="50" r="5" fill="#64748B"/>
+    </g>
+    
+    <!-- Vehicle 2 -->
+    <g transform="translate(90, 5)">
+      <rect x="0" y="15" width="65" height="32" rx="6" fill="#10B981"/>
+      <rect x="-18" y="24" width="23" height="23" rx="4" fill="#059669"/>
+      <rect x="-14" y="28" width="14" height="11" rx="2" fill="#6ee7b7"/>
+      <circle cx="5" cy="47" r="9" fill="#334155"/>
+      <circle cx="5" cy="47" r="4" fill="#64748B"/>
+      <circle cx="48" cy="47" r="9" fill="#334155"/>
+      <circle cx="48" cy="47" r="4" fill="#64748B"/>
+    </g>
+    
+    <!-- Vehicle 3 -->
+    <g transform="translate(175, -2)">
+      <rect x="0" y="15" width="68" height="34" rx="6" fill="#f59e0b"/>
+      <rect x="-19" y="25" width="24" height="24" rx="4" fill="#d97706"/>
+      <rect x="-15" y="29" width="15" height="11" rx="2" fill="#fcd34d"/>
+      <circle cx="5" cy="49" r="9" fill="#334155"/>
+      <circle cx="5" cy="49" r="4" fill="#64748B"/>
+      <circle cx="50" cy="49" r="9" fill="#334155"/>
+      <circle cx="50" cy="49" r="4" fill="#64748B"/>
+    </g>
+    
+    <!-- Vehicle 4 -->
+    <g transform="translate(265, 3)">
+      <rect x="0" y="15" width="66" height="33" rx="6" fill="#8b5cf6"/>
+      <rect x="-18" y="24" width="23" height="23" rx="4" fill="#7c3aed"/>
+      <rect x="-14" y="28" width="14" height="11" rx="2" fill="#c4b5fd"/>
+      <circle cx="5" cy="48" r="9" fill="#334155"/>
+      <circle cx="5" cy="48" r="4" fill="#64748B"/>
+      <circle cx="49" cy="48" r="9" fill="#334155"/>
+      <circle cx="49" cy="48" r="4" fill="#64748B"/>
+    </g>
+    
+    <!-- Vehicle 5 -->
+    <g transform="translate(355, 0)">
+      <rect x="0" y="15" width="70" height="35" rx="6" fill="#ec4899"/>
+      <rect x="-20" y="25" width="25" height="25" rx="4" fill="#db2777"/>
+      <rect x="-15" y="30" width="15" height="12" rx="2" fill="#fbcfe8"/>
+      <circle cx="5" cy="50" r="10" fill="#334155"/>
+      <circle cx="5" cy="50" r="5" fill="#64748B"/>
+      <circle cx="50" cy="50" r="10" fill="#334155"/>
+      <circle cx="50" cy="50" r="5" fill="#64748B"/>
+    </g>
+  </g>
+  
+  <!-- Sparkles and stars -->
+  <g fill="#fbbf24">
+    <path d="M430,70 L432,76 L438,78 L432,80 L430,86 L428,80 L422,78 L428,76 Z"/>
+    <path d="M60,200 L62,206 L68,208 L62,210 L60,216 L58,210 L52,208 L58,206 Z"/>
+    <path d="M460,250 L462,254 L466,256 L462,258 L460,262 L458,258 L454,256 L458,254 Z"/>
+  </g>
+  
+  <!-- Welcome star burst -->
+  <g transform="translate(60, 260)">
+    <circle cx="0" cy="0" r="25" fill="url(#goldGradient)" opacity="0.2"/>
+    <circle cx="0" cy="0" r="18" fill="url(#goldGradient)" opacity="0.4"/>
+    <circle cx="0" cy="0" r="10" fill="#fbbf24"/>
+    <text x="0" y="4" font-family="system-ui, sans-serif" font-size="10" fill="white" font-weight="bold" text-anchor="middle">★</text>
+  </g>
+</svg>
