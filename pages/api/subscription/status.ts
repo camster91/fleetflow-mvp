@@ -12,7 +12,7 @@ import {
   subscriptionNeedsAttention,
 } from '@/lib/subscription';
 import { getPlanByType, PricingPlan } from '@/config/pricing';
-import { PlanType } from '../../../types';
+import { PlanType, SubscriptionStatus } from '../../../types';
 
 interface SubscriptionStatusResponse {
   hasSubscription: boolean;
@@ -84,11 +84,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json(response);
     }
 
-    // Build response
-    const planDetails = getPlanByType(subscription.plan as PlanType);
-    const trialDaysLeft = getTrialDaysLeft(subscription);
-    const isActive = hasActiveSubscription(subscription);
-    const needsAttention = subscriptionNeedsAttention(subscription);
+    // Build response - cast subscription to proper type
+    const typedSubscription = {
+      ...subscription,
+      plan: subscription.plan as PlanType,
+      status: subscription.status as SubscriptionStatus,
+    };
+    const planDetails = getPlanByType(typedSubscription.plan);
+    const trialDaysLeft = getTrialDaysLeft(typedSubscription as any);
+    const isActive = hasActiveSubscription(typedSubscription as any);
+    const needsAttention = subscriptionNeedsAttention(typedSubscription as any);
 
     const response: SubscriptionStatusResponse = {
       hasSubscription: true,
