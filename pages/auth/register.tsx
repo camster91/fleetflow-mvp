@@ -99,7 +99,7 @@ export default function RegisterPage() {
 
   const handleSocialLogin = (provider: 'google' | 'azure-ad') => {
     setLoading(true);
-    signIn(provider, { callbackUrl: '/' });
+    signIn(provider, { callbackUrl: '/dashboard' });
   };
 
   // Success state - show email verification message

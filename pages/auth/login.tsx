@@ -44,7 +44,7 @@ export default function LoginPage() {
           setError(result.error);
         }
       } else {
-        router.push('/');
+        router.push('/dashboard');
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -69,7 +69,7 @@ export default function LoginPage() {
         throw new Error(result.error);
       }
 
-      router.push('/');
+      router.push('/dashboard');
     } catch (err) {
       setTwoFactorError(err instanceof Error ? err.message : 'Invalid code');
     } finally {
