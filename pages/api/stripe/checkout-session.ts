@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { stripe, createCheckoutSession, createStripeCustomer } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
-import { getPlanByStripePriceId, TRIAL_DAYS } from '@/config/pricing';
+import { getPlanTypeFromStripePriceId, getPlanByType, TRIAL_DAYS } from '@/config/pricing';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -26,10 +26,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validate the price ID exists in our pricing config
-    const plan = getPlanByStripePriceId(priceId);
-    if (!plan) {
+    const planType = getPlanTypeFromStripePriceId(priceId);
+    if (!planType) {
       return res.status(400).json({ error: 'Invalid price ID' });
     }
+    const plan = getPlanByType(planType);
 
     // Get user and existing subscription
     const user = await prisma.user.findUnique({
@@ -64,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data: {
             userId: user.id,
             stripeCustomerId: customerId,
-            plan: plan.planType,
+            plan: planType,
           },
         });
       }

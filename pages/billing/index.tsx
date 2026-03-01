@@ -18,8 +18,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { PRICING_PLANS, getNextPlan, getDowngradePlan, calculateYearlySavings } from '@/config/pricing';
-import { formatPrice, getPlanDisplayName } from '@/lib/subscription';
+import { PRICING_PLANS, calculateYearlySavings, getPlanByType, calculatePrice } from '@/config/pricing';
+import { getPlanDisplayName, PlanType, getNextPlan } from '@/lib/subscription';
 
 const BillingPage: React.FC = () => {
   const router = useRouter();
@@ -141,9 +141,9 @@ const BillingPage: React.FC = () => {
                   {subscription.plan?.name}
                 </p>
                 <p className="text-sm text-slate-500">
-                  {isYearly 
-                    ? `${formatPrice(currentPlan?.yearlyPrice || 0)}/month billed annually`
-                    : `${formatPrice(currentPlan?.monthlyPrice || 0)}/month`
+                  {subscription.plan?.type === 'PER_USER' 
+                    ? '$50 per user/month'
+                    : '$200/month flat rate'
                   }
                 </p>
               </div>
@@ -217,7 +217,7 @@ const BillingPage: React.FC = () => {
         </div>
 
         {/* Upgrade/Downgrade Options */}
-        {nextPlan && (
+        {nextPlan && subscription.plan?.type === 'PER_USER' && (
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-start space-x-4">
@@ -226,11 +226,10 @@ const BillingPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">
-                    Upgrade to {nextPlan.name}
+                    Upgrade to Unlimited
                   </h3>
                   <p className="text-slate-600 mt-1">
-                    Get {nextPlan.limits.vehicles === -1 ? 'unlimited' : nextPlan.limits.vehicles} vehicles, 
-                    priority support, and more advanced features.
+                    Get unlimited users for just $200/month. Perfect for growing teams!
                   </p>
                 </div>
               </div>

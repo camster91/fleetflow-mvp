@@ -25,7 +25,7 @@ export const FeatureGate: React.FC<FeatureGateProps> = ({
 
   // Determine which plan has this feature
   const nextPlan = getNextPlan(userPlan);
-  const requiredPlan = nextPlan ? nextPlan.planType : 'ENTERPRISE' as PlanType;
+  const requiredPlan = nextPlan ? nextPlan.planType : 'UNLIMITED' as PlanType;
 
   if (fallback === 'hidden') {
     return null;

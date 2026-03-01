@@ -12,7 +12,7 @@ export async function startTrial(userId: string): Promise<Subscription> {
   const subscription = await prisma.subscription.create({
     data: {
       userId,
-      plan: 'STARTER',
+      plan: 'PER_USER',
       status: 'TRIAL',
       trialEndsAt,
     },

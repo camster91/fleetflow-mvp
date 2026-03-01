@@ -60,7 +60,7 @@ CREATE TABLE "Subscription" (
     "stripeCustomerId" TEXT,
     "stripeSubscriptionId" TEXT,
     "stripePriceId" TEXT,
-    "plan" TEXT NOT NULL DEFAULT 'STARTER',
+    "plan" TEXT NOT NULL DEFAULT 'PER_USER',
     "status" TEXT NOT NULL DEFAULT 'TRIAL',
     "trialEndsAt" DATETIME,
     "currentPeriodStart" DATETIME,
