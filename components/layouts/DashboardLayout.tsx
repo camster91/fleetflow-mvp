@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from 'next-auth/react';
 import {
-  Truck,
   LayoutDashboard,
   Car,
   Package,
@@ -11,7 +10,6 @@ import {
   Users,
   BarChart3,
   Settings,
-
   Search,
   Menu,
   X,
@@ -23,6 +21,7 @@ import {
   FileText,
   Coffee,
   CreditCard,
+  Sparkles,
 } from 'lucide-react';
 import { TrialBanner } from '@/components/billing/TrialBanner';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -389,6 +388,16 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             </div>
           </div>
         )}
+
+        {/* Beta Banner */}
+        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-center space-x-2 text-white text-sm">
+            <Sparkles className="h-4 w-4" />
+            <span className="font-medium">Beta Access</span>
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline">Free during beta period • All features included</span>
+          </div>
+        </div>
 
         {/* Main Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6">
