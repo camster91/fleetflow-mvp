@@ -303,7 +303,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                className="lg:hidden p-2 text-slate-600 bg-slate-100 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors"
+                aria-label="Open menu"
               >
                 <Menu className="h-5 w-5" />
               </button>

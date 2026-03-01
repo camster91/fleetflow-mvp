@@ -24,56 +24,56 @@ import { TestimonialCard } from '../components/marketing/TestimonialCard';
 import { FAQ } from '../components/marketing/FAQ';
 import { Button } from '../components/ui/Button';
 
-// Feature data
+// Feature data - Only features that are actually implemented
 const features = [
   {
     icon: MapPin,
-    title: 'Real-time Vehicle Tracking',
-    description: 'Track your entire fleet in real-time with GPS precision. Know exactly where every vehicle is at any moment.',
+    title: 'Fleet Status Tracking',
+    description: 'Monitor your fleet status, vehicle locations, and driver assignments in one centralized dashboard.',
   },
   {
     icon: Wrench,
     title: 'Maintenance Scheduling',
-    description: 'Automated maintenance reminders and scheduling to keep your vehicles in top condition and avoid costly breakdowns.',
+    description: 'Schedule and track vehicle maintenance, set reminders for service intervals, and avoid costly breakdowns.',
+  },
+  {
+    icon: Package,
+    title: 'Delivery Management',
+    description: 'Create and track deliveries, assign drivers, and monitor delivery status from pickup to drop-off.',
   },
   {
     icon: Users,
-    title: 'Driver Management',
-    description: 'Manage driver profiles, certifications, schedules, and performance all in one centralized platform.',
+    title: 'Team Collaboration',
+    description: 'Manage team members, assign roles and permissions, and collaborate across your organization.',
   },
   {
-    icon: Fuel,
-    title: 'Fuel Cost Analytics',
-    description: 'Track fuel consumption, identify inefficiencies, and reduce costs with detailed analytics and insights.',
+    icon: BarChart3,
+    title: 'Fleet Analytics',
+    description: 'Track key metrics, view performance reports, and gain insights into your fleet operations.',
   },
   {
-    icon: Route,
-    title: 'Route Optimization',
-    description: 'AI-powered route planning to minimize travel time, reduce fuel costs, and maximize delivery efficiency.',
-  },
-  {
-    icon: FileCheck,
-    title: 'Compliance Reporting',
-    description: 'Stay compliant with automated reports for inspections, certifications, and regulatory requirements.',
+    icon: Shield,
+    title: 'Secure & Reliable',
+    description: 'Enterprise-grade security with role-based access control, audit logs, and data encryption.',
   },
 ];
 
-// How it works steps
+// How it works steps - Accurate to actual implementation
 const howItWorksSteps = [
   {
     number: '01',
-    title: 'Import Your Fleet',
-    description: 'Easily add your vehicles, drivers, and routes to FleetFlow. Import from spreadsheets or connect your existing systems.',
+    title: 'Set Up Your Fleet',
+    description: 'Add your vehicles, drivers, and team members to FleetFlow. Set up maintenance schedules and delivery workflows.',
   },
   {
     number: '02',
-    title: 'Track & Optimize',
-    description: 'Monitor your fleet in real-time, automate maintenance schedules, and optimize routes for maximum efficiency.',
+    title: 'Manage Operations',
+    description: 'Track vehicle status, schedule maintenance, manage deliveries, and collaborate with your team in real-time.',
   },
   {
     number: '03',
-    title: 'Grow Your Business',
-    description: 'Use insights and analytics to make data-driven decisions that reduce costs and improve customer satisfaction.',
+    title: 'Analyze & Improve',
+    description: 'Use built-in analytics to track performance, identify trends, and make data-driven decisions to optimize your fleet.',
   },
 ];
 
