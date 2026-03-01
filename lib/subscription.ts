@@ -74,11 +74,16 @@ export const FEATURE_ACCESS: FeatureAccess = {
 
 /**
  * Check if a user's plan can access a specific feature
+ * Beta: All features are enabled for all users
  */
 export function canAccessFeature(userPlan: PlanType, feature: string): boolean {
-  const allowedPlans = FEATURE_ACCESS[feature];
-  if (!allowedPlans) return false;
-  return allowedPlans.includes(userPlan);
+  // Beta: All features are enabled
+  return true;
+  
+  // Original code (restore after beta):
+  // const allowedPlans = FEATURE_ACCESS[feature];
+  // if (!allowedPlans) return false;
+  // return allowedPlans.includes(userPlan);
 }
 
 /**

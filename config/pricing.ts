@@ -18,7 +18,7 @@ export interface PricingPlan {
   isPerUser?: boolean;
 }
 
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 365; // Free for beta testing (1 year)
 
 export const PRICING_PLANS: Record<string, PricingPlan> = {
   perUser: {

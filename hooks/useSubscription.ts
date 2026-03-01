@@ -84,6 +84,11 @@ export function useSubscription(): UseSubscriptionReturn {
   }, [fetchSubscription]);
 
   const isFeatureEnabled = useCallback((feature: string): boolean => {
+    // Beta: All features are enabled for all users
+    return true;
+    
+    // Original code (restore after beta):
+    /*
     if (!subscription?.plan?.type) return false;
     
     const featureAccess: Record<string, PlanType[]> = {
@@ -114,6 +119,7 @@ export function useSubscription(): UseSubscriptionReturn {
     if (!allowedPlans) return false;
     
     return allowedPlans.includes(subscription.plan.type);
+    */
   }, [subscription]);
 
   const canAddVehicle = useCallback((currentCount: number): boolean => {
