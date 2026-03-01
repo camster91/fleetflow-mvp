@@ -1,17 +1,16 @@
 import { PRICING_PLANS, getPlanByType, PricingPlan } from '@/config/pricing';
 
 // Note: Prisma with SQLite uses String for enums
-// PlanType: 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE'
+// PlanType: 'PER_USER' | 'UNLIMITED'
 // SubscriptionStatus: 'TRIAL' | 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'UNPAID'
 
-export type PlanType = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type PlanType = 'PER_USER' | 'UNLIMITED';
 export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'UNPAID';
 
 // Constants for PlanType (for use as values)
 export const PlanType = {
-  STARTER: 'STARTER' as const,
-  PROFESSIONAL: 'PROFESSIONAL' as const,
-  ENTERPRISE: 'ENTERPRISE' as const,
+  PER_USER: 'PER_USER' as const,
+  UNLIMITED: 'UNLIMITED' as const,
 };
 
 // Constants for subscription status
@@ -51,27 +50,26 @@ export interface FeatureAccess {
 
 // Define which plans have access to which features
 export const FEATURE_ACCESS: FeatureAccess = {
-  'basic_reports': ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-  'email_support': ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-  'mobile_app': ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-  'maintenance_tracking': ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-  'driver_management': ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
-  'advanced_analytics': ['PROFESSIONAL', 'ENTERPRISE'],
-  'priority_support': ['PROFESSIONAL', 'ENTERPRISE'],
-  'api_access': ['PROFESSIONAL', 'ENTERPRISE'],
-  'custom_reports': ['PROFESSIONAL', 'ENTERPRISE'],
-  'fuel_tracking': ['PROFESSIONAL', 'ENTERPRISE'],
-  'route_optimization': ['PROFESSIONAL', 'ENTERPRISE'],
-  'maintenance_scheduling': ['PROFESSIONAL', 'ENTERPRISE'],
-  'team_collaboration': ['PROFESSIONAL', 'ENTERPRISE'],
-  'white_label': ['ENTERPRISE'],
-  'dedicated_support': ['ENTERPRISE'],
-  'custom_integrations': ['ENTERPRISE'],
-  'sla_guarantee': ['ENTERPRISE'],
-  'advanced_security': ['ENTERPRISE'],
-  'audit_logs': ['ENTERPRISE'],
-  'multi_location': ['ENTERPRISE'],
-  'custom_contracts': ['ENTERPRISE'],
+  'basic_reports': ['PER_USER', 'UNLIMITED'],
+  'email_support': ['PER_USER', 'UNLIMITED'],
+  'mobile_app': ['PER_USER', 'UNLIMITED'],
+  'maintenance_tracking': ['PER_USER', 'UNLIMITED'],
+  'driver_management': ['PER_USER', 'UNLIMITED'],
+  'advanced_analytics': ['PER_USER', 'UNLIMITED'],
+  'priority_support': ['UNLIMITED'],
+  'api_access': ['UNLIMITED'],
+  'custom_reports': ['UNLIMITED'],
+  'fuel_tracking': ['PER_USER', 'UNLIMITED'],
+  'maintenance_scheduling': ['PER_USER', 'UNLIMITED'],
+  'team_collaboration': ['PER_USER', 'UNLIMITED'],
+  'white_label': ['UNLIMITED'],
+  'dedicated_support': ['UNLIMITED'],
+  'custom_integrations': ['UNLIMITED'],
+  'sla_guarantee': ['UNLIMITED'],
+  'advanced_security': ['UNLIMITED'],
+  'audit_logs': ['UNLIMITED'],
+  'multi_location': ['PER_USER', 'UNLIMITED'],
+  'custom_contracts': ['UNLIMITED'],
 };
 
 /**
@@ -268,28 +266,28 @@ export function getPlanDisplayName(plan: PlanType): string {
 }
 
 /**
- * Get next plan for upgrade
+ * Get next plan for upgrade (from PER_USER to UNLIMITED)
  */
 export function getNextPlan(currentPlan: PlanType): PricingPlan | null {
   switch (currentPlan) {
-    case 'STARTER':
-      return PRICING_PLANS.professional;
-    case 'PROFESSIONAL':
-      return PRICING_PLANS.enterprise;
+    case 'PER_USER':
+      return PRICING_PLANS.unlimited;
+    case 'UNLIMITED':
+      return null; // Already at highest tier
     default:
       return null;
   }
 }
 
 /**
- * Get downgrade plan
+ * Get downgrade plan (from UNLIMITED to PER_USER)
  */
 export function getDowngradePlan(currentPlan: PlanType): PricingPlan | null {
   switch (currentPlan) {
-    case 'ENTERPRISE':
-      return PRICING_PLANS.professional;
-    case 'PROFESSIONAL':
-      return PRICING_PLANS.starter;
+    case 'UNLIMITED':
+      return PRICING_PLANS.perUser;
+    case 'PER_USER':
+      return null; // Already at lowest tier
     default:
       return null;
   }

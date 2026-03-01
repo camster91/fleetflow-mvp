@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // If no subscription exists, return default response
     if (!subscription) {
-      const defaultPlan = getPlanByType(PlanType.STARTER);
+      const defaultPlan = getPlanByType(PlanType.PER_USER);
       const response: SubscriptionStatusResponse = {
         hasSubscription: false,
         isActive: false,

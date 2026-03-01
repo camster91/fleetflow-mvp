@@ -2,12 +2,11 @@
 // These types mirror what would be in Prisma schema but are defined here for SQLite compatibility
 
 // Plan types for subscription management
-export type PlanType = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE';
+export type PlanType = 'PER_USER' | 'UNLIMITED';
 
 export const PlanType = {
-  STARTER: 'STARTER' as const,
-  PROFESSIONAL: 'PROFESSIONAL' as const,
-  ENTERPRISE: 'ENTERPRISE' as const,
+  PER_USER: 'PER_USER' as const,
+  UNLIMITED: 'UNLIMITED' as const,
 };
 
 // User roles

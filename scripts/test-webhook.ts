@@ -42,9 +42,8 @@ function createMockCheckoutSession(userId: string): any {
 
 function createMockSubscription(userId: string, plan: PlanType): any {
   const priceIds: Record<PlanType, string> = {
-    'STARTER': 'price_starter_monthly',
-    'PROFESSIONAL': 'price_professional_monthly',
-    'ENTERPRISE': 'price_enterprise_monthly',
+    'PER_USER': 'price_peruser_monthly',
+    'UNLIMITED': 'price_unlimited_monthly',
   };
 
   return {
@@ -121,8 +120,8 @@ console.log('checkout.session.completed:');
 console.log(JSON.stringify(createMockCheckoutSession(testUserId), null, 2));
 console.log('\n');
 
-console.log('customer.subscription.created (Starter):');
-console.log(JSON.stringify(createMockSubscription(testUserId, 'STARTER'), null, 2));
+console.log('customer.subscription.created (Per User):');
+console.log(JSON.stringify(createMockSubscription(testUserId, 'PER_USER'), null, 2));
 console.log('\n');
 
 console.log('invoice.paid:');

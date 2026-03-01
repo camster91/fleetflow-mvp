@@ -226,7 +226,7 @@ model Subscription {
   stripeCustomerId      String?   @unique
   stripeSubscriptionId  String?   @unique
   stripePriceId         String?
-  plan                  String    @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  plan                  String    @default("PER_USER") // PER_USER, UNLIMITED
   status                String    @default("TRIAL")   // TRIAL, ACTIVE, CANCELLED, PAST_DUE, UNPAID
   trialEndsAt           DateTime?
   currentPeriodStart    DateTime?

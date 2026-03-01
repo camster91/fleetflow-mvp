@@ -3,19 +3,16 @@ import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { 
   Check, 
-  X, 
-  Zap,
-  Building2,
-  Rocket,
-  Crown,
+  Users,
+  Infinity,
   Loader2,
   ArrowRight,
-  Shield
+  HelpCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { PRICING_PLANS, calculateYearlySavings, TRIAL_DAYS } from '@/config/pricing';
-import { PlanType } from '../types';
+import { MarketingLayout } from '@/components/layouts/MarketingLayout';
+import { PRICING_PLANS, calculatePrice, getRecommendedPlan } from '@/config/pricing';
 import { useSubscription } from '@/hooks/useSubscription';
 
 const PricingPage: React.FC = () => {
@@ -23,15 +20,19 @@ const PricingPage: React.FC = () => {
   const { data: session, status: sessionStatus } = useSession();
   const { subscription, isLoading: subLoading } = useSubscription();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [userCount, setUserCount] = useState(5);
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
-  const handleSubscribe = async (priceId: string, planName: string) => {
+  const handleSubscribe = async (planId: 'perUser' | 'unlimited') => {
     if (sessionStatus !== 'authenticated') {
       router.push('/auth/login?callbackUrl=/pricing');
       return;
     }
 
-    setIsLoading(planName);
+    const plan = PRICING_PLANS[planId];
+    const priceId = billingCycle === 'yearly' ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
+
+    setIsLoading(planId);
     try {
       const response = await fetch('/api/stripe/checkout-session', {
         method: 'POST',
@@ -49,7 +50,6 @@ const PricingPage: React.FC = () => {
         throw new Error(data.error || 'Failed to create checkout session');
       }
 
-      // Redirect to Stripe Checkout
       window.location.href = data.url;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'An error occurred');
@@ -77,8 +77,8 @@ const PricingPage: React.FC = () => {
         throw new Error(data.error || 'Failed to start trial');
       }
 
-      toast.success(`Your ${TRIAL_DAYS}-day trial has started!`);
-      router.push('/');
+      toast.success('Your 7-day trial has started!');
+      router.push('/dashboard');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'An error occurred');
     } finally {
@@ -86,289 +86,247 @@ const PricingPage: React.FC = () => {
     }
   };
 
-  const isCurrentPlan = (planType: PlanType) => {
-    return subscription?.plan?.type === planType;
-  };
+  const perUserPlan = PRICING_PLANS.perUser;
+  const unlimitedPlan = PRICING_PLANS.unlimited;
+  const recommendedPlan = getRecommendedPlan(userCount);
 
-  const plans = [
-    { ...PRICING_PLANS.starter, icon: Rocket, popular: false },
-    { ...PRICING_PLANS.professional, icon: Zap, popular: true },
-    { ...PRICING_PLANS.enterprise, icon: Building2, popular: false },
-  ];
+  const perUserTotal = calculatePrice('perUser', userCount, billingCycle);
+  const unlimitedTotal = calculatePrice('unlimited', userCount, billingCycle);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-900 rounded-lg">
-                <Crown className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-900">FleetFlow</span>
-            </Link>
-            <div className="flex items-center space-x-4">
-              {session ? (
-                <Link
-                  href="/"
-                  className="text-sm font-medium text-slate-600 hover:text-slate-900"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/login"
-                    className="text-sm font-medium text-slate-600 hover:text-slate-900"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/auth/register"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                  >
-                    Get started
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <MarketingLayout>
+      <div className="min-h-screen bg-slate-50">
         {/* Hero Section */}
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 sm:text-5xl">
-            Simple, transparent pricing
-          </h1>
-          <p className="mt-4 text-xl text-slate-600">
-            Start with a {TRIAL_DAYS}-day free trial. No credit card required.
-          </p>
-        </div>
-
-        {/* Trial Banner for New Users */}
-        {session && !subLoading && !subscription?.hasSubscription && (
-          <div className="max-w-2xl mx-auto mb-12">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-center text-white">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4">
-                <Rocket className="h-8 w-8" />
-              </div>
-              <h2 className="text-2xl font-bold">Start Your {TRIAL_DAYS}-Day Free Trial</h2>
-              <p className="mt-2 text-blue-100">
-                Get full access to all Starter features. No credit card required.
-              </p>
+        <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 py-20 px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              Simple, Transparent Pricing
+            </h1>
+            <p className="text-xl text-blue-100 mb-8">
+              Choose the plan that works best for your team. No hidden fees.
+            </p>
+            
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center space-x-4">
+              <span className={`text-sm font-medium ${billingCycle === 'monthly' ? 'text-white' : 'text-blue-200'}`}>
+                Monthly
+              </span>
               <button
-                onClick={handleStartTrial}
-                disabled={isLoading === 'trial'}
-                className="mt-6 px-8 py-3 bg-white text-blue-600 rounded-xl font-semibold hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                className="relative inline-flex h-6 w-11 items-center rounded-full bg-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-blue-900"
               >
-                {isLoading === 'trial' ? (
-                  <span className="flex items-center">
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Starting...
-                  </span>
-                ) : (
-                  'Start Free Trial'
-                )}
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    billingCycle === 'yearly' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
               </button>
+              <span className={`text-sm font-medium ${billingCycle === 'yearly' ? 'text-white' : 'text-blue-200'}`}>
+                Yearly
+              </span>
+              <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-300">
+                Save 20%
+              </span>
             </div>
-          </div>
-        )}
-
-        {/* Billing Toggle */}
-        <div className="flex items-center justify-center mb-12">
-          <div className="bg-white p-1 rounded-lg border border-slate-200 inline-flex">
-            <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                billingCycle === 'monthly'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle('yearly')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                billingCycle === 'yearly'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Yearly
-              <span className="ml-1.5 text-xs text-green-600">Save 20%</span>
-            </button>
           </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {plans.map((plan) => {
-            const Icon = plan.icon;
-            const price = billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
-            const priceId = billingCycle === 'monthly' ? plan.stripeMonthlyPriceId : plan.stripeYearlyPriceId;
-            const current = isCurrentPlan(plan.planType);
+        <div className="max-w-6xl mx-auto px-4 py-16">
+          {/* User Count Slider (for calculator) */}
+          <div className="max-w-md mx-auto mb-12 bg-white rounded-xl shadow-sm p-6">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              How many team members?
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              value={userCount}
+              onChange={(e) => setUserCount(parseInt(e.target.value))}
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
+            <div className="flex justify-between mt-2">
+              <span className="text-sm text-slate-500">1 user</span>
+              <span className="text-lg font-bold text-blue-600">{userCount} users</span>
+              <span className="text-sm text-slate-500">20 users</span>
+            </div>
+          </div>
 
-            return (
-              <div
-                key={plan.id}
-                className={`
-                  relative rounded-2xl border bg-white p-8
-                  ${plan.popular 
-                    ? 'border-blue-200 shadow-xl shadow-blue-900/5 ring-1 ring-blue-500' 
-                    : 'border-slate-200 shadow-sm'
-                  }
-                  ${current ? 'ring-2 ring-green-500' : ''}
-                `}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-                {current && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
-                      Current Plan
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className={`p-2 rounded-lg ${plan.popular ? 'bg-blue-100' : 'bg-slate-100'}`}>
-                    <Icon className={`h-6 w-6 ${plan.popular ? 'text-blue-600' : 'text-slate-600'}`} />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900">{plan.name}</h3>
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {/* Per User Plan */}
+            <div className={`relative bg-white rounded-2xl shadow-lg overflow-hidden ${recommendedPlan === 'perUser' ? 'ring-2 ring-blue-500' : ''}`}>
+              {recommendedPlan === 'perUser' && (
+                <div className="absolute top-0 left-0 right-0 bg-blue-500 text-white text-center text-sm py-1 font-medium">
+                  Recommended for {userCount} users
                 </div>
-
-                <p className="text-slate-600 text-sm mb-6">{plan.description}</p>
+              )}
+              <div className="p-8">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <Users className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Per User</h3>
+                    <p className="text-sm text-slate-500">Pay per team member</p>
+                  </div>
+                </div>
 
                 <div className="mb-6">
                   <div className="flex items-baseline">
-                    <span className="text-4xl font-bold text-slate-900">${price}</span>
-                    <span className="text-slate-500 ml-2">/month</span>
+                    <span className="text-5xl font-bold text-slate-900">
+                      ${billingCycle === 'yearly' ? perUserPlan.yearlyPrice : perUserPlan.monthlyPrice}
+                    </span>
+                    <span className="ml-2 text-slate-500">/user/month</span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600">
+                    {userCount} users = <span className="font-semibold">${perUserTotal}/month</span>
                   </div>
                   {billingCycle === 'yearly' && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Save ${calculateYearlySavings(plan)}/year
+                    <p className="text-sm text-emerald-600 mt-1">
+                      Save ${(perUserPlan.monthlyPrice - perUserPlan.yearlyPrice) * 12 * userCount}/year
                     </p>
                   )}
                 </div>
 
+                <ul className="space-y-3 mb-8">
+                  {perUserPlan.features.slice(0, 6).map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <Check className="h-5 w-5 text-emerald-500 flex-shrink-0 mr-3" />
+                      <span className="text-slate-600">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
                 <button
-                  onClick={() => handleSubscribe(priceId, plan.name)}
-                  disabled={isLoading !== null || current}
-                  className={`
-                    w-full py-3 px-4 rounded-xl font-medium transition-colors
-                    ${current
-                      ? 'bg-green-100 text-green-700 cursor-default'
-                      : plan.popular
-                        ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
-                        : 'bg-slate-100 text-slate-900 hover:bg-slate-200 disabled:opacity-50'
-                    }
-                  `}
+                  onClick={() => handleSubscribe('perUser')}
+                  disabled={isLoading === 'perUser'}
+                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
                 >
-                  {isLoading === plan.name ? (
-                    <span className="flex items-center justify-center">
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Loading...
-                    </span>
-                  ) : current ? (
-                    'Current Plan'
+                  {isLoading === 'perUser' ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
-                    `Choose ${plan.name}`
+                    <>Get Started <ArrowRight className="ml-2 h-4 w-4" /></>
                   )}
                 </button>
+              </div>
+            </div>
 
-                <div className="mt-6 space-y-3">
-                  <p className="text-sm font-medium text-slate-900">Features included:</p>
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-start">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0 mr-3" />
-                      <span className="text-sm text-slate-600">{feature}</span>
-                    </div>
+            {/* Unlimited Plan */}
+            <div className={`relative bg-white rounded-2xl shadow-lg overflow-hidden ${recommendedPlan === 'unlimited' ? 'ring-2 ring-emerald-500' : ''}`}>
+              {recommendedPlan === 'unlimited' && (
+                <div className="absolute top-0 left-0 right-0 bg-emerald-500 text-white text-center text-sm py-1 font-medium">
+                  Recommended for {userCount} users
+                </div>
+              )}
+              <div className="p-8">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-3 bg-emerald-100 rounded-xl">
+                    <Infinity className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Unlimited</h3>
+                    <p className="text-sm text-slate-500">Flat rate for whole team</p>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-baseline">
+                    <span className="text-5xl font-bold text-slate-900">
+                      ${billingCycle === 'yearly' ? unlimitedPlan.yearlyPrice : unlimitedPlan.monthlyPrice}
+                    </span>
+                    <span className="ml-2 text-slate-500">/month</span>
+                  </div>
+                  <div className="mt-2 text-sm text-slate-600">
+                    Unlimited users = <span className="font-semibold">${unlimitedTotal}/month</span>
+                  </div>
+                  {billingCycle === 'yearly' && (
+                    <p className="text-sm text-emerald-600 mt-1">
+                      Save ${(unlimitedPlan.monthlyPrice - unlimitedPlan.yearlyPrice) * 12}/year
+                    </p>
+                  )}
+                </div>
+
+                <ul className="space-y-3 mb-8">
+                  {unlimitedPlan.features.slice(0, 6).map((feature, index) => (
+                    <li key={index} className="flex items-start">
+                      <Check className="h-5 w-5 text-emerald-500 flex-shrink-0 mr-3" />
+                      <span className="text-slate-600">{feature}</span>
+                    </li>
                   ))}
-                </div>
+                </ul>
 
-                <div className="mt-6 pt-6 border-t border-slate-200">
-                  <p className="text-sm text-slate-500">
-                    <span className="font-medium text-slate-900">{plan.limits.vehicles === -1 ? 'Unlimited' : plan.limits.vehicles} vehicles</span>
-                    {' • '}
-                    <span className="font-medium text-slate-900">{plan.limits.users === -1 ? 'Unlimited' : plan.limits.users} users</span>
-                  </p>
-                </div>
+                <button
+                  onClick={() => handleSubscribe('unlimited')}
+                  disabled={isLoading === 'unlimited'}
+                  className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isLoading === 'unlimited' ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>Get Started <ArrowRight className="ml-2 h-4 w-4" /></>
+                  )}
+                </button>
               </div>
-            );
-          })}
+            </div>
+          </div>
+
+          {/* Break-even explanation */}
+          <div className="max-w-2xl mx-auto mt-12 bg-blue-50 rounded-xl p-6">
+            <div className="flex items-start space-x-3">
+              <HelpCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-blue-900">Which plan should I choose?</h4>
+                <p className="text-blue-700 mt-1">
+                  If you have <strong>4 or fewer team members</strong>, the Per User plan is more cost-effective 
+                  (4 × $50 = $200). With <strong>5 or more users</strong>, the Unlimited plan at $200/month 
+                  gives you the best value.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Free Trial CTA */}
+          <div className="text-center mt-16">
+            <p className="text-slate-600 mb-4">Not sure yet? Try FleetFlow free for 7 days.</p>
+            <button
+              onClick={handleStartTrial}
+              disabled={isLoading === 'trial'}
+              className="inline-flex items-center px-6 py-3 border-2 border-slate-300 text-slate-700 font-medium rounded-lg hover:border-blue-500 hover:text-blue-600 transition-colors disabled:opacity-50"
+            >
+              {isLoading === 'trial' ? (
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              ) : null}
+              Start Free Trial
+            </button>
+            <p className="text-sm text-slate-500 mt-3">No credit card required</p>
+          </div>
         </div>
 
-        {/* Enterprise CTA */}
-        <div className="mt-16 bg-slate-900 rounded-2xl p-8 sm:p-12 text-center text-white">
-          <h2 className="text-2xl font-bold">Need a custom solution?</h2>
-          <p className="mt-2 text-slate-400">
-            Contact us for enterprise pricing and custom integrations
-          </p>
-          <a
-            href="mailto:sales@fleetflow.app"
-            className="mt-6 inline-flex items-center px-6 py-3 bg-white text-slate-900 rounded-xl font-medium hover:bg-slate-100 transition-colors"
-          >
-            Contact Sales
-            <ArrowRight className="h-5 w-5 ml-2" />
-          </a>
-        </div>
-
-        {/* FAQ */}
-        <div className="mt-16 max-w-3xl mx-auto">
+        {/* FAQ Section */}
+        <div className="max-w-3xl mx-auto px-4 py-16 border-t border-slate-200">
           <h2 className="text-2xl font-bold text-slate-900 text-center mb-8">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900">Can I change my plan later?</h3>
-              <p className="mt-2 text-slate-600">
-                Yes, you can upgrade or downgrade your plan at any time. Changes take effect at your next billing cycle.
-              </p>
+          <div className="space-y-6">
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Can I switch plans later?</h3>
+              <p className="text-slate-600">Yes, you can upgrade or downgrade your plan at any time. Changes take effect at the start of your next billing cycle.</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900">What happens after my trial ends?</h3>
-              <p className="mt-2 text-slate-600">
-                After your {TRIAL_DAYS}-day trial, you&apos;ll need to choose a plan to continue using FleetFlow. 
-                We&apos;ll remind you before the trial ends.
-              </p>
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">What happens if I add more users to the Per User plan?</h3>
+              <p className="text-slate-600">You'll be charged prorated for additional users. If you reach 5+ users, consider switching to Unlimited for better value.</p>
             </div>
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900">Is there a refund policy?</h3>
-              <p className="mt-2 text-slate-600">
-                We offer a 30-day money-back guarantee. If you&apos;re not satisfied, contact us for a full refund.
-              </p>
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Is there a limit on vehicles?</h3>
+              <p className="text-slate-600">No, both plans include unlimited vehicles. The only difference is how user seats are priced.</p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-2">Do you offer refunds?</h3>
+              <p className="text-slate-600">Yes, we offer a 30-day money-back guarantee if you're not satisfied with FleetFlow.</p>
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} FleetFlow. All rights reserved.
-            </p>
-            <div className="flex items-center space-x-6 mt-4 md:mt-0">
-              <a href="#" className="text-sm text-slate-500 hover:text-slate-900">Privacy</a>
-              <a href="#" className="text-sm text-slate-500 hover:text-slate-900">Terms</a>
-              <div className="flex items-center text-sm text-slate-500">
-                <Shield className="h-4 w-4 mr-1.5" />
-                PCI Compliant
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </MarketingLayout>
   );
 };
 

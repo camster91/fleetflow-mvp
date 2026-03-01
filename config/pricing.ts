@@ -1,4 +1,4 @@
-import { PlanType } from '@/lib/subscription';
+import { PlanType } from '@/types';
 
 export interface PricingPlan {
   id: string;
@@ -15,164 +15,170 @@ export interface PricingPlan {
     apiCalls: number;
   };
   planType: PlanType;
+  isPerUser?: boolean;
 }
 
+export const TRIAL_DAYS = 7;
+
 export const PRICING_PLANS: Record<string, PricingPlan> = {
-  starter: {
-    id: 'starter',
-    name: 'Starter',
-    description: 'Perfect for small fleets',
-    monthlyPrice: 29,
-    yearlyPrice: 23,
-    stripeMonthlyPriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID || 'price_starter_monthly',
-    stripeYearlyPriceId: process.env.STRIPE_STARTER_YEARLY_PRICE_ID || 'price_starter_yearly',
-    features: [
-      'Up to 10 vehicles',
-      'Basic reports',
-      'Email support',
-      'Mobile app access',
-      'Basic maintenance tracking',
-      'Driver management',
-    ],
-    limits: { vehicles: 10, users: 3, apiCalls: 1000 },
-    planType: 'STARTER',
-  },
-  professional: {
-    id: 'professional',
-    name: 'Professional',
-    description: 'For growing fleets',
-    monthlyPrice: 79,
-    yearlyPrice: 63,
-    stripeMonthlyPriceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID || 'price_professional_monthly',
-    stripeYearlyPriceId: process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID || 'price_professional_yearly',
-    features: [
-      'Up to 50 vehicles',
-      'Advanced analytics',
-      'Priority support',
-      'API access',
-      'Custom reports',
-      'Fuel tracking',
-      'Route optimization',
-      'Maintenance scheduling',
-      'Team collaboration',
-    ],
-    limits: { vehicles: 50, users: 10, apiCalls: 10000 },
-    planType: 'PROFESSIONAL',
-  },
-  enterprise: {
-    id: 'enterprise',
-    name: 'Enterprise',
-    description: 'For large organizations',
-    monthlyPrice: 199,
-    yearlyPrice: 159,
-    stripeMonthlyPriceId: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID || 'price_enterprise_monthly',
-    stripeYearlyPriceId: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID || 'price_enterprise_yearly',
+  perUser: {
+    id: 'perUser',
+    name: 'Per User',
+    description: 'Pay per team member',
+    monthlyPrice: 50,
+    yearlyPrice: 40, // 20% discount for yearly
+    stripeMonthlyPriceId: process.env.STRIPE_PERUSER_MONTHLY_PRICE_ID || 'price_peruser_monthly',
+    stripeYearlyPriceId: process.env.STRIPE_PERUSER_YEARLY_PRICE_ID || 'price_peruser_yearly',
     features: [
       'Unlimited vehicles',
+      'All features included',
+      'Priority support',
+      'API access',
+      'Advanced analytics',
+      'Custom reports',
+      'Team collaboration',
+      'Maintenance scheduling',
+      'Delivery tracking',
+    ],
+    limits: { vehicles: -1, users: -1, apiCalls: 10000 },
+    planType: 'PER_USER' as PlanType,
+    isPerUser: true,
+  },
+  unlimited: {
+    id: 'unlimited',
+    name: 'Unlimited',
+    description: 'Flat rate for entire team',
+    monthlyPrice: 200,
+    yearlyPrice: 160, // 20% discount for yearly
+    stripeMonthlyPriceId: process.env.STRIPE_UNLIMITED_MONTHLY_PRICE_ID || 'price_unlimited_monthly',
+    stripeYearlyPriceId: process.env.STRIPE_UNLIMITED_YEARLY_PRICE_ID || 'price_unlimited_yearly',
+    features: [
+      'Unlimited vehicles',
+      'Unlimited users',
+      'All features included',
+      'Priority support',
+      'API access',
+      'Advanced analytics',
+      'Custom reports',
       'White-label options',
-      'Dedicated support',
-      'Custom integrations',
+      'Dedicated account manager',
       'SLA guarantee',
-      'Advanced security',
-      'Audit logs',
-      'Multi-location support',
-      'Custom contracts',
     ],
     limits: { vehicles: -1, users: -1, apiCalls: -1 },
-    planType: 'ENTERPRISE',
+    planType: 'UNLIMITED' as PlanType,
+    isPerUser: false,
   },
 };
 
-export const TRIAL_DAYS = parseInt(process.env.TRIAL_DAYS || '7', 10);
-
 export function getPlanByType(planType: PlanType): PricingPlan {
   switch (planType) {
-    case 'STARTER':
-      return PRICING_PLANS.starter;
-    case 'PROFESSIONAL':
-      return PRICING_PLANS.professional;
-    case 'ENTERPRISE':
-      return PRICING_PLANS.enterprise;
+    case 'PER_USER':
+      return PRICING_PLANS.perUser;
+    case 'UNLIMITED':
+      return PRICING_PLANS.unlimited;
     default:
-      return PRICING_PLANS.starter;
+      return PRICING_PLANS.perUser;
   }
 }
 
-export function getPlanByStripePriceId(priceId: string): PricingPlan | null {
-  for (const plan of Object.values(PRICING_PLANS)) {
-    if (plan.stripeMonthlyPriceId === priceId || plan.stripeYearlyPriceId === priceId) {
-      return plan;
-    }
+export function getPlanById(id: string): PricingPlan | undefined {
+  return PRICING_PLANS[id];
+}
+
+export function getAllPlans(): PricingPlan[] {
+  return Object.values(PRICING_PLANS);
+}
+
+export function getPlanDisplayName(planType: PlanType): string {
+  switch (planType) {
+    case 'PER_USER':
+      return 'Per User';
+    case 'UNLIMITED':
+      return 'Unlimited';
+    default:
+      return 'Per User';
   }
-  return null;
 }
 
-export function getPlanTypeFromStripePriceId(priceId: string): PlanType {
-  const plan = getPlanByStripePriceId(priceId);
-  return plan?.planType || 'STARTER';
+export function getVehicleLimit(plan: PlanType): number {
+  return -1; // Unlimited for both plans
 }
 
-export function isYearlyPrice(priceId: string): boolean {
-  for (const plan of Object.values(PRICING_PLANS)) {
-    if (plan.stripeYearlyPriceId === priceId) {
-      return true;
-    }
-  }
-  return false;
+export function getUserLimit(plan: PlanType): number {
+  return -1; // Unlimited for both plans
 }
 
-export function getAllFeatures(): string[] {
-  const allFeatures = new Set<string>();
-  Object.values(PRICING_PLANS).forEach(plan => {
-    plan.features.forEach(feature => allFeatures.add(feature));
-  });
-  return Array.from(allFeatures);
+export function formatPrice(price: number, currency: string = 'USD'): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(price);
 }
 
-export function comparePlans(plan1: PricingPlan, plan2: PricingPlan): {
-  onlyInPlan1: string[];
-  onlyInPlan2: string[];
-  inBoth: string[];
-} {
-  const set1 = new Set(plan1.features);
-  const set2 = new Set(plan2.features);
-  
-  return {
-    onlyInPlan1: plan1.features.filter(f => !set2.has(f)),
-    onlyInPlan2: plan2.features.filter(f => !set1.has(f)),
-    inBoth: plan1.features.filter(f => set2.has(f)),
-  };
-}
-
-/**
- * Get the next higher plan
- */
-export function getNextPlan(currentPlan: PlanType): PricingPlan | null {
-  const order = [PlanType.STARTER, PlanType.PROFESSIONAL, PlanType.ENTERPRISE];
-  const currentIndex = order.indexOf(currentPlan);
-  if (currentIndex < order.length - 1) {
-    return getPlanByType(order[currentIndex + 1]);
-  }
-  return null;
-}
-
-/**
- * Get the next lower plan
- */
-export function getDowngradePlan(currentPlan: PlanType): PricingPlan | null {
-  const order = [PlanType.STARTER, PlanType.PROFESSIONAL, PlanType.ENTERPRISE];
-  const currentIndex = order.indexOf(currentPlan);
-  if (currentIndex > 0) {
-    return getPlanByType(order[currentIndex - 1]);
-  }
-  return null;
-}
-
-/**
- * Calculate yearly savings compared to monthly
- */
-export function calculateYearlySavings(plan: PricingPlan): number {
-  const monthlyCost = plan.monthlyPrice * 12;
-  const yearlyCost = plan.yearlyPrice * 12;
+export function calculateYearlySavings(monthlyPrice: number, yearlyPrice: number): number {
+  const yearlyCost = yearlyPrice * 12;
+  const monthlyCost = monthlyPrice * 12;
   return monthlyCost - yearlyCost;
+}
+
+export function getPlanComparison(): {
+  feature: string;
+  perUser: string;
+  unlimited: string;
+}[] {
+  return [
+    { feature: 'Price', perUser: '$50/user/month', unlimited: '$200/month flat' },
+    { feature: 'Vehicles', perUser: 'Unlimited', unlimited: 'Unlimited' },
+    { feature: 'Users', perUser: 'Pay per user', unlimited: 'Unlimited' },
+    { feature: 'Support', perUser: 'Priority', unlimited: 'Priority + Dedicated' },
+    { feature: 'API Access', perUser: '✓', unlimited: '✓' },
+    { feature: 'Analytics', perUser: 'Advanced', unlimited: 'Advanced + Custom' },
+    { feature: 'White-label', perUser: '—', unlimited: '✓' },
+    { feature: 'SLA', perUser: '—', unlimited: '✓' },
+  ];
+}
+
+export function getRecommendedPlan(userCount: number): 'perUser' | 'unlimited' {
+  // Break-even at 4 users: 4 × $50 = $200
+  return userCount <= 4 ? 'perUser' : 'unlimited';
+}
+
+export function calculatePrice(planId: 'perUser' | 'unlimited', userCount: number, billingCycle: 'monthly' | 'yearly'): number {
+  const plan = PRICING_PLANS[planId];
+  const price = billingCycle === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+  
+  if (planId === 'perUser') {
+    return price * userCount;
+  }
+  
+  return price;
+}
+
+/**
+ * Map Stripe price ID to plan type
+ */
+export function getPlanTypeFromStripePriceId(priceId: string): PlanType {
+  const perUserPriceIds = [
+    PRICING_PLANS.perUser.stripeMonthlyPriceId,
+    PRICING_PLANS.perUser.stripeYearlyPriceId,
+  ];
+  
+  const unlimitedPriceIds = [
+    PRICING_PLANS.unlimited.stripeMonthlyPriceId,
+    PRICING_PLANS.unlimited.stripeYearlyPriceId,
+  ];
+  
+  if (perUserPriceIds.includes(priceId)) {
+    return 'PER_USER';
+  }
+  
+  if (unlimitedPriceIds.includes(priceId)) {
+    return 'UNLIMITED';
+  }
+  
+  // Default to PER_USER if unknown
+  console.warn(`Unknown price ID: ${priceId}, defaulting to PER_USER`);
+  return 'PER_USER';
 }
