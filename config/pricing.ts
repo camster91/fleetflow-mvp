@@ -149,3 +149,36 @@ export function comparePlans(plan1: PricingPlan, plan2: PricingPlan): {
     inBoth: plan1.features.filter(f => set2.has(f)),
   };
 }
+
+/**
+ * Get the next higher plan
+ */
+export function getNextPlan(currentPlan: PlanType): PricingPlan | null {
+  const order = [PlanType.STARTER, PlanType.PROFESSIONAL, PlanType.ENTERPRISE];
+  const currentIndex = order.indexOf(currentPlan);
+  if (currentIndex < order.length - 1) {
+    return getPlanByType(order[currentIndex + 1]);
+  }
+  return null;
+}
+
+/**
+ * Get the next lower plan
+ */
+export function getDowngradePlan(currentPlan: PlanType): PricingPlan | null {
+  const order = [PlanType.STARTER, PlanType.PROFESSIONAL, PlanType.ENTERPRISE];
+  const currentIndex = order.indexOf(currentPlan);
+  if (currentIndex > 0) {
+    return getPlanByType(order[currentIndex - 1]);
+  }
+  return null;
+}
+
+/**
+ * Calculate yearly savings compared to monthly
+ */
+export function calculateYearlySavings(plan: PricingPlan): number {
+  const monthlyCost = plan.monthlyPrice * 12;
+  const yearlyCost = plan.yearlyPrice * 12;
+  return monthlyCost - yearlyCost;
+}
