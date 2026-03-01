@@ -4,12 +4,12 @@ import { X, Send, AlertCircle, Users, Clock } from 'lucide-react'
 interface AnnouncementModalProps {
   isOpen: boolean
   onClose: () => void
-  onSend: (message: string, priority: string, recipients: string) => void
+  onSend: (message: string, priority: 'low' | 'normal' | 'high' | 'urgent', recipients: string) => void
 }
 
 export default function AnnouncementModal({ isOpen, onClose, onSend }: AnnouncementModalProps) {
   const [message, setMessage] = useState('')
-  const [priority, setPriority] = useState('normal')
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'urgent'>('normal')
   const [recipients, setRecipients] = useState('all')
   const [isSending, setIsSending] = useState(false)
 
