@@ -172,7 +172,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
                           className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
                         />
                       </button>
-                      {expanded && (
+                      {expanded && item.children && (
                         <div className="mt-1 ml-4 pl-4 border-l border-slate-200 space-y-1">
                           {item.children.map((child) => (
                             <Link
