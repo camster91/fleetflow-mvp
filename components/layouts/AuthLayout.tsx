@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import { Truck } from 'lucide-react';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -37,11 +36,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           {/* Logo */}
           <div>
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="p-3 bg-white/10 rounded-xl backdrop-blur-sm group-hover:bg-white/20 transition-colors">
-                <Truck className="h-8 w-8" />
-              </div>
-              <span className="text-2xl font-bold">FleetFlow</span>
+            <Link href="/" className="flex items-center group">
+              <img 
+                src="/brand/logo/logo-horizontal-dark.svg" 
+                alt="FleetFlow" 
+                className="h-10 w-auto"
+              />
             </Link>
           </div>
 
@@ -92,11 +92,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
       <div className="flex-1 flex flex-col">
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-white">
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="p-2 bg-blue-900 rounded-lg">
-              <Truck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-slate-900">FleetFlow</span>
+          <Link href="/" className="flex items-center">
+            <img 
+              src="/brand/logo/logo-horizontal.svg" 
+              alt="FleetFlow" 
+              className="h-7 w-auto"
+            />
           </Link>
         </div>
 
