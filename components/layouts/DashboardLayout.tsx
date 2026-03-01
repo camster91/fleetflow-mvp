@@ -11,7 +11,7 @@ import {
   Users,
   BarChart3,
   Settings,
-  Bell,
+
   Search,
   Menu,
   X,
@@ -22,7 +22,11 @@ import {
   HelpCircle,
   FileText,
   Coffee,
+  CreditCard,
 } from 'lucide-react';
+import { TrialBanner } from '@/components/billing/TrialBanner';
+import { useSubscription } from '@/hooks/useSubscription';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface NavItem {
   id: string;
@@ -48,6 +52,7 @@ const navItems: NavItem[] = [
   { id: 'clients', label: 'Clients', icon: Users, href: '/?tab=clients' },
   { id: 'vending', label: 'Vending', icon: Coffee, href: '/?tab=vending' },
   { id: 'reports', label: 'Reports', icon: BarChart3, href: '/?tab=reports' },
+  { id: 'billing', label: 'Billing', icon: CreditCard, href: '/billing' },
 ];
 
 interface DashboardLayoutProps {
@@ -67,10 +72,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   const { data: session } = useSession();
   const router = useRouter();
+  const { subscription, isLoading: subLoading } = useSubscription();
+  const trialDaysLeft = subscription?.trial?.daysLeft || 0;
+  const isInTrial = subscription?.trial?.isInTrial || false;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<string[]>(['vehicles']);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   // Close sidebar on route change (mobile)
@@ -83,14 +92,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = () => {
-      setNotificationsOpen(false);
       setUserMenuOpen(false);
     };
-    if (notificationsOpen || userMenuOpen) {
+    if (userMenuOpen) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
     }
-  }, [notificationsOpen, userMenuOpen]);
+  }, [userMenuOpen]);
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) =>
@@ -284,6 +292,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Main Content Area */}
       <div className="lg:ml-72 min-h-screen flex flex-col">
+        {/* Trial Banner */}
+        {isInTrial && trialDaysLeft > 0 && (
+          <TrialBanner daysLeft={trialDaysLeft} />
+        )}
+        
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
           <div className="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -340,42 +353,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               </button>
 
               {/* Notifications */}
-              <div className="relative">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setNotificationsOpen(!notificationsOpen);
-                  }}
-                  className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
-                >
-                  <Bell className="h-5 w-5" />
-                  <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
-                </button>
-
-                {/* Notifications Dropdown */}
-                {notificationsOpen && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 py-2">
-                    <div className="px-4 py-2 border-b border-slate-100">
-                      <h3 className="font-medium text-slate-900">Notifications</h3>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      <div className="px-4 py-3 hover:bg-slate-50 cursor-pointer">
-                        <p className="text-sm text-slate-900">Maintenance due for Truck #3</p>
-                        <p className="text-xs text-slate-500 mt-1">2 hours ago</p>
-                      </div>
-                      <div className="px-4 py-3 hover:bg-slate-50 cursor-pointer">
-                        <p className="text-sm text-slate-900">New delivery assigned</p>
-                        <p className="text-xs text-slate-500 mt-1">5 hours ago</p>
-                      </div>
-                    </div>
-                    <div className="px-4 py-2 border-t border-slate-100">
-                      <Link href="/notifications" className="text-sm text-blue-600 hover:text-blue-700">
-                        View all notifications
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <NotificationBell />
 
               {/* Actions */}
               {actions && <div className="hidden sm:flex items-center space-x-2">{actions}</div>}
