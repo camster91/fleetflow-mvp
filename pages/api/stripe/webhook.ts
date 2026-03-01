@@ -127,8 +127,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       stripePriceId: priceId,
       plan: planType,
       status: 'ACTIVE' as SubscriptionStatus,
-      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+      currentPeriodStart: new Date((stripeSubscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
     },
     update: {
@@ -137,8 +137,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       stripePriceId: priceId,
       plan: planType,
       status: 'ACTIVE' as SubscriptionStatus,
-      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+      currentPeriodStart: new Date((stripeSubscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       trialEndsAt: null, // Clear trial end date when converting to paid
     },
@@ -252,8 +252,8 @@ async function handleSubscriptionUpdated(stripeSubscription: Stripe.Subscription
       plan: planType,
       status,
       stripePriceId: priceId,
-      currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
+      currentPeriodStart: new Date((stripeSubscription as any).current_period_start * 1000),
+      currentPeriodEnd: new Date((stripeSubscription as any).current_period_end * 1000),
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
     },
   });
