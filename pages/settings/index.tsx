@@ -17,6 +17,7 @@ import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { Input, TextArea, Select } from '../../components/ui/Input';
 import { notify } from '../../services/notifications';
 
