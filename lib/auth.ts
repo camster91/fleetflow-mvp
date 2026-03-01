@@ -378,6 +378,22 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return session
+    },
+    
+    async redirect({ url, baseUrl }) {
+      // Redirect to dashboard after sign in
+      if (url === baseUrl || url === '/') {
+        return `${baseUrl}/dashboard`
+      }
+      // Allow relative URLs
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`
+      }
+      // Allow same origin URLs
+      if (url.startsWith(baseUrl)) {
+        return url
+      }
+      return baseUrl
     }
   },
   events: {
