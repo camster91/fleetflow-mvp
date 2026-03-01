@@ -14,7 +14,7 @@ export default async function handler(
   }
 
   // Apply rate limiting
-  const allowed = await rateLimitMiddleware(req, res, 'auth');
+  const allowed = await rateLimitMiddleware(req, res, 'api');
   if (!allowed) return;
 
   try {
