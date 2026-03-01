@@ -121,12 +121,6 @@ export function isYearlyPrice(priceId: string): boolean {
   return false;
 }
 
-export function calculateYearlySavings(monthlyPrice: number, yearlyPrice: number): number {
-  const yearlyCost = yearlyPrice * 12;
-  const monthlyCost = monthlyPrice * 12;
-  return monthlyCost - yearlyCost;
-}
-
 export function getAllFeatures(): string[] {
   const allFeatures = new Set<string>();
   Object.values(PRICING_PLANS).forEach(plan => {
