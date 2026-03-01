@@ -256,7 +256,7 @@ const PricingPage: React.FC = () => {
                   </div>
                   {billingCycle === 'yearly' && (
                     <p className="text-sm text-green-600 mt-1">
-                      Save ${calculateYearlySavings(plan.monthlyPrice, plan.yearlyPrice)}/year
+                      Save ${calculateYearlySavings(plan)}/year
                     </p>
                   )}
                 </div>
