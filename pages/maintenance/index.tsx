@@ -31,12 +31,18 @@ export default function MaintenancePage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant: 'danger' | 'warning' | 'info';
+  }>({
     isOpen: false,
     title: '',
     message: '',
     onConfirm: () => {},
-    variant: 'danger' as const,
+    variant: 'danger',
   });
 
   useEffect(() => {
