@@ -44,16 +44,27 @@ export default async function handler(
       try {
         const { name, phone, timezone, language, bio } = req.body;
 
+        // Get current preferences
+        const currentUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { notificationPreferences: true }
+        });
+        
+        const currentPrefs = currentUser?.notificationPreferences 
+          ? JSON.parse(currentUser.notificationPreferences) 
+          : {};
+
         const updatedUser = await prisma.user.update({
           where: { id: userId },
           data: {
             name,
-            notificationPreferences: {
+            notificationPreferences: JSON.stringify({
+              ...currentPrefs,
               phone,
               timezone,
               language,
               bio,
-            },
+            }),
           },
           select: {
             id: true,
