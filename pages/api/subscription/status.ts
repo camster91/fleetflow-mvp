@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Build response
-    const planDetails = getPlanByType(subscription.plan);
+    const planDetails = getPlanByType(subscription.plan as PlanType);
     const trialDaysLeft = getTrialDaysLeft(subscription);
     const isActive = hasActiveSubscription(subscription);
     const needsAttention = subscriptionNeedsAttention(subscription);
@@ -94,8 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hasSubscription: true,
       isActive,
       plan: {
-        type: subscription.plan,
-        name: getPlanDisplayName(subscription.plan),
+        type: subscription.plan as PlanType,
+        name: getPlanDisplayName(subscription.plan as PlanType),
         details: planDetails,
       },
       status: subscription.status,
@@ -110,8 +110,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         needsAttention,
       },
       limits: {
-        vehicles: getVehicleLimit(subscription.plan),
-        users: getUserLimit(subscription.plan),
+        vehicles: getVehicleLimit(subscription.plan as PlanType),
+        users: getUserLimit(subscription.plan as PlanType),
       },
       features: planDetails.features,
     };
