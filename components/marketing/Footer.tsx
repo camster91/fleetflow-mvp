@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Truck, Mail, Phone, MapPin, Twitter, Linkedin, Github, Youtube } from 'lucide-react';
+import { Mail, Phone, MapPin, Twitter, Linkedin, Github, Youtube } from 'lucide-react';
 import { useState } from 'react';
 
 const footerLinks = {
@@ -91,11 +91,12 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
           {/* Brand Column */}
           <div className="col-span-2">
-            <Link href="/" className="flex items-center space-x-2 mb-4">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Truck className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white">FleetFlow</span>
+            <Link href="/" className="flex items-center mb-4">
+              <img 
+                src="/brand/logo/logo-horizontal-dark.svg" 
+                alt="FleetFlow" 
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="text-slate-400 text-sm mb-6 max-w-xs">
               Modern fleet management software for delivery services, logistics, and transportation companies.

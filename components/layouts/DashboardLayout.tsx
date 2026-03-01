@@ -136,12 +136,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
         `}
       >
         {/* Sidebar Header */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200">
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-900 rounded-lg">
-              <Truck className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold text-slate-900">FleetFlow</span>
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
+          <Link href="/dashboard" className="flex items-center">
+            <img 
+              src="/brand/logo/logo-horizontal.svg" 
+              alt="FleetFlow" 
+              className="h-7 w-auto"
+            />
           </Link>
           <button
             onClick={() => setSidebarOpen(false)}
