@@ -93,12 +93,12 @@ export default function AnnouncementModal({ isOpen, onClose, onSend }: Announcem
                 Priority
               </label>
               <div className="flex space-x-2">
-                {[
+                {([
                   { id: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
                   { id: 'normal', label: 'Normal', color: 'bg-blue-100 text-blue-800' },
                   { id: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
                   { id: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-800' },
-                ].map((option) => (
+                ] as const).map((option) => (
                   <button
                     key={option.id}
                     type="button"
