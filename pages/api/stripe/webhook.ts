@@ -149,7 +149,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
 
 async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const stripeCustomerId = invoice.customer as string;
-  const stripeSubscriptionId = invoice.subscription as string;
+  const stripeSubscriptionId = (invoice as any).subscription as string;
 
   if (!stripeCustomerId) {
     console.error('No customer ID in invoice');
@@ -172,17 +172,17 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
     where: { stripeInvoiceId: invoice.id },
     create: {
       userId: subscription.userId,
-      stripeInvoiceId: invoice.id,
-      amount: invoice.amount_paid / 100, // Convert from cents
-      currency: invoice.currency.toUpperCase(),
-      status: invoice.status || 'paid',
-      invoicePdf: invoice.invoice_pdf,
-      periodStart: new Date((invoice.period_start || invoice.created) * 1000),
-      periodEnd: new Date((invoice.period_end || invoice.created) * 1000),
+      stripeInvoiceId: (invoice as any).id,
+      amount: (invoice as any).amount_paid / 100, // Convert from cents
+      currency: (invoice as any).currency.toUpperCase(),
+      status: (invoice as any).status || 'paid',
+      invoicePdf: (invoice as any).invoice_pdf,
+      periodStart: new Date(((invoice as any).period_start || (invoice as any).created) * 1000),
+      periodEnd: new Date(((invoice as any).period_end || (invoice as any).created) * 1000),
     },
     update: {
-      status: invoice.status || 'paid',
-      invoicePdf: invoice.invoice_pdf,
+      status: (invoice as any).status || 'paid',
+      invoicePdf: (invoice as any).invoice_pdf,
     },
   });
 
