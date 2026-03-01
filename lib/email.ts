@@ -1,13 +1,24 @@
-// Email service using SendGrid
-import sgMail from '@sendgrid/mail';
+// Email service using Mailgun
+import formData from 'form-data';
+import Mailgun from 'mailgun.js';
 
-// Initialize SendGrid with API key
-const apiKey = process.env.SENDGRID_API_KEY;
-if (apiKey) {
-  sgMail.setApiKey(apiKey);
+const mailgun = new Mailgun(formData);
+
+// Initialize Mailgun with API key
+const apiKey = process.env.MAILGUN_API_KEY;
+const domain = process.env.MAILGUN_DOMAIN;
+const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3';
+
+let mg: any;
+if (apiKey && domain) {
+  mg = mailgun.client({
+    username: 'api',
+    key: apiKey,
+    url: baseUrl.replace('/v3', ''), // mailgun.js adds /v3 automatically
+  });
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@fleetflow.io';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'FleetFlow <notifications@fleetflow.ashbi.ca>';
 const APP_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'FleetFlow';
 
@@ -142,19 +153,20 @@ export async function sendEmail({
   from?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    // If SendGrid is not configured, log the email for development
-    if (!apiKey) {
-      console.log('=== EMAIL (SendGrid not configured) ===');
+    // If Mailgun is not configured, log the email for development
+    if (!mg || !domain) {
+      console.log('=== EMAIL (Mailgun not configured) ===');
       console.log('To:', to);
+      console.log('From:', from);
       console.log('Subject:', subject);
       console.log('Text:', text);
       console.log('======================================');
       return { success: true };
     }
 
-    await sgMail.send({
-      to,
+    await mg.messages.create(domain, {
       from,
+      to,
       subject,
       html,
       text,
