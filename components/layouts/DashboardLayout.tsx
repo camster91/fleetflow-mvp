@@ -37,21 +37,20 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   {
     id: 'vehicles',
     label: 'Vehicles',
     icon: Car,
     children: [
-      { id: 'vehicle-list', label: 'Vehicle List', href: '/?tab=vehicles' },
-      { id: 'add-vehicle', label: 'Add New', href: '/?tab=vehicles&action=add' },
+      { id: 'vehicle-list', label: 'Vehicle List', href: '/vehicles' },
+      { id: 'add-vehicle', label: 'Add New', href: '/vehicles?action=add' },
     ],
   },
-  { id: 'deliveries', label: 'Deliveries', icon: Package, href: '/?tab=deliveries' },
-  { id: 'maintenance', label: 'Maintenance', icon: Wrench, href: '/?tab=maintenance' },
-  { id: 'clients', label: 'Clients', icon: Users, href: '/?tab=clients' },
-  { id: 'vending', label: 'Vending', icon: Coffee, href: '/?tab=vending' },
-  { id: 'reports', label: 'Reports', icon: BarChart3, href: '/?tab=reports' },
+  { id: 'deliveries', label: 'Deliveries', icon: Package, href: '/deliveries' },
+  { id: 'maintenance', label: 'Maintenance', icon: Wrench, href: '/maintenance' },
+  { id: 'team', label: 'Team', icon: Users, href: '/team' },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
   { id: 'billing', label: 'Billing', icon: CreditCard, href: '/billing' },
 ];
 
