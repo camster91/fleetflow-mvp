@@ -11,21 +11,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Note: SQLite doesn't support native enums, so we use String with validation
+
 model User {
-  id             String    @id @default(cuid())
-  email          String    @unique
-  name           String?
-  password       String?   // Nullable for OAuth users
-  role           String    @default("fleet_manager")
-  company        String?
-  emailVerified  DateTime?
-  image          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  
-  // Relationships
-  sessions       Session[]
-  accounts       Account[]
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Nullable for OAuth users
+  role          String    @default("fleet_manager")
+  company       String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Email verification
+  verificationToken String? @unique
+
+  // 2FA
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  backupCodes      String? // Hashed backup codes, JSON array
+
+  // Password reset
+  passwordResetToken   String?   @unique
+  passwordResetExpires DateTime?
+
+  // Login tracking
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  // Social auth
+  googleId    String? @unique
+  microsoftId String? @unique
+
+  // Onboarding
+  onboardingCompleted Boolean @default(false)
+  onboardingStep      Int     @default(0)
+
+  // Notification preferences (stored as JSON string in SQLite)
+  notificationPreferences String? @default("{}")
+
+  // Session management
+  sessions Session[]
+  accounts Account[]
+
+  // Login history for security audit
+  loginHistory LoginHistory[]
+
+  // Teams - User can own multiple teams and be member of multiple teams
+  ownedTeams Team[]
+  teamMemberships TeamMember[]
+
+  // Notifications
+  notifications Notification[]
+
+  // API Keys
+  apiKeys ApiKey[]
+
+  // Subscription
+  subscription Subscription?
+  invoices Invoice[]
+
+  @@index([email])
+  @@index([googleId])
+  @@index([microsoftId])
 }
 
 model Account {
@@ -45,6 +96,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -52,7 +104,14 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Track device info for session management
+  deviceInfo   String?
+  ipAddress    String?
+  lastActiveAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {
@@ -63,3 +122,139 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Login history for security audit trail
+model LoginHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+  failureReason String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// Password history to prevent reuse
+model PasswordHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  password  String   // Hashed password
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// Team Management
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members     TeamMember[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Company info
+  logo          String?
+  address       String?
+  phone         String?
+  businessHours String?
+  branding      String?  // Custom colors, etc. (JSON string for SQLite)
+
+  @@index([ownerId])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String   @default("MEMBER") // OWNER, ADMIN, MANAGER, MEMBER, VIEWER
+  invitedBy String?
+  invitedAt DateTime @default(now())
+  joinedAt  DateTime?
+  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+// Notifications System
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // MAINTENANCE_DUE, VEHICLE_ALERT, TEAM_INVITE, BILLING, SYSTEM, SECURITY
+  title       String
+  message     String
+  data        String?  // Flexible data storage (JSON string for SQLite)
+  read        Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+// API Keys for integrations
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  key         String   @unique
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  revokedAt   DateTime?
+
+  @@index([userId])
+  @@index([key])
+}
+
+// Subscription & Billing Models
+model Subscription {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId      String?   @unique
+  stripeSubscriptionId  String?   @unique
+  stripePriceId         String?
+  plan                  String    @default("STARTER") // STARTER, PROFESSIONAL, ENTERPRISE
+  status                String    @default("TRIAL")   // TRIAL, ACTIVE, CANCELLED, PAST_DUE, UNPAID
+  trialEndsAt           DateTime?
+  currentPeriodStart    DateTime?
+  currentPeriodEnd      DateTime?
+  cancelAtPeriodEnd     Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+  @@index([stripeSubscriptionId])
+  @@index([status])
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeInvoiceId String   @unique
+  amount          Float
+  currency        String   @default("USD")
+  status          String
+  invoicePdf      String?
+  createdAt       DateTime @default(now())
+  periodStart     DateTime
+  periodEnd       DateTime
+
+  @@index([userId])
+  @@index([stripeInvoiceId])
+  @@index([createdAt])
+}
