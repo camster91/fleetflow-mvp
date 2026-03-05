@@ -5,7 +5,7 @@ import {
   Users, Shield, AlertCircle, CheckCircle, Edit
 } from 'lucide-react'
 import { notify, clientNotifications } from '../services/notifications'
-import * as dataService from '../services/dataService'
+import * as dataService from '../services/dataServiceWithSync'
 
 interface ClientDetailModalProps {
   isOpen: boolean

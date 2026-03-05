@@ -4,7 +4,7 @@ import {
   MessageSquare, MapPin, Phone, User, Shield,
   ChevronDown, Plus, Check
 } from 'lucide-react'
-import * as dataService from '../services/dataService'
+import * as dataService from '../services/dataServiceWithSync'
 import { vendingMachineNotifications } from '../services/notifications'
 
 interface Props {

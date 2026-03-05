@@ -18,7 +18,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
-import * as dataService from '../../services/dataService';
+import * as dataService from '../../services/dataServiceWithSync';
 import { notify } from '../../services/notifications';
 import MaintenanceTaskFormModal from '../../components/MaintenanceTaskFormModal';
 import ConfirmModal from '../../components/ConfirmModal';

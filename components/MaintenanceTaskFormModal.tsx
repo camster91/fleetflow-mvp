@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Wrench, Calendar, AlertTriangle, FileText, Truck, Clock } from 'lucide-react'
 import FormModal from './FormModal'
 import AutocompleteInput from './AutocompleteInput'
-import * as dataService from '../services/dataService'
+import * as dataService from '../services/dataServiceWithSync'
 import * as recentItems from '../services/recentItems'
 
 interface MaintenanceTaskFormModalProps {

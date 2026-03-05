@@ -6,7 +6,7 @@ import {
   Star, Camera, Map as MapIcon, BarChart, Download
 } from 'lucide-react';
 import { notify, confirmAction, promptAction, clientNotifications, deliveryNotifications } from '../../services/notifications';
-import * as dataService from '../../services/dataService';
+import * as dataService from '../../services/dataServiceWithSync';
 
 const DispatchDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('clients');

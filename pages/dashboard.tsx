@@ -503,6 +503,19 @@ export default function Dashboard() {
         isOpen={isVehicleDetailOpen}
         onClose={() => setIsVehicleDetailOpen(false)}
         vehicle={selectedVehicle}
+        onEdit={() => {
+          if (selectedVehicle) {
+            setEditingVehicle(selectedVehicle);
+            setIsVehicleFormOpen(true);
+            setIsVehicleDetailOpen(false);
+          }
+        }}
+        onDelete={() => {
+          if (selectedVehicle) {
+            handleDeleteVehicle(selectedVehicle);
+            setIsVehicleDetailOpen(false);
+          }
+        }}
       />
       <VehicleFormModal
         isOpen={isVehicleFormOpen}

@@ -74,6 +74,17 @@ model User {
   subscription Subscription?
   invoices Invoice[]
 
+  // User data (vehicles, deliveries, etc.)
+  userData UserData[]
+  
+  // Owned business data
+  vehicles Vehicle[]
+  deliveries Delivery[]
+  maintenanceTasks MaintenanceTask[]
+  clients Client[]
+  sopCategories SOPCategory[]
+  vendingMachines VendingMachine[]
+
   @@index([email])
   @@index([googleId])
   @@index([microsoftId])
@@ -155,6 +166,15 @@ model Team {
   ownerId     String
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members     TeamMember[]
+  
+  // Relationships to team data
+  vehicles     Vehicle[]
+  deliveries   Delivery[]
+  maintenanceTasks MaintenanceTask[]
+  clients      Client[]
+  sopCategories SOPCategory[]
+  vendingMachines VendingMachine[]
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -257,4 +277,280 @@ model Invoice {
   @@index([userId])
   @@index([stripeInvoiceId])
   @@index([createdAt])
+}
+
+// Core Business Models
+model Vehicle {
+  id              String   @id @default(cuid())
+  name            String
+  status          String   @default("active") // active, inactive, delayed
+  driver          String?
+  location        String?
+  eta             String?
+  mileage         Int?     @default(0)
+  maintenanceDue  Boolean  @default(false)
+  
+  // Vehicle details
+  vehicleType     String?
+  licensePlate    String?
+  year            Int?
+  fuelLevel       Int?     @default(100) // percentage
+  lastService     DateTime?
+  nextService     DateTime?
+  
+  // Relationships
+  ownerId         String
+  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId          String?
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Related data
+  deliveries      Delivery[]
+  maintenanceTasks MaintenanceTask[]
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lastUpdated     DateTime @default(now())
+  
+  // Indexes
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([status])
+  @@index([maintenanceDue])
+}
+
+model Delivery {
+  id                String   @id @default(cuid())
+  address           String
+  customer          String
+  status            String   @default("pending") // pending, in-transit, delivered, cancelled
+  driver            String?
+  items             Int      @default(1)
+  progress          Int      @default(0) // percentage
+  
+  // Timestamps
+  scheduledTime     DateTime?
+  estimatedArrival  DateTime?
+  completedTime     DateTime?
+  
+  // Location details
+  parkingInstructions String?
+  dropoffInstructions String?
+  
+  // Contact information (stored as JSON in SQLite)
+  contactPerson      String?  // JSON string: ContactPerson
+  
+  // Access information (stored as JSON arrays in SQLite)
+  accessCodes        String?  // JSON string: string[]
+  securityNotes      String?
+  businessHours      String?
+  specialRequirements String? // JSON string: string[]
+  
+  // Notes
+  notes             String?
+  
+  // Relationships
+  vehicleId         String?
+  vehicle           Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Location coordinates (stored as JSON in SQLite)
+  parkingLocation   String?  // JSON string: LocationCoordinates
+  dropoffLocation   String?  // JSON string: LocationCoordinates
+  
+  // Photos (stored as JSON array in SQLite)
+  photos            String?  // JSON string: DeliveryPhoto[]
+  
+  // Indexes
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([vehicleId])
+  @@index([status])
+  @@index([customer])
+  @@index([createdAt])
+}
+
+model MaintenanceTask {
+  id                String   @id @default(cuid())
+  title             String
+  type              String
+  dueDate           DateTime
+  priority          String   @default("medium") // high, medium, low
+  completed         Boolean  @default(false)
+  completedDate     DateTime?
+  
+  // Details
+  notes             String?
+  estimatedDuration String?
+  serviceProvider   String?
+  costEstimate      Float?
+  
+  // Relationships
+  vehicleId         String
+  vehicle           Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Parts needed (stored as JSON array in SQLite)
+  partsNeeded       String?  // JSON string: string[]
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Indexes
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([vehicleId])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([completed])
+}
+
+model Client {
+  id                String   @id @default(cuid())
+  name              String
+  businessName      String?
+  type              String   @default("other") // restaurant, hotel, office, retail, warehouse, cafe, institution, other
+  address           String
+  
+  // Contact information
+  phone             String?
+  email             String?
+  website           String?
+  
+  // Delivery preferences
+  businessHours     String?
+  securityNotes     String?
+  
+  // Notes and history
+  notes             String?
+  lastDeliveryDate  DateTime?
+  deliveryFrequency String?  // daily, weekly, bi-weekly, monthly, as-needed
+  rating            Int?     @default(5) // 1-5
+  
+  // Relationships
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Contact person (stored as JSON in SQLite)
+  contactPerson     String?  // JSON string: ContactPerson
+  
+  // Preferences (stored as JSON arrays in SQLite)
+  preferredDeliveryTimes String?  // JSON string: string[]
+  accessCodes            String?  // JSON string: string[]
+  specialRequirements    String?  // JSON string: string[]
+  
+  // Location data (stored as JSON in SQLite)
+  primaryLocation   String?  // JSON string: LocationCoordinates
+  parkingLocation   String?  // JSON string: LocationCoordinates
+  dropoffLocation   String?  // JSON string: LocationCoordinates
+  
+  // Instructions
+  parkingInstructions  String?
+  dropoffInstructions  String?
+  
+  // Photos (stored as JSON array in SQLite)
+  locationPhotos    String?  // JSON string: DeliveryPhoto[]
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Indexes
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([type])
+  @@index([name])
+}
+
+model SOPCategory {
+  id                String   @id @default(cuid())
+  name              String
+  description       String?
+  
+  // Relationships
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Count (denormalized for performance)
+  documentCount     Int      @default(0)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastUpdated       DateTime @default(now())
+  
+  // Indexes
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([name])
+}
+
+model VendingMachine {
+  id                String   @id @default(cuid())
+  name              String
+  location          String
+  status            String   @default("active") // active, maintenance, out-of-service
+  lastService       DateTime?
+  nextService       DateTime?
+  
+  // Details
+  machineType       String?
+  serialNumber      String?
+  notes             String?
+  
+  // Relationships
+  ownerId           String
+  owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId            String?
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  
+  // Notes (stored as JSON array in SQLite)
+  driverNotes       String?  // JSON string: VendingMachineNote[]
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Indexes
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([status])
+  @@index([location])
+}
+
+// Simple key-value store for user data (temporary solution for persistence)
+model UserData {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dataType          String   // 'vehicles', 'deliveries', 'maintenance', 'clients', 'sop', 'vending-machines'
+  data              String   // JSON string of the data
+  version           Int      @default(1)
+  
+  // Timestamps
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Unique constraint: one data type per user
+  @@unique([userId, dataType])
+  
+  // Indexes
+  @@index([userId])
+  @@index([dataType])
 }

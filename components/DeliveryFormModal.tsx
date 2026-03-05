@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Package, MapPin, User, Calendar, Clock, FileText, Phone, Mail, Building, Camera, Navigation } from 'lucide-react'
 import FormModal from './FormModal'
-import * as dataService from '../services/dataService'
+import * as dataService from '../services/dataServiceWithSync'
 import * as recentItems from '../services/recentItems'
 import AutocompleteInput from './AutocompleteInput'
 
