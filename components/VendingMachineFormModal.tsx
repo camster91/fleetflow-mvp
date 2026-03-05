@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Building, MapPin, Lock, FileText, User, Phone, Mail, Clock, CheckCircle, AlertTriangle, Package } from 'lucide-react'
 import FormModal from './FormModal'
 import AutocompleteInput from './AutocompleteInput'
-import * as dataService from '../services/dataService'
+import * as dataService from '../services/dataServiceWithSync'
 import * as recentItems from '../services/recentItems'
 
 interface VendingMachineFormModalProps {

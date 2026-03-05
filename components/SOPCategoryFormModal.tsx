@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileText, Hash, AlignLeft, BookOpen } from 'lucide-react'
 import FormModal from './FormModal'
-import * as dataService from '../services/dataService'
+import * as dataService from '../services/dataServiceWithSync'
 
 interface SOPCategoryFormModalProps {
   isOpen: boolean

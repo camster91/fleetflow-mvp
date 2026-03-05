@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { 
@@ -8,7 +8,9 @@ import {
   Loader2,
   ArrowRight,
   Sparkles,
-  Gift
+  Gift,
+  ArrowLeft,
+  Home
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { MarketingLayout } from '@/components/layouts/MarketingLayout';
@@ -27,6 +29,12 @@ const PricingPage: React.FC = () => {
       return;
     }
 
+    // If user already has subscription, redirect to dashboard
+    if (!subLoading && subscription?.hasSubscription) {
+      router.push('/dashboard');
+      return;
+    }
+
     setIsLoading('beta');
     try {
       const response = await fetch('/api/subscription/trial-start', {
@@ -37,6 +45,11 @@ const PricingPage: React.FC = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        // If user already has subscription, redirect to dashboard
+        if (data.error?.includes('already has a subscription')) {
+          router.push('/dashboard');
+          return;
+        }
         throw new Error(data.error || 'Failed to start beta access');
       }
 
@@ -49,6 +62,16 @@ const PricingPage: React.FC = () => {
     }
   };
 
+  // Redirect to dashboard if user already has a subscription
+  useEffect(() => {
+    if (!subLoading && subscription?.hasSubscription && sessionStatus === 'authenticated') {
+      router.push('/dashboard');
+    }
+  }, [subLoading, subscription, sessionStatus, router]);
+
+  // Show a back to dashboard button for authenticated users
+  const showBackToDashboard = sessionStatus === 'authenticated' && subscription?.hasSubscription;
+
   const perUserPlan = PRICING_PLANS.perUser;
   const unlimitedPlan = PRICING_PLANS.unlimited;
 
@@ -56,7 +79,19 @@ const PricingPage: React.FC = () => {
     <MarketingLayout>
       <div className="min-h-screen bg-slate-50">
         {/* Hero Section */}
-        <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 py-20 px-4">
+        <div className="bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 py-20 px-4 relative">
+          {/* Back to Dashboard button for authenticated users */}
+          {sessionStatus === 'authenticated' && (
+            <div className="absolute top-4 right-4">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg border border-white/30 transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </button>
+            </div>
+          )}
           <div className="max-w-4xl mx-auto text-center">
             {/* Beta Badge */}
             <div className="inline-flex items-center space-x-2 bg-amber-500/20 border border-amber-500/30 rounded-full px-4 py-1.5 mb-6">

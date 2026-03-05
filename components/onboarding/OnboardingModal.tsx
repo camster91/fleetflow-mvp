@@ -226,7 +226,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
     setIsLoading(true);
     try {
       if (session?.user?.id) {
-        await completeOnboarding(session.user.id);
+        try {
+          await completeOnboarding(session.user.id);
+        } catch (dbError) {
+          console.error('Database onboarding save failed, using local storage:', dbError);
+          // Fall back to local storage if database fails
+          saveLocalOnboardingProgress({ completed: true });
+        }
       } else {
         saveLocalOnboardingProgress({ completed: true });
       }
@@ -234,7 +240,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       onComplete?.();
       onClose();
     } catch (error) {
+      console.error('Onboarding completion error:', error);
       notify.error('Failed to save progress. Please try again.');
+      // Still try to close the modal even on error
+      onClose();
     } finally {
       setIsLoading(false);
     }
