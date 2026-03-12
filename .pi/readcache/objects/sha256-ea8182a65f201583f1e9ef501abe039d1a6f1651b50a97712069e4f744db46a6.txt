@@ -189,23 +189,10 @@ export default function MaintenancePage() {
       />
 
       {/* Stats */}
-      <div className="mb-6">
-        {/* Mobile: horizontal scroll */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
-          {stats.map((stat) => (
-            <div key={stat.title} className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-              <div className={`inline-flex p-2 rounded-lg ${stat.iconBgColor} mb-2`}>{stat.icon}</div>
-              <p className="text-xl font-bold text-slate-900">{stat.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{stat.title}</p>
-            </div>
-          ))}
-        </div>
-        {/* Tablet+: grid */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {stats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
       </div>
 
       {/* Filter Tabs */}
@@ -261,14 +248,13 @@ export default function MaintenancePage() {
 
           {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1">
-            {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map(day => (
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
               <div key={day} className="text-center text-xs font-semibold text-slate-500 py-2">
-                <span className="hidden sm:inline">{day.slice(0, 3)}</span>
-                <span className="sm:hidden">{day.charAt(0)}</span>
+                {day}
               </div>
             ))}
             {blanks.map((_, i) => (
-              <div key={`blank-${i}`} className="min-h-[40px] sm:aspect-square" />
+              <div key={`blank-${i}`} className="aspect-square" />
             ))}
             {days.map(day => {
               const dayTasks = getTasksForDay(day);
@@ -280,7 +266,7 @@ export default function MaintenancePage() {
                 <div
                   key={day}
                   className={`
-                    min-h-[40px] p-1 sm:aspect-square sm:p-2 border border-slate-100 rounded-lg
+                    aspect-square p-2 border border-slate-100 rounded-lg
                     ${isToday ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-50'}
                   `}
                 >
@@ -393,16 +379,6 @@ export default function MaintenancePage() {
           )}
         </Card>
       </div>
-
-      {/* FAB — mobile only */}
-      <button
-        onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
-        aria-label="Schedule task"
-        style={{ touchAction: 'manipulation' }}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
 
       {/* Maintenance Form Modal */}
       <MaintenanceTaskFormModal
