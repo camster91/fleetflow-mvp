@@ -64,7 +64,7 @@ export default async function handler(
     }
 
     // Check team member limit (example: 10 members for free tier)
-    const memberCount = team.members.filter(m => m.status === 'ACCEPTED').length;
+    const memberCount = team.members.filter((m: { status: string }) => m.status === 'ACCEPTED').length;
     if (memberCount + emails.length > 10) {
       return res.status(400).json({ error: 'Team member limit would be exceeded' });
     }

@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       orderBy: { createdAt: 'desc' },
     });
 
-    const formattedInvoices: InvoiceResponse[] = invoices.map(invoice => ({
+    const formattedInvoices: InvoiceResponse[] = invoices.map((invoice: { id: string; amount: number; currency: string; status: string; invoicePdf: string | null; createdAt: Date; periodStart: Date; periodEnd: Date }) => ({
       id: invoice.id,
       amount: invoice.amount,
       currency: invoice.currency,

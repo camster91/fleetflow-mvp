@@ -44,7 +44,7 @@ export default async function handler(
       twoFactorEnabled: user.twoFactorEnabled,
       lastPasswordChange: user.updatedAt,
       lastLoginAt: user.lastLoginAt,
-      loginHistory: loginHistory.map(record => ({
+      loginHistory: loginHistory.map((record: { id: string; timestamp: Date; ipAddress: string | null; userAgent: string | null; success: boolean }) => ({
         id: record.id,
         timestamp: record.timestamp,
         ipAddress: record.ipAddress,

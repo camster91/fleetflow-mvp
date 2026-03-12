@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { supabaseClient } from '../lib/supabase';
 
 export type UserRole = 
   | 'admin' 
@@ -31,15 +31,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  isLoading: true,
+  isAuthenticated: false,
+  logout: async () => {},
+  hasPermission: () => false,
+  isAuthorized: () => false,
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return defaults during SSR/static generation instead of throwing
+    return defaultAuthContext;
   }
   return context;
 };
 
-// Role descriptions for UI (copied from RoleContext for compatibility)
+// Role descriptions for UI
 export const roleDescriptions: Record<UserRole, { title: string; description: string }> = {
   admin: {
     title: 'Administrator',
@@ -71,7 +81,7 @@ export const roleDescriptions: Record<UserRole, { title: string; description: st
   }
 };
 
-// Role-based permissions (copied from RoleContext for compatibility)
+// Role-based permissions
 export const rolePermissions: Record<UserRole, string[]> = {
   admin: ['*'],
   fleet_manager: [
@@ -105,49 +115,72 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'loading') {
-      setIsLoading(true);
-      return;
-    }
+    // Get initial session
+    supabaseClient.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        await loadUserProfile(session.user.id, session.user.email || '');
+      } else {
+        setIsLoading(false);
+      }
+    });
 
-    if (status === 'unauthenticated' || !session?.user) {
-      setUser(null);
+    // Listen for auth state changes
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          await loadUserProfile(session.user.id, session.user.email || '');
+        } else {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadUserProfile = async (userId: string, email: string) => {
+    try {
+      const { data: profile } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      setUser({
+        id: userId,
+        email: email,
+        name: profile?.name || email.split('@')[0],
+        role: (profile?.role as UserRole) || 'fleet_manager',
+        company: profile?.company || undefined,
+      });
+    } catch {
+      // Profile not found — use defaults from auth metadata
+      setUser({
+        id: userId,
+        email: email,
+        name: email.split('@')[0],
+        role: 'fleet_manager',
+      });
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Map NextAuth session to our User type
-    const mappedUser: User = {
-      id: session.user.id || '',
-      name: session.user.name || '',
-      email: session.user.email || '',
-      role: (session.user.role as UserRole) || 'fleet_manager',
-      company: session.user.company || undefined,
-      image: session.user.image || undefined,
-    };
-
-    setUser(mappedUser);
-    setIsLoading(false);
-  }, [session, status]);
+  };
 
   const logout = async () => {
-    await signOut({ redirect: false });
+    await supabaseClient.auth.signOut();
     setUser(null);
     router.push('/auth/login');
   };
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
-    
-    // Admin has all permissions
     if (user.role === 'admin') return true;
-    
     const permissions = rolePermissions[user.role];
     return permissions.includes(permission) || permissions.includes('*');
   };

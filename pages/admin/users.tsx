@@ -1,24 +1,24 @@
-import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
+import { useAuth } from '../../context/SupabaseAuthContext'
 import AdminUserManagement from '../../components/AdminUserManagement'
 import { Shield, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminUsersPage() {
-  const { data: session, status } = useSession()
+  const { user, userRole, isLoading, isAuthenticated } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
     // Redirect if not authenticated or not an admin
-    if (status === 'unauthenticated') {
+    if (!isLoading && !isAuthenticated) {
       router.push('/auth/login')
-    } else if (status === 'authenticated' && session?.user?.role !== 'admin') {
+    } else if (!isLoading && isAuthenticated && userRole !== 'admin') {
       router.push('/unauthorized')
     }
-  }, [status, session, router])
+  }, [isLoading, isAuthenticated, userRole, router])
 
-  if (status === 'loading' || status === 'unauthenticated') {
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
@@ -26,8 +26,8 @@ export default function AdminUsersPage() {
     )
   }
 
-  // Show access denied if not admin and not impersonating
-  if (session?.user?.role !== 'admin' && session?.impersonation?.originalUserRole !== 'admin') {
+  // Show access denied if not admin
+  if (userRole !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
