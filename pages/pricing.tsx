@@ -62,15 +62,12 @@ const PricingPage: React.FC = () => {
     }
   };
 
-  // Redirect to dashboard if user already has a subscription
+  // Authenticated users are already subscribers — send them straight to dashboard
   useEffect(() => {
-    if (!subLoading && subscription?.hasSubscription && sessionStatus === 'authenticated') {
-      router.push('/dashboard');
+    if (sessionStatus === 'authenticated') {
+      router.replace('/dashboard');
     }
-  }, [subLoading, subscription, sessionStatus, router]);
-
-  // Show a back to dashboard button for authenticated users
-  const showBackToDashboard = sessionStatus === 'authenticated' && subscription?.hasSubscription;
+  }, [sessionStatus, router]);
 
   const perUserPlan = PRICING_PLANS.perUser;
   const unlimitedPlan = PRICING_PLANS.unlimited;

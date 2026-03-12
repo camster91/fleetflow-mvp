@@ -291,10 +291,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Main Content Area */}
       <div className="lg:ml-72 min-h-screen flex flex-col">
-        {/* Trial Banner */}
-        {isInTrial && trialDaysLeft > 0 && (
-          <TrialBanner daysLeft={trialDaysLeft} />
-        )}
         
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
@@ -389,14 +385,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         )}
 
-        {/* Beta Banner */}
-        <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex items-center justify-center space-x-2 text-white text-sm">
-            <Sparkles className="h-4 w-4" />
-            <span className="font-medium">Beta Access</span>
-            <span className="hidden sm:inline">•</span>
-            <span className="hidden sm:inline">Free during beta period • All features included</span>
-          </div>
+        {/* Beta Banner removed — users in the app are already on the platform */}
+        <div className="hidden">
         </div>
 
         {/* Main Content */}
