@@ -98,13 +98,16 @@ export const NotificationList: React.FC = () => {
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'markAsRead', notificationIds }),
+        body: JSON.stringify({ notificationIds }),
       });
 
       if (response.ok) {
         setNotifications(prev =>
-          prev.map(n => (notificationIds.includes(n.id) ? { ...n, read: true, readAt: new Date().toISOString() } : n))
+          prev.map(n =>
+            notificationIds.includes(n.id) ? { ...n, read: true, readAt: new Date().toISOString() } : n
+          )
         );
+        setSelectedItems(new Set());
         notify.success('Marked as read');
       }
     } catch (error) {
@@ -116,13 +119,13 @@ export const NotificationList: React.FC = () => {
   const handleMarkAllAsRead = async () => {
     try {
       const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'markAllAsRead' }),
+        method: 'PUT',
       });
 
       if (response.ok) {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true, readAt: new Date().toISOString() })));
+        setNotifications(prev =>
+          prev.map(n => ({ ...n, read: true, readAt: new Date().toISOString() }))
+        );
         notify.success('All notifications marked as read');
       }
     } catch (error) {
@@ -133,20 +136,18 @@ export const NotificationList: React.FC = () => {
 
   const handleDelete = async (notificationIds: string[]) => {
     try {
-      const response = await fetch('/api/notifications', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notificationIds }),
-      });
-
-      if (response.ok) {
-        setNotifications(prev => prev.filter(n => !notificationIds.includes(n.id)));
-        setSelectedItems(new Set());
-        notify.success('Deleted');
+      for (const id of notificationIds) {
+        await fetch(`/api/notifications?id=${id}`, {
+          method: 'DELETE',
+        });
       }
+      
+      setNotifications(prev => prev.filter(n => !notificationIds.includes(n.id)));
+      setSelectedItems(new Set());
+      notify.success('Notifications deleted');
     } catch (error) {
-      console.error('Failed to delete:', error);
-      notify.error('Failed to delete');
+      console.error('Failed to delete notifications:', error);
+      notify.error('Failed to delete notifications');
     }
   };
 
@@ -179,56 +180,72 @@ export const NotificationList: React.FC = () => {
     >
       <PageHeader
         title="Notifications"
-        subtitle={`${totalCount} total, ${unreadCount} unread`}
+        subtitle={`You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`}
         actions={
-          unreadCount > 0 ? (
-            <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}
-              iconLeft={<Check className="h-4 w-4" />}>
-              Mark all read
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMarkAllAsRead}
+                iconLeft={<Check className="h-4 w-4" />}
+              >
+                Mark all read
+              </Button>
+            )}
+          </div>
         }
       />
 
       <Card>
-        {/* Filter bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-slate-400" />
-            <select
-              value={selectedType}
-              onChange={(e) => {
-                setSelectedType(e.target.value as NotificationType | 'all');
-                setPage(1);
-              }}
-              className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
+            <Button
+              variant={selectedType === 'all' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setSelectedType('all')}
             >
-              <option value="all">All notifications</option>
-              <option value="MAINTENANCE_DUE">Maintenance</option>
-              <option value="VEHICLE_ALERT">Vehicle Alerts</option>
-              <option value="TEAM_INVITE">Team</option>
-              <option value="BILLING">Billing</option>
-              <option value="SYSTEM">System</option>
-              <option value="SECURITY">Security</option>
-            </select>
+              All
+            </Button>
+            {Object.entries(typeLabels).map(([type, label]) => (
+              <Button
+                key={type}
+                variant={selectedType === type ? 'primary' : 'ghost'}
+                size="sm"
+                onClick={() => setSelectedType(type as NotificationType)}
+              >
+                {label}
+              </Button>
+            ))}
           </div>
 
           {selectedItems.size > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600">{selectedItems.size} selected</span>
-              <Button variant="outline" size="sm" onClick={() => handleMarkAsRead(Array.from(selectedItems))}>
-                <Check className="h-4 w-4 mr-1" />
-                Mark as read
+              <span className="text-sm text-slate-500">
+                {selectedItems.size} selected
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleMarkAsRead(Array.from(selectedItems))}
+                iconLeft={<Check className="h-4 w-4" />}
+              >
+                Mark read
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleDelete(Array.from(selectedItems))} className="text-red-600 hover:text-red-800">
-                <Trash2 className="h-4 w-4 mr-1" />
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleDelete(Array.from(selectedItems))}
+                iconLeft={<Trash2 className="h-4 w-4" />}
+              >
                 Delete
               </Button>
             </div>
           )}
         </div>
 
-        {/* Notifications */}
+        {/* Notifications Table */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
