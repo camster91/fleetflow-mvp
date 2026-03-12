@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 import {
   Truck,
   Package,
@@ -19,7 +19,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
-import * as dataService from '../services/dataService';
+import * as dataService from '../services/dataServiceWithSync';
 import { notify } from '../services/notifications';
 import { OnboardingModal } from '../components/onboarding/OnboardingModal';
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
@@ -37,8 +37,12 @@ import ActivityFeed from '../components/ActivityFeed';
 import QuickActions from '../components/QuickActions';
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
+  
+  const user = session?.user;
+  const authLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   
@@ -205,7 +209,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout
-      title={`Welcome back, ${session?.user?.name?.split(' ')[0] || 'User'}!`}
+      title={`Welcome back, ${user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'User'}!`}
       subtitle="Here's what's happening with your fleet today."
       actions={
         <Button

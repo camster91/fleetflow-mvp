@@ -1,28 +1,34 @@
-import { UserRole } from './index'
 import 'next-auth'
+import 'next-auth/jwt'
 
 declare module 'next-auth' {
-  interface User {
-    role: UserRole
-    company?: string
-  }
-  
   interface Session {
     user: {
       id: string
       name?: string | null
       email?: string | null
       image?: string | null
-      role: UserRole
-      company?: string | null
+      role?: string
+      company?: string
     }
+    impersonation?: {
+      isImpersonating?: boolean
+      impersonatedUserName?: string
+      originalUserId?: string
+    }
+  }
+
+  interface User {
+    id: string
+    role?: string
+    company?: string
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    id: string
-    role: UserRole
-    company?: string | null
+    id?: string
+    role?: string
+    company?: string
   }
 }

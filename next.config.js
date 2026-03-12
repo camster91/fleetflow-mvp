@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -17,7 +19,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self'",
+      "connect-src 'self' https://vmvojkmaiuwidrduiotn.supabase.co wss://vmvojkmaiuwidrduiotn.supabase.co https://api.stripe.com https://api.mailgun.net",
       "frame-ancestors 'none'",
     ].join('; '),
   },
@@ -47,6 +49,9 @@ const nextConfig = {
   
   // Webpack optimization
   webpack: (config, { isServer }) => {
+    // Alias next-auth/react to our Supabase compatibility shim
+    config.resolve.alias['next-auth/react'] = path.resolve('./lib/auth-compat.tsx')
+
     // Optimize chunk size
     if (!isServer) {
       config.optimization.splitChunks = {

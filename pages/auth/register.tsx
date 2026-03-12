@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { Mail, Lock, AlertCircle, ArrowRight, Building, User, Check, CheckCircle, Chrome, Building2 } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowRight, User, CheckCircle, Building, Check } from 'lucide-react';
 import Link from 'next/link';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { signIn } from 'next-auth/react';
+import toast from 'react-hot-toast';
 
 const roles = [
   { value: 'fleet_manager', label: 'Fleet Manager', description: 'Manage vehicles and maintenance' },
@@ -69,44 +69,67 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name,
+          action: 'register',
           email,
           password,
-          company,
-          role,
+          name,
         }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error(data.error || 'Registration failed');
       }
 
-      setRegistered(true);
-    } catch (err) {
+      toast.success('Account created successfully! Please log in.');
+      router.push('/auth/login');
+    } catch (err: any) {
       setError(err instanceof Error ? err.message : 'Registration failed');
+      toast.error(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialLogin = (provider: 'google' | 'azure-ad') => {
+  const handleSocialLogin = async (provider: 'google' | 'azure') => {
     setLoading(true);
-    signIn(provider, { callbackUrl: '/dashboard' });
+    
+    try {
+      const { supabaseClient } = await import('../../lib/supabase');
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: provider === 'azure' ? 'azure' : 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            // Pass role as a query param for the callback to handle
+            role: role,
+          },
+        },
+      });
+
+      if (error) {
+        toast.error(error.message);
+        setLoading(false);
+      }
+      // OAuth redirect will happen automatically
+    } catch (err: any) {
+      toast.error('Failed to initiate social login');
+      setLoading(false);
+    }
   };
 
   // Success state - show email verification message
   if (registered) {
     return (
       <AuthLayout
-        title="Verify Your Email"
+        title="Account Created"
         subtitle="Almost there!"
       >
         <div className="text-center py-8">
@@ -114,17 +137,32 @@ export default function RegisterPage() {
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
           <h2 className="text-xl font-semibold text-slate-900 mb-2">
-            Check Your Email
+            Account Created!
           </h2>
           <p className="text-slate-600 mb-4">
-            We&apos;ve sent a verification email to
+            Your account has been created for
           </p>
           <p className="text-lg font-medium text-slate-900 mb-6">
             {email}
           </p>
-          <p className="text-sm text-slate-600 mb-6">
-            Click the link in the email to verify your account and start using FleetFlow.
-          </p>
+          
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
+            <h3 className="font-medium text-amber-900 mb-2">⚠️ Account Verification Required</h3>
+            <p className="text-sm text-amber-800 mb-2">
+              Email delivery is not configured. Your account needs to be manually verified by an admin.
+            </p>
+            <p className="text-sm text-amber-800">
+              Please contact the site administrator to activate your account.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left text-sm">
+            <p className="font-medium text-slate-700 mb-2">For Administrators:</p>
+            <code className="block bg-slate-100 p-2 rounded text-xs text-slate-600">
+              node scripts/confirm-user.js {email}
+            </code>
+          </div>
+          
           <div className="space-y-3">
             <Button
               variant="outline"
@@ -134,15 +172,6 @@ export default function RegisterPage() {
               Go to Login
             </Button>
           </div>
-          <p className="mt-6 text-xs text-slate-500">
-            Didn&apos;t receive the email?{' '}
-            <button 
-              onClick={() => router.push('/auth/login?resend=true')}
-              className="text-blue-900 hover:underline font-medium"
-            >
-              Click here to resend
-            </button>
-          </p>
         </div>
       </AuthLayout>
     );
@@ -185,7 +214,7 @@ export default function RegisterPage() {
 
       {step === 1 && (
         <>
-          {/* Social Login Options */}
+          {/* Social Login Options - Disabled until configured in Supabase
           <div className="grid grid-cols-2 gap-3 mb-6">
             <Button
               type="button"
@@ -200,7 +229,7 @@ export default function RegisterPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => handleSocialLogin('azure-ad')}
+              onClick={() => handleSocialLogin('azure')}
               disabled={loading}
               className="flex items-center justify-center"
             >
@@ -217,6 +246,7 @@ export default function RegisterPage() {
               <span className="px-2 bg-white text-slate-500">Or with email</span>
             </div>
           </div>
+          */}
         </>
       )}
 

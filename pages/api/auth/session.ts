@@ -1,25 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSession } from '../../../lib/auth'
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const token = req.cookies.access_token
-
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' })
-  }
-
   try {
-    const session = await getSession(token)
+    // Create Supabase client
+    const supabase = createPagesServerClient({ req, res })
     
-    if (!session) {
-      return res.status(401).json({ error: 'Invalid session' })
+    // Get session
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error || !session) {
+      return res.status(401).json({ error: 'Not authenticated' })
     }
 
-    return res.status(200).json({ user: session.user })
+    return res.status(200).json({ 
+      user: {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.user_metadata?.name || session.user.email,
+        role: session.user.user_metadata?.role || 'fleet_manager',
+        company: session.user.user_metadata?.company,
+      }
+    })
   } catch (error: any) {
     return res.status(401).json({ error: error.message })
   }

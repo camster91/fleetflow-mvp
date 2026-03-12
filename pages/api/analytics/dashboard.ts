@@ -33,7 +33,7 @@ export default async function handler(
       },
     });
 
-    const teamIds = userTeams.map(t => t.teamId);
+    const teamIds = userTeams.map((t: { teamId: string }) => t.teamId);
 
     // Mock analytics data - in a real app, this would come from your database
     // These would be actual queries to vehicles, deliveries, maintenance tables

@@ -1,202 +1,65 @@
-import { supabaseClient, supabaseAdmin } from './supabase'
+import { prisma } from './prisma'
+import { PrismaAdapter } from "@next-auth/prisma-adapter"
+import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from 'bcryptjs'
 
-// Types
-export interface User {
-  id: string
-  email: string
-  name?: string
-  role: string
-  company?: string
-  emailVerified?: Date
-  twoFactorEnabled?: boolean
-}
-
-export interface Session {
-  user: User
-  access_token: string
-  refresh_token: string
-}
-
-// Sign up with email/password
-export async function signUp(email: string, password: string, name: string) {
-  // Create auth user in Supabase
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true, // Auto-confirm for now (you can change this)
-    user_metadata: {
-      name,
-      role: 'fleet_manager'
-    }
-  })
-
-  if (authError) {
-    throw new Error(authError.message)
-  }
-
-  // Create user profile in database
-  const { error: profileError } = await supabaseAdmin
-    .from('users')
-    .insert({
-      id: authData.user.id,
-      email,
-      name,
-      role: 'fleet_manager',
-      created_at: new Date().toISOString()
+export const authOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials: any) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Invalid email or password')
+        }
+        
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email.toLowerCase() }
+        })
+        
+        if (!user || !user.password) {
+          throw new Error('Invalid email or password')
+        }
+        
+        const isValidPassword = await bcrypt.compare(credentials.password, user.password)
+        
+        if (!isValidPassword) {
+          throw new Error('Invalid email or password')
+        }
+        
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        }
+      }
     })
-
-  if (profileError) {
-    // Rollback auth user if profile creation fails
-    await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-    throw new Error(profileError.message)
-  }
-
-  return { user: authData.user }
-}
-
-// Sign in with email/password
-export async function signIn(email: string, password: string) {
-  const { data, error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  })
-
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  // Get user profile
-  const { data: profile } = await supabaseAdmin
-    .from('users')
-    .select('*')
-    .eq('id', data.user.id)
-    .single()
-
-  return {
-    user: {
-      id: data.user.id,
-      email: data.user.email!,
-      name: profile?.name || data.user.user_metadata.name,
-      role: profile?.role || 'fleet_manager',
-      company: profile?.company,
-      emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : undefined,
-      twoFactorEnabled: profile?.two_factor_enabled || false
+  ],
+  callbacks: {
+    async jwt({ token, user }: any) {
+      if (user) {
+        token.role = user.role
+      }
+      return token
     },
-    access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token
-  }
-}
-
-// Sign out
-export async function signOut(token?: string) {
-  if (token) {
-    // Server-side signout with token
-    const { error } = await supabaseAdmin.auth.admin.signOut(token)
-    if (error) throw new Error(error.message)
-  } else {
-    // Client-side signout
-    const { error } = await supabaseClient.auth.signOut()
-    if (error) throw new Error(error.message)
-  }
-}
-
-// Get session from access token
-export async function getSession(accessToken: string) {
-  const { data, error } = await supabaseAdmin.auth.getUser(accessToken)
-  
-  if (error || !data.user) {
-    return null
-  }
-
-  // Get user profile
-  const { data: profile } = await supabaseAdmin
-    .from('users')
-    .select('*')
-    .eq('id', data.user.id)
-    .single()
-
-  return {
-    user: {
-      id: data.user.id,
-      email: data.user.email!,
-      name: profile?.name || data.user.user_metadata.name,
-      role: profile?.role || 'fleet_manager',
-      company: profile?.company,
-      emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : undefined,
-      twoFactorEnabled: profile?.two_factor_enabled || false
+    async session({ session, token }: any) {
+      if (session.user) {
+        session.user.role = token.role
+      }
+      return session
     }
-  }
-}
-
-// Refresh session
-export async function refreshSession(refreshToken: string) {
-  const { data, error } = await supabaseAdmin.auth.refreshSession({ refresh_token: refreshToken })
-  
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  return {
-    access_token: data.session!.access_token,
-    refresh_token: data.session!.refresh_token
-  }
-}
-
-// OAuth sign in
-export async function signInWithOAuth(provider: 'google' | 'azure') {
-  const { data, error } = await supabaseClient.auth.signInWithOAuth({
-    provider: provider === 'azure' ? 'azure' : 'google',
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://fleet.ashbi.ca'}/auth/callback`
-    }
-  })
-
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  return { url: data.url }
-}
-
-// Handle OAuth callback
-export async function handleOAuthCallback(code: string) {
-  const { data, error } = await supabaseClient.auth.exchangeCodeForSession(code)
-  
-  if (error) {
-    throw new Error(error.message)
-  }
-
-  // Check if user profile exists, create if not
-  const { data: existingProfile } = await supabaseAdmin
-    .from('users')
-    .select('*')
-    .eq('id', data.user.id)
-    .single()
-
-  if (!existingProfile) {
-    await supabaseAdmin
-      .from('users')
-      .insert({
-        id: data.user.id,
-        email: data.user.email!,
-        name: data.user.user_metadata.name || data.user.user_metadata.full_name,
-        role: 'fleet_manager',
-        created_at: new Date().toISOString()
-      })
-  }
-
-  return {
-    user: {
-      id: data.user.id,
-      email: data.user.email!,
-      name: data.user.user_metadata.name || data.user.user_metadata.full_name,
-      role: existingProfile?.role || 'fleet_manager',
-      company: existingProfile?.company,
-      emailVerified: data.user.email_confirmed_at ? new Date(data.user.email_confirmed_at) : undefined,
-      twoFactorEnabled: existingProfile?.two_factor_enabled || false
-    },
-    access_token: data.session.access_token,
-    refresh_token: data.session.refresh_token
-  }
+  },
+  pages: {
+    signIn: '/auth/login',
+    error: '/auth/error',
+  },
+  session: {
+    strategy: 'jwt' as const,
+  },
+  secret: process.env.NEXTAUTH_SECRET || 'placeholder-secret',
 }

@@ -36,7 +36,7 @@ export function canViewTeam(role: TeamRole): boolean {
  * Check if a role can view reports and analytics
  */
 export function canViewReports(role: TeamRole): boolean {
-  return ['owner', 'admin', 'manager', 'member'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(role);
 }
 
 /**
@@ -64,7 +64,7 @@ export function canManageSettings(role: TeamRole): boolean {
  * Check if a role can manage maintenance schedules
  */
 export function canManageMaintenance(role: TeamRole): boolean {
-  return ['owner', 'admin', 'manager', 'member'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(role);
 }
 
 /**
@@ -78,7 +78,7 @@ export function canViewMaintenance(role: TeamRole): boolean {
  * Check if a role can manage deliveries
  */
 export function canManageDeliveries(role: TeamRole): boolean {
-  return ['owner', 'admin', 'manager', 'member'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(role);
 }
 
 /**

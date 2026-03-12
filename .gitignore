@@ -52,3 +52,37 @@ dev2.err
 # Local database files
 *.db
 *.db-journal
+
+# Test results and reports
+/test-results*
+/playwright-report*
+/ui-test-report-*.json
+/ui-elements-report-*.json
+/test-*.png
+/test-*.jpg
+/test-*.jpeg
+/coverage
+/jest-results*
+
+# Script output and logs
+/*.log
+/dev.log
+/dev2.log
+/dev2.err
+
+# Backup files
+*.backup*
+*.bak
+
+# Temporary directories
+/tmp
+/temp
+
+# Coolify deployment temporary files (generated scripts)
+apply_fixes.sh
+deploy-fixes.sh
+deploy-master.sh
+check-deployment.sh
+simple-auth-fix.sh
+fix-pricing-patch.sh
+ONE-COMMAND-FIX.sh

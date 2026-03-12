@@ -40,7 +40,7 @@ export default async function handler(
         });
 
         // Mask keys except for the last 4 characters
-        const maskedKeys = keys.map(k => ({
+        const maskedKeys = keys.map((k: { key: string; name: string; createdAt: Date; lastUsedAt: Date | null }) => ({
           ...k,
           key: k.key.substring(0, 12) + '••••••••' + k.key.slice(-4),
         }));

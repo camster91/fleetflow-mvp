@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../lib/auth'
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
 import { prisma } from '../../lib/prisma'
 
 // Simple key-value storage using raw SQL (avoiding Prisma schema changes)
@@ -19,8 +18,7 @@ async function initTable() {
         version INTEGER DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(user_id, data_type),
-        FOREIGN KEY (user_id) REFERENCES User(id) ON DELETE CASCADE
+        UNIQUE(user_id, data_type)
       )
     `
     console.log('user_data table ready')
@@ -38,12 +36,17 @@ if (!initialized) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions)
+  // Create Supabase client
+  const supabase = createPagesServerClient({ req, res })
   
-  // Check if user is authenticated
-  if (!session?.user?.id) {
+  // Get session
+  const { data: { session }, error } = await supabase.auth.getSession()
+  
+  if (error || !session) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
+  
+  const userId = session.user.id
 
   const { dataType } = req.query
   
@@ -55,7 +58,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  const userId = session.user.id
   const typedDataType = dataType as DataType
 
   // GET - Retrieve user data

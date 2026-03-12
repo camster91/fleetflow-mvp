@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
-import { Mail, Lock, AlertCircle, ArrowRight, Loader2, Chrome, Building } from 'lucide-react';
+import { Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { TwoFactorChallenge } from '../../components/auth/TwoFactorChallenge';
+import toast from 'react-hot-toast';
+import { supabaseClient } from '../../lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,89 +15,29 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
-  // 2FA state
-  const [requires2FA, setRequires2FA] = useState(false);
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
-  const [twoFactorError, setTwoFactorError] = useState('');
-  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
-      });
+    const { data, error: authError } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-      if (result?.error) {
-        // Check if 2FA is required
-        if (result.error.includes('2FA') || result.error.includes('two-factor')) {
-          // This would need server-side support to return user ID
-          // For now, we'll show an error
-          setError(result.error);
-        } else {
-          setError(result.error);
-        }
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
+    if (authError) {
+      const msg = authError.message || 'Invalid email or password';
+      setError(msg);
+      toast.error(msg);
       setLoading(false);
+      return;
     }
+
+    toast.success('Login successful!');
+    const callbackUrl = router.query.callbackUrl as string;
+    router.push(callbackUrl || '/dashboard');
   };
-
-  const handle2FAVerify = async (code: string, rememberDevice: boolean) => {
-    setTwoFactorLoading(true);
-    setTwoFactorError('');
-
-    try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        twoFactorCode: code,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        throw new Error(result.error);
-      }
-
-      router.push('/dashboard');
-    } catch (err) {
-      setTwoFactorError(err instanceof Error ? err.message : 'Invalid code');
-    } finally {
-      setTwoFactorLoading(false);
-    }
-  };
-
-  const handleSocialLogin = (provider: 'google' | 'azure-ad') => {
-    setLoading(true);
-    signIn(provider, { callbackUrl: '/' });
-  };
-
-  // Show 2FA challenge if required
-  if (requires2FA) {
-    return (
-      <AuthLayout title="Two-Factor Authentication" subtitle="">
-        <TwoFactorChallenge
-          onVerify={handle2FAVerify}
-          onCancel={() => {
-            setRequires2FA(false);
-            setPendingUserId(null);
-          }}
-          error={twoFactorError}
-          loading={twoFactorLoading}
-        />
-      </AuthLayout>
-    );
-  }
 
   return (
     <AuthLayout
@@ -149,13 +89,13 @@ export default function LoginPage() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900"
+              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span className="text-sm text-slate-600">Remember me</span>
           </label>
           <Link
             href="/auth/forgot-password"
-            className="text-sm font-medium text-blue-900 hover:text-blue-800 transition-colors"
+            className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
           >
             Forgot password?
           </Link>
@@ -173,42 +113,6 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      {/* Social Login */}
-      <div className="mt-8">
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-200" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-slate-500">Or continue with</span>
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSocialLogin('google')}
-            disabled={loading}
-            className="flex items-center justify-center"
-          >
-            <Chrome className="h-5 w-5 mr-2 text-red-500" />
-            Google
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleSocialLogin('azure-ad')}
-            disabled={loading}
-            className="flex items-center justify-center"
-          >
-            <Building className="h-5 w-5 mr-2 text-blue-600" />
-            Microsoft
-          </Button>
-        </div>
-      </div>
-
-      {/* Create Account */}
       <div className="mt-8">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
@@ -230,11 +134,11 @@ export default function LoginPage() {
 
       <p className="mt-8 text-center text-xs text-slate-500">
         By signing in, you agree to our{' '}
-        <Link href="/terms" className="text-blue-900 hover:underline">
+        <Link href="/terms" className="text-blue-600 hover:text-blue-800 hover:underline">
           Terms of Service
         </Link>{' '}
         and{' '}
-        <Link href="/privacy" className="text-blue-900 hover:underline">
+        <Link href="/privacy" className="text-blue-600 hover:text-blue-800 hover:underline">
           Privacy Policy
         </Link>
         .
