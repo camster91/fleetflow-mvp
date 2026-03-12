@@ -38,16 +38,10 @@ export default function VehiclesPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<dataService.Vehicle | null>(null);
   const [confirmModal, setConfirmModal] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-    variant: 'danger' as const,
+    isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' as const,
   });
 
-  useEffect(() => {
-    loadVehicles();
-  }, []);
+  useEffect(() => { loadVehicles(); }, []);
 
   const loadVehicles = () => {
     setVehicles(dataService.getVehicles());
@@ -64,112 +58,64 @@ export default function VehiclesPage() {
   });
 
   const stats = [
-    {
-      title: 'Total Vehicles',
-      value: vehicles.length,
-      icon: <Truck className="h-6 w-6 text-blue-600" />,
-      iconBgColor: 'bg-blue-50',
-    },
-    {
-      title: 'Active',
-      value: vehicles.filter(v => v.status === 'active').length,
-      icon: <div className="h-2 w-2 rounded-full bg-emerald-500" />,
-      iconBgColor: 'bg-emerald-50',
-    },
-    {
-      title: 'Maintenance Due',
-      value: vehicles.filter(v => v.maintenanceDue).length,
-      icon: <div className="h-2 w-2 rounded-full bg-amber-500" />,
-      iconBgColor: 'bg-amber-50',
-    },
-    {
-      title: 'Avg Mileage',
-      value: vehicles.length > 0
-        ? Math.round(vehicles.reduce((sum, v) => sum + v.mileage, 0) / vehicles.length).toLocaleString()
-        : '0',
-      icon: <span className="text-sm font-bold text-slate-600">mi</span>,
-      iconBgColor: 'bg-slate-100',
-    },
+    { title: 'Total Vehicles', value: vehicles.length, icon: <Truck className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
+    { title: 'Active', value: vehicles.filter(v => v.status === 'active').length, icon: <div className="h-2 w-2 rounded-full bg-emerald-500" />, iconBgColor: 'bg-emerald-50' },
+    { title: 'Maintenance Due', value: vehicles.filter(v => v.maintenanceDue).length, icon: <div className="h-2 w-2 rounded-full bg-amber-500" />, iconBgColor: 'bg-amber-50' },
+    { title: 'Avg Mileage', value: vehicles.length > 0 ? Math.round(vehicles.reduce((sum, v) => sum + v.mileage, 0) / vehicles.length).toLocaleString() : '0', icon: <span className="text-sm font-bold text-slate-600">mi</span>, iconBgColor: 'bg-slate-100' },
   ];
 
-  const handleAdd = () => {
-    setEditingVehicle(null);
-    setIsFormOpen(true);
-  };
-
-  const handleEdit = (vehicle: dataService.Vehicle) => {
-    setEditingVehicle(vehicle);
-    setIsFormOpen(true);
-  };
-
+  const handleAdd = () => { setEditingVehicle(null); setIsFormOpen(true); };
+  const handleEdit = (vehicle: dataService.Vehicle) => { setEditingVehicle(vehicle); setIsFormOpen(true); };
   const handleDelete = (vehicle: dataService.Vehicle) => {
     setConfirmModal({
-      isOpen: true,
-      title: 'Delete Vehicle',
+      isOpen: true, title: 'Delete Vehicle',
       message: `Are you sure you want to delete "${vehicle.name}"? This action cannot be undone.`,
       variant: 'danger',
-      onConfirm: () => {
-        dataService.deleteVehicle(vehicle.id);
-        loadVehicles();
-        notify.success(`Vehicle "${vehicle.name}" deleted successfully`);
-      },
+      onConfirm: () => { dataService.deleteVehicle(vehicle.id); loadVehicles(); notify.success(`Vehicle "${vehicle.name}" deleted successfully`); },
     });
   };
-
-  const handleView = (vehicle: dataService.Vehicle) => {
-    setSelectedVehicle(vehicle);
-    setIsDetailOpen(true);
-  };
+  const handleView = (vehicle: dataService.Vehicle) => { setSelectedVehicle(vehicle); setIsDetailOpen(true); };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active':
-        return <Badge variant="success">Active</Badge>;
-      case 'inactive':
-        return <Badge variant="default">Inactive</Badge>;
-      case 'delayed':
-        return <Badge variant="warning">Delayed</Badge>;
-      default:
-        return <Badge>{status}</Badge>;
+      case 'active': return <Badge variant="success">Active</Badge>;
+      case 'inactive': return <Badge variant="default">Inactive</Badge>;
+      case 'delayed': return <Badge variant="warning">Delayed</Badge>;
+      default: return <Badge>{status}</Badge>;
     }
   };
 
   return (
-    <DashboardLayout
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/' },
-        { label: 'Vehicles' },
-      ]}
-    >
+    <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Vehicles' }]}>
       <PageHeader
         title="Vehicles"
         subtitle="Manage your fleet vehicles, drivers, and status"
         actions={
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              iconLeft={<Download className="h-4 w-4" />}
-            >
-              Export
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              iconLeft={<Plus className="h-4 w-4" />}
-              onClick={handleAdd}
-            >
-              Add Vehicle
-            </Button>
+            <Button variant="outline" size="sm" iconLeft={<Download className="h-4 w-4" />}>Export</Button>
+            <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={handleAdd}>Add Vehicle</Button>
           </div>
         }
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {stats.map((stat) => (
-          <StatCard key={stat.title} {...stat} />
-        ))}
+      <div className="mb-6">
+        {/* Mobile: horizontal scroll */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
+          {stats.map((stat) => (
+            <div key={stat.title} className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+              <div className={`inline-flex p-2 rounded-lg ${stat.iconBgColor} mb-2`}>{stat.icon}</div>
+              <p className="text-xl font-bold text-slate-900">{stat.value}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{stat.title}</p>
+            </div>
+          ))}
+        </div>
+        {/* Tablet+: grid */}
+        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
+        </div>
       </div>
 
       {/* Filters */}
@@ -178,19 +124,9 @@ export default function VehiclesPage() {
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search vehicles..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
-              />
+              <input type="text" placeholder="Search vehicles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent"
-            >
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent">
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
@@ -198,18 +134,8 @@ export default function VehiclesPage() {
             </select>
           </div>
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-2 rounded-lg ${viewMode === 'table' ? 'bg-blue-100 text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <List className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <Grid className="h-5 w-5" />
-            </button>
+            <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg ${viewMode === 'table' ? 'bg-blue-100 text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}><List className="h-5 w-5" /></button>
+            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}><Grid className="h-5 w-5" /></button>
           </div>
         </div>
       </Card>
@@ -218,21 +144,52 @@ export default function VehiclesPage() {
       {isLoading ? (
         <SkeletonTable rows={5} columns={6} />
       ) : filteredVehicles.length === 0 ? (
-        <Card>
-          <EmptyState
-            type={searchQuery ? 'search' : 'data'}
-            title={searchQuery ? 'No results found' : 'No vehicles yet'}
-            description={searchQuery 
-              ? 'Try adjusting your search or filters'
-              : 'Add your first vehicle to start tracking your fleet'
-            }
-            actionLabel={!searchQuery ? 'Add Vehicle' : undefined}
-            onAction={!searchQuery ? handleAdd : undefined}
-          />
-        </Card>
+        <Card><EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results found' : 'No vehicles yet'} description={searchQuery ? 'Try adjusting your search or filters' : 'Add your first vehicle to start tracking your fleet'} actionLabel={!searchQuery ? 'Add Vehicle' : undefined} onAction={!searchQuery ? handleAdd : undefined} /></Card>
       ) : viewMode === 'table' ? (
         <Card padding="none">
-          <div className="overflow-x-auto">
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {filteredVehicles.map((vehicle) => (
+              <div key={vehicle.id} className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl shrink-0 ${
+                    vehicle.status === 'active' ? 'bg-emerald-50 text-emerald-600' :
+                    vehicle.status === 'delayed' ? 'bg-amber-50 text-amber-600' :
+                    'bg-slate-100 text-slate-600'
+                  }`}>
+                    <Truck className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-semibold text-slate-900 truncate">{vehicle.name}</p>
+                      {getStatusBadge(vehicle.status)}
+                    </div>
+                    <p className="text-xs text-slate-500">{vehicle.driver}</p>
+                  </div>
+                  {vehicle.maintenanceDue && (
+                    <span className="shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Maint</span>
+                  )}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-slate-500">
+                  <div className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /><span className="truncate">{vehicle.location}</span></div>
+                  <div className="flex items-center gap-1"><Battery className="h-3.5 w-3.5" />{vehicle.mileage.toLocaleString()} mi</div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => handleView(vehicle)}
+                    className="flex-1 py-2 border border-slate-300 rounded-lg text-sm font-medium min-h-[40px] text-slate-700 hover:bg-slate-50"
+                    style={{ touchAction: 'manipulation' }}>View</button>
+                  <button onClick={() => handleEdit(vehicle)}
+                    className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium min-h-[40px]"
+                    style={{ touchAction: 'manipulation' }}>Edit</button>
+                  <button onClick={() => handleDelete(vehicle)}
+                    className="p-2 border border-red-200 text-red-600 rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center hover:bg-red-50"
+                    style={{ touchAction: 'manipulation' }}><Trash2 className="h-4 w-4" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
@@ -249,62 +206,24 @@ export default function VehiclesPage() {
                   <tr key={vehicle.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
-                        <div className="p-2 bg-blue-50 rounded-lg mr-3">
-                          <Truck className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900">{vehicle.name}</p>
-                          <p className="text-sm text-slate-500">ETA: {vehicle.eta}</p>
-                        </div>
+                        <div className="p-2 bg-blue-50 rounded-lg mr-3"><Truck className="h-5 w-5 text-blue-600" /></div>
+                        <div><p className="font-medium text-slate-900">{vehicle.name}</p><p className="text-sm text-slate-500">ETA: {vehicle.eta}</p></div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(vehicle.status)}
-                        {vehicle.maintenanceDue && (
-                          <Badge variant="warning" dot>Maintenance</Badge>
-                        )}
+                        {vehicle.maintenanceDue && (<Badge variant="warning" dot>Maintenance</Badge>)}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-slate-900">{vehicle.driver}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-slate-500">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {vehicle.location}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center text-sm text-slate-900">
-                        <Battery className="h-4 w-4 mr-1 text-slate-400" />
-                        {vehicle.mileage.toLocaleString()} mi
-                      </div>
-                    </td>
+                    <td className="px-6 py-4"><p className="text-sm text-slate-900">{vehicle.driver}</p></td>
+                    <td className="px-6 py-4"><div className="flex items-center text-sm text-slate-500"><MapPin className="h-4 w-4 mr-1" />{vehicle.location}</div></td>
+                    <td className="px-6 py-4"><div className="flex items-center text-sm text-slate-900"><Battery className="h-4 w-4 mr-1 text-slate-400" />{vehicle.mileage.toLocaleString()} mi</div></td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleView(vehicle)}
-                        >
-                          View
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(vehicle)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDelete(vehicle)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleView(vehicle)}>View</Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleEdit(vehicle)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(vehicle)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </td>
                   </tr>
@@ -313,9 +232,7 @@ export default function VehiclesPage() {
             </table>
           </div>
           <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
-            <p className="text-sm text-slate-500">
-              Showing {filteredVehicles.length} of {vehicles.length} vehicles
-            </p>
+            <p className="text-sm text-slate-500">Showing {filteredVehicles.length} of {vehicles.length} vehicles</p>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" disabled>Previous</Button>
               <Button variant="outline" size="sm" disabled>Next</Button>
@@ -328,79 +245,39 @@ export default function VehiclesPage() {
             <Card key={vehicle.id} hover className="cursor-pointer" onClick={() => handleView(vehicle)}>
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className={`
-                    p-3 rounded-xl
-                    ${vehicle.status === 'active' ? 'bg-emerald-50 text-emerald-600' :
-                      vehicle.status === 'delayed' ? 'bg-amber-50 text-amber-600' :
-                      'bg-slate-100 text-slate-600'}
-                  `}>
-                    <Truck className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">{vehicle.name}</h3>
-                    <p className="text-sm text-slate-500">{vehicle.driver}</p>
-                  </div>
+                  <div className={`p-3 rounded-xl ${ vehicle.status === 'active' ? 'bg-emerald-50 text-emerald-600' : vehicle.status === 'delayed' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'}`}><Truck className="h-6 w-6" /></div>
+                  <div><h3 className="font-semibold text-slate-900">{vehicle.name}</h3><p className="text-sm text-slate-500">{vehicle.driver}</p></div>
                 </div>
                 {getStatusBadge(vehicle.status)}
               </div>
               <div className="mt-4 space-y-2">
-                <div className="flex items-center text-sm text-slate-500">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  {vehicle.location}
-                </div>
-                <div className="flex items-center text-sm text-slate-500">
-                  <Battery className="h-4 w-4 mr-2" />
-                  {vehicle.mileage.toLocaleString()} miles
-                </div>
+                <div className="flex items-center text-sm text-slate-500"><MapPin className="h-4 w-4 mr-2" />{vehicle.location}</div>
+                <div className="flex items-center text-sm text-slate-500"><Battery className="h-4 w-4 mr-2" />{vehicle.mileage.toLocaleString()} miles</div>
               </div>
-              {vehicle.maintenanceDue && (
-                <div className="mt-4 p-3 bg-amber-50 rounded-lg">
-                  <p className="text-sm text-amber-800 font-medium">Maintenance Due</p>
-                </div>
-              )}
+              {vehicle.maintenanceDue && (<div className="mt-4 p-3 bg-amber-50 rounded-lg"><p className="text-sm text-amber-800 font-medium">Maintenance Due</p></div>)}
               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-sm text-slate-500">ETA: {vehicle.eta}</span>
-                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(vehicle); }}>
-                  <Edit className="h-4 w-4" />
-                </Button>
+                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(vehicle); }}><Edit className="h-4 w-4" /></Button>
               </div>
             </Card>
           ))}
         </div>
       )}
 
+      {/* FAB — mobile only */}
+      <button
+        onClick={handleAdd}
+        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
+        aria-label="Add vehicle"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
       {/* Modals */}
-      <VehicleFormModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={(vehicle) => {
-          if (editingVehicle) {
-            dataService.updateVehicle(vehicle.id, vehicle);
-            notify.success(`Vehicle "${vehicle.name}" updated successfully`);
-          } else {
-            dataService.addVehicle(vehicle);
-            notify.success(`Vehicle "${vehicle.name}" added successfully`);
-          }
-          loadVehicles();
-        }}
-        vehicle={editingVehicle}
-      />
-      <VehicleDetailModal
-        isOpen={isDetailOpen}
-        onClose={() => setIsDetailOpen(false)}
-        vehicle={selectedVehicle}
-      />
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-        onConfirm={() => {
-          confirmModal.onConfirm();
-          setConfirmModal({ ...confirmModal, isOpen: false });
-        }}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        variant={confirmModal.variant}
-      />
+      <VehicleFormModal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={(vehicle) => { if (editingVehicle) { dataService.updateVehicle(vehicle.id, vehicle); notify.success(`Vehicle "${vehicle.name}" updated successfully`); } else { dataService.addVehicle(vehicle); notify.success(`Vehicle "${vehicle.name}" added successfully`); } loadVehicles(); }} vehicle={editingVehicle} />
+      <VehicleDetailModal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} vehicle={selectedVehicle} />
+      <ConfirmModal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })} onConfirm={() => { confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }} title={confirmModal.title} message={confirmModal.message} variant={confirmModal.variant} />
     </DashboardLayout>
   );
 }

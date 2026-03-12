@@ -140,23 +140,10 @@ export default function DeliveriesPage() {
       />
 
       {/* Stats */}
-      <div className="mb-6">
-        {/* Mobile: horizontal scroll */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
-          {stats.map((stat) => (
-            <div key={stat.title} className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-              <div className={`inline-flex p-2 rounded-lg ${stat.iconBgColor} mb-2`}>{stat.icon}</div>
-              <p className="text-xl font-bold text-slate-900">{stat.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{stat.title}</p>
-            </div>
-          ))}
-        </div>
-        {/* Tablet+: grid */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {stats.map((stat) => (
+          <StatCard key={stat.title} {...stat} />
+        ))}
       </div>
 
       {/* View Toggle & Filters */}
@@ -308,12 +295,11 @@ export default function DeliveriesPage() {
                 </div>
 
                 {/* Right: Actions */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex items-center space-x-2">
                   <Button
                     variant="outline"
                     size="sm"
                     iconLeft={<Navigation className="h-4 w-4" />}
-                    className="w-full sm:w-auto"
                     onClick={() => {
                       const encodedAddress = encodeURIComponent(delivery.address);
                       window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`, '_blank');
@@ -325,7 +311,6 @@ export default function DeliveriesPage() {
                     <Button
                       variant="primary"
                       size="sm"
-                      className="w-full sm:w-auto"
                       onClick={() => {
                         dataService.updateDelivery(delivery.id, { 
                           status: 'delivered', 
@@ -354,16 +339,6 @@ export default function DeliveriesPage() {
           />
         </Card>
       )}
-
-      {/* FAB — mobile only */}
-      <button
-        onClick={() => setIsFormOpen(true)}
-        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
-        aria-label="New delivery"
-        style={{ touchAction: 'manipulation' }}
-      >
-        <Plus className="h-6 w-6" />
-      </button>
 
       {/* Delivery Form Modal */}
       <DeliveryFormModal
