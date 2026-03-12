@@ -1,33 +1,37 @@
+/**
+ * Supabase client configuration
+ *
+ * IMPORTANT: Use createPagesBrowserClient (from @supabase/auth-helpers-nextjs) for the
+ * browser client so sessions are stored in COOKIES instead of localStorage.
+ * This is required for the middleware (createMiddlewareClient) to detect the
+ * session and protect routes — localStorage is not accessible server-side.
+ */
+import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
-// Check if we're in a build/SSG context
-const isBuildTime = typeof window === 'undefined' && process.env.NODE_ENV === 'production'
+/**
+ * Browser client — uses cookie-based session storage.
+ * The CookieAuthStorageAdapter inside auth-helpers is safe to create at
+ * module level: it guards against SSR with `typeof document === 'undefined'`.
+ */
+export const supabaseClient = createPagesBrowserClient({
+  supabaseUrl,
+  supabaseKey: supabaseAnonKey,
+})
 
-// Client for browser (anon key)
-// Use dummy values during build time to prevent errors
-export const supabaseClient = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key',
-  {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-    },
-  }
-)
-
-// Client for server-side (service role key - admin access)
-// Only create if service key is available
-export const supabaseAdmin = supabaseServiceKey 
+/**
+ * Server / admin client — service-role key, no session persistence.
+ * Falls back to the anon client if the service role key is absent.
+ */
+export const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
-        persistSession: false
-      }
+        persistSession: false,
+      },
     })
-  : supabaseClient // Fallback to regular client if no service key
+  : supabaseClient
