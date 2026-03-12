@@ -19,7 +19,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://vmvojkmaiuwidrduiotn.supabase.co wss://vmvojkmaiuwidrduiotn.supabase.co https://api.stripe.com https://api.mailgun.net",
+      "connect-src 'self' https://vtbreowxqfcvwegpfnwn.supabase.co wss://vtbreowxqfcvwegpfnwn.supabase.co https://vmvojkmaiuwidrduiotn.supabase.co wss://vmvojkmaiuwidrduiotn.supabase.co https://api.stripe.com https://api.mailgun.net",
       "frame-ancestors 'none'",
     ].join('; '),
   },
