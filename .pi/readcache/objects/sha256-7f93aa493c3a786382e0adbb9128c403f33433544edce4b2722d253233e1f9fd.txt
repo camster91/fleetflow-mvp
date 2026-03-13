@@ -100,100 +100,102 @@ const InvoicesPage: React.FC = () => {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
                 <FileText className="h-8 w-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-medium text-slate-900 mb-2">No invoices yet</h3>
-              <p className="text-sm text-slate-500">Your billing history will appear here once you have any payments.</p>
+              <h3 className="text-lg font-medium text-slate-900">No invoices yet</h3>
+              <p className="text-slate-500 mt-1">Your invoices will appear here once you have a paid subscription.</p>
             </div>
           ) : (
             <>
               {/* Mobile card list */}
-              <div className="md:hidden divide-y divide-slate-200">
+              <div className="md:hidden divide-y divide-slate-100">
                 {invoices.map((invoice) => (
-                  <div key={invoice.id} className="p-4 space-y-3">
+                  <div key={invoice.id} className="p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-slate-400 shrink-0" />
-                        <span className="text-sm font-medium text-slate-900 truncate">{invoice.id}</span>
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">#{invoice.id.slice(-8).toUpperCase()}</p>
+                          <p className="text-xs text-slate-400">{new Date(invoice.createdAt).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {getStatusIcon(invoice.status)}
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getStatusClass(invoice.status)}`}>
-                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                        </span>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(invoice.status)}`}>
+                        {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-end justify-between">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900">{formatAmount(invoice.amount, invoice.currency)}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {new Date(invoice.periodStart).toLocaleDateString()} – {new Date(invoice.periodEnd).toLocaleDateString()}
+                        </p>
                       </div>
+                      {invoice.invoicePdf ? (
+                        <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium min-h-[40px]"
+                          style={{ touchAction: 'manipulation' }}>
+                          <Download className="h-4 w-4" />
+                          PDF
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">Not available</span>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-semibold text-slate-900">{formatAmount(invoice.amount / 100, invoice.currency)}</span>
-                      <span className="text-slate-500">{new Date(invoice.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-slate-500">
-                      <Calendar className="h-3.5 w-3.5" />
-                      <span>{new Date(invoice.periodStart).toLocaleDateString()} – {new Date(invoice.periodEnd).toLocaleDateString()}</span>
-                    </div>
-                    {invoice.invoicePdf ? (
-                      <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2.5 min-h-[44px] bg-blue-600 text-white rounded-lg text-sm font-medium">
-                        <Download className="h-4 w-4" />Download PDF
-                      </a>
-                    ) : (
-                      <p className="text-xs text-slate-400 text-center">No PDF available</p>
-                    )}
                   </div>
                 ))}
               </div>
 
               {/* Desktop table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Invoice</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Billing Period</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-slate-200">
                     {invoices.map((invoice) => (
-                      <tr key={invoice.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4">
+                      <tr key={invoice.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <FileText className="h-5 w-5 text-slate-400 mr-2 shrink-0" />
-                            <div className="text-sm font-medium text-slate-900 truncate max-w-xs">{invoice.id}</div>
+                            <FileText className="h-5 w-5 text-slate-400 mr-3" />
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">Invoice #{invoice.id.slice(-8).toUpperCase()}</p>
+                              <p className="text-xs text-slate-500">{new Date(invoice.createdAt).toLocaleDateString()}</p>
+                            </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm text-slate-600">
+                            <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                            {new Date(invoice.periodStart).toLocaleDateString()} - {new Date(invoice.periodEnd).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center text-sm font-medium text-slate-900">
+                            <DollarSign className="h-4 w-4 mr-1 text-slate-400" />
+                            {formatAmount(invoice.amount, invoice.currency)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
                             {getStatusIcon(invoice.status)}
-                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(invoice.status)}`}>
+                            <span className={`ml-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(invoice.status)}`}>
                               {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center text-sm text-slate-900">
-                            <DollarSign className="h-4 w-4 mr-1 text-slate-400" />
-                            {formatAmount(invoice.amount / 100, invoice.currency)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center text-sm text-slate-500">
-                            <Calendar className="h-4 w-4 mr-1 text-slate-400" />
-                            {new Date(invoice.createdAt).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-500">
-                          {new Date(invoice.periodStart).toLocaleDateString()} – {new Date(invoice.periodEnd).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 text-right text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
                           {invoice.invoicePdf ? (
                             <a href={invoice.invoicePdf} target="_blank" rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium min-h-[40px]">
-                              <Download className="h-4 w-4" />Download
+                              className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700">
+                              <Download className="h-4 w-4 mr-1.5" />
+                              Download
                             </a>
                           ) : (
-                            <span className="text-slate-400">No PDF</span>
+                            <span className="text-sm text-slate-400">Not available</span>
                           )}
                         </td>
                       </tr>
@@ -205,20 +207,25 @@ const InvoicesPage: React.FC = () => {
           )}
         </div>
 
-        {invoices.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="h-5 w-5 text-blue-600" />
+        {!isLoading && invoices.length > 0 && (
+          <div className="bg-slate-50 rounded-xl border border-slate-200 p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm text-slate-600">Total Invoices</p>
+                <p className="text-2xl font-semibold text-slate-900">{invoices.length}</p>
               </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-blue-900 mb-1">Need help with billing?</h3>
-                <p className="text-sm text-blue-700 mb-3">If you have questions about your invoices or need to update your payment method, visit the customer portal or contact our support team.</p>
-                <div className="flex items-center gap-3">
-                  <Link href="/billing" className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700">Manage Billing</Link>
-                  <span className="text-blue-300">•</span>
-                  <a href="mailto:support@fleetflow.com" className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700">Contact Support</a>
-                </div>
+              <div>
+                <p className="text-sm text-slate-600">Total Paid</p>
+                <p className="text-2xl font-semibold text-slate-900">
+                  {formatAmount(
+                    invoices.filter(inv => inv.status.toLowerCase() === 'paid').reduce((sum, inv) => sum + inv.amount, 0),
+                    'USD'
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600">Last Payment</p>
+                <p className="text-2xl font-semibold text-slate-900">{new Date(invoices[0]?.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
