@@ -9,11 +9,6 @@ interface MobileMenuProps {
 export default function MobileMenu({ activeTab, setActiveTab }: MobileMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  // Lock body scroll when menu is open
-  if (typeof document !== 'undefined') {
-    document.body.style.overflow = isOpen ? 'hidden' : ''
-  }
-
   const tabs = [
     { id: 'overview', label: 'Overview', icon: Truck },
     { id: 'vehicles', label: 'Vehicles', icon: Truck },

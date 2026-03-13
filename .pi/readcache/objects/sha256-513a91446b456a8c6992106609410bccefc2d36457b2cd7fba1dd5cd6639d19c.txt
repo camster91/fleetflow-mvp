@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { signIn } from 'next-auth/react';
 import { Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import toast from 'react-hot-toast';
+import { supabaseClient } from '../../lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,25 +21,22 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const result = await signIn('credentials', {
-      email: email.toLowerCase().trim(),
+    const { data, error: authError } = await supabaseClient.auth.signInWithPassword({
+      email,
       password,
-      redirect: false,
     });
 
-    if (!result || result.error) {
-      const msg = result?.error === 'CredentialsSignin'
-        ? 'Invalid email or password'
-        : result?.error || 'Login failed — please try again';
+    if (authError) {
+      const msg = authError.message || 'Invalid email or password';
       setError(msg);
       toast.error(msg);
       setLoading(false);
       return;
     }
 
-    toast.success('Welcome back!');
-    const callbackUrl = (router.query.callbackUrl as string) || '/dashboard';
-    router.push(callbackUrl);
+    toast.success('Login successful!');
+    const callbackUrl = router.query.callbackUrl as string;
+    router.push(callbackUrl || '/dashboard');
   };
 
   return (

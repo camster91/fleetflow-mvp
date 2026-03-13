@@ -61,10 +61,5 @@ export const authOptions = {
   session: {
     strategy: 'jwt' as const,
   },
-  secret: process.env.NEXTAUTH_SECRET ?? (() => {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('NEXTAUTH_SECRET environment variable is not set');
-    }
-    return 'dev-only-placeholder-not-for-production';
-  })(),
+  secret: process.env.NEXTAUTH_SECRET || 'placeholder-secret',
 }
