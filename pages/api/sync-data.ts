@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 
 // Simple key-value storage using raw SQL (avoiding Prisma schema changes)
@@ -36,17 +37,13 @@ if (!initialized) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Create Supabase client
-  const supabase = createPagesServerClient({ req, res })
-  
-  // Get session
-  const { data: { session }, error } = await supabase.auth.getSession()
-  
-  if (error || !session) {
+  const session = await getServerSession(req, res, authOptions)
+
+  if (!session?.user?.email) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
-  
-  const userId = session.user.id
+
+  const userId = (session.user as any).id || session.user.email
 
   const { dataType } = req.query
   

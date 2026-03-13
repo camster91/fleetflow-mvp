@@ -232,7 +232,8 @@ export default function AdminUserManagement() {
 
       {/* Users Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px]">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
@@ -279,7 +280,7 @@ export default function AdminUserManagement() {
                         <button
                           onClick={() => handleImpersonate(user)}
                           className="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition"
-                          title="Impersonate user"
+                          title="Impersonate user" aria-label="Impersonate user"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -292,7 +293,7 @@ export default function AdminUserManagement() {
                           setIsRoleModalOpen(true)
                         }}
                         className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
-                        title="Change role"
+                        title="Change role" aria-label="Change role"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
@@ -304,7 +305,7 @@ export default function AdminUserManagement() {
                           setIsDeleteModalOpen(true)
                         }}
                         className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
-                        title="Delete user"
+                        title="Delete user" aria-label="Delete user"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -315,7 +316,8 @@ export default function AdminUserManagement() {
             })}
           </tbody>
         </table>
-        
+        </div>
+
         {filteredUsers.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-30" />

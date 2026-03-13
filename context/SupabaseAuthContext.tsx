@@ -1,16 +1,6 @@
 /**
- * Compatibility shim — re-exports from AuthContext with a userRole field
- * so pages that imported from SupabaseAuthContext still work.
+ * Compatibility shim — re-exports from AuthContext.
+ * Authentication is now handled by NextAuth (useSession from next-auth/react).
  */
-import { useAuth as _useAuth, AuthProvider, UserRole, rolePermissions, roleDescriptions } from './AuthContext'
-
-export { AuthProvider, rolePermissions, roleDescriptions }
-export type { UserRole }
-
-export function useAuth() {
-  const ctx = _useAuth()
-  return {
-    ...ctx,
-    userRole: ctx.user?.role ?? null,
-  }
-}
+export { useAuth, AuthProvider, rolePermissions, roleDescriptions } from './AuthContext'
+export type { UserRole } from './AuthContext'
