@@ -115,6 +115,7 @@ async function handleResetPassword(req: NextApiRequest, res: NextApiResponse) {
         password: hashedPassword,
         passwordResetToken: null,
         passwordResetExpires: null,
+        passwordChangedAt: new Date(), // Invalidates all existing JWT sessions
         // Reset failed login attempts
         failedLoginAttempts: 0,
         lockedUntil: null,

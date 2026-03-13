@@ -36,6 +36,7 @@ model User {
   // Password reset
   passwordResetToken   String?   @unique
   passwordResetExpires DateTime?
+  passwordChangedAt    DateTime? // used to invalidate JWTs issued before password change
 
   // Login tracking
   lastLoginAt         DateTime?
