@@ -70,6 +70,7 @@ export default async function handler(
       where: { id: userId },
       data: {
         password: hashedPassword,
+        passwordChangedAt: new Date(), // Invalidates existing JWT sessions
         updatedAt: new Date(),
       },
     });

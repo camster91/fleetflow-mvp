@@ -43,11 +43,32 @@ export const authOptions = {
   callbacks: {
     async jwt({ token, user }: any) {
       if (user) {
+        // Fresh login — store role and password change sentinel
         token.role = user.role
+        token.passwordChangedAt = null
+      } else if (token.sub) {
+        // Token refresh — check if password was changed since token was issued
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { passwordChangedAt: true, role: true },
+        })
+        if (dbUser) {
+          // If password was changed after this token was issued, invalidate it
+          if (dbUser.passwordChangedAt && token.iat) {
+            const changedAt = new Date(dbUser.passwordChangedAt).getTime() / 1000
+            if (changedAt > (token.iat as number)) {
+              // Return empty token to force re-login
+              return {}
+            }
+          }
+          token.role = dbUser.role
+        }
       }
       return token
     },
     async session({ session, token }: any) {
+      // If token was invalidated (empty), clear the session
+      if (!token.sub) return { ...session, user: undefined }
       if (session.user) {
         session.user.id = token.sub          // Prisma user ID
         session.user.role = token.role
