@@ -41,7 +41,7 @@ export default async function handler(
     // Generate 2FA secret
     const secret = speakeasy.generateSecret({
       name: `FleetFlow:${user.email}`,
-      issuer: process.env.TWO_FACTOR_ISSUER || 'Fleet Manager',
+      issuer: process.env.TWO_FACTOR_ISSUER || 'FleetFlow Pro',
       length: 32,
     });
 

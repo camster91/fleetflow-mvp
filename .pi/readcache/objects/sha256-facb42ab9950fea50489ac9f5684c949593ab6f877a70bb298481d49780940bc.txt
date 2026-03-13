@@ -157,7 +157,7 @@ export default function RegisterPage() {
   return (
     <AuthLayout
       title="Create Account"
-      subtitle="Create your Fleet Manager account"
+      subtitle="Join FleetFlow Pro to streamline your operations"
     >
       {/* Progress Steps */}
       <div className="flex items-center justify-center mb-8">
