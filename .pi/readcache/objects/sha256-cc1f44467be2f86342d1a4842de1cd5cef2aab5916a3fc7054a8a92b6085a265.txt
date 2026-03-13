@@ -90,7 +90,6 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ role, currentPath, onOpenSi
             <Link
               key={tab.href}
               href={tab.href}
-              aria-current={isTabActive ? 'page' : undefined}
               className="flex-1 flex flex-col items-center justify-center gap-0.5 py-2 min-h-[56px] transition-colors active:bg-slate-50 select-none"
               style={{ touchAction: 'manipulation' }}
             >
@@ -128,14 +127,6 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
   const [expandedSections, setExpandedSections] = useState<string[]>(['vehicles']);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-
-  // Lock body scroll when mobile sidebar is open
-  useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.body.style.overflow = sidebarOpen ? 'hidden' : '';
-    }
-    return () => { if (typeof document !== 'undefined') document.body.style.overflow = ''; };
-  }, [sidebarOpen]);
 
   useEffect(() => {
     const h = () => setSidebarOpen(false);
