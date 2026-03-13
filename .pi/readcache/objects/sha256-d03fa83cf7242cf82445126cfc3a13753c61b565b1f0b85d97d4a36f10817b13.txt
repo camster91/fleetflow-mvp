@@ -49,7 +49,6 @@ export const authOptions = {
     },
     async session({ session, token }: any) {
       if (session.user) {
-        session.user.id = token.sub          // Prisma user ID
         session.user.role = token.role
       }
       return session

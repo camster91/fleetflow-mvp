@@ -569,4 +569,59 @@ ${APP_URL}
 }
 
 // Re-export for convenience
+export async function sendTeamInvitationEmail(
+  email: string,
+  invitedByName: string,
+  role: string,
+  teamName: string
+): Promise<{ success: boolean; error?: string }> {
+  const registerUrl = `${APP_URL}/auth/register`;
+  const displayRole = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const html = getBaseEmailTemplate(`
+    <h2 style="margin-top: 0; color: #1e293b;">You've been invited to ${APP_NAME}</h2>
+    <p>Hi there,</p>
+    <p><strong>${invitedByName}</strong> has invited you to join <strong>${teamName}</strong> on ${APP_NAME} as a <strong>${displayRole}</strong>.</p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${registerUrl}" class="button">Accept Invitation</a>
+    </div>
+
+    <div class="info-box">
+      <p style="margin: 0;"><strong>Or copy and paste this link:</strong></p>
+      <p style="margin: 8px 0 0 0; word-break: break-all;">
+        <a href="${registerUrl}" style="color: #1e40af;">${registerUrl}</a>
+      </p>
+    </div>
+
+    <p style="color: #64748b; font-size: 14px;">
+      Create your account with this email address to automatically join the team. If you weren't expecting this invitation, you can safely ignore this email.
+    </p>
+  `);
+
+  const text = `
+You've been invited to ${APP_NAME}
+
+Hi there,
+
+${invitedByName} has invited you to join ${teamName} on ${APP_NAME} as a ${displayRole}.
+
+Create your account here to accept:
+${registerUrl}
+
+If you weren't expecting this invitation, you can safely ignore this email.
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return sendEmail({
+    to: email,
+    subject: `${invitedByName} invited you to ${teamName} on ${APP_NAME}`,
+    html,
+    text,
+  });
+}
+
 export { FROM_EMAIL, APP_URL, APP_NAME };
