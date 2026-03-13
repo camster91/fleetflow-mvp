@@ -5,7 +5,6 @@ import { prisma } from '../../../lib/prisma';
 import { TeamRole, InvitationStatus } from '../../../types';
 import { randomBytes } from 'crypto';
 import { canManageTeam } from '../../../lib/permissions';
-import { sendTeamInvitationEmail } from '../../../lib/email';
 
 // Generate a secure invitation token
 function generateToken(): string {
@@ -120,15 +119,15 @@ export default async function handler(
           },
         });
 
-        // Send invitation email (non-blocking — don't fail the invite if email fails)
-        sendTeamInvitationEmail(
-          email,
-          (session.user as any).name || session.user.email || 'A team member',
-          assignedRole,
-          team.name,
-        ).catch((err: Error) => {
-          console.error(`Failed to send invitation email to ${email}:`, err.message);
-        });
+        // TODO: Send invitation email
+        // await sendInvitationEmail({
+        //   to: email,
+        //   teamName: team.name,
+        //   invitedBy: session.user.name || session.user.email,
+        //   role: assignedRole,
+        //   token: generateToken(),
+        //   message,
+        // });
 
         results.push({ email, status: 'invited', invitationId: invitation.id });
       } catch (error) {

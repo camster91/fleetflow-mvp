@@ -98,31 +98,8 @@ export default function RegisterPage() {
     }
   };
 
-  const handleSocialLogin = async (provider: 'google' | 'azure') => {
-    setLoading(true);
-    
-    try {
-      const { supabaseClient } = await import('../../lib/supabase');
-      const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: provider === 'azure' ? 'azure' : 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            // Pass role as a query param for the callback to handle
-            role: role,
-          },
-        },
-      });
-
-      if (error) {
-        toast.error(error.message);
-        setLoading(false);
-      }
-      // OAuth redirect will happen automatically
-    } catch (err: any) {
-      toast.error('Failed to initiate social login');
-      setLoading(false);
-    }
+  const handleSocialLogin = (_provider: 'google' | 'azure') => {
+    toast('Social login coming soon — please use email/password for now.', { icon: 'ℹ️' });
   };
 
   // Success state - show email verification message
