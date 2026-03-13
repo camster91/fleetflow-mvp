@@ -10,14 +10,14 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
     <SessionProvider session={session}>
       <AuthProvider>
         <Head>
-          <title>FleetFlow Pro - Fleet Management Dashboard</title>
+          <title>Fleet Manager - Fleet Management Dashboard</title>
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="description" content="Modern fleet management dashboard for food truck delivery services and similar operations" />
-          <meta name="keywords" content="fleet management, delivery, logistics, food truck, dashboard" />
-          
+          <meta name="description" content="Fleet management dashboard — vehicles, maintenance, deliveries and analytics." />
+          <meta name="keywords" content="fleet management, delivery, logistics, vehicles, dashboard" />
+
           {/* Open Graph */}
-          <meta property="og:title" content="FleetFlow Pro - Fleet Management" />
-          <meta property="og:description" content="Streamline your fleet operations with FleetFlow Pro" />
+          <meta property="og:title" content="Fleet Manager" />
+          <meta property="og:description" content="Streamline your fleet operations with Fleet Manager" />
           <meta property="og:type" content="website" />
           
           {/* PWA */}

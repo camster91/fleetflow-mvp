@@ -31,7 +31,7 @@ export default function Document() {
         
         {/* Open Graph / Social Media */}
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="FleetFlow" />
+        <meta property="og:site_name" content="Fleet Manager" />
         <meta property="og:image" content="https://fleet.ashbi.ca/brand/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -41,7 +41,7 @@ export default function Document() {
         <meta name="twitter:image" content="https://fleet.ashbi.ca/brand/twitter-card.png" />
         
         {/* Description (will be overridden by page-specific meta) */}
-        <meta name="description" content="Modern fleet management SaaS platform. Streamline your fleet operations with FleetFlow." />
+        <meta name="description" content="Fleet management dashboard — vehicles, maintenance, deliveries and analytics." />
       </Head>
       <body className="font-sans antialiased bg-slate-50">
         <Main />
