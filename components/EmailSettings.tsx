@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Mail, Bell, Truck, Package, Wrench, Users, Check, AlertTriangle } from 'lucide-react'
 
 interface EmailSettingsProps {
@@ -105,6 +105,21 @@ export default function EmailSettings({ isOpen, onClose }: EmailSettingsProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
 
+  React.useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/settings/notifications')
+      .then(r => r.json())
+      .then(data => {
+        if (data.notificationSettings && Object.keys(data.notificationSettings).length > 0) {
+          setSettings(prev => prev.map(s => ({
+            ...s,
+            ...(data.notificationSettings[s.id] ?? {}),
+          })))
+        }
+      })
+      .catch(() => {})
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const toggleSetting = (id: string, type: 'email' | 'push') => {
@@ -117,11 +132,25 @@ export default function EmailSettings({ isOpen, onClose }: EmailSettingsProps) {
 
   const handleSave = async () => {
     setIsSaving(true)
-    // In production, save to database
-    await new Promise(resolve => setTimeout(resolve, 500))
-    setSaveMessage('Settings saved successfully!')
-    setIsSaving(false)
-    setTimeout(() => setSaveMessage(''), 3000)
+    try {
+      const settingsMap: Record<string, { email: boolean; push: boolean }> = {}
+      settings.forEach(s => { settingsMap[s.id] = { email: s.email, push: s.push } })
+      const res = await fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationSettings: settingsMap }),
+      })
+      if (res.ok) {
+        setSaveMessage('Settings saved successfully!')
+      } else {
+        setSaveMessage('Failed to save — please try again.')
+      }
+    } catch {
+      setSaveMessage('Failed to save — please try again.')
+    } finally {
+      setIsSaving(false)
+      setTimeout(() => setSaveMessage(''), 3000)
+    }
   }
 
   // Group settings by category

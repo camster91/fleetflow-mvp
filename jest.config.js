@@ -1,7 +1,51 @@
 /** @type {import('jest').Config} */
 const config = {
-  testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  // API route tests run in Node (no DOM needed); component/page tests use jsdom
+  projects: [
+    {
+      displayName: 'api',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/__tests__/pages/api/**/*.test.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+      },
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
+      },
+      testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+    },
+    {
+      displayName: 'ui',
+      testEnvironment: 'jsdom',
+      testMatch: [
+        '<rootDir>/__tests__/components/**/*.test.{ts,tsx}',
+        '<rootDir>/__tests__/pages/[^a]**/*.test.{ts,tsx}',
+        '<rootDir>/__tests__/pages/dashboard.test.tsx',
+        '<rootDir>/__tests__/services/**/*.test.ts',
+        '<rootDir>/__tests__/lib/**/*.test.ts',
+      ],
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+        '^@/components/(.*)$': '<rootDir>/components/$1',
+        '^@/pages/(.*)$': '<rootDir>/pages/$1',
+        '^@/services/(.*)$': '<rootDir>/services/$1',
+        '^@/lib/(.*)$': '<rootDir>/lib/$1',
+        '^@/context/(.*)$': '<rootDir>/context/$1',
+        '^@/hooks/(.*)$': '<rootDir>/hooks/$1',
+        '^@/types/(.*)$': '<rootDir>/types/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+      },
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
+          presets: [['next/babel', { 'preset-react': { runtime: 'automatic', importSource: '@testing-library/react' } }]],
+        }],
+      },
+      testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+    },
+  ],
+  // Legacy flat config kept for coverage collection
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
     '^@/components/(.*)$': '<rootDir>/components/$1',

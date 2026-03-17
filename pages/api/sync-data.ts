@@ -4,7 +4,7 @@ import { authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 
 // Simple key-value storage using raw SQL (avoiding Prisma schema changes)
-const validDataTypes = ['vehicles', 'deliveries', 'maintenance', 'clients', 'sop', 'vending-machines'] as const
+const validDataTypes = ['vehicles', 'deliveries', 'maintenance', 'clients', 'sop', 'vending-machines', 'announcements'] as const
 type DataType = typeof validDataTypes[number]
 
 // Initialize the user_data table if it doesn't exist
@@ -105,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(413).json({ error: 'Data too large' })
       }
 
-      // Use raw SQL for upsert (SQLite doesn't have UPSERT until v3.24, so use INSERT OR REPLACE)
+      // Use Prisma upsert for data sync
       const id = `${userId}-${typedDataType}`
       
       await prisma.$executeRaw`

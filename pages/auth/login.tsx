@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
-import { signIn } from 'next-auth/react';
+import { signIn } from '@/lib/session';
 import { Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { AuthLayout } from '../../components/layouts/AuthLayout';

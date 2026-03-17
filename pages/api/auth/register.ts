@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
-import bcrypt from 'bcryptjs';
+import { hashPassword, signToken } from '../../../lib/auth';
+import { serialize } from 'cookie';
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit';
 import { generateVerificationToken, getExpiryDate, TOKEN_EXPIRY } from '../../../lib/tokens';
 import { sendVerificationEmail } from '../../../lib/email';
@@ -53,8 +54,11 @@ export default async function handler(
       });
     }
 
-    // Validate role — must be from the allowed set; admin cannot be self-assigned
-    const assignedRole: AllowedRole = ALLOWED_ROLES.includes(role) ? role : 'fleet_manager';
+    // First user becomes admin; otherwise validate role
+    const userCount = await prisma.user.count();
+    const assignedRole: AllowedRole | 'admin' = userCount === 0
+      ? 'admin'
+      : (ALLOWED_ROLES.includes(role) ? role : 'fleet_manager');
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -67,7 +71,7 @@ export default async function handler(
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await hashPassword(password);
 
     // Generate verification token
     const verificationToken = generateVerificationToken();
@@ -99,6 +103,16 @@ export default async function handler(
     } catch (emailError) {
       console.error('Failed to send verification email:', emailError);
     }
+
+    // Set auth cookie
+    const jwt = signToken({ sub: user.id, email: user.email, name: user.name, role: user.role });
+    res.setHeader('Set-Cookie', serialize('token', jwt, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    }));
 
     // Remove sensitive data from response
     const { password: _, verificationToken: __, twoFactorSecret: ___, ...userWithoutSensitive } = user;

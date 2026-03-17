@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, MapPin, Package, Calendar, Clock, Navigation, 
   Phone, Mail, MessageSquare, Filter, Search, Plus,
@@ -11,11 +11,16 @@ import * as dataService from '../../services/dataServiceWithSync';
 const DispatchDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('clients');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedClients, setSelectedClients] = useState<number[]>([]);
-  
-  const clients = dataService.getClients();
-  const deliveries = dataService.getDeliveries();
-  const vehicles = dataService.getVehicles();
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [clients, setClients] = useState<dataService.Client[]>([]);
+  const [deliveries, setDeliveries] = useState<dataService.Delivery[]>([]);
+  const [vehicles, setVehicles] = useState<dataService.Vehicle[]>([]);
+
+  useEffect(() => {
+    Promise.all([dataService.getClients(), dataService.getDeliveries(), dataService.getVehicles()])
+      .then(([c, d, v]) => { setClients(c); setDeliveries(d); setVehicles(v); })
+      .catch(console.error);
+  }, []);
 
   const handleAssignDelivery = async (client: dataService.Client) => {
     const driver = await promptAction(`Assign delivery to ${client.name}. Enter driver name:`, 'John D.');
@@ -28,7 +33,7 @@ const DispatchDashboard: React.FC = () => {
     }
   };
 
-  const handlePlanRoute = async (clientIds: number[]) => {
+  const handlePlanRoute = async (clientIds: string[]) => {
     const selected = clients.filter(c => clientIds.includes(c.id));
     if (selected.length === 0) { notify.info('Please select clients to plan a route.', { duration: 3000 }); return; }
     const addresses = selected.map(c => c.address).join('\n• ');
@@ -38,14 +43,14 @@ const DispatchDashboard: React.FC = () => {
     );
   };
 
-  const handleSendBulkMessage = async (clientIds: number[]) => {
+  const handleSendBulkMessage = async (clientIds: string[]) => {
     const selected = clients.filter(c => clientIds.includes(c.id));
     if (selected.length === 0) return;
     const message = await promptAction(`Send message to ${selected.length} clients:`, 'Delivery update: Your order is on the way!');
     if (message) notify.info(`Message sent to ${selected.length} clients:\n\n"${message}"\n\nIn production, this would send SMS/email notifications to all selected clients.`, { duration: 5000 });
   };
 
-  const handleToggleClientSelection = (clientId: number) => {
+  const handleToggleClientSelection = (clientId: string) => {
     setSelectedClients(prev => prev.includes(clientId) ? prev.filter(id => id !== clientId) : [...prev, clientId]);
   };
 
@@ -54,7 +59,9 @@ const DispatchDashboard: React.FC = () => {
     if (name) notify.info(`Delivery template "${name}" created\n\nIn production, this would save a reusable delivery template.`, { duration: 5000 });
   };
 
-  const filteredClients = searchQuery ? dataService.searchClients(searchQuery) : clients;
+  const filteredClients = searchQuery
+    ? clients.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.address.toLowerCase().includes(searchQuery.toLowerCase()))
+    : clients;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">

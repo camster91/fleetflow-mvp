@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/session'
 import { Loader2 } from 'lucide-react'
 
 interface RequireAuthProps {

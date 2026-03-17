@@ -1,129 +1,205 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { StatCard } from '../../components/analytics/StatCard';
 import { ChartCard } from '../../components/analytics/ChartCard';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { Button } from '../../components/ui/Button';
-import { subDays, startOfWeek, endOfWeek } from 'date-fns';
-import {
-  Truck,
-  Fuel,
-  Wrench,
-  Users,
-  TrendingUp,
-  Download,
-  Calendar,
-} from 'lucide-react';
+import { subDays } from 'date-fns';
+import { Truck, Wrench, Package, Users, Download } from 'lucide-react';
 import { notify } from '../../services/notifications';
 
-interface DateRange {
-  from: Date;
-  to: Date;
-  label: string;
-}
+interface DateRange { from: Date; to: Date; label: string; }
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: subDays(new Date(), 30),
-    to: new Date(),
-    label: 'Last 30 days',
+    from: subDays(new Date(), 30), to: new Date(), label: 'Last 30 days',
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
 
-  useEffect(() => { fetchAnalytics(); }, [dateRange]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setIsLoading(true);
     try {
-      const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
-      const response = await fetch(`/api/analytics/dashboard?days=${days}`);
-      if (response.ok) { const data = await response.json(); setStats(data); }
-    } catch (error) { console.error('Failed to fetch analytics:', error); notify.error('Failed to load analytics'); }
+      const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / 86400000);
+      const r = await fetch(`/api/analytics/dashboard?days=${days}`);
+      if (r.ok) setData(await r.json());
+      else notify.error('Failed to load analytics');
+    } catch { notify.error('Failed to load analytics'); }
     finally { setIsLoading(false); }
-  };
+  }, [dateRange]);
 
-  const mockStats = {
-    fleetUtilization: { current: 78, change: 5.2 },
-    fuelCosts: { current: 12450, change: -3.5 },
-    maintenanceCosts: { current: 8900, change: 12.3 },
-    driverScore: { current: 8.7, change: 0.3 },
-  };
+  useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
-  const fuelCostData = [
-    { name: 'Mon', fuel: 420, maintenance: 240 }, { name: 'Tue', fuel: 380, maintenance: 180 },
-    { name: 'Wed', fuel: 450, maintenance: 320 }, { name: 'Thu', fuel: 410, maintenance: 200 },
-    { name: 'Fri', fuel: 480, maintenance: 280 }, { name: 'Sat', fuel: 320, maintenance: 150 },
-    { name: 'Sun', fuel: 290, maintenance: 120 },
-  ];
-  const maintenanceCategoryData = [
-    { name: 'Preventive', value: 4500 }, { name: 'Repairs', value: 2800 },
-    { name: 'Tires', value: 1200 }, { name: 'Other', value: 400 },
-  ];
-  const utilizationHeatmapData = [
-    { name: 'Truck 101', value: 85 }, { name: 'Truck 102', value: 72 },
-    { name: 'Van 201', value: 91 }, { name: 'Van 202', value: 68 }, { name: 'Truck 103', value: 78 },
-  ];
-  const driverScoreData = [
-    { name: '0-4', value: 2 }, { name: '4-6', value: 8 }, { name: '6-8', value: 24 },
-    { name: '8-9', value: 18 }, { name: '9-10', value: 6 },
-  ];
+  const s = data?.stats;
+  const charts = data?.charts;
+
+  const fleetUtil = s?.fleetUtilization?.current ?? 0;
+  const totalVehicles = s?.fleetUtilization?.total ?? 0;
+  const maintCost = s?.maintenance?.totalCost ?? 0;
+  const deliveryTotal = s?.deliveries?.total ?? 0;
+  const deliveryDone = s?.deliveries?.delivered ?? 0;
+  const maintOverdue = s?.maintenance?.overdue ?? 0;
+  const maintDueSoon = s?.maintenance?.dueSoon ?? 0;
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Analytics' }]}>
+    <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Analytics' }]}>
       <PageHeader
         title="Analytics & Insights"
-        subtitle="Deep dive into your fleet performance metrics"
+        subtitle="Real-time fleet performance metrics"
         actions={
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 items-center">
             <DateRangePicker value={dateRange} onChange={setDateRange} />
-            <Button variant="outline" iconLeft={<Download className="h-4 w-4" />}>Export Report</Button>
+            <Button variant="outline" size="sm" iconLeft={<Download className="h-4 w-4" />}
+              onClick={() => {
+                if (!data) return;
+                const csv = [
+                  'Metric,Value',
+                  `Fleet Utilization,${fleetUtil}%`,
+                  `Total Vehicles,${totalVehicles}`,
+                  `Total Deliveries,${deliveryTotal}`,
+                  `Completed Deliveries,${deliveryDone}`,
+                  `Maintenance Cost,$${maintCost}`,
+                  `Overdue Maintenance,${maintOverdue}`,
+                ].join('\n');
+                const a = document.createElement('a');
+                a.href = 'data:text/csv,' + encodeURIComponent(csv);
+                a.download = 'fleet-analytics.csv';
+                a.click();
+              }}
+            >Export</Button>
           </div>
         }
       />
 
-      {/* Stats Overview */}
-      <div className="mb-6">
-        {/* Mobile: horizontal scroll */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
-          {[
-            { title: 'Fleet Utilization', value: `${mockStats.fleetUtilization.current}%`, icon: <Truck className="h-5 w-5 text-blue-600" />, bg: 'bg-blue-50' },
-            { title: 'Fuel Costs', value: `$${mockStats.fuelCosts.current.toLocaleString()}`, icon: <Fuel className="h-5 w-5 text-amber-600" />, bg: 'bg-amber-50' },
-            { title: 'Maintenance', value: `$${mockStats.maintenanceCosts.current.toLocaleString()}`, icon: <Wrench className="h-5 w-5 text-red-600" />, bg: 'bg-red-50' },
-            { title: 'Driver Score', value: mockStats.driverScore.current, icon: <Users className="h-5 w-5 text-emerald-600" />, bg: 'bg-emerald-50' },
-          ].map((stat) => (
-            <div key={stat.title} className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-              <div className={`inline-flex p-2 rounded-lg ${stat.bg} mb-2`}>{stat.icon}</div>
-              <p className="text-xl font-bold text-slate-900">{stat.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{stat.title}</p>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          title="Fleet Utilization"
+          value={`${fleetUtil}%`}
+          changeLabel={`${s?.fleetUtilization?.active ?? 0} of ${totalVehicles} active`}
+          icon={<Truck className="h-6 w-6" />}
+          iconBgColor="bg-blue-50" iconColor="text-blue-600"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Deliveries"
+          value={deliveryTotal}
+          changeLabel={`${deliveryDone} completed`}
+          icon={<Package className="h-6 w-6" />}
+          iconBgColor="bg-emerald-50" iconColor="text-emerald-600"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Maintenance Cost"
+          value={`$${maintCost.toLocaleString()}`}
+          changeLabel={`${s?.maintenance?.total ?? 0} tasks total`}
+          icon={<Wrench className="h-6 w-6" />}
+          iconBgColor="bg-red-50" iconColor="text-red-600"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Maintenance Alerts"
+          value={maintOverdue + maintDueSoon}
+          changeLabel={`${maintOverdue} overdue, ${maintDueSoon} due soon`}
+          icon={<Users className="h-6 w-6" />}
+          iconBgColor="bg-amber-50" iconColor="text-amber-600"
+          loading={isLoading}
+        />
+      </div>
+
+      {/* Charts row 1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <ChartCard
+          title="Fleet Activity"
+          subtitle="Deliveries and maintenance logged per day"
+          type="area"
+          data={charts?.activityOverTime ?? []}
+          dataKey="deliveries"
+          series={[
+            { key: 'deliveries', name: 'Deliveries', color: '#3b82f6' },
+            { key: 'maintenance', name: 'Maintenance', color: '#f59e0b' },
+          ]}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
+          loading={isLoading}
+        />
+        <ChartCard
+          title="Maintenance by Type"
+          subtitle="Task count across categories"
+          type="pie"
+          data={charts?.maintenanceByCategory ?? []}
+          dataKey="value"
+          xAxisKey="name"
+          colors={['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']}
+          loading={isLoading}
+        />
+      </div>
+
+      {/* Charts row 2 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <ChartCard
+          title="Vehicle Delivery Load"
+          subtitle="Deliveries assigned per vehicle"
+          type="bar"
+          data={charts?.vehicleUtilization ?? []}
+          dataKey="deliveries"
+          xAxisKey="name"
+          colors={['#3b82f6']}
+          loading={isLoading}
+        />
+        {/* Delivery status breakdown */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <h3 className="font-semibold text-slate-900 mb-1">Delivery Status Breakdown</h3>
+          <p className="text-sm text-slate-500 mb-4">Current pipeline overview</p>
+          {isLoading ? (
+            <div className="space-y-3">{[1,2,3,4].map(i => <div key={i} className="h-8 bg-slate-100 rounded-lg animate-pulse" />)}</div>
+          ) : (
+            <div className="space-y-3">
+              {[
+                { label: 'Delivered', count: s?.deliveries?.delivered ?? 0, color: 'bg-emerald-500', pct: deliveryTotal ? Math.round(((s?.deliveries?.delivered ?? 0) / deliveryTotal) * 100) : 0 },
+                { label: 'In Transit', count: s?.deliveries?.inTransit ?? 0, color: 'bg-blue-500', pct: deliveryTotal ? Math.round(((s?.deliveries?.inTransit ?? 0) / deliveryTotal) * 100) : 0 },
+                { label: 'Pending', count: s?.deliveries?.pending ?? 0, color: 'bg-amber-400', pct: deliveryTotal ? Math.round(((s?.deliveries?.pending ?? 0) / deliveryTotal) * 100) : 0 },
+                { label: 'Delayed', count: s?.deliveries?.delayed ?? 0, color: 'bg-red-500', pct: deliveryTotal ? Math.round(((s?.deliveries?.delayed ?? 0) / deliveryTotal) * 100) : 0 },
+              ].map(({ label, count, color, pct }) => (
+                <div key={label}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-700 font-medium">{label}</span>
+                    <span className="text-slate-500">{count} ({pct}%)</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full">
+                    <div className={`h-2 rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        {/* Tablet+: StatCard grid */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Fleet Utilization" value={`${mockStats.fleetUtilization.current}%`} change={mockStats.fleetUtilization.change} icon={<Truck className="h-6 w-6" />} iconBgColor="bg-blue-50" iconColor="text-blue-600" loading={isLoading} />
-          <StatCard title="Fuel Costs" value={`$${mockStats.fuelCosts.current.toLocaleString()}`} change={mockStats.fuelCosts.change} prefix="$" icon={<Fuel className="h-6 w-6" />} iconBgColor="bg-amber-50" iconColor="text-amber-600" loading={isLoading} />
-          <StatCard title="Maintenance Costs" value={`$${mockStats.maintenanceCosts.current.toLocaleString()}`} change={mockStats.maintenanceCosts.change} prefix="$" icon={<Wrench className="h-6 w-6" />} iconBgColor="bg-red-50" iconColor="text-red-600" loading={isLoading} />
-          <StatCard title="Driver Score" value={mockStats.driverScore.current} change={mockStats.driverScore.change} icon={<Users className="h-6 w-6" />} iconBgColor="bg-emerald-50" iconColor="text-emerald-600" loading={isLoading} />
+          )}
         </div>
       </div>
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <ChartCard title="Fuel & Maintenance Costs" subtitle="Daily spending breakdown" type="area" data={fuelCostData} dataKey="fuel" series={[{ key: 'fuel', name: 'Fuel', color: '#f59e0b' }, { key: 'maintenance', name: 'Maintenance', color: '#ef4444' }]} dateRange={dateRange} onDateRangeChange={setDateRange} loading={isLoading} />
-        <ChartCard title="Maintenance by Category" subtitle="Cost distribution across categories" type="pie" data={maintenanceCategoryData} dataKey="value" xAxisKey="name" colors={['#3b82f6', '#10b981', '#f59e0b', '#ef4444']} loading={isLoading} />
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <ChartCard title="Vehicle Utilization" subtitle="Utilization rate by vehicle" type="bar" data={utilizationHeatmapData} dataKey="value" xAxisKey="name" colors={['#3b82f6']} loading={isLoading} />
-        <ChartCard title="Driver Score Distribution" subtitle="Performance ratings across your team" type="bar" data={driverScoreData} dataKey="value" xAxisKey="name" colors={['#10b981']} loading={isLoading} />
-      </div>
-
-      <ChartCard title="Cost Per Mile Trend" subtitle="Track efficiency over time" type="line"
-        data={Array.from({ length: 30 }, (_, i) => ({ date: `Day ${i + 1}`, cost: 2.2 + Math.random() * 0.4 }))}
-        dataKey="cost" xAxisKey="date" loading={isLoading} />
+      {/* Upcoming maintenance */}
+      {(s?.maintenance?.upcoming?.length ?? 0) > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+          <h3 className="font-semibold text-slate-900 mb-3">Upcoming Maintenance</h3>
+          <div className="divide-y divide-slate-50">
+            {s.maintenance.upcoming.map((item: any, i: number) => (
+              <div key={i} className="flex items-center justify-between py-2.5">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{item.vehicle}</p>
+                  <p className="text-xs text-slate-500">{item.task}</p>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  item.dueIn <= 2 ? 'bg-red-100 text-red-700'
+                  : item.dueIn <= 7 ? 'bg-amber-100 text-amber-700'
+                  : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {item.dueIn === 0 ? 'Today' : item.dueIn === 1 ? 'Tomorrow' : `In ${item.dueIn}d`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

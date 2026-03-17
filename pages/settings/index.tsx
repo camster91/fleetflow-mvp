@@ -1,281 +1,230 @@
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import {
-  User,
-  Bell,
-  Shield,
-  Palette,
-  Globe,
-  Mail,
-  Smartphone,
-  Key,
-  Save,
-  Camera,
-  Check,
-} from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from '@/lib/session';
+import { User, Bell, Shield, Palette, Save, Camera, Eye, EyeOff } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { Input, TextArea, Select } from '../../components/ui/Input';
 import { notify } from '../../services/notifications';
 
 type TabId = 'profile' | 'notifications' | 'security' | 'preferences';
 
-interface Tab {
-  id: TabId;
-  label: string;
-  icon: React.ElementType;
-}
-
-const tabs: Tab[] = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'security', label: 'Security', icon: Shield },
-  { id: 'preferences', label: 'Preferences', icon: Palette },
-];
-
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [profile, setProfile] = useState({
-    name: session?.user?.name || '',
-    email: session?.user?.email || '',
-    company: '',
-    phone: '',
-    bio: '',
-  });
-
+  const [profile, setProfile] = useState({ name: '', email: '', company: '', phone: '', bio: '' });
   const [notifications, setNotifications] = useState({
-    emailDeliveries: true,
-    emailMaintenance: true,
-    pushDeliveries: true,
-    pushMaintenance: false,
-    weeklyReports: true,
+    emailDeliveries: true, emailMaintenance: true,
+    pushDeliveries: true, pushMaintenance: false, weeklyReports: true,
   });
-
   const [preferences, setPreferences] = useState({
-    language: 'en',
-    timezone: 'America/New_York',
-    dateFormat: 'MM/DD/YYYY',
-    theme: 'light',
+    language: 'en', timezone: 'America/Toronto', dateFormat: 'MM/DD/YYYY', theme: 'light',
   });
+  const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+
+  // Load profile on mount
+  const loadProfile = useCallback(async () => {
+    try {
+      const r = await fetch('/api/settings/profile');
+      if (!r.ok) return;
+      const { user, prefs } = await r.json();
+      setProfile(p => ({
+        ...p,
+        name: user.name || '',
+        email: user.email || '',
+        company: user.company || '',
+        phone: prefs?.phone || '',
+        bio: prefs?.bio || '',
+      }));
+      if (prefs?.notificationSettings) setNotifications(prefs.notificationSettings);
+      if (prefs?.preferences) setPreferences(prefs.preferences);
+    } catch {}
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
 
   const handleSave = async () => {
     setSaving(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
-    notify.success('Settings saved successfully');
+    try {
+      if (activeTab === 'profile') {
+        await fetch('/api/settings/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: profile.name, company: profile.company, phone: profile.phone, bio: profile.bio }),
+        });
+        await updateSession({ name: profile.name });
+      } else if (activeTab === 'notifications') {
+        await fetch('/api/settings/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notificationSettings: notifications }),
+        });
+      } else if (activeTab === 'preferences') {
+        await fetch('/api/settings/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ preferences }),
+        });
+      } else if (activeTab === 'security') {
+        if (security.newPassword !== security.confirmPassword) {
+          notify.error('Passwords do not match'); setSaving(false); return;
+        }
+        if (security.newPassword.length < 8) {
+          notify.error('Password must be at least 8 characters'); setSaving(false); return;
+        }
+        const r = await fetch('/api/auth/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword: security.currentPassword, newPassword: security.newPassword }),
+        });
+        if (!r.ok) { const e = await r.json(); notify.error(e.error || 'Failed to change password'); setSaving(false); return; }
+        setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      }
+      notify.success('Settings saved');
+    } catch { notify.error('Failed to save settings'); }
+    finally { setSaving(false); }
   };
 
-  const renderProfileTab = () => (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-6">
-        <div className="relative">
-          <div className="h-24 w-24 rounded-full bg-blue-900 flex items-center justify-center text-white text-2xl font-bold">
-            {profile.name.charAt(0) || 'U'}
-          </div>
-          <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md border border-slate-200 hover:bg-slate-50">
-            <Camera className="h-4 w-4 text-slate-600" />
-          </button>
-        </div>
-        <div>
-          <h3 className="text-lg font-medium text-slate-900">Profile Photo</h3>
-          <p className="text-sm text-slate-500">JPG, GIF or PNG. Max size of 800KB</p>
-          <div className="mt-2 flex items-center space-x-3">
-            <Button variant="outline" size="sm">Upload New</Button>
-            <Button variant="ghost" size="sm" className="text-red-600">Remove</Button>
-          </div>
-        </div>
-      </div>
+  const inputCls = 'w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent';
+  const labelCls = 'block text-sm font-medium text-slate-700 mb-1';
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Input label="Full Name" value={profile.name} onChange={(e) => setProfile({ ...profile, name: e.target.value })} placeholder="John Doe" />
-        <Input label="Email Address" type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} placeholder="john@example.com" disabled helperText="Contact support to change your email" />
-        <Input label="Company" value={profile.company} onChange={(e) => setProfile({ ...profile, company: e.target.value })} placeholder="Acme Inc." />
-        <Input label="Phone Number" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} placeholder="+1 (555) 000-0000" />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Bio</label>
-        <textarea value={profile.bio} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} rows={4} placeholder="Tell us about yourself..." className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900 resize-none" />
-      </div>
-    </div>
-  );
-
-  const renderNotificationsTab = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Email Notifications</h3>
-        <p className="text-sm text-slate-500 mb-4">Receive notifications via email</p>
-        <div className="space-y-3">
-          <label className="flex items-start space-x-3 cursor-pointer" style={{ minHeight: '44px' }}>
-            <input type="checkbox" checked={notifications.emailDeliveries} onChange={(e) => setNotifications({ ...notifications, emailDeliveries: e.target.checked })} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900" />
-            <div className="flex-1"><div className="text-sm font-medium text-slate-900">Delivery Updates</div><div className="text-sm text-slate-500">Get notified when deliveries are assigned or completed</div></div>
-          </label>
-          <label className="flex items-start space-x-3 cursor-pointer" style={{ minHeight: '44px' }}>
-            <input type="checkbox" checked={notifications.emailMaintenance} onChange={(e) => setNotifications({ ...notifications, emailMaintenance: e.target.checked })} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900" />
-            <div className="flex-1"><div className="text-sm font-medium text-slate-900">Maintenance Alerts</div><div className="text-sm text-slate-500">Alerts when vehicles require maintenance</div></div>
-          </label>
-          <label className="flex items-start space-x-3 cursor-pointer" style={{ minHeight: '44px' }}>
-            <input type="checkbox" checked={notifications.weeklyReports} onChange={(e) => setNotifications({ ...notifications, weeklyReports: e.target.checked })} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900" />
-            <div className="flex-1"><div className="text-sm font-medium text-slate-900">Weekly Reports</div><div className="text-sm text-slate-500">Summary of fleet activity every week</div></div>
-          </label>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 pt-6">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Push Notifications</h3>
-        <p className="text-sm text-slate-500 mb-4">Receive push notifications on your devices</p>
-        <div className="space-y-3">
-          <label className="flex items-start space-x-3 cursor-pointer" style={{ minHeight: '44px' }}>
-            <input type="checkbox" checked={notifications.pushDeliveries} onChange={(e) => setNotifications({ ...notifications, pushDeliveries: e.target.checked })} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900" />
-            <div className="flex-1"><div className="text-sm font-medium text-slate-900">Delivery Updates</div><div className="text-sm text-slate-500">Real-time delivery notifications</div></div>
-          </label>
-          <label className="flex items-start space-x-3 cursor-pointer" style={{ minHeight: '44px' }}>
-            <input type="checkbox" checked={notifications.pushMaintenance} onChange={(e) => setNotifications({ ...notifications, pushMaintenance: e.target.checked })} className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-900 focus:ring-blue-900" />
-            <div className="flex-1"><div className="text-sm font-medium text-slate-900">Maintenance Alerts</div><div className="text-sm text-slate-500">Urgent maintenance notifications</div></div>
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderSecurityTab = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Change Password</h3>
-        <p className="text-sm text-slate-500 mb-4">Update your password to keep your account secure</p>
-        <div className="space-y-4 max-w-md">
-          <Input label="Current Password" type="password" placeholder="Enter current password" />
-          <Input label="New Password" type="password" placeholder="Enter new password" />
-          <Input label="Confirm New Password" type="password" placeholder="Confirm new password" />
-          <Button variant="primary">Update Password</Button>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 pt-6">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Two-Factor Authentication</h3>
-        <p className="text-sm text-slate-500 mb-4">Add an extra layer of security to your account</p>
-        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <Shield className="h-5 w-5 text-slate-400" />
-            <div><div className="text-sm font-medium text-slate-900">Two-Factor Authentication</div><div className="text-sm text-slate-500">Not enabled</div></div>
-          </div>
-          <Button variant="outline" size="sm">Enable</Button>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-200 pt-6">
-        <h3 className="text-lg font-medium text-slate-900 mb-1">Active Sessions</h3>
-        <p className="text-sm text-slate-500 mb-4">Manage your active sessions across devices</p>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <Smartphone className="h-5 w-5 text-slate-400" />
-              <div><div className="text-sm font-medium text-slate-900">Current Session</div><div className="text-sm text-slate-500">Toronto, Canada • Active now</div></div>
-            </div>
-            <Badge variant="success">Active</Badge>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPreferencesTab = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1"><Globe className="h-4 w-4 inline mr-1" />Language</label>
-          <select value={preferences.language} onChange={(e) => setPreferences({ ...preferences, language: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900">
-            <option value="en">English</option>
-            <option value="fr">French</option>
-            <option value="es">Spanish</option>
-            <option value="de">German</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Timezone</label>
-          <select value={preferences.timezone} onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900">
-            <option value="America/New_York">Eastern Time (ET)</option>
-            <option value="America/Chicago">Central Time (CT)</option>
-            <option value="America/Denver">Mountain Time (MT)</option>
-            <option value="America/Los_Angeles">Pacific Time (PT)</option>
-            <option value="Europe/London">London (GMT)</option>
-            <option value="Europe/Paris">Paris (CET)</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Date Format</label>
-          <select value={preferences.dateFormat} onChange={(e) => setPreferences({ ...preferences, dateFormat: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900">
-            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Theme</label>
-          <select value={preferences.theme} onChange={(e) => setPreferences({ ...preferences, theme: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-900 focus:border-blue-900">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="auto">Auto</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-
-  const tabContent: Record<TabId, React.ReactNode> = {
-    profile: renderProfileTab(),
-    notifications: renderNotificationsTab(),
-    security: renderSecurityTab(),
-    preferences: renderPreferencesTab(),
-  };
+  const tabs = [
+    { id: 'profile' as TabId, label: 'Profile', icon: User },
+    { id: 'notifications' as TabId, label: 'Notifications', icon: Bell },
+    { id: 'security' as TabId, label: 'Security', icon: Shield },
+    { id: 'preferences' as TabId, label: 'Preferences', icon: Palette },
+  ];
 
   return (
-    <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Settings' }]}>
-      <PageHeader title="Settings" subtitle="Manage your account settings and preferences" />
+    <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Settings' }]}>
+      <PageHeader title="Settings" subtitle="Manage your account and preferences" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar — horizontal scroll on mobile, vertical on desktop */}
-        <div className="lg:col-span-1">
-          <Card padding="none">
-            <nav className="flex overflow-x-auto lg:flex-col gap-1 p-2">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex-shrink-0 lg:w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? 'bg-blue-50 text-blue-900'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
-                    style={{ touchAction: 'manipulation' }}
-                  >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </Card>
+      <div className="flex gap-6 flex-col lg:flex-row">
+        {/* Sidebar tabs */}
+        <div className="lg:w-48 shrink-0">
+          <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
+            {tabs.map(({ id, label, icon: Icon }) => (
+              <button key={id} onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeTab === id ? 'bg-blue-50 text-blue-900' : 'text-slate-600 hover:bg-slate-100'
+                }`}>
+                <Icon className="h-4 w-4 shrink-0" />{label}
+              </button>
+            ))}
+          </nav>
         </div>
 
         {/* Content */}
-        <div className="lg:col-span-3">
-          <Card>
-            {tabContent[activeTab]}
-            <div className="mt-6 pt-6 border-t border-slate-200 flex justify-end">
-              <Button variant="primary" onClick={handleSave} loading={saving} iconLeft={<Save className="h-4 w-4" />}>
-                Save Changes
-              </Button>
-            </div>
-          </Card>
+        <div className="flex-1 max-w-2xl">
+          {loading ? (
+            <Card><div className="h-64 animate-pulse bg-slate-100 rounded-xl" /></Card>
+          ) : (
+            <Card>
+              {activeTab === 'profile' && (
+                <div className="space-y-5">
+                  <h2 className="font-semibold text-slate-900">Profile Information</h2>
+                  {/* Avatar */}
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 rounded-full bg-blue-900 flex items-center justify-center text-white text-xl font-bold shrink-0">
+                      {profile.name.charAt(0).toUpperCase() || 'U'}
+                    </div>
+                    <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+                      <Camera className="h-4 w-4" /> Change photo
+                    </button>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div><label className={labelCls}>Full Name</label><input value={profile.name} onChange={e => setProfile(p => ({...p, name: e.target.value}))} className={inputCls} /></div>
+                    <div><label className={labelCls}>Email</label><input value={profile.email} disabled className={inputCls + ' bg-slate-50 cursor-not-allowed'} /></div>
+                    <div><label className={labelCls}>Company</label><input value={profile.company} onChange={e => setProfile(p => ({...p, company: e.target.value}))} className={inputCls} placeholder="Your company" /></div>
+                    <div><label className={labelCls}>Phone</label><input value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))} className={inputCls} placeholder="+1 (555) 000-0000" /></div>
+                  </div>
+                  <div><label className={labelCls}>Bio</label><textarea value={profile.bio} onChange={e => setProfile(p => ({...p, bio: e.target.value}))} className={inputCls + ' resize-none'} rows={3} placeholder="Tell your team a little about yourself" /></div>
+                </div>
+              )}
+
+              {activeTab === 'notifications' && (
+                <div className="space-y-5">
+                  <h2 className="font-semibold text-slate-900">Notification Preferences</h2>
+                  {[
+                    { key: 'emailDeliveries', label: 'Email — Delivery updates', desc: 'Get notified when deliveries change status' },
+                    { key: 'emailMaintenance', label: 'Email — Maintenance alerts', desc: 'Reminders for upcoming and overdue tasks' },
+                    { key: 'pushDeliveries', label: 'Push — Delivery updates', desc: 'Real-time push notifications for deliveries' },
+                    { key: 'pushMaintenance', label: 'Push — Maintenance alerts', desc: 'Push alerts for maintenance tasks' },
+                    { key: 'weeklyReports', label: 'Weekly summary report', desc: 'A weekly digest of your fleet activity' },
+                  ].map(({ key, label, desc }) => (
+                    <div key={key} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
+                      <div><p className="text-sm font-medium text-slate-900">{label}</p><p className="text-xs text-slate-500">{desc}</p></div>
+                      <button
+                        onClick={() => setNotifications(n => ({ ...n, [key]: !n[key as keyof typeof n] }))}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          notifications[key as keyof typeof notifications] ? 'bg-blue-600' : 'bg-slate-200'
+                        }`}>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                          notifications[key as keyof typeof notifications] ? 'translate-x-6' : 'translate-x-1'
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {activeTab === 'security' && (
+                <div className="space-y-5">
+                  <h2 className="font-semibold text-slate-900">Change Password</h2>
+                  <div className="space-y-4">
+                    <div><label className={labelCls}>Current Password</label>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={security.currentPassword}
+                          onChange={e => setSecurity(s => ({...s, currentPassword: e.target.value}))}
+                          className={inputCls + ' pr-10'} />
+                        <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div><label className={labelCls}>New Password</label><input type="password" value={security.newPassword} onChange={e => setSecurity(s => ({...s, newPassword: e.target.value}))} className={inputCls} /></div>
+                    <div><label className={labelCls}>Confirm New Password</label><input type="password" value={security.confirmPassword} onChange={e => setSecurity(s => ({...s, confirmPassword: e.target.value}))} className={inputCls} /></div>
+                  </div>
+                  <p className="text-xs text-slate-500">Password must be at least 8 characters and contain a mix of letters, numbers, and symbols.</p>
+                </div>
+              )}
+
+              {activeTab === 'preferences' && (
+                <div className="space-y-5">
+                  <h2 className="font-semibold text-slate-900">App Preferences</h2>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {[
+                      { key: 'language', label: 'Language', options: [['en','English'],['fr','French'],['es','Spanish']] },
+                      { key: 'timezone', label: 'Timezone', options: [['America/Toronto','Eastern (Toronto)'],['America/Chicago','Central (Chicago)'],['America/Denver','Mountain (Denver)'],['America/Los_Angeles','Pacific (LA)'],['America/Vancouver','Pacific (Vancouver)']] },
+                      { key: 'dateFormat', label: 'Date Format', options: [['MM/DD/YYYY','MM/DD/YYYY'],['DD/MM/YYYY','DD/MM/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']] },
+                      { key: 'theme', label: 'Theme', options: [['light','Light'],['dark','Dark (coming soon)']] },
+                    ].map(({ key, label, options }) => (
+                      <div key={key}>
+                        <label className={labelCls}>{label}</label>
+                        <select value={preferences[key as keyof typeof preferences]}
+                          onChange={e => setPreferences(p => ({ ...p, [key]: e.target.value }))}
+                          className={inputCls}>
+                          {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 pt-5 border-t border-slate-100">
+                <Button variant="primary" onClick={handleSave} disabled={saving}
+                  iconLeft={<Save className="h-4 w-4" />}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </DashboardLayout>

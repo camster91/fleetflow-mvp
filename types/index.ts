@@ -1,5 +1,5 @@
 // Type definitions for FleetFlow
-// These types mirror what would be in Prisma schema but are defined here for SQLite compatibility
+// These types mirror what would be in Prisma schema but are defined here for compatibility
 
 // Plan types for subscription management
 export type PlanType = 'PER_USER' | 'UNLIMITED';

@@ -1,13 +1,13 @@
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
-import { SessionProvider } from 'next-auth/react'
+import { SessionProvider } from '../lib/session'
 import { AuthProvider } from '../context/AuthContext'
 import { Toaster } from 'react-hot-toast'
 import '../styles/globals.css'
 
-export default function App({ Component, pageProps: { session, ...pageProps } }: AppProps) {
+export default function App({ Component, pageProps }: AppProps) {
   return (
-    <SessionProvider session={session}>
+    <SessionProvider>
       <AuthProvider>
         <Head>
           <title>Fleet Manager - Fleet Management Dashboard</title>

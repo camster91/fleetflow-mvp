@@ -1,20 +1,19 @@
-import { useState, useEffect, useRef } from 'react'
-import { 
-  Bell, X, Check, Trash2, Filter, Settings, 
-  Package, Truck, Wrench, Users, AlertTriangle, 
-  CheckCircle, Info, Clock, ChevronRight
+import { useState, useEffect, useRef, useCallback } from 'react'
+import {
+  Bell, X, Check, Trash2, Filter,
+  Package, Truck, Wrench, Users, AlertTriangle,
+  CheckCircle, Info, Clock,
 } from 'lucide-react'
 
 interface Notification {
   id: string
-  type: 'delivery' | 'vehicle' | 'maintenance' | 'announcement' | 'system' | 'alert'
+  type: string
   title: string
   message: string
-  timestamp: string
+  createdAt: string
   read: boolean
-  actionUrl?: string
-  actionLabel?: string
-  priority: 'low' | 'normal' | 'high' | 'urgent'
+  data?: string | null
+  priority?: string
 }
 
 interface NotificationsCenterProps {
@@ -22,330 +21,151 @@ interface NotificationsCenterProps {
   onClose: () => void
 }
 
-// Mock notifications - in production, fetch from API
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'delivery',
-    title: 'Delivery Completed',
-    message: 'Delivery to Acme Corp has been marked as delivered by John Driver.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // 5 mins ago
-    read: false,
-    priority: 'normal',
-    actionUrl: '/?tab=deliveries',
-    actionLabel: 'View Delivery'
-  },
-  {
-    id: '2',
-    type: 'maintenance',
-    title: 'Maintenance Due',
-    message: 'Vehicle "Van 1" is due for oil change in 2 days.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 mins ago
-    read: false,
-    priority: 'high',
-    actionUrl: '/?tab=maintenance',
-    actionLabel: 'Schedule'
-  },
-  {
-    id: '3',
-    type: 'announcement',
-    title: 'Fleet Meeting Tomorrow',
-    message: 'Reminder: Monthly fleet safety meeting at 10 AM in Conference Room A.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-    read: true,
-    priority: 'normal'
-  },
-  {
-    id: '4',
-    type: 'alert',
-    title: 'Vehicle Delayed',
-    message: 'Truck A is running 30 minutes behind schedule due to traffic.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
-    read: true,
-    priority: 'high',
-    actionUrl: '/?tab=vehicles'
-  }
-]
-
 const typeIcons: Record<string, React.ReactNode> = {
+  MAINTENANCE_DUE: <Wrench className="h-5 w-5 text-orange-600" />,
+  VEHICLE_ALERT: <Truck className="h-5 w-5 text-green-600" />,
+  TEAM_INVITE: <Users className="h-5 w-5 text-purple-600" />,
+  BILLING: <Info className="h-5 w-5 text-blue-600" />,
+  SYSTEM: <Info className="h-5 w-5 text-gray-600" />,
+  SECURITY: <AlertTriangle className="h-5 w-5 text-red-600" />,
   delivery: <Package className="h-5 w-5 text-blue-600" />,
-  vehicle: <Truck className="h-5 w-5 text-green-600" />,
   maintenance: <Wrench className="h-5 w-5 text-orange-600" />,
   announcement: <Users className="h-5 w-5 text-purple-600" />,
-  system: <Info className="h-5 w-5 text-gray-600" />,
-  alert: <AlertTriangle className="h-5 w-5 text-red-600" />
+  alert: <AlertTriangle className="h-5 w-5 text-red-600" />,
 }
 
-const priorityColors: Record<string, string> = {
-  low: 'bg-gray-100 text-gray-700',
-  normal: 'bg-blue-100 text-blue-700',
-  high: 'bg-orange-100 text-orange-700',
-  urgent: 'bg-red-100 text-red-700'
+function formatTime(ts: string) {
+  const diff = Date.now() - new Date(ts).getTime()
+  if (diff < 60000) return 'just now'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
+  return `${Math.floor(diff / 86400000)}d ago`
 }
 
 export default function NotificationsCenter({ isOpen, onClose }: NotificationsCenterProps) {
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS)
-  const [filter, setFilter] = useState<'all' | 'unread' | 'high'>('all')
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [filter, setFilter] = useState<'all' | 'unread'>('all')
   const [isLoading, setIsLoading] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
-        onClose()
+  const fetchNotifications = useCallback(async () => {
+    if (!isOpen) return
+    setIsLoading(true)
+    try {
+      const r = await fetch('/api/notifications?limit=30')
+      if (r.ok) {
+        const data = await r.json()
+        setNotifications(data.notifications ?? [])
       }
-    }
+    } catch {}
+    finally { setIsLoading(false) }
+  }, [isOpen])
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
+  useEffect(() => { fetchNotifications() }, [fetchNotifications])
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose()
     }
+    if (isOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen, onClose])
 
-  const filteredNotifications = notifications.filter(n => {
-    if (filter === 'unread') return !n.read
-    if (filter === 'high') return n.priority === 'high' || n.priority === 'urgent'
-    return true
-  })
-
-  const unreadCount = notifications.filter(n => !n.read).length
-  const highPriorityCount = notifications.filter(n => 
-    (n.priority === 'high' || n.priority === 'urgent') && !n.read
-  ).length
-
-  const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ))
+  const markRead = async (ids: string[]) => {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notificationIds: ids }),
+    })
+    setNotifications((prev) => prev.map((n) => ids.includes(n.id) ? { ...n, read: true } : n))
   }
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })))
+  const markAllRead = async () => {
+    await fetch('/api/notifications', { method: 'PUT' })
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
   }
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id))
+  const deleteNotification = async (id: string) => {
+    await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' })
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 
-  const clearAll = () => {
-    setNotifications([])
-  }
-
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
-    
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 7) return `${days}d ago`
-    return date.toLocaleDateString()
-  }
+  const filtered = notifications.filter((n) => filter === 'all' || !n.read)
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
-      
-      {/* Panel */}
-      <div 
-        ref={panelRef}
-        className="relative w-full max-w-md h-full bg-white shadow-2xl flex flex-col animate-slide-in-right"
-      >
+    <div className="fixed inset-0 z-50 flex items-start justify-end pt-16 pr-4" aria-modal="true">
+      <div ref={panelRef} className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col max-h-[80vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Bell className="h-5 w-5 text-gray-700" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </div>
-            <h2 className="font-semibold text-gray-900">Notifications</h2>
-          </div>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+          <div className="flex items-center space-x-2">
+            <Bell className="h-5 w-5 text-slate-700" />
+            <span className="font-semibold text-slate-900">Notifications</span>
             {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="p-2 text-sm text-primary-600 hover:bg-primary-50 rounded-lg transition"
-                title="Mark all as read"
-              >
-                <Check className="h-4 w-4" />
+              <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">{unreadCount}</span>
+            )}
+          </div>
+          <div className="flex items-center space-x-1">
+            {unreadCount > 0 && (
+              <button onClick={markAllRead} className="p-1.5 text-xs text-blue-600 hover:bg-blue-50 rounded-lg flex items-center gap-1">
+                <Check className="h-3.5 w-3.5" /> All read
               </button>
             )}
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition"
-            >
-              <X className="h-5 w-5" />
+            <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg">
+              <X className="h-4 w-4 text-slate-500" />
             </button>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b bg-white">
-          <Filter className="h-4 w-4 text-gray-400" />
-          <div className="flex gap-1">
-            {(['all', 'unread', 'high'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1 text-xs font-medium rounded-full transition ${
-                  filter === f
-                    ? 'bg-primary-100 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {f === 'all' && `All (${notifications.length})`}
-                {f === 'unread' && `Unread (${unreadCount})`}
-                {f === 'high' && `High Priority (${highPriorityCount})`}
-              </button>
-            ))}
-          </div>
+        {/* Filter tabs */}
+        <div className="flex px-4 py-2 gap-2 border-b border-slate-100">
+          {(['all', 'unread'] as const).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                filter === f ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}>
+              {f === 'all' ? 'All' : `Unread${unreadCount > 0 ? ` (${unreadCount})` : ''}`}
+            </button>
+          ))}
         </div>
 
-        {/* Notifications List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredNotifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <Bell className="h-12 w-12 mb-3 opacity-30" />
-              <p className="text-sm">
-                {filter === 'unread' 
-                  ? 'No unread notifications' 
-                  : filter === 'high'
-                  ? 'No high priority notifications'
-                  : 'No notifications'}
-              </p>
+        {/* List */}
+        <div className="overflow-y-auto flex-1">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12 text-slate-400">
+              <Clock className="h-5 w-5 animate-spin mr-2" /> Loading...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+              <CheckCircle className="h-10 w-10 mb-2 text-emerald-400" />
+              <p className="text-sm font-medium">All caught up!</p>
+              <p className="text-xs mt-1">{filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-100">
-              {filteredNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 hover:bg-gray-50 transition group ${
-                    !notification.read ? 'bg-blue-50/50' : ''
-                  }`}
-                >
-                  <div className="flex gap-3">
-                    {/* Icon */}
-                    <div className="flex-shrink-0">
-                      <div className={`p-2 rounded-lg ${
-                        !notification.read ? 'bg-white' : 'bg-gray-100'
-                      }`}>
-                        {typeIcons[notification.type]}
-                      </div>
+            <ul className="divide-y divide-slate-50">
+              {filtered.map((n) => (
+                <li key={n.id} className={`flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors ${
+                  !n.read ? 'bg-blue-50/40' : ''
+                }`}>
+                  <div className="mt-0.5 shrink-0">{typeIcons[n.type] ?? <Info className="h-5 w-5 text-gray-500" />}</div>
+                  <div className="flex-1 min-w-0" onClick={() => !n.read && markRead([n.id])}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`text-sm font-medium truncate ${!n.read ? 'text-slate-900' : 'text-slate-600'}`}>{n.title}</p>
+                      <span className="text-xs text-slate-400 shrink-0">{formatTime(n.createdAt)}</span>
                     </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className={`font-medium text-sm ${
-                            !notification.read ? 'text-gray-900' : 'text-gray-700'
-                          }`}>
-                            {notification.title}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-0.5 line-clamp-2">
-                            {notification.message}
-                          </p>
-                        </div>
-                        
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                          {!notification.read && (
-                            <button
-                              onClick={() => markAsRead(notification.id)}
-                              className="p-1.5 text-primary-600 hover:bg-primary-50 rounded transition"
-                              title="Mark as read"
-                            >
-                              <Check className="h-4 w-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => deleteNotification(notification.id)}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {/* Meta */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          priorityColors[notification.priority]
-                        }`}>
-                          {notification.priority}
-                        </span>
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(notification.timestamp)}
-                        </span>
-                        
-                        {notification.actionUrl && (
-                          <a
-                            href={notification.actionUrl}
-                            className="text-xs text-primary-600 hover:text-primary-700 flex items-center gap-0.5 ml-auto"
-                            onClick={() => markAsRead(notification.id)}
-                          >
-                            {notification.actionLabel || 'View'}
-                            <ChevronRight className="h-3 w-3" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
                   </div>
-                </div>
+                  <button onClick={() => deleteNotification(n.id)} className="shrink-0 p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
-
-        {/* Footer */}
-        {notifications.length > 0 && (
-          <div className="border-t px-4 py-3 bg-gray-50 flex items-center justify-between">
-            <button
-              onClick={clearAll}
-              className="text-sm text-red-600 hover:text-red-700 flex items-center gap-1.5"
-            >
-              <Trash2 className="h-4 w-4" />
-              Clear all
-            </button>
-            <button className="text-sm text-gray-600 hover:text-gray-700 flex items-center gap-1.5">
-              <Settings className="h-4 w-4" />
-              Settings
-            </button>
-          </div>
-        )}
       </div>
-      
-      <style jsx>{`
-        @keyframes slide-in-right {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.2s ease-out;
-        }
-      `}</style>
     </div>
   )
 }

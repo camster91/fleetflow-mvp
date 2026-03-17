@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router'
 import { ShieldAlert, Home, LogOut } from 'lucide-react'
-import { signOut } from 'next-auth/react'
+import { signOut } from '@/lib/session'
 
 export default function UnauthorizedPage() {
   const router = useRouter()

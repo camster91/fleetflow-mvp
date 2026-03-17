@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 import {
   Truck,
   Package,
@@ -19,7 +19,7 @@ import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
-import * as dataService from '../services/dataServiceWithSync';
+import * as dataService from '../services/apiService';
 import { notify } from '../services/notifications';
 import { OnboardingModal } from '../components/onboarding/OnboardingModal';
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
@@ -88,13 +88,20 @@ export default function Dashboard() {
 
   // Load data
   useEffect(() => {
-    const loadData = () => {
+    const loadData = async () => {
       try {
-        setVehicles(dataService.getVehicles());
-        setDeliveries(dataService.getDeliveries());
-        setMaintenanceTasks(dataService.getMaintenanceTasks());
-        setSopCategories(dataService.getSOPCategories());
-        setClients(dataService.getClients());
+        const [v, d, m, s, c] = await Promise.all([
+          dataService.getVehicles(),
+          dataService.getDeliveries(),
+          dataService.getMaintenanceTasks(),
+          dataService.getSOPCategories(),
+          dataService.getClients(),
+        ]);
+        setVehicles(v);
+        setDeliveries(d);
+        setMaintenanceTasks(m);
+        setSopCategories(s);
+        setClients(c);
         setIsLoading(false);
       } catch (error) {
         console.error('Failed to load data:', error);
@@ -146,12 +153,23 @@ export default function Dashboard() {
   ];
 
   // Handlers
-  const refreshData = () => {
-    setVehicles(dataService.getVehicles());
-    setDeliveries(dataService.getDeliveries());
-    setMaintenanceTasks(dataService.getMaintenanceTasks());
-    setSopCategories(dataService.getSOPCategories());
-    setClients(dataService.getClients());
+  const refreshData = async () => {
+    try {
+      const [v, d, m, s, c] = await Promise.all([
+        dataService.getVehicles(),
+        dataService.getDeliveries(),
+        dataService.getMaintenanceTasks(),
+        dataService.getSOPCategories(),
+        dataService.getClients(),
+      ]);
+      setVehicles(v);
+      setDeliveries(d);
+      setMaintenanceTasks(m);
+      setSopCategories(s);
+      setClients(c);
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+    }
   };
 
   const handleAddVehicle = () => {
@@ -170,9 +188,9 @@ export default function Dashboard() {
       title: 'Delete Vehicle',
       message: `Are you sure you want to delete "${vehicle.name}"? This action cannot be undone.`,
       variant: 'danger',
-      onConfirm: () => {
-        dataService.deleteVehicle(vehicle.id);
-        refreshData();
+      onConfirm: async () => {
+        await dataService.deleteVehicle(vehicle.id);
+        await refreshData();
         notify.success(`Vehicle "${vehicle.name}" deleted successfully`);
       },
     });
@@ -493,12 +511,8 @@ export default function Dashboard() {
       <AnnouncementModal
         isOpen={isAnnouncementModalOpen}
         onClose={() => setIsAnnouncementModalOpen(false)}
-        onSend={(message, priority, recipients) => {
-          dataService.addAnnouncement({
-            message,
-            priority,
-            recipients,
-          });
+        onSend={async (_message, _priority, _recipients) => {
+          // AnnouncementModal now calls the API internally before invoking onSend
           setIsAnnouncementModalOpen(false);
           notify.success('Announcement sent successfully');
         }}
@@ -524,25 +538,18 @@ export default function Dashboard() {
       <VehicleFormModal
         isOpen={isVehicleFormOpen}
         onClose={() => setIsVehicleFormOpen(false)}
-        onSubmit={(vehicle) => {
-          if (editingVehicle) {
-            dataService.updateVehicle(vehicle.id, vehicle);
-            notify.success(`Vehicle "${vehicle.name}" updated successfully`);
-          } else {
-            dataService.addVehicle(vehicle);
-            notify.success(`Vehicle "${vehicle.name}" added successfully`);
-          }
-          refreshData();
+        onSubmit={async (vehicle) => {
+          notify.success(editingVehicle ? `Vehicle "${vehicle.name}" updated successfully` : `Vehicle "${vehicle.name}" added successfully`);
+          await refreshData();
         }}
         vehicle={editingVehicle}
       />
       <DeliveryFormModal
         isOpen={isDeliveryFormOpen}
         onClose={() => setIsDeliveryFormOpen(false)}
-        onSubmit={(delivery) => {
-          dataService.addDelivery(delivery);
-          refreshData();
+        onSubmit={async (delivery) => {
           notify.success(`Delivery for "${delivery.customer}" created successfully`);
+          await refreshData();
         }}
         clients={clients}
         vehicles={vehicles}
@@ -550,10 +557,9 @@ export default function Dashboard() {
       <MaintenanceTaskFormModal
         isOpen={isMaintenanceFormOpen}
         onClose={() => setIsMaintenanceFormOpen(false)}
-        onSubmit={(task) => {
-          dataService.addMaintenanceTask(task);
-          refreshData();
+        onSubmit={async (task) => {
           notify.success('Maintenance task scheduled successfully');
+          await refreshData();
         }}
         vehicles={vehicles}
       />

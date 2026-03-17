@@ -1,0 +1,83 @@
+import { createMocks } from 'node-mocks-http';
+import handler from '../../../pages/api/team/invite-details';
+
+jest.mock('../../../lib/prisma', () => ({
+  prisma: {
+    teamMember: { findFirst: jest.fn() },
+    user: { findUnique: jest.fn() },
+  },
+}));
+
+import { prisma } from '../../../lib/prisma';
+
+const baseMember = {
+  id: 'member-1',
+  status: 'PENDING',
+  role: 'MEMBER',
+  invitedBy: 'user-admin-123',
+  invitedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), 
+  team: { name: 'Fleet Co' },
+  user: { name: null, email: 'invitee@example.com' },
+};
+
+const mockInviter = {
+  name: 'Admin User',
+  email: 'admin@fleet.com',
+};
+
+beforeEach(() => jest.clearAllMocks());
+
+describe('GET /api/team/invite-details', () => {
+  it('returns 405 for non-GET', async () => {
+    const { req, res } = createMocks({ method: 'POST' });
+    await handler(req as any, res as any);
+    expect(res._getStatusCode()).toBe(405);
+  });
+
+  it('returns 400 when token missing', async () => {
+    const { req, res } = createMocks({ method: 'GET' });
+    await handler(req as any, res as any);
+    expect(res._getStatusCode()).toBe(400);
+  });
+
+  it('returns 404 when invite not found', async () => {
+    (prisma.teamMember.findFirst as jest.Mock).mockResolvedValue(null);
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'bad-token' } });
+    await handler(req as any, res as any);
+    expect(res._getStatusCode()).toBe(404);
+  });
+
+  it('returns 410 when already accepted', async () => {
+    (prisma.teamMember.findFirst as jest.Mock).mockResolvedValue({ ...baseMember, status: 'ACCEPTED' });
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'member-1' } });
+    await handler(req as any, res as any);
+    expect(res._getStatusCode()).toBe(410);
+  });
+
+  it('returns invite details with real team/inviter data', async () => {
+    (prisma.teamMember.findFirst as jest.Mock).mockResolvedValue(baseMember);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockInviter);
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'member-1' } });
+    await handler(req as any, res as any);
+    expect(res._getStatusCode()).toBe(200);
+    const d = JSON.parse(res._getData());
+    expect(d.invite.teamName).toBe('Fleet Co');
+    expect(d.invite.invitedBy).toBe('Admin User');
+    expect(d.invite.role).toBe('MEMBER');
+    expect(d.invite.isExpired).toBe(false);
+    expect(d.invite.inviteeEmail).toBe('invitee@example.com');
+  });
+
+  it('marks invite as expired when older than 7 days', async () => {
+    const oldMember = {
+      ...baseMember,
+      invitedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+    };
+    (prisma.teamMember.findFirst as jest.Mock).mockResolvedValue(oldMember);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockInviter);
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'member-1' } });
+    await handler(req as any, res as any);
+    const d = JSON.parse(res._getData());
+    expect(d.invite.isExpired).toBe(true);
+  });
+});

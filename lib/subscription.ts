@@ -1,6 +1,6 @@
 import { PRICING_PLANS, getPlanByType, PricingPlan } from '@/config/pricing';
 
-// Note: Prisma with SQLite uses String for enums
+// Note: Prisma uses String for enums (stored as text)
 // PlanType: 'PER_USER' | 'UNLIMITED'
 // SubscriptionStatus: 'TRIAL' | 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'UNPAID'
 

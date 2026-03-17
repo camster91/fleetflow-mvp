@@ -4,7 +4,7 @@ import {
   MapPin, Phone, Search, Zap, TrendingUp, Calendar,
   ChevronRight, X
 } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/session'
 
 interface QuickAction {
   id: string

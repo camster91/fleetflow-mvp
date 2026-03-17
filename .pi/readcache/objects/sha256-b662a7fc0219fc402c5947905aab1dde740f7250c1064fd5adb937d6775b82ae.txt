@@ -1,0 +1,44 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import { prisma } from '../../../lib/prisma';
+
+/** GET /api/team/invite-details?token=[token] — public, no auth needed */
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { token } = req.query;
+  if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
+
+  // Try to find by invitationToken or by id
+  const member = await prisma.teamMember.findFirst({
+    where: {
+      OR: [
+        { invitationToken: token },
+        { id: token },
+      ],
+    },
+    include: {
+      team: { select: { name: true } },
+      invitedBy: { select: { name: true, email: true } },
+      user: { select: { name: true, email: true } },
+    },
+  });
+
+  if (!member) return res.status(404).json({ error: 'Invitation not found' });
+  if (member.status === 'ACCEPTED') return res.status(410).json({ error: 'Invitation already accepted' });
+  if (member.status === 'DECLINED') return res.status(410).json({ error: 'Invitation was declined' });
+
+  const expiresAt = new Date((member as any).createdAt);
+  expiresAt.setDate(expiresAt.getDate() + 7);
+
+  return res.json({
+    invite: {
+      id: member.id,
+      teamName: member.team.name,
+      invitedBy: member.invitedBy?.name || member.invitedBy?.email || 'Unknown',
+      role: member.role,
+      inviteeEmail: member.user?.email || (member as any).invitedEmail,
+      expiresAt: expiresAt.toISOString(),
+      isExpired: expiresAt < new Date(),
+    },
+  });
+}

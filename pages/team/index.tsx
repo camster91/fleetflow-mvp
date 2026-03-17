@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 import { useRouter } from 'next/router';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
@@ -57,38 +57,46 @@ export default function TeamPage() {
 
   const fetchMembers = async () => {
     try {
-      const mockMembers: TeamMember[] = [
-        { id: '1', role: 'OWNER', status: 'ACCEPTED', invitedAt: new Date().toISOString(), joinedAt: new Date().toISOString(), user: { id: 'u1', name: session?.user?.name || 'You', email: session?.user?.email || 'you@example.com', image: null }, invitedByUser: null },
-        { id: '2', role: 'ADMIN', status: 'ACCEPTED', invitedAt: new Date(Date.now() - 86400000 * 30).toISOString(), joinedAt: new Date(Date.now() - 86400000 * 29).toISOString(), user: { id: 'u2', name: 'Sarah Johnson', email: 'sarah@example.com', image: null }, invitedByUser: { name: 'You', email: 'you@example.com' } },
-        { id: '3', role: 'MANAGER', status: 'ACCEPTED', invitedAt: new Date(Date.now() - 86400000 * 15).toISOString(), joinedAt: new Date(Date.now() - 86400000 * 14).toISOString(), user: { id: 'u3', name: 'Mike Chen', email: 'mike@example.com', image: null }, invitedByUser: { name: 'You', email: 'you@example.com' } },
-        { id: '4', role: 'MEMBER', status: 'PENDING', invitedAt: new Date(Date.now() - 86400000 * 2).toISOString(), joinedAt: null, user: null, invitedByUser: { name: 'You', email: 'you@example.com' } },
-      ];
-      setMembers(mockMembers);
-    } catch (error) {
-      notify.error('Failed to load team members');
-    } finally {
-      setIsLoading(false);
-    }
+      const r = await fetch('/api/team');
+      if (r.ok) setMembers(await r.json());
+      else notify.error('Failed to load team members');
+    } catch { notify.error('Failed to load team members'); }
+    finally { setIsLoading(false); }
   };
 
   const handleChangeRole = async (memberId: string, newRole: TeamRole) => {
     try {
-      setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
-      notify.success('Role updated successfully');
-    } catch (error) { notify.error('Failed to update role'); }
+      const r = await fetch('/api/team', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberId, role: newRole }) });
+      if (r.ok) { setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m)); notify.success('Role updated'); }
+      else notify.error('Failed to update role');
+    } catch { notify.error('Failed to update role'); }
   };
 
   const handleRemoveMember = async (memberId: string) => {
     if (!confirm('Are you sure you want to remove this member?')) return;
     try {
-      setMembers(prev => prev.filter(m => m.id !== memberId));
-      notify.success('Member removed successfully');
-    } catch (error) { notify.error('Failed to remove member'); }
+      const r = await fetch('/api/team', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberId }) });
+      if (r.ok) { setMembers(prev => prev.filter(m => m.id !== memberId)); notify.success('Member removed'); }
+      else notify.error('Failed to remove member');
+    } catch { notify.error('Failed to remove member'); }
   };
 
   const handleResendInvite = async (memberId: string) => {
-    try { notify.success('Invitation resent successfully'); }
-    catch (error) { notify.error('Failed to resend invitation'); }
+    try {
+      const r = await fetch('/api/team/resend-invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      });
+      if (r.ok) {
+        notify.success('Invitation resent successfully');
+      } else {
+        const d = await r.json();
+        notify.error(d.error || 'Failed to resend invitation');
+      }
+    } catch {
+      notify.error('Failed to resend invitation');
+    }
   };
 
   const filteredMembers = members.filter(member => {
