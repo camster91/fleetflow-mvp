@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession, signIn } from '@/lib/session';
 import { AlertCircle, Clock, RefreshCw, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 

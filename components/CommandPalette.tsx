@@ -5,7 +5,7 @@ import {
   ChevronRight, Sparkles, Clock, Star
 } from 'lucide-react'
 import { useRouter } from 'next/router'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/session'
 
 interface Command {
   id: string

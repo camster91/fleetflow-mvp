@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -12,6 +12,31 @@ import { notify } from '../../services/notifications';
 export default function ProfileSettingsPage() {
   const { data: session, update } = useSession();
   const [isLoading, setIsLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarUpload = async (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      try {
+        const res = await fetch('/api/settings/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl }),
+        });
+        if (res.ok) {
+          await update({});
+          notify.success('Avatar updated');
+        } else {
+          notify.error('Failed to upload avatar');
+        }
+      } catch {
+        notify.error('Failed to upload avatar');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const [profile, setProfile] = useState({
     name: session?.user?.name || '',
     email: session?.user?.email || '',
@@ -22,10 +47,41 @@ export default function ProfileSettingsPage() {
     isPublic: false,
   });
 
+  React.useEffect(() => {
+    fetch('/api/settings/profile')
+      .then(r => r.json())
+      .then(data => {
+        if (data.user) {
+          const prefs = data.user.prefs?.preferences ?? {};
+          setProfile(prev => ({
+            ...prev,
+            name: data.user.name ?? prev.name,
+            email: data.user.email ?? prev.email,
+            phone: data.user.prefs?.phone ?? prev.phone,
+            bio: data.user.prefs?.bio ?? prev.bio,
+            timezone: prefs.timezone ?? prev.timezone,
+            language: prefs.language ?? prev.language,
+            isPublic: prefs.isPublic ?? prev.isPublic,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      // API call would go here
+      const res = await fetch('/api/settings/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profile.name,
+          phone: profile.phone,
+          bio: profile.bio,
+          preferences: { timezone: profile.timezone, language: profile.language, isPublic: profile.isPublic },
+        }),
+      });
+      if (!res.ok) throw new Error('Save failed');
       await update({ name: profile.name });
       notify.success('Profile updated successfully');
     } catch (error) {
@@ -57,7 +113,18 @@ export default function ProfileSettingsPage() {
               <div className="w-24 h-24 bg-blue-900 rounded-full flex items-center justify-center text-white text-3xl font-bold">
                 {profile.name.charAt(0) || 'U'}
               </div>
-              <button className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md border border-slate-200 hover:bg-slate-50">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
+              />
+              <button
+                type="button"
+                className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md border border-slate-200 hover:bg-slate-50"
+                onClick={() => avatarInputRef.current?.click()}
+              >
                 <Camera className="h-4 w-4 text-slate-600" />
               </button>
             </div>
@@ -66,7 +133,7 @@ export default function ProfileSettingsPage() {
                 Upload a new avatar. Large files will be resized automatically.
               </p>
               <div className="flex gap-3">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => avatarInputRef.current?.click()}>
                   Upload New
                 </Button>
                 <Button variant="ghost" size="sm" className="text-red-600">

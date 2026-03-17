@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { PageHeader } from '../PageHeader';
 import { Card } from '../ui/Card';

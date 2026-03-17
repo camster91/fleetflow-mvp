@@ -1,0 +1,176 @@
+/**
+ * API-backed data service.
+ * Replaces the localStorage-based dataService.
+ * All data is shared across users (single-tenant fleet data).
+ */
+import type {
+  Vehicle, Delivery, MaintenanceTask, Client,
+  SOPCategory, VendingMachine, Announcement,
+} from '../lib/fleet'
+
+export type {
+  Vehicle, Delivery, MaintenanceTask, Client,
+  SOPCategory, VendingMachine, Announcement,
+  LocationCoordinates, ContactPerson, DeliveryPhoto, VendingMachineNote, ActivityItem,
+} from '../lib/fleet'
+
+// ─── Generic fetch helpers ────────────────────────────────────────────────────
+
+async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || `Request failed: ${res.status}`)
+  }
+  return res.json()
+}
+
+const get = <T>(url: string) => apiFetch<T>(url)
+const post = <T>(url: string, body: any) => apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
+const put = <T>(url: string, body: any) => apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) })
+const del = <T>(url: string) => apiFetch<T>(url, { method: 'DELETE' })
+
+// ─── Vehicles ─────────────────────────────────────────────────────────────────
+
+export const getVehicles = () => get<Vehicle[]>('/api/vehicles')
+export const addVehicle = (v: Omit<Vehicle, 'id'>) => post<Vehicle>('/api/vehicles', v)
+export const updateVehicle = (id: string, v: Partial<Vehicle>) => put<Vehicle>(`/api/vehicles/${id}`, v)
+export const deleteVehicle = (id: string) => del<{ success: boolean }>(`/api/vehicles/${id}`)
+
+// ─── Deliveries ───────────────────────────────────────────────────────────────
+
+export const getDeliveries = () => get<Delivery[]>('/api/deliveries')
+export const addDelivery = (d: Omit<Delivery, 'id'>) => post<Delivery>('/api/deliveries', d)
+export const updateDelivery = (id: string, d: Partial<Delivery>) => put<Delivery>(`/api/deliveries/${id}`, d)
+export const deleteDelivery = (id: string) => del<{ success: boolean }>(`/api/deliveries/${id}`)
+
+// ─── Maintenance ──────────────────────────────────────────────────────────────
+
+export const getMaintenanceTasks = () => get<MaintenanceTask[]>('/api/maintenance')
+export const addMaintenanceTask = (t: Omit<MaintenanceTask, 'id'>) => post<MaintenanceTask>('/api/maintenance', t)
+export const updateMaintenanceTask = (id: string, t: Partial<MaintenanceTask>) =>
+  put<MaintenanceTask>(`/api/maintenance/${id}`, t)
+export const deleteMaintenanceTask = (id: string) => del<{ success: boolean }>(`/api/maintenance/${id}`)
+
+// ─── Clients ──────────────────────────────────────────────────────────────────
+
+export const getClients = () => get<Client[]>('/api/clients')
+export const addClient = (c: Omit<Client, 'id' | 'created' | 'updated'>) => post<Client>('/api/clients', c)
+export const updateClient = (id: string, c: Partial<Client>) => put<Client>(`/api/clients/${id}`, c)
+export const deleteClient = (id: string) => del<{ success: boolean }>(`/api/clients/${id}`)
+export const getClientById = async (id: string) => get<Client>(`/api/clients/${id}`)
+export const searchClients = async (query: string): Promise<Client[]> => {
+  const clients = await getClients()
+  const q = query.toLowerCase()
+  return clients.filter(
+    (c) =>
+      c.name.toLowerCase().includes(q) ||
+      c.businessName?.toLowerCase().includes(q) ||
+      c.address.toLowerCase().includes(q) ||
+      c.type.toLowerCase().includes(q)
+  )
+}
+
+// ─── SOP Categories (stored as JSON blob per org for now) ─────────────────────
+// These are lightweight enough to keep in DB as UserData blobs shared via /api/sync-data
+// until a full SOP module is built. We expose empty stubs here.
+
+export const getSOPCategories = (): Promise<SOPCategory[]> =>
+  get<{ data: SOPCategory[] }>('/api/sync-data?dataType=sop')
+    .then((r) => r.data ?? [])
+    .catch(() => [])
+
+export const addSOPCategory = async (cat: Omit<SOPCategory, 'id'>): Promise<SOPCategory> => {
+  const cats = await getSOPCategories()
+  const newCat: SOPCategory = { ...cat, id: `sop-${Date.now()}`, lastUpdated: new Date().toISOString() }
+  await post('/api/sync-data?dataType=sop', { data: [...cats, newCat] })
+  return newCat
+}
+
+export const updateSOPCategory = async (id: string, updates: Partial<SOPCategory>): Promise<SOPCategory | null> => {
+  const cats = await getSOPCategories()
+  const idx = cats.findIndex((c) => c.id === id)
+  if (idx === -1) return null
+  cats[idx] = { ...cats[idx], ...updates, lastUpdated: new Date().toISOString() }
+  await post('/api/sync-data?dataType=sop', { data: cats })
+  return cats[idx]
+}
+
+export const deleteSOPCategory = async (id: string): Promise<boolean> => {
+  const cats = await getSOPCategories()
+  const filtered = cats.filter((c) => c.id !== id)
+  if (filtered.length === cats.length) return false
+  await post('/api/sync-data?dataType=sop', { data: filtered })
+  return true
+}
+
+// ─── Vending Machines (also kept as sync-data blob for now) ───────────────────
+
+export const getVendingMachines = (): Promise<VendingMachine[]> =>
+  get<{ data: VendingMachine[] }>('/api/sync-data?dataType=vending-machines')
+    .then((r) => r.data ?? [])
+    .catch(() => [])
+
+export const addVendingMachine = async (m: Omit<VendingMachine, 'id' | 'created' | 'updated'>): Promise<VendingMachine> => {
+  const machines = await getVendingMachines()
+  const now = new Date().toISOString()
+  const newM: VendingMachine = { ...m, id: `vm-${Date.now()}`, created: now, updated: now, driverNotes: [] }
+  await post('/api/sync-data?dataType=vending-machines', { data: [...machines, newM] })
+  return newM
+}
+
+export const updateVendingMachine = async (id: string, updates: Partial<VendingMachine>): Promise<VendingMachine | null> => {
+  const machines = await getVendingMachines()
+  const idx = machines.findIndex((m) => m.id === id)
+  if (idx === -1) return null
+  machines[idx] = { ...machines[idx], ...updates, updated: new Date().toISOString() }
+  await post('/api/sync-data?dataType=vending-machines', { data: machines })
+  return machines[idx]
+}
+
+export const deleteVendingMachine = async (id: string): Promise<boolean> => {
+  const machines = await getVendingMachines()
+  const filtered = machines.filter((m) => m.id !== id)
+  if (filtered.length === machines.length) return false
+  await post('/api/sync-data?dataType=vending-machines', { data: filtered })
+  return true
+}
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+
+export const getAnnouncements = (): Promise<Announcement[]> =>
+  get<{ data: Announcement[] }>('/api/sync-data?dataType=announcements')
+    .then((r) => r.data ?? [])
+    .catch(() => [])
+
+export const addAnnouncement = async (a: Omit<Announcement, 'id'>): Promise<Announcement> => {
+  const anns = await getAnnouncements()
+  const newA: Announcement = {
+    ...a, id: `ann-${Date.now()}`, timestamp: new Date().toISOString(), read: false,
+  }
+  await post('/api/sync-data?dataType=announcements', { data: [newA, ...anns] })
+  return newA
+}
+
+// ─── Dashboard stats helper ───────────────────────────────────────────────────
+
+export const getDashboardStats = async () => {
+  const [vehicles, deliveries, tasks] = await Promise.all([
+    getVehicles().catch(() => [] as Vehicle[]),
+    getDeliveries().catch(() => [] as Delivery[]),
+    getMaintenanceTasks().catch(() => [] as MaintenanceTask[]),
+  ])
+  
+  return {
+    totalVehicles: vehicles.length,
+    activeVehicles: vehicles.filter((v) => v.status === 'active').length,
+    totalDeliveries: deliveries.length,
+    pendingDeliveries: deliveries.filter((d) => d.status === 'pending').length,
+    completedDeliveries: deliveries.filter((d) => d.status === 'delivered').length,
+    totalMaintenanceTasks: tasks.length,
+    pendingMaintenanceTasks: tasks.filter((t) => !t.completed).length,
+  }
+}

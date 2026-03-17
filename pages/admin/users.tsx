@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import AdminUserManagement from '../../components/AdminUserManagement';
 import { Shield } from 'lucide-react';

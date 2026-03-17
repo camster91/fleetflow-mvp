@@ -7,11 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// Note: SQLite doesn't support native enums, so we use String with validation
 
 model User {
   id            String    @id @default(cuid())
@@ -51,7 +49,7 @@ model User {
   onboardingCompleted Boolean @default(false)
   onboardingStep      Int     @default(0)
 
-  // Notification preferences (stored as JSON string in SQLite)
+  // Notification preferences (JSON string)
   notificationPreferences String? @default("{}")
 
   // Session management
@@ -85,6 +83,8 @@ model User {
   clients Client[]
   sopCategories SOPCategory[]
   vendingMachines VendingMachine[]
+  announcements   Announcement[]
+  taskShareLinks TaskShareLink[]
 
   @@index([email])
   @@index([googleId])
@@ -175,6 +175,7 @@ model Team {
   clients      Client[]
   sopCategories SOPCategory[]
   vendingMachines VendingMachine[]
+  announcements   Announcement[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -184,7 +185,7 @@ model Team {
   address       String?
   phone         String?
   businessHours String?
-  branding      String?  // Custom colors, etc. (JSON string for SQLite)
+  branding      String?  // Custom colors, etc. (JSON string)
 
   @@index([ownerId])
 }
@@ -214,7 +215,7 @@ model Notification {
   type        String   // MAINTENANCE_DUE, VEHICLE_ALERT, TEAM_INVITE, BILLING, SYSTEM, SECURITY
   title       String
   message     String
-  data        String?  // Flexible data storage (JSON string for SQLite)
+  data        String?  // Flexible data storage (JSON string)
   read        Boolean  @default(false)
   readAt      DateTime?
   createdAt   DateTime @default(now())
@@ -339,10 +340,10 @@ model Delivery {
   parkingInstructions String?
   dropoffInstructions String?
   
-  // Contact information (stored as JSON in SQLite)
+  // Contact information (JSON string)
   contactPerson      String?  // JSON string: ContactPerson
-  
-  // Access information (stored as JSON arrays in SQLite)
+
+  // Access information (JSON string)
   accessCodes        String?  // JSON string: string[]
   securityNotes      String?
   businessHours      String?
@@ -363,11 +364,11 @@ model Delivery {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   
-  // Location coordinates (stored as JSON in SQLite)
+  // Location coordinates (JSON string)
   parkingLocation   String?  // JSON string: LocationCoordinates
   dropoffLocation   String?  // JSON string: LocationCoordinates
-  
-  // Photos (stored as JSON array in SQLite)
+
+  // Photos (JSON string)
   photos            String?  // JSON string: DeliveryPhoto[]
   
   // Indexes
@@ -383,6 +384,7 @@ model MaintenanceTask {
   id                String   @id @default(cuid())
   title             String
   type              String
+  vehicleName       String?  // denormalized vehicle name for display
   dueDate           DateTime
   priority          String   @default("medium") // high, medium, low
   completed         Boolean  @default(false)
@@ -395,14 +397,15 @@ model MaintenanceTask {
   costEstimate      Float?
   
   // Relationships
-  vehicleId         String
-  vehicle           Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId         String?  // optional FK to Vehicle
+  vehicle           Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
   ownerId           String
   owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId            String?
   team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  shareLinks        TaskShareLink[]
   
-  // Parts needed (stored as JSON array in SQLite)
+  // Parts needed (JSON string)
   partsNeeded       String?  // JSON string: string[]
   
   // Timestamps
@@ -446,15 +449,15 @@ model Client {
   teamId            String?
   team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   
-  // Contact person (stored as JSON in SQLite)
+  // Contact person (JSON string)
   contactPerson     String?  // JSON string: ContactPerson
-  
-  // Preferences (stored as JSON arrays in SQLite)
+
+  // Preferences (JSON string)
   preferredDeliveryTimes String?  // JSON string: string[]
   accessCodes            String?  // JSON string: string[]
   specialRequirements    String?  // JSON string: string[]
-  
-  // Location data (stored as JSON in SQLite)
+
+  // Location data (JSON string)
   primaryLocation   String?  // JSON string: LocationCoordinates
   parkingLocation   String?  // JSON string: LocationCoordinates
   dropoffLocation   String?  // JSON string: LocationCoordinates
@@ -463,7 +466,7 @@ model Client {
   parkingInstructions  String?
   dropoffInstructions  String?
   
-  // Photos (stored as JSON array in SQLite)
+  // Photos (JSON string)
   locationPhotos    String?  // JSON string: DeliveryPhoto[]
   
   // Timestamps
@@ -521,7 +524,7 @@ model VendingMachine {
   teamId            String?
   team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
   
-  // Notes (stored as JSON array in SQLite)
+  // Notes (JSON string)
   driverNotes       String?  // JSON string: VendingMachineNote[]
   
   // Timestamps
@@ -554,4 +557,59 @@ model UserData {
   // Indexes
   @@index([userId])
   @@index([dataType])
+}
+
+// Activity / audit log for the activity feed
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String?
+  userRole    String?
+  action      String   // created, updated, deleted, completed, status_changed
+  entityType  String   // vehicle, delivery, maintenance, client, user
+  entityId    String?
+  entityName  String?
+  description String
+  metadata    String?  // JSON
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  message     String
+  priority    String   @default("low") // low, normal, high, urgent
+  type        String   @default("general") // system, maintenance, delivery, general
+  category    String?
+  expiresAt   DateTime?
+  actionUrl   String?
+  actionLabel String?
+  author      String?
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([teamId])
+  @@index([createdAt])
+}
+
+model TaskShareLink {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  taskId    String
+  task      MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  ownerId   String
+  owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  usedAt    DateTime?
+
+  @@index([token])
+  @@index([taskId])
 }

@@ -1,6 +1,8 @@
-import { getToken } from 'next-auth/jwt'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import jwt from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'dev-only-placeholder-not-for-production'
 
 // Marketing / SaaS pages that should redirect to login (private deployment)
 const REDIRECT_TO_LOGIN = new Set([
@@ -30,12 +32,24 @@ const PROTECTED_PREFIXES = [
   '/report',
 ]
 
-const PUBLIC_API_PREFIXES = ['/api/auth']
+const PUBLIC_API_PREFIXES = ['/api/auth', '/api/task']
+
+const PUBLIC_PREFIXES = ['/task']
+
+function getTokenPayload(req: NextRequest) {
+  const token = req.cookies.get('token')?.value
+  if (!token) return null
+  try {
+    return jwt.verify(token, JWT_SECRET) as { sub: string; role: string }
+  } catch {
+    return null
+  }
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Let NextAuth API and static files pass through
+  // Let auth API and static files pass through
   if (
     PUBLIC_API_PREFIXES.some(p => pathname.startsWith(p)) ||
     pathname.startsWith('/_next') ||
@@ -51,18 +65,22 @@ export async function middleware(req: NextRequest) {
   if (
     REDIRECT_TO_LOGIN.has(pathname) ||
     pathname.startsWith('/blog') ||
-    pathname.startsWith('/help') ||
-    pathname.startsWith('/billing')
+    pathname.startsWith('/help')
   ) {
     return NextResponse.redirect(new URL('/auth/login', req.url))
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+  const token = getTokenPayload(req)
   const isAuthPage = pathname.startsWith('/auth')
 
   // Authenticated user hits an auth page → send to dashboard
   if (isAuthPage && token) {
     return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
+  // Public routes that don't need auth
+  if (PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+    return NextResponse.next()
   }
 
   // Protected route without a session → send to login

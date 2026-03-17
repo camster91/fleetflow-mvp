@@ -32,6 +32,10 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
   const isEditing = !!vehicle
   const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
   
+  useEffect(() => {
+    if (isOpen) setRecents(recentItems.getRecentItems());
+  }, [isOpen]);
+  
   const [formData, setFormData] = useState<{
     name: string
     vehicleType: string
@@ -140,14 +144,14 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
       let result: dataService.Vehicle
       
       if (isEditing && vehicle) {
-        const updated = dataService.updateVehicle(vehicle.id, {
+        const updated = await dataService.updateVehicle(vehicle.id, {
           ...formData,
           eta: vehicle.eta || 'N/A'
         })
         if (!updated) throw new Error('Failed to update vehicle')
         result = updated
       } else {
-        result = dataService.addVehicle({
+        result = await dataService.addVehicle({
           ...formData,
           eta: 'N/A'
         })

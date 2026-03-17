@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/session'
 import { 
   Users, Shield, UserCheck, UserX, Edit2, Trash2, 
   Eye, EyeOff, Search, AlertTriangle, CheckCircle, X,

@@ -151,6 +151,7 @@ export default function AutocompleteInput({
         
         {inputValue && (
           <button
+            type="button"
             onClick={handleClear}
             className="absolute right-8 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
           >
@@ -177,6 +178,7 @@ export default function AutocompleteInput({
               </div>
               {filteredRecent.map((item, index) => (
                 <button
+                  type="button"
                   key={`recent-${item}`}
                   onClick={() => handleSelect(item)}
                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition flex items-center gap-2 ${
@@ -207,6 +209,7 @@ export default function AutocompleteInput({
               </div>
               {filteredSuggestions.map((item, index) => (
                 <button
+                  type="button"
                   key={`sugg-${item}`}
                   onClick={() => handleSelect(item)}
                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition flex items-center gap-2 ${
@@ -239,6 +242,7 @@ export default function AutocompleteInput({
                 <div className="border-t border-gray-100" />
               )}
               <button
+                type="button"
                 onClick={() => handleSelect(inputValue)}
                 className="w-full px-3 py-2 text-left text-sm text-primary-600 hover:bg-primary-50 transition"
               >

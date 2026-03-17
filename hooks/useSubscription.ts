@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 import { PlanType } from '@/lib/subscription';
 import { PricingPlan } from '@/config/pricing';
 

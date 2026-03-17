@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, signIn } from 'next-auth/react';
+import { useSession, signIn } from '@/lib/session';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -32,18 +32,24 @@ export default function AcceptInvitePage() {
 
   useEffect(() => {
     if (!token || typeof token !== 'string') return;
-
-    // In a real app, fetch invite details from API
-    // For now, using mock data
-    setTimeout(() => {
-      setInvite({
-        teamName: 'Acme Logistics',
-        invitedBy: 'John Smith',
-        role: 'Manager',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-      setIsLoading(false);
-    }, 1000);
+    fetch(`/api/team/invite-details?token=${encodeURIComponent(token)}`)
+      .then(async r => {
+        if (!r.ok) {
+          const d = await r.json().catch(() => ({}));
+          setError(d.error || 'Invitation not found or expired');
+        } else {
+          const d = await r.json();
+          setInvite({
+            teamName: d.invite.teamName,
+            invitedBy: d.invite.invitedBy,
+            role: d.invite.role,
+            expiresAt: d.invite.expiresAt,
+          });
+          if (d.invite.isExpired) setError('This invitation has expired');
+        }
+      })
+      .catch(() => setError('Failed to load invitation details'))
+      .finally(() => setIsLoading(false));
   }, [token]);
 
   const handleAccept = async () => {

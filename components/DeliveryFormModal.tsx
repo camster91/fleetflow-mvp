@@ -25,6 +25,10 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
   const isEditing = !!delivery
   const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
   
+  useEffect(() => {
+    if (isOpen) setRecents(recentItems.getRecentItems());
+  }, [isOpen]);
+  
   const [formData, setFormData] = useState<{
     customer: string
     address: string
@@ -198,11 +202,11 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
       let result: dataService.Delivery
       
       if (isEditing && delivery) {
-        const updated = dataService.updateDelivery(delivery.id, deliveryData)
+        const updated = await dataService.updateDelivery(delivery.id, deliveryData)
         if (!updated) throw new Error('Failed to update delivery')
         result = updated
       } else {
-        result = dataService.addDelivery(deliveryData)
+        result = await dataService.addDelivery(deliveryData)
       }
       
       // Save to recent items for autofill

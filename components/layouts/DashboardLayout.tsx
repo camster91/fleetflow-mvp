@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useSession, signOut } from 'next-auth/react';
-import { LayoutDashboard, Car, Package, Wrench, Users, BarChart3, Settings, Search, Menu, X, ChevronDown, ChevronRight, LogOut, HelpCircle, FileText, MoreHorizontal } from 'lucide-react';
+import { useSession, signOut } from '@/lib/session';
+import { LayoutDashboard, Car, Package, Wrench, Users, BarChart3, Settings, Search, Menu, X, ChevronDown, ChevronRight, LogOut, HelpCircle, FileText, MoreHorizontal, BookOpen, ShoppingCart, Building } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface NavItem { id: string; label: string; icon: React.ElementType; href?: string; children?: { id: string; label: string; href: string }[]; }
@@ -13,6 +13,9 @@ const navItems: NavItem[] = [
   { id: 'deliveries', label: 'Deliveries', icon: Package, href: '/deliveries' },
   { id: 'maintenance', label: 'Maintenance', icon: Wrench, href: '/maintenance' },
   { id: 'team', label: 'Team', icon: Users, href: '/team' },
+  { id: 'clients', label: 'Clients', icon: Building, href: '/clients' },
+  { id: 'sop', label: 'SOPs & Procedures', icon: BookOpen, href: '/sop' },
+  { id: 'vending', label: 'Vending Machines', icon: ShoppingCart, href: '/vending-machines' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
 ];
 
@@ -33,7 +36,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ role, currentPath, onOpenSi
     ],
     dispatch: [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
-      { href: '/deliveries', icon: Package, label: 'Clients' },
+      { href: '/clients', icon: Building, label: 'Clients' },
       { href: '/vehicles', icon: Car, label: 'Vehicles' },
       { href: '/team', icon: Users, label: 'Team' },
       { href: '#more', icon: MoreHorizontal, label: 'More' },
@@ -127,6 +130,33 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
   const [expandedSections, setExpandedSections] = useState<string[]>(['vehicles']);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any>(null);
+  const [searchDropOpen, setSearchDropOpen] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const doSearch = (q: string) => {
+    setSearchQuery(q);
+    clearTimeout(debounceRef.current);
+    if (q.length < 2) { setSearchResults(null); setSearchDropOpen(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+        if (r.ok) { setSearchResults(await r.json()); setSearchDropOpen(true); }
+      } catch {}
+    }, 300);
+  };
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchDropOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Lock body scroll when mobile sidebar is open
   useEffect(() => {
@@ -298,9 +328,42 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <div className="hidden md:block">
-                <div className="relative">
+                <div className="relative" ref={searchRef}>
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <input type="text" placeholder="Search..." className="w-64 pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all" />
+                  <input
+                    type="text"
+                    placeholder="Search vehicles, deliveries, clients..."
+                    value={searchQuery}
+                    onChange={e => doSearch(e.target.value)}
+                    onFocus={() => searchQuery.length >= 2 && setSearchDropOpen(true)}
+                    className="w-64 pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all"
+                  />
+                  {searchDropOpen && searchResults && (
+                    <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+                      {['vehicles','deliveries','clients','maintenance'].map(cat => {
+                        const items = searchResults[cat] ?? [];
+                        if (!items.length) return null;
+                        const hrefs: Record<string,string> = { vehicles: '/vehicles', deliveries: '/deliveries', clients: '/clients', maintenance: '/maintenance' };
+                        return (
+                          <div key={cat}>
+                            <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wide">{cat}</p>
+                            {items.map((item: any) => (
+                              <a key={item.id} href={hrefs[cat]} onClick={() => setSearchDropOpen(false)}
+                                className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-sm text-slate-700">
+                                <span className="font-medium">{item.name || item.customer || item.vehicle}</span>
+                                {(item.address || item.location || item.driver) && (
+                                  <span className="text-slate-400 text-xs truncate">{item.address || item.location || item.driver}</span>
+                                )}
+                              </a>
+                            ))}
+                          </div>
+                        );
+                      })}
+                      {['vehicles','deliveries','clients','maintenance'].every(c => !(searchResults[c]?.length)) && (
+                        <p className="px-3 py-4 text-sm text-slate-400 text-center">No results for "{searchQuery}"</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <button onClick={() => setSearchOpen(!searchOpen)} className="md:hidden p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg">

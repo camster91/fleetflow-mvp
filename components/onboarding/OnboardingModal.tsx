@@ -18,7 +18,7 @@ import {
   saveLocalOnboardingProgress,
   completeOnboarding,
 } from '../../lib/onboarding';
-import { useSession } from 'next-auth/react';
+import { useSession } from '@/lib/session';
 
 interface OnboardingModalProps {
   isOpen: boolean;
