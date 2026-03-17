@@ -21,9 +21,7 @@ services:
             - NODE_ENV=production
             - PORT=3000
             - HOST=0.0.0.0
-            - NEXT_PUBLIC_SUPABASE_URL=https://vmvojkmaiuwidrduiotn.supabase.co
-            - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtdm9qa21haXV3aWRyZHVpb3RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODY4ODksImV4cCI6MjA4Nzk2Mjg4OX0.iXMJCfzWOtPlvCNYZsIjjNZniPbkvoBkzbJYtj9bEyE
-            - DATABASE_URL=file:/app/data/fleet.db
+            - DATABASE_URL=postgresql://fleetflow:Fleet2026!@10.0.1.28:5432/fleetflow
             - NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION=false
         volumes:
             - /tmp/new-deploy:/app

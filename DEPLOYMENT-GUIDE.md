@@ -98,8 +98,8 @@ The `/api/sync-data` endpoint doesn't exist yet. This means:
 
 ### Authentication Errors
 If users can't log in after rebuild:
-1. Check Supabase configuration (new auth system)
-2. Verify `.env` variables are set
+1. Check JWT + Postgres auth configuration
+2. Verify `.env` variables are set (DATABASE_URL, JWT_SECRET, NEXTAUTH_SECRET)
 3. Fallback: Use `admin@fleetflow.com` / `admin123`
 
 ### Database Errors

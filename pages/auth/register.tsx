@@ -191,7 +191,7 @@ export default function RegisterPage() {
 
       {step === 1 && (
         <>
-          {/* Social Login Options - Disabled until configured in Supabase
+          {/* Social Login Options - Disabled until OAuth providers configured
           <div className="grid grid-cols-2 gap-3 mb-6">
             <Button
               type="button"
