@@ -49,8 +49,6 @@ const nextConfig = {
   
   // Webpack optimization
   webpack: (config, { isServer }) => {
-    // Alias removed: now using real next-auth/react (Supabase shim deleted)
-
     // Optimize chunk size
     if (!isServer) {
       config.optimization.splitChunks = {
