@@ -568,6 +568,56 @@ ${APP_URL}
   });
 }
 
+// Send magic login code email
+export async function sendLoginCodeEmail(
+  email: string,
+  name: string,
+  code: string
+): Promise<{ success: boolean; error?: string }> {
+  const html = getBaseEmailTemplate(`
+    <h2 style="margin-top: 0; color: #1e293b;">Your Login Code</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>Use the code below to sign in to your ${APP_NAME} account:</p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <div style="display: inline-block; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px 40px;">
+        <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1e3a8a;">${code}</span>
+      </div>
+    </div>
+
+    <div class="warning">
+      <strong>This code expires in 10 minutes.</strong> If you didn't request this, you can safely ignore this email.
+    </div>
+
+    <p style="color: #64748b; font-size: 14px;">
+      For security, never share this code with anyone. ${APP_NAME} will never ask you for this code.
+    </p>
+  `);
+
+  const text = `
+Your Login Code
+
+Hi ${name || 'there'},
+
+Your ${APP_NAME} login code is: ${code}
+
+This code expires in 10 minutes.
+
+If you didn't request this, you can safely ignore this email.
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim();
+
+  return sendEmail({
+    to: email,
+    subject: `${code} is your ${APP_NAME} login code`,
+    html,
+    text,
+  });
+}
+
 // Re-export for convenience
 export async function sendTeamInvitationEmail(
   email: string,

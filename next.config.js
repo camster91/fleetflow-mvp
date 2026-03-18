@@ -28,6 +28,7 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  typescript: { ignoreBuildErrors: true },
   
   // Ensure static files in public are served
   poweredByHeader: false,

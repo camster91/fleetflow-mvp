@@ -22,6 +22,9 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Public registration is disabled — accounts are created by admins only
+  return res.status(403).json({ error: 'Registration is disabled. Contact your administrator for access.' });
+
   // Apply rate limiting
   const ip = getClientIP(req);
   const allowed = await rateLimitMiddleware(req, res, 'register', ip);
