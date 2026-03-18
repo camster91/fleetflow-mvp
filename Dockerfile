@@ -11,6 +11,10 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
 
+# Copy prisma schema and generate client
+COPY prisma ./prisma
+RUN npx prisma generate
+
 # Copy source code
 COPY . .
 
@@ -20,15 +24,15 @@ ARG NEXTAUTH_SECRET
 ARG DATABASE_URL
 ENV NEXTAUTH_URL=$NEXTAUTH_URL
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-ENV DATABASE_URL=$DATABASE_URL
+ENV DATABASE_URL=${DATABASE_URL:-file:./prisma/dev.db}
 
 RUN npm run build
 
 # Production image
 FROM node:20-alpine AS runner
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install curl for health checks and openssl for Prisma
+RUN apk add --no-cache curl openssl
 
 # Set working directory
 WORKDIR /app
@@ -41,6 +45,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
 # Set environment variables
 ENV NODE_ENV=production
