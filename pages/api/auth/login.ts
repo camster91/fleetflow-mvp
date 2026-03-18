@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
-import { verifyPassword, signToken } from '../../../lib/auth'
+import { signToken } from '../../../lib/auth'
 import { serialize } from 'cookie'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -8,17 +8,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { email, password } = req.body
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' })
+  const { email, code } = req.body
+  if (!email || !code) {
+    return res.status(400).json({ error: 'Email and code are required' })
   }
 
+  const normalizedEmail = email.toLowerCase().trim()
+
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase().trim() },
+    where: { email: normalizedEmail },
   })
 
-  if (!user || !user.password) {
-    return res.status(401).json({ error: 'Invalid email or password' })
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid email or code' })
   }
 
   // Check account lockout
@@ -26,16 +28,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(423).json({ error: 'Account temporarily locked. Try again later.' })
   }
 
-  const valid = await verifyPassword(password, user.password)
-  if (!valid) {
+  // Look up the verification token — token is stored as "code:randomSuffix"
+  const tokenRecord = await prisma.verificationToken.findFirst({
+    where: {
+      identifier: `login:${normalizedEmail}`,
+      token: { startsWith: `${code.trim()}:` },
+    },
+  })
+
+  if (!tokenRecord || new Date(tokenRecord.expires) < new Date()) {
+    // Invalid or expired code
     const attempts = user.failedLoginAttempts + 1
     const lockout = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null
     await prisma.user.update({
       where: { id: user.id },
       data: { failedLoginAttempts: attempts, lockedUntil: lockout },
     })
-    return res.status(401).json({ error: 'Invalid email or password' })
+    // Clean up expired token
+    if (tokenRecord) {
+      await prisma.verificationToken.deleteMany({
+        where: { identifier: `login:${normalizedEmail}` },
+      })
+    }
+    return res.status(401).json({ error: 'Invalid or expired code' })
   }
+
+  // Code is valid — delete it (one-time use)
+  await prisma.verificationToken.deleteMany({
+    where: { identifier: `login:${normalizedEmail}` },
+  })
 
   // Reset failed attempts, update last login
   await prisma.user.update({

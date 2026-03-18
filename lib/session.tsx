@@ -69,18 +69,37 @@ export function useSession() {
 }
 
 /**
- * signIn — POST credentials to /api/auth/login.
- * Compatible with the old NextAuth signIn('credentials', { redirect: false, ... }) pattern.
+ * sendCode — POST email to /api/auth/send-code to request a magic login code.
+ */
+export async function sendCode(email: string) {
+  try {
+    const res = await fetch('/api/auth/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      return { error: data.error || 'Failed to send code', ok: false }
+    }
+    return { error: null, ok: true, message: data.message }
+  } catch {
+    return { error: 'Failed to send code', ok: false }
+  }
+}
+
+/**
+ * signIn — POST email + code to /api/auth/login.
  */
 export async function signIn(
   _provider: string,
-  opts?: { email?: string; password?: string; redirect?: boolean; callbackUrl?: string }
+  opts?: { email?: string; code?: string; password?: string; redirect?: boolean; callbackUrl?: string }
 ) {
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: opts?.email, password: opts?.password }),
+      body: JSON.stringify({ email: opts?.email, code: opts?.code }),
     })
     const data = await res.json()
     if (!res.ok) {
