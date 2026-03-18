@@ -20,6 +20,27 @@
   box-sizing: border-box;
 }
 
+/* Fix browser autofill styling overriding input colors */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px white inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+}
+
+/* Ensure inputs always have visible text regardless of dark mode */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"] {
+  color: #0f172a !important;
+  background-color: white !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
