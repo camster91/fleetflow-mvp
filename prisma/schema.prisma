@@ -392,7 +392,8 @@ model MaintenanceTask {
   priority          String   @default("medium") // high, medium, low
   completed         Boolean  @default(false)
   completedDate     DateTime?
-  
+  reminderSentAt    DateTime?
+
   // Details
   notes             String?
   estimatedDuration String?

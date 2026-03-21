@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/lib/session';
-import { User, Bell, Shield, Palette, Save, Camera, Eye, EyeOff } from 'lucide-react';
+import { User, Bell, Shield, Palette, Save, Camera, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -25,6 +26,7 @@ export default function SettingsPage() {
     language: 'en', timezone: 'America/Toronto', dateFormat: 'MM/DD/YYYY', theme: 'light',
   });
   const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [isDark, toggleDark] = useDarkMode();
 
   // Load profile on mount
   const loadProfile = useCallback(async () => {
@@ -214,11 +216,19 @@ export default function SettingsPage() {
                     ))}
                     <div>
                       <label className={labelCls}>Theme</label>
-                      <div className="relative group">
-                        <select disabled value="light" className={inputCls + ' opacity-50 cursor-not-allowed'}>
-                          <option value="light">Light</option>
-                        </select>
-                        <p className="mt-1 text-xs text-slate-400">Coming soon</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <Sun className="h-4 w-4 text-slate-500" />
+                        <button
+                          onClick={toggleDark}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            isDark ? 'bg-blue-600' : 'bg-slate-200'
+                          }`}>
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            isDark ? 'translate-x-6' : 'translate-x-1'
+                          }`} />
+                        </button>
+                        <Moon className="h-4 w-4 text-slate-500" />
+                        <span className="text-sm text-slate-600">{isDark ? 'Dark' : 'Light'}</span>
                       </div>
                     </div>
                   </div>

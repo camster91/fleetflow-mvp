@@ -69,7 +69,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ role, currentPath, onOpenSi
   const tabs = ROLE_TABS[role as keyof typeof ROLE_TABS] || ROLE_TABS.default;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white border-t border-slate-200 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-lg">
       <div className="flex items-stretch" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -192,15 +192,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 dark:text-white">
       {/* Sidebar overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-white border-r border-slate-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
+      <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
           <Link href="/dashboard">
             <img src="/brand/logo/logo-horizontal.svg" alt="Fleet Manager" className="h-7 w-auto" />
           </Link>
@@ -265,7 +265,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
         </nav>
 
         {/* User profile */}
-        <div className="border-t border-slate-200 p-4">
+        <div className="border-t border-slate-200 dark:border-slate-700 p-4">
           <div className="relative">
             <button
               onClick={e => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
@@ -281,7 +281,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
               <ChevronDown className="h-4 w-4 text-slate-400" />
             </button>
             {userMenuOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-slate-200 py-1">
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1">
                 <Link href="/settings" className="flex items-center space-x-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-100">
                   <Settings className="h-4 w-4" /><span>Settings</span>
                 </Link>
@@ -305,7 +305,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
       <div className="lg:ml-72 min-h-screen flex flex-col">
         <TrialBanner />
         {/* Top header */}
-        <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
+        <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
           <div className="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
             <div className="flex items-center space-x-4">
               <button
@@ -342,7 +342,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                     className="w-64 pl-10 pr-4 py-2 bg-slate-100 border-0 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:bg-white transition-all"
                   />
                   {searchDropOpen && searchResults && (
-                    <div className="absolute top-full left-0 mt-1 w-80 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+                    <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden">
                       {['vehicles','deliveries','clients','maintenance'].map(cat => {
                         const items = searchResults[cat] ?? [];
                         if (!items.length) return null;
@@ -388,10 +388,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
 
         {/* Page header */}
         {(title || subtitle) && (
-          <div className="bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-6">
+          <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 sm:px-6 lg:px-8 py-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                {title && <h1 className="text-2xl font-bold text-slate-900">{title}</h1>}
+                {title && <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h1>}
                 {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
               </div>
               {actions && <div className="flex sm:hidden items-center space-x-2">{actions}</div>}

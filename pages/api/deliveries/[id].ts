@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToDelivery, deliveryToDb, logActivity } from '../../../lib/fleet'
+import { createNotification } from '../../../lib/notifications'
+import { notifyDeliveryAssigned, notifyDeliveryStatus } from '../../../lib/email.server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -35,6 +37,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       return updated
     })
+    // Notify driver if newly assigned
+    const driverChanged = delivery.driver && delivery.driver !== existing.driver
+    if (driverChanged) {
+      const driverUser = await prisma.user.findFirst({ where: { name: delivery.driver } })
+      if (driverUser) {
+        await createNotification({
+          userId: driverUser.id,
+          type: 'SYSTEM',
+          title: 'New Delivery Assignment',
+          message: `You have been assigned a delivery for "${delivery.customer}"`,
+          data: { deliveryId: delivery.id, customer: delivery.customer },
+        })
+        if (driverUser.email) {
+          notifyDeliveryAssigned(delivery, driverUser.name || delivery.driver, driverUser.email, session.user.name || 'Manager').catch(console.error)
+        }
+      }
+    }
+
+    // Notify owner when delivery is completed
+    if (wasCompleted) {
+      await createNotification({
+        userId: existing.ownerId,
+        type: 'SYSTEM',
+        title: 'Delivery Completed',
+        message: `Delivery for "${delivery.customer}" has been marked as delivered`,
+        data: { deliveryId: delivery.id, customer: delivery.customer },
+      })
+      const owner = await prisma.user.findUnique({ where: { id: existing.ownerId } })
+      if (owner?.email) {
+        notifyDeliveryStatus(delivery, [owner.email], 'admin').catch(console.error)
+      }
+    }
+
     return res.json(dbToDelivery(delivery))
   }
 

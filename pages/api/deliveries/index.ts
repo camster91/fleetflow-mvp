@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToDelivery, deliveryToDb, logActivity } from '../../../lib/fleet'
+import { createNotification } from '../../../lib/notifications'
+import { notifyDeliveryAssigned } from '../../../lib/email.server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -30,6 +32,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       entityId: delivery.id, entityName: delivery.customer,
       description: `Delivery for "${delivery.customer}" was created`,
     })
+    // Notify driver if assigned
+    if (delivery.driver) {
+      const driverUser = await prisma.user.findFirst({ where: { name: delivery.driver } })
+      if (driverUser) {
+        await createNotification({
+          userId: driverUser.id,
+          type: 'SYSTEM',
+          title: 'New Delivery Assignment',
+          message: `You have been assigned a delivery for "${delivery.customer}"`,
+          data: { deliveryId: delivery.id, customer: delivery.customer },
+        })
+        if (driverUser.email) {
+          notifyDeliveryAssigned(delivery, driverUser.name || delivery.driver, driverUser.email, session.user.name || 'Manager').catch(console.error)
+        }
+      }
+    }
+
     return res.status(201).json(dbToDelivery(delivery))
   }
 

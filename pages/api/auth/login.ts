@@ -73,6 +73,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }),
   ])
 
+  // Check if 2FA is enabled — require separate validation step
+  if (user.twoFactorEnabled && user.twoFactorSecret) {
+    return res.json({
+      requiresTwoFactor: true,
+      userId: user.id,
+    })
+  }
+
   const token = signToken({ sub: user.id, email: user.email, name: user.name, role: user.role })
 
   res.setHeader('Set-Cookie', serialize('token', token, {
