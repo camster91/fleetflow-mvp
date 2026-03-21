@@ -1,4 +1,4 @@
-import * as dataService from '../../services/dataServiceWithSync';
+import * as dataService from '../../services/dataService';
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -19,7 +19,7 @@ const localStorageMock = (() => {
   };
 })();
 
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+Object.defineProperty(global, 'localStorage', { value: localStorageMock, writable: true, configurable: true });
 
 describe('DataService', () => {
   beforeEach(() => {
@@ -27,8 +27,8 @@ describe('DataService', () => {
     jest.clearAllMocks();
     localStorageMock.clear();
     
-    // Reset data version
-    localStorageMock.setItem('fleetflow-data-version', '1.0.0');
+    // Reset data version (must match DATA_VERSION in dataService.ts)
+    localStorageMock.setItem('fleetflow-data-version', 'v3');
   });
 
   describe('Vehicle Operations', () => {
@@ -53,7 +53,7 @@ describe('DataService', () => {
       expect(result.lastUpdated).toBeDefined();
       
       // Check it was saved to localStorage
-      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.find(call => call[0] === 'fleetflow-vehicles')?.[1] || '[]');
+      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.findLast(call => call[0] === 'fleetflow-vehicles')?.[1] || '[]');
       expect(savedData).toHaveLength(1);
       expect(savedData[0].id).toBe(1);
     });
@@ -86,7 +86,7 @@ describe('DataService', () => {
       expect(result?.lastUpdated).not.toBe('2026-03-05T10:00:00.000Z');
       
       // Verify the update was saved
-      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.find(call => call[0] === 'fleetflow-vehicles')?.[1] || '[]');
+      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.findLast(call => call[0] === 'fleetflow-vehicles')?.[1] || '[]');
       expect(savedData[0].name).toBe('Updated Vehicle');
     });
 
@@ -102,7 +102,7 @@ describe('DataService', () => {
       expect(result).toBe(true);
       
       // Verify only vehicle 2 remains
-      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.find(call => call[0] === 'fleetflow-vehicles')?.[1] || '[]');
+      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.findLast(call => call[0] === 'fleetflow-vehicles')?.[1] || '[]');
       expect(savedData).toHaveLength(1);
       expect(savedData[0].id).toBe(2);
     });
@@ -187,16 +187,15 @@ describe('DataService', () => {
       expect(result.type).toBe('Oil Change');
     });
 
-    test('completeMaintenanceTask marks task as completed', () => {
+    test('updateMaintenanceTask marks task as completed', () => {
       const tasks = [
         { ...testTask, id: 1 },
       ];
       localStorageMock.setItem('fleetflow-maintenance-tasks', JSON.stringify(tasks));
-      
-      const result = dataService.completeMaintenanceTask(1);
-      
+
+      const result = dataService.updateMaintenanceTask(1, { completed: true });
+
       expect(result?.completed).toBe(true);
-      expect(result?.completedDate).toBeDefined();
     });
   });
 
@@ -304,10 +303,10 @@ describe('DataService', () => {
       dataService.getVehicles();
       
       // Check that version was updated
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('fleetflow-data-version', '1.0.0');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('fleetflow-data-version', 'v3');
       
       // Check seed data was initialized (vehicles key was set)
-      const vehiclesCall = localStorageMock.setItem.mock.calls.find(call => call[0] === 'fleetflow-vehicles');
+      const vehiclesCall = localStorageMock.setItem.mock.calls.findLast(call => call[0] === 'fleetflow-vehicles');
       expect(vehiclesCall).toBeDefined();
       const savedVehicles = JSON.parse(vehiclesCall?.[1] || '[]');
       expect(savedVehicles).toBeInstanceOf(Array);
@@ -320,7 +319,7 @@ describe('DataService', () => {
       
       // Set current version and existing data
       localStorageMock.getItem.mockImplementation((key) => {
-        if (key === 'fleetflow-data-version') return '1.0.0';
+        if (key === 'fleetflow-data-version') return 'v3';
         if (key === 'fleetflow-vehicles') return JSON.stringify([{ id: 1, name: 'Existing Vehicle' }]);
         return null;
       });

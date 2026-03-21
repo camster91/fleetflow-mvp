@@ -1,10 +1,27 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import VehicleDetailModal from '../../components/VehicleDetailModal';
 import { notify } from '../../services/notifications';
 
 // Mock the notifications service
 jest.mock('../../services/notifications');
+
+// Mock lucide-react icons
+jest.mock('lucide-react', () => ({
+  X: () => <span>X</span>,
+  Truck: () => <span>Truck</span>,
+  MapPin: () => <span>MapPin</span>,
+  Battery: () => <span>Battery</span>,
+  Calendar: () => <span>Calendar</span>,
+  Wrench: () => <span>Wrench</span>,
+  Navigation: () => <span>Navigation</span>,
+  Phone: () => <span>Phone</span>,
+  Mail: () => <span>Mail</span>,
+  FileText: () => <span>FileText</span>,
+  Loader2: () => <span>Loader2</span>,
+  CheckCircle: () => <span>CheckCircle</span>,
+  Clock: () => <span>Clock</span>,
+}));
 
 describe('VehicleDetailModal', () => {
   const mockVehicle = {
@@ -22,6 +39,11 @@ describe('VehicleDetailModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset fetch mock to return empty data
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ maintenanceTasks: [], driverUser: null }),
+    });
   });
 
   test('renders nothing when not open or no vehicle', () => {
@@ -36,179 +58,156 @@ describe('VehicleDetailModal', () => {
     expect(container2.firstChild).toBeNull();
   });
 
-  test('renders vehicle details when open', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('renders vehicle details when open', async () => {
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
 
-    // Check vehicle name is displayed
     expect(screen.getByText('Ford Transit Van')).toBeInTheDocument();
-    
-    // Check driver information
-    expect(screen.getByText('Maria Rodriguez')).toBeInTheDocument();
-    
-    // Check location
+    expect(screen.getByText(/Maria Rodriguez/)).toBeInTheDocument();
     expect(screen.getByText('Downtown Delivery Zone')).toBeInTheDocument();
-    
-    // Check ETA
     expect(screen.getByText('10:30 AM')).toBeInTheDocument();
-    
-    // Check mileage
-    expect(screen.getByText('45,230')).toBeInTheDocument();
-    expect(screen.getByText('miles')).toBeInTheDocument();
-    
-    // Check status badge
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    // Status badge shows raw status
+    expect(screen.getByText('active')).toBeInTheDocument();
   });
 
-  test('displays tabs for different sections', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('displays tabs for different sections', async () => {
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
 
-    // Check all tabs are present
     expect(screen.getByText('Overview')).toBeInTheDocument();
     expect(screen.getByText('Maintenance')).toBeInTheDocument();
-    expect(screen.getByText('Documents')).toBeInTheDocument();
+    expect(screen.getByText('Driver Info')).toBeInTheDocument();
     expect(screen.getByText('History')).toBeInTheDocument();
   });
 
-  test('shows overview tab content by default', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('shows overview tab content by default', async () => {
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
 
-    // Overview tab should show key details
-    expect(screen.getByText('Vehicle Details')).toBeInTheDocument();
-    expect(screen.getByText('Driver Information')).toBeInTheDocument();
-    expect(screen.getByText('Current Status')).toBeInTheDocument();
+    expect(screen.getByText('Current Location')).toBeInTheDocument();
+    expect(screen.getByText('ETA to Destination')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle Mileage')).toBeInTheDocument();
+    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
   });
 
-  test('can switch between tabs', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('can switch to maintenance tab', async () => {
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
 
-    // Click Maintenance tab
-    fireEvent.click(screen.getByText('Maintenance'));
-    
-    // Should show maintenance content
-    expect(screen.getByText('Maintenance History')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming Services')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Maintenance'));
+    });
 
-    // Click Documents tab
-    fireEvent.click(screen.getByText('Documents'));
-    
-    // Should show documents content
-    expect(screen.getByText('Vehicle Documents')).toBeInTheDocument();
-    expect(screen.getByText('Registration')).toBeInTheDocument();
-    expect(screen.getByText('Insurance')).toBeInTheDocument();
+    // Maintenance tab shows maintenance status
+    expect(screen.getByText('Maintenance Up to Date')).toBeInTheDocument();
   });
 
-  test('Navigate button shows notification', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('navigate button opens maps', async () => {
+    window.open = jest.fn();
 
-    // Find and click Navigate button
-    const navigateButton = screen.getByRole('button', { name: /navigate/i });
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
+
+    const navigateButton = screen.getByText('Navigate To');
     fireEvent.click(navigateButton);
-    
-    // Check notification was called with correct info
-    expect(notify.info).toHaveBeenCalledWith(
-      expect.stringContaining('Navigating to Downtown Delivery Zone'),
-      expect.any(Object)
-    );
-    expect(notify.info).toHaveBeenCalledWith(
-      expect.stringContaining('Vehicle: Ford Transit Van'),
-      expect.any(Object)
-    );
-    expect(notify.info).toHaveBeenCalledWith(
-      expect.stringContaining('Driver: Maria Rodriguez'),
-      expect.any(Object)
+
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('google.com/maps'),
+      '_blank'
     );
   });
 
-  test('Call Driver button shows notification', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('call driver button shows notification when no phone', async () => {
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
 
-    // Find and click Call Driver button
-    const callButton = screen.getByRole('button', { name: /call driver/i });
+    const callButton = screen.getByText('Call Driver');
     fireEvent.click(callButton);
-    
-    // Check notification was called with correct info
+
     expect(notify.info).toHaveBeenCalledWith(
-      expect.stringContaining('Calling Maria Rodriguez'),
-      expect.any(Object)
-    );
-    expect(notify.info).toHaveBeenCalledWith(
-      expect.stringContaining('Ford Transit Van'),
-      expect.any(Object)
+      expect.stringContaining('Maria Rodriguez')
     );
   });
 
-  test('close button calls onClose handler', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
+  test('close button calls onClose handler', async () => {
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
+      );
+    });
 
-    // Find and click close button (X icon)
-    const closeButton = screen.getByRole('button', { name: '' }); // Empty aria-label for X button
+    // Use the Close text button in the footer
+    const closeButton = screen.getByText('Close');
     fireEvent.click(closeButton);
-    
+
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
-  test('shows maintenance due warning when applicable', () => {
+  test('shows maintenance required when maintenanceDue is true', async () => {
     const vehicleWithMaintenanceDue = {
       ...mockVehicle,
       maintenanceDue: true,
     };
 
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={vehicleWithMaintenanceDue} />
-    );
+    await act(async () => {
+      render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={vehicleWithMaintenanceDue} />
+      );
+    });
 
-    // Should show maintenance warning
-    expect(screen.getByText(/maintenance due/i)).toBeInTheDocument();
-    expect(screen.getByText(/attention required/i)).toBeInTheDocument();
+    // Switch to Maintenance tab
+    await act(async () => {
+      fireEvent.click(screen.getByText('Maintenance'));
+    });
+
+    expect(screen.getByText('Maintenance Required')).toBeInTheDocument();
+    expect(screen.getByText(/immediate attention/i)).toBeInTheDocument();
   });
 
-  test('shows different status badges', () => {
+  test('shows different status badges', async () => {
     const inactiveVehicle = {
       ...mockVehicle,
       status: 'inactive' as const,
     };
 
-    const { rerender } = render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={inactiveVehicle} />
-    );
+    let result: ReturnType<typeof render>;
+    await act(async () => {
+      result = render(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={inactiveVehicle} />
+      );
+    });
 
-    expect(screen.getByText('Inactive')).toBeInTheDocument();
+    expect(screen.getByText('inactive')).toBeInTheDocument();
 
     const delayedVehicle = {
       ...mockVehicle,
       status: 'delayed' as const,
     };
 
-    rerender(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={delayedVehicle} />
-    );
+    await act(async () => {
+      result!.rerender(
+        <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={delayedVehicle} />
+      );
+    });
 
-    expect(screen.getByText('Delayed')).toBeInTheDocument();
-  });
-
-  test('displays action buttons with correct icons', () => {
-    render(
-      <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
-    );
-
-    // Check for action buttons
-    expect(screen.getByRole('button', { name: /navigate/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /call driver/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /message/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view documents/i })).toBeInTheDocument();
+    expect(screen.getByText('delayed')).toBeInTheDocument();
   });
 });

@@ -84,6 +84,14 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   disconnect: jest.fn(),
 }));
 
+// Mock global fetch
+global.fetch = jest.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({}),
+  })
+);
+
 // Clear all mocks after each test
 afterEach(() => {
   jest.clearAllMocks();

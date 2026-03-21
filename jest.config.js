@@ -5,7 +5,7 @@ const config = {
     {
       displayName: 'api',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/__tests__/pages/api/**/*.test.ts'],
+      testMatch: ['<rootDir>/__tests__/pages/api/**/*.test.ts', '<rootDir>/__tests__/api/**/*.test.ts'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
@@ -23,7 +23,6 @@ const config = {
         '<rootDir>/__tests__/pages/[^a]**/*.test.{ts,tsx}',
         '<rootDir>/__tests__/pages/dashboard.test.tsx',
         '<rootDir>/__tests__/services/**/*.test.ts',
-        '<rootDir>/__tests__/lib/**/*.test.ts',
       ],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
       moduleNameMapper: {
@@ -39,8 +38,21 @@ const config = {
       },
       transform: {
         '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
-          presets: [['next/babel', { 'preset-react': { runtime: 'automatic', importSource: '@testing-library/react' } }]],
+          presets: [['next/babel', { 'preset-react': { runtime: 'automatic' } }]],
         }],
+      },
+      testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+    },
+    {
+      displayName: 'unit',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/__tests__/lib/**/*.test.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+        '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+      },
+      transform: {
+        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
       },
       testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
     },
@@ -64,7 +76,6 @@ const config = {
         ['next/babel', {
           'preset-react': {
             runtime: 'automatic',
-            importSource: '@testing-library/react',
           },
         }],
       ],
