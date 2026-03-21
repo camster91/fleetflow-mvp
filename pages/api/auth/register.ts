@@ -94,6 +94,20 @@ export default async function handler(
       },
     });
 
+    // Create trial subscription for new user
+    try {
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          status: 'TRIAL',
+          plan: 'UNLIMITED',
+          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+        },
+      });
+    } catch (subError) {
+      console.error('Failed to create trial subscription:', subError);
+    }
+
     // Send verification email (don't fail if email fails)
     let emailSent = false;
     try {

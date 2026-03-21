@@ -4,6 +4,7 @@ import { useRouter } from 'next/router';
 import { useSession, signOut } from '@/lib/session';
 import { LayoutDashboard, Car, Package, Wrench, Users, BarChart3, Settings, Search, Menu, X, ChevronDown, ChevronRight, LogOut, HelpCircle, FileText, MoreHorizontal, BookOpen, ShoppingCart, Building } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { TrialBanner } from '@/components/TrialBanner';
 
 interface NavItem { id: string; label: string; icon: React.ElementType; href?: string; children?: { id: string; label: string; href: string }[]; }
 
@@ -301,6 +302,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
 
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen flex flex-col">
+        <TrialBanner />
         {/* Top header */}
         <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
           <div className="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">
