@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from '@/lib/session';
-import { LayoutDashboard, Car, Package, Wrench, Users, BarChart3, Settings, Search, Menu, X, ChevronDown, ChevronRight, LogOut, HelpCircle, FileText, MoreHorizontal, BookOpen, ShoppingCart, Building } from 'lucide-react';
+import { LayoutDashboard, Car, Package, Wrench, Users, BarChart3, Settings, Search, Menu, X, ChevronDown, ChevronRight, LogOut, HelpCircle, FileText, MoreHorizontal, BookOpen, ShoppingCart, Building, ClipboardList } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { TrialBanner } from '@/components/TrialBanner';
 
@@ -17,6 +17,7 @@ const navItems: NavItem[] = [
   { id: 'clients', label: 'Clients', icon: Building, href: '/clients' },
   { id: 'sop', label: 'SOPs & Procedures', icon: BookOpen, href: '/sop' },
   { id: 'vending', label: 'Vending Machines', icon: ShoppingCart, href: '/vending-machines' },
+  { id: 'reports', label: 'Reports', icon: ClipboardList, href: '/reports' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
 ];
 
