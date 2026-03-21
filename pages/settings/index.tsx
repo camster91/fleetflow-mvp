@@ -202,7 +202,6 @@ export default function SettingsPage() {
                       { key: 'language', label: 'Language', options: [['en','English'],['fr','French'],['es','Spanish']] },
                       { key: 'timezone', label: 'Timezone', options: [['America/Toronto','Eastern (Toronto)'],['America/Chicago','Central (Chicago)'],['America/Denver','Mountain (Denver)'],['America/Los_Angeles','Pacific (LA)'],['America/Vancouver','Pacific (Vancouver)']] },
                       { key: 'dateFormat', label: 'Date Format', options: [['MM/DD/YYYY','MM/DD/YYYY'],['DD/MM/YYYY','DD/MM/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']] },
-                      { key: 'theme', label: 'Theme', options: [['light','Light'],['dark','Dark (coming soon)']] },
                     ].map(({ key, label, options }) => (
                       <div key={key}>
                         <label className={labelCls}>{label}</label>
@@ -213,6 +212,15 @@ export default function SettingsPage() {
                         </select>
                       </div>
                     ))}
+                    <div>
+                      <label className={labelCls}>Theme</label>
+                      <div className="relative group">
+                        <select disabled value="light" className={inputCls + ' opacity-50 cursor-not-allowed'}>
+                          <option value="light">Light</option>
+                        </select>
+                        <p className="mt-1 text-xs text-slate-400">Coming soon</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

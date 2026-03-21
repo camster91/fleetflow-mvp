@@ -144,22 +144,43 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
     }
   }, [isOpen, client])
 
+  const isValidEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Client name is required'
     }
-    
+
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required'
     }
-    
-    if (formData.email && !formData.email.includes('@')) {
-      newErrors.email = 'Please enter a valid email'
+
+    if (formData.email && !isValidEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address'
     }
-    
+
+    if (formData.contactEmail && !isValidEmail(formData.contactEmail)) {
+      newErrors.contactEmail = 'Please enter a valid contact email address'
+    }
+
+    if (formData.rating < 1 || formData.rating > 5) {
+      newErrors.rating = 'Rating must be between 1 and 5'
+    }
+
     setErrors(newErrors)
+
+    // Switch to the tab containing the first error
+    if (Object.keys(newErrors).length > 0) {
+      if (newErrors.name || newErrors.address || newErrors.email || newErrors.rating) {
+        setActiveTab('basic')
+      } else if (newErrors.contactEmail) {
+        setActiveTab('contact')
+      }
+    }
+
     return Object.keys(newErrors).length === 0
   }
 
@@ -471,8 +492,11 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                   value={formData.contactEmail}
                   onChange={(e) => handleChange('contactEmail', e.target.value)}
                   placeholder="person@business.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition ${
+                    errors.contactEmail ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                {errors.contactEmail && <p className="mt-1 text-sm text-red-600">{errors.contactEmail}</p>}
               </div>
 
               {/* Availability */}

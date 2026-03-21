@@ -10,8 +10,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = (session.user as any).id
 
   if (req.method === 'GET') {
-    const cats = await prisma.sOPCategory.findMany({ orderBy: { name: 'asc' } })
-    return res.json(cats.map(dbToSOPCategory))
+    const page = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
+    const skip = (page - 1) * limit
+
+    const [cats, total] = await Promise.all([
+      prisma.sOPCategory.findMany({ orderBy: { name: 'asc' }, skip, take: limit }),
+      prisma.sOPCategory.count(),
+    ])
+    return res.json({ data: cats.map(dbToSOPCategory), total, page, limit, hasMore: skip + limit < total })
   }
 
   if (req.method === 'POST') {

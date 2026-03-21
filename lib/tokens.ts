@@ -9,8 +9,9 @@ export function generateSecureToken(length: number = 32): string {
 // Generate a short numeric code (for 2FA, etc.)
 export function generateNumericCode(length: number = 6): string {
   const min = Math.pow(10, length - 1);
-  const max = Math.pow(10, length) - 1;
-  return Math.floor(min + Math.random() * (max - min + 1)).toString();
+  const range = Math.pow(10, length) - min;
+  const randomValue = crypto.randomInt(range);
+  return (min + randomValue).toString();
 }
 
 // Generate verification token

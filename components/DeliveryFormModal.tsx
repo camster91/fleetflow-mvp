@@ -148,23 +148,27 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.customer.trim()) {
       newErrors.customer = 'Customer name is required'
     }
-    
+
     if (!formData.address.trim()) {
       newErrors.address = 'Delivery address is required'
     }
-    
+
     if (formData.items < 1) {
       newErrors.items = 'Must have at least 1 item'
     }
-    
+
     if (formData.progress < 0 || formData.progress > 100) {
       newErrors.progress = 'Progress must be between 0 and 100'
     }
-    
+
+    if (formData.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.contactEmail)) {
+      newErrors.contactEmail = 'Please enter a valid email address'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -524,9 +528,12 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
                   value={formData.contactEmail}
                   onChange={(e) => handleChange('contactEmail', e.target.value)}
                   placeholder="john@example.com"
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
+                  className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition ${
+                    errors.contactEmail ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
               </div>
+              {errors.contactEmail && <p className="mt-1 text-sm text-red-600">{errors.contactEmail}</p>}
             </div>
           </div>
         </div>

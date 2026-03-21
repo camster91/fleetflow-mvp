@@ -75,62 +75,65 @@ export default async function handler(
 
     for (const email of emails) {
       try {
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
-        });
+        const result = await prisma.$transaction(async (tx) => {
+          // Check if user already exists
+          const existingUser = await tx.user.findUnique({
+            where: { email: email.toLowerCase() },
+          });
 
-        // Check if already a member
-        const existingMember = await prisma.teamMember.findFirst({
-          where: {
-            teamId,
-            OR: [
-              { userId: existingUser?.id || '' },
-              { user: { email: email.toLowerCase() } },
-            ],
-          },
-        });
+          // Check if already a member
+          const existingMember = await tx.teamMember.findFirst({
+            where: {
+              teamId,
+              OR: [
+                { userId: existingUser?.id || '' },
+                { user: { email: email.toLowerCase() } },
+              ],
+            },
+          });
 
-        if (existingMember) {
-          if (existingMember.status === 'ACCEPTED') {
-            errors.push({ email, error: 'Already a team member' });
-            continue;
-          } else if (existingMember.status === 'PENDING') {
-            // Resend invitation
-            await prisma.teamMember.update({
-              where: { id: existingMember.id },
-              data: {
-                invitedAt: new Date(),
-                role: assignedRole,
-              },
-            });
-            results.push({ email, status: 'resent' });
-            continue;
+          if (existingMember) {
+            if (existingMember.status === 'ACCEPTED') {
+              return { type: 'error' as const, email, error: 'Already a team member' };
+            } else if (existingMember.status === 'PENDING') {
+              await tx.teamMember.update({
+                where: { id: existingMember.id },
+                data: { invitedAt: new Date(), role: assignedRole },
+              });
+              return { type: 'resent' as const, email };
+            }
           }
+
+          // Create invitation
+          const invitation = await tx.teamMember.create({
+            data: {
+              teamId,
+              userId: existingUser?.id || '',
+              role: assignedRole,
+              invitedBy: session.user.id,
+              status: 'PENDING',
+            },
+          });
+
+          return { type: 'invited' as const, email, invitationId: invitation.id };
+        });
+
+        if (result.type === 'error') {
+          errors.push({ email: result.email, error: result.error });
+        } else if (result.type === 'resent') {
+          results.push({ email: result.email, status: 'resent' });
+        } else {
+          // Send invitation email (non-blocking — don't fail the invite if email fails)
+          sendTeamInvitationEmail(
+            email,
+            (session.user as any).name || session.user.email || 'A team member',
+            assignedRole,
+            team.name,
+          ).catch((err: Error) => {
+            console.error(`Failed to send invitation email to ${email}:`, err.message);
+          });
+          results.push({ email: result.email, status: 'invited', invitationId: result.invitationId });
         }
-
-        // Create invitation
-        const invitation = await prisma.teamMember.create({
-          data: {
-            teamId,
-            userId: existingUser?.id || '',
-            role: assignedRole,
-            invitedBy: session.user.id,
-            status: 'PENDING',
-          },
-        });
-
-        // Send invitation email (non-blocking — don't fail the invite if email fails)
-        sendTeamInvitationEmail(
-          email,
-          (session.user as any).name || session.user.email || 'A team member',
-          assignedRole,
-          team.name,
-        ).catch((err: Error) => {
-          console.error(`Failed to send invitation email to ${email}:`, err.message);
-        });
-
-        results.push({ email, status: 'invited', invitationId: invitation.id });
       } catch (error) {
         console.error(`Failed to invite ${email}:`, error);
         errors.push({ email, error: 'Failed to send invitation' });

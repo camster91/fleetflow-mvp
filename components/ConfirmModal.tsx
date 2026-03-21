@@ -1,4 +1,5 @@
 import { AlertTriangle, X, CheckCircle, Info } from 'lucide-react'
+import { useId } from 'react'
 import FormModal from './FormModal'
 
 type ConfirmVariant = 'danger' | 'warning' | 'info'
@@ -49,6 +50,7 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   const style = variants[variant]
   const Icon = style.icon
+  const confirmTitleId = useId()
 
   const handleConfirm = () => {
     onConfirm()
@@ -58,7 +60,7 @@ export default function ConfirmModal({
     <FormModal
       isOpen={isOpen}
       onClose={onClose}
-      title=""
+      title={title}
       size="sm"
     >
       <div className="text-center">
@@ -68,7 +70,7 @@ export default function ConfirmModal({
         </div>
 
         {/* Title */}
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <h3 id={confirmTitleId} className="text-lg font-semibold text-gray-900 mb-2">
           {title}
         </h3>
 

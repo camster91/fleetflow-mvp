@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Package, Plus, Search, MapPin, Truck, Clock,
   CheckCircle, Download, Navigation, Edit, Trash2,
@@ -16,35 +16,35 @@ import { notify } from '../../services/notifications';
 import DeliveryFormModal from '../../components/DeliveryFormModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import toast from 'react-hot-toast';
+import { useDataFetch } from '../../hooks/useDataFetch';
+import { useFilteredData } from '../../hooks/useFilteredData';
 
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { data: allData, loading: isLoading, refetch: loadData } = useDataFetch(
+    async () => {
+      const [d, v, c] = await Promise.all([api.getDeliveries(), api.getVehicles(), api.getClients()]);
+      return { deliveries: d, vehicles: v, clients: c };
+    },
+    { deliveries: [] as Delivery[], vehicles: [] as Vehicle[], clients: [] as Client[] },
+    []
+  );
+  const { deliveries, vehicles, clients } = allData;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
-  const loadData = useCallback(async () => {
-    try {
-      const [d, v, c] = await Promise.all([api.getDeliveries(), api.getVehicles(), api.getClients()]);
-      setDeliveries(d); setVehicles(v); setClients(c);
-    } catch (err: any) { toast.error(err.message || 'Failed to load data'); }
-    finally { setIsLoading(false); }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const filtered = deliveries.filter((d) => {
-    const matchesSearch =
-      d.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.driver.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && (statusFilter === 'all' || d.status === statusFilter);
+  const {
+    filtered,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+  } = useFilteredData<Delivery>({
+    data: deliveries,
+    searchFields: ['customer', 'address', 'driver'],
+    filterFn: (d, f) => !f.status || f.status === 'all' || d.status === f.status,
   });
+  const statusFilter = filters.status || 'all';
 
   const stats = [
     { title: 'Total', value: deliveries.length, icon: <Package className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
@@ -123,7 +123,7 @@ export default function DeliveriesPage() {
             <input type="text" placeholder="Search deliveries..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900" />
           </div>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+          <select value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
@@ -133,7 +133,7 @@ export default function DeliveriesPage() {
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
           {['all', 'pending', 'in-transit', 'delivered'].map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)}
+            <button key={s} onClick={() => setFilter('status', s)}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === s ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
               {s === 'all' ? 'All Deliveries' : s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ')}
               {s !== 'all' && <span className="ml-2 text-xs">({deliveries.filter((d) => d.status === s).length})</span>}

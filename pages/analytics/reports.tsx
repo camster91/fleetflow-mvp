@@ -116,13 +116,20 @@ export default function ReportsPage() {
         actions={
           <Button
             variant="primary"
-            onClick={() => setIsCreateModalOpen(true)}
+            disabled
             iconLeft={<Plus className="h-4 w-4" />}
           >
             Create Report
           </Button>
         }
       />
+
+      {/* Coming soon banner */}
+      <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+        <p className="text-sm font-medium text-amber-800">
+          Reports are under development. Report generation and scheduling will be available soon.
+        </p>
+      </div>
 
       {/* Search */}
       <div className="mb-6">

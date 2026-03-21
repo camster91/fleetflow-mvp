@@ -10,13 +10,12 @@ A fleet management SaaS app. Live at fleet.ashbi.ca. Next.js with pages router (
 - Tailwind
 
 ## Database
-- Host: postgresql://fleetflow:Fleet2026!@10.0.1.28:5432/fleetflow
+- Host: Set via DATABASE_URL env var (see .env.example for format)
 - fleetflow-postgres container on VPS coolify network
 
 ## Auth
 - NextAuth with JWT strategy
-- Env vars: NEXTAUTH_URL=https://fleet.ashbi.ca, NEXTAUTH_SECRET
-- Login: cameron@ashbi.ca / Ashbi2026!
+- Env vars: NEXTAUTH_URL, NEXTAUTH_SECRET (set in deployment environment)
 - Custom auth also in pages/api/auth/login.ts (parallel system)
 
 ## Coolify

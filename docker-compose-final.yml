@@ -21,7 +21,7 @@ services:
             - NODE_ENV=production
             - PORT=3000
             - HOST=0.0.0.0
-            - DATABASE_URL=postgresql://fleetflow:Fleet2026!@10.0.1.28:5432/fleetflow
+            - DATABASE_URL=${DATABASE_URL}
             - NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION=false
         volumes:
             - /tmp/new-deploy:/app

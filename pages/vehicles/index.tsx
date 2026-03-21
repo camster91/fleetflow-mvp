@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Truck, Plus, Search, Edit, Trash2,
   MapPin, Battery, Download, Grid, List,
@@ -17,12 +17,13 @@ import VehicleFormModal from '../../components/VehicleFormModal';
 import VehicleDetailModal from '../../components/VehicleDetailModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import toast from 'react-hot-toast';
+import { useDataFetch } from '../../hooks/useDataFetch';
+import { useFilteredData } from '../../hooks/useFilteredData';
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const { data: vehicles, loading: isLoading, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
+    api.getVehicles, [], []
+  );
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
@@ -32,26 +33,18 @@ export default function VehiclesPage() {
     isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' as const,
   });
 
-  const loadVehicles = useCallback(async () => {
-    try {
-      const data = await api.getVehicles();
-      setVehicles(data);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load vehicles');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadVehicles(); }, [loadVehicles]);
-
-  const filteredVehicles = vehicles.filter((v) => {
-    const matchesSearch =
-      v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.driver.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && (statusFilter === 'all' || v.status === statusFilter);
+  const {
+    filtered: filteredVehicles,
+    searchQuery,
+    setSearchQuery,
+    setFilter,
+    filters,
+  } = useFilteredData<Vehicle>({
+    data: vehicles,
+    searchFields: ['name', 'driver', 'location'],
+    filterFn: (v, f) => !f.status || f.status === 'all' || v.status === f.status,
   });
+  const statusFilter = filters.status || 'all';
 
   const stats = [
     { title: 'Total Vehicles', value: vehicles.length, icon: <Truck className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
@@ -128,7 +121,7 @@ export default function VehiclesPage() {
               <input type="text" placeholder="Search vehicles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" />
             </div>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+            <select value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent">
               <option value="all">All Status</option>
               <option value="active">Active</option>
