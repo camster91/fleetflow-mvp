@@ -217,7 +217,8 @@ export default function MaintenancePage() {
           </div>
 
           {isLoading ? <SkeletonTable rows={5} columns={7} /> : (
-            <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden min-w-[640px]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <div key={day} className="bg-slate-50 p-2 text-center text-xs font-semibold text-slate-500 uppercase">{day}</div>
               ))}
@@ -248,6 +249,7 @@ export default function MaintenancePage() {
                   </div>
                 );
               })}
+            </div>
             </div>
           )}
         </Card>

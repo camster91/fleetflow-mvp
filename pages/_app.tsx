@@ -1,14 +1,34 @@
 import type { AppProps } from 'next/app'
 import Head from 'next/head'
-import { SessionProvider } from '../lib/session'
+import { useRouter } from 'next/router'
+import { useEffect } from 'react'
+import { SessionProvider, useSession } from '../lib/session'
 import { AuthProvider } from '../context/AuthContext'
 import { Toaster } from 'react-hot-toast'
 import '../styles/globals.css'
+
+function OnboardingGuard({ children }: { children: React.ReactNode }) {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (status !== 'authenticated' || !session?.user) return
+    const path = router.pathname
+    // Skip redirect for onboarding page itself, auth pages, and API routes
+    if (path === '/onboarding' || path.startsWith('/auth') || path.startsWith('/api')) return
+    if (session.user.onboardingCompleted === false) {
+      router.replace('/onboarding')
+    }
+  }, [status, session, router])
+
+  return <>{children}</>
+}
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <SessionProvider>
       <AuthProvider>
+        <OnboardingGuard>
         <Head>
           <title>Fleet Manager - Fleet Management Dashboard</title>
           <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -69,6 +89,7 @@ export default function App({ Component, pageProps }: AppProps) {
             },
           }}
         />
+      </OnboardingGuard>
       </AuthProvider>
     </SessionProvider>
   )

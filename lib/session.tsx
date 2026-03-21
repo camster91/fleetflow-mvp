@@ -12,6 +12,7 @@ interface SessionUser {
   name: string | null
   role: string
   image?: string | null
+  onboardingCompleted?: boolean
 }
 
 interface Session {

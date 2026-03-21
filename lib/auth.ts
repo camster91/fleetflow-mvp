@@ -24,6 +24,7 @@ export interface SessionUser {
   email: string
   name: string | null
   role: string
+  onboardingCompleted?: boolean
 }
 
 export interface Session {
@@ -67,7 +68,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   // Check if password was changed after token was issued (invalidate old tokens)
   const dbUser = await prisma.user.findUnique({
     where: { id: payload.sub },
-    select: { passwordChangedAt: true, role: true, email: true, name: true },
+    select: { passwordChangedAt: true, role: true, email: true, name: true, onboardingCompleted: true },
   })
 
   if (!dbUser) return null
@@ -83,6 +84,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
       email: dbUser.email,
       name: dbUser.name,
       role: dbUser.role,
+      onboardingCompleted: dbUser.onboardingCompleted,
     },
   }
 }

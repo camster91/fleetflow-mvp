@@ -30,6 +30,7 @@ const PROTECTED_PREFIXES = [
   '/billing',
   '/notifications',
   '/report',
+  '/onboarding',
 ]
 
 const PUBLIC_API_PREFIXES = ['/api/auth', '/api/task']

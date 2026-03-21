@@ -90,8 +90,19 @@ export default function ClientsPage() {
         }
       />
 
-      <div className="hidden sm:grid sm:grid-cols-3 gap-4 mb-6">
-        {stats.map((s) => <StatCard key={s.title} {...s} />)}
+      <div className="mb-6">
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
+          {stats.map((s) => (
+            <div key={s.title} className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+              <div className={`inline-flex p-2 rounded-lg ${s.iconBgColor} mb-2`}>{s.icon}</div>
+              <p className="text-xl font-bold text-slate-900">{s.value}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{s.title}</p>
+            </div>
+          ))}
+        </div>
+        <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+          {stats.map((s) => <StatCard key={s.title} {...s} />)}
+        </div>
       </div>
 
       <Card className="mb-6">
