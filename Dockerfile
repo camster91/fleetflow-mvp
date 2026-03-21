@@ -34,6 +34,9 @@ FROM node:20-alpine AS runner
 # Install curl for health checks and openssl for Prisma
 RUN apk add --no-cache curl openssl
 
+# Install Prisma CLI globally for migrations
+RUN npm install -g prisma@5
+
 # Set working directory
 WORKDIR /app
 

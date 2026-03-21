@@ -89,3 +89,5 @@ check-deployment.sh
 simple-auth-fix.sh
 fix-pricing-patch.sh
 ONE-COMMAND-FIX.sh
+*.tar.gz
+*.tar

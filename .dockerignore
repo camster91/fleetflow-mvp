@@ -10,3 +10,5 @@ Dockerfile*
 docker-compose*
 README.md
 LICENSE
+*.tar.gz
+*.tar
