@@ -9,9 +9,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  // IP-based rate limiting
   const ip = getClientIP(req)
-  const allowed = await rateLimitMiddleware(req, res, 'login', ip)
-  if (!allowed) return
+  const ipAllowed = await rateLimitMiddleware(req, res, 'login', ip)
+  if (!ipAllowed) return
 
   const { email } = req.body
   if (!email) {
@@ -19,6 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const normalizedEmail = email.toLowerCase().trim()
+
+  // Per-email rate limiting: 5 attempts per 15 minutes
+  const emailAllowed = await rateLimitMiddleware(req, res, 'loginEmail', normalizedEmail)
+  if (!emailAllowed) return
 
   // Find user — only existing users can log in
   const user = await prisma.user.findUnique({

@@ -34,6 +34,12 @@ const RATE_LIMITS = {
     duration: 15 * 60, // 15 minutes
     blockDuration: 15 * 60,
   },
+  // Per-email login: 5 attempts per 15 minutes per email
+  loginEmail: {
+    points: 5,
+    duration: 15 * 60, // 15 minutes
+    blockDuration: 15 * 60,
+  },
   // General API: 100 requests per minute
   api: {
     points: 100,
@@ -65,6 +71,10 @@ const rateLimiters = {
   verifyEmail: new RateLimiterMemory({
     keyPrefix: 'verify_email',
     ...RATE_LIMITS.verifyEmail,
+  }),
+  loginEmail: new RateLimiterMemory({
+    keyPrefix: 'login_email',
+    ...RATE_LIMITS.loginEmail,
   }),
   twoFactor: new RateLimiterMemory({
     keyPrefix: '2fa',

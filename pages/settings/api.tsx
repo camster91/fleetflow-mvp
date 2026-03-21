@@ -59,7 +59,7 @@ export default function APISettingsPage() {
     const newKey: ApiKey = {
       id: Date.now().toString(),
       name: 'New API Key',
-      key: 'ff_live_' + Math.random().toString(36).substring(2, 15),
+      key: 'ff_live_' + Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''),
       createdAt: new Date().toISOString(),
       lastUsedAt: null,
       permissions: ['read'],

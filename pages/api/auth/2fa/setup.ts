@@ -56,10 +56,11 @@ export default async function handler(
     // Generate QR code
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
 
-    // Generate backup codes
-    const backupCodes = Array.from({ length: 10 }, () => 
-      Math.random().toString(36).substring(2, 8).toUpperCase()
-    );
+    // Generate backup codes using cryptographically secure randomness
+    const backupCodes = Array.from({ length: 10 }, () => {
+      const bytes = require('crypto').randomBytes(4);
+      return bytes.toString('hex').substring(0, 6).toUpperCase();
+    });
 
     return res.status(200).json({
       message: '2FA setup initiated',

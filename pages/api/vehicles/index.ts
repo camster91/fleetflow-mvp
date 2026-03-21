@@ -9,8 +9,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'GET') {
-    const vehicles = await prisma.vehicle.findMany({ orderBy: { createdAt: 'asc' } })
-    return res.json(vehicles.map(dbToVehicle))
+    const page = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
+    const skip = (page - 1) * limit
+
+    const [vehicles, total] = await Promise.all([
+      prisma.vehicle.findMany({ orderBy: { createdAt: 'asc' }, skip, take: limit }),
+      prisma.vehicle.count(),
+    ])
+    return res.json({ data: vehicles.map(dbToVehicle), total, page, limit, hasMore: skip + limit < total })
   }
 
   if (req.method === 'POST') {

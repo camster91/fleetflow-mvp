@@ -9,8 +9,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
 
   if (req.method === 'GET') {
-    const deliveries = await prisma.delivery.findMany({ orderBy: { createdAt: 'desc' } })
-    return res.json(deliveries.map(dbToDelivery))
+    const page = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
+    const skip = (page - 1) * limit
+
+    const [deliveries, total] = await Promise.all([
+      prisma.delivery.findMany({ orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      prisma.delivery.count(),
+    ])
+    return res.json({ data: deliveries.map(dbToDelivery), total, page, limit, hasMore: skip + limit < total })
   }
 
   if (req.method === 'POST') {

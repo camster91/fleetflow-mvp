@@ -21,15 +21,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existing = await prisma.delivery.findUnique({ where: { id } })
     if (!existing) return res.status(404).json({ error: 'Not found' })
     const { ownerId: _o, ...fields } = deliveryToDb(req.body, userId) as any
-    const delivery = await prisma.delivery.update({ where: { id }, data: fields })
     const wasCompleted = req.body.status === 'delivered' && existing.status !== 'delivered'
-    await logActivity(prisma, {
-      userId, userName: session.user.name, userRole: (session.user as any).role,
-      action: wasCompleted ? 'completed' : 'status_changed',
-      entityType: 'delivery', entityId: id, entityName: delivery.customer,
-      description: wasCompleted
-        ? `Delivery for "${delivery.customer}" was marked as delivered`
-        : `Delivery for "${delivery.customer}" status changed to ${delivery.status}`,
+
+    const delivery = await prisma.$transaction(async (tx) => {
+      const updated = await tx.delivery.update({ where: { id }, data: fields })
+      await logActivity(tx, {
+        userId, userName: session.user.name, userRole: (session.user as any).role,
+        action: wasCompleted ? 'completed' : 'status_changed',
+        entityType: 'delivery', entityId: id, entityName: updated.customer,
+        description: wasCompleted
+          ? `Delivery for "${updated.customer}" was marked as delivered`
+          : `Delivery for "${updated.customer}" status changed to ${updated.status}`,
+      })
+      return updated
     })
     return res.json(dbToDelivery(delivery))
   }

@@ -2,10 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import crypto from 'crypto';
 
 function makeToken() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return crypto.randomBytes(24).toString('hex');
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

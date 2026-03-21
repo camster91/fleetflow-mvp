@@ -148,6 +148,7 @@ model LoginHistory {
 
   @@index([userId])
   @@index([timestamp])
+  @@index([userId, timestamp])
 }
 
 // Password history to prevent reuse
@@ -319,6 +320,7 @@ model Vehicle {
   @@index([ownerId])
   @@index([teamId])
   @@index([status])
+  @@index([status, createdAt])
   @@index([maintenanceDue])
 }
 
@@ -376,6 +378,7 @@ model Delivery {
   @@index([teamId])
   @@index([vehicleId])
   @@index([status])
+  @@index([status, createdAt])
   @@index([customer])
   @@index([createdAt])
 }
@@ -419,6 +422,7 @@ model MaintenanceTask {
   @@index([priority])
   @@index([dueDate])
   @@index([completed])
+  @@index([completed, dueDate])
 }
 
 model Client {

@@ -1,59 +1,105 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../lib/auth';
+import { getUserFromRequest } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { subDays } from 'date-fns';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getUserFromRequest(req);
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  const userId = session.user.id;
 
   try {
     const days = Math.max(7, Math.min(365, parseInt(req.query.days as string) || 30));
     const fromDate = subDays(new Date(), days);
+    const today = new Date();
+    const twoWeeksFromNow = new Date(today.getTime() + 14 * 86400000);
 
-    const [vehicles, deliveries, maintenanceTasks, clients, activityLogs] = await Promise.all([
-      prisma.vehicle.findMany(),
-      prisma.delivery.findMany(),
-      prisma.maintenanceTask.findMany(),
-      prisma.client.findMany({ select: { id: true } }),
+    // Find teams the user belongs to for team-scoped data access
+    const teamMemberships = await prisma.teamMember.findMany({
+      where: { userId },
+      select: { teamId: true },
+    });
+    const teamIds = teamMemberships.map(tm => tm.teamId);
+
+    // Build ownership filter: user's own data OR data belonging to their teams
+    const ownershipFilter = teamIds.length > 0
+      ? { OR: [{ ownerId: userId }, { teamId: { in: teamIds } }] }
+      : { ownerId: userId };
+
+    const [
+      // Vehicle counts by status
+      totalVehicles,
+      activeVehicles,
+      // Delivery counts by status
+      totalDeliveries,
+      deliveredCount,
+      inTransitCount,
+      pendingCount,
+      delayedCount,
+      // Maintenance aggregations
+      totalMaintenance,
+      overdueCount,
+      dueSoonCount,
+      completedMaintCount,
+      maintenanceCostAgg,
+      // Upcoming maintenance (limited)
+      upcomingTasks,
+      // Client count
+      clientCount,
+      // Activity logs for charts
+      activityLogs,
+      // Vehicle names for utilization chart
+      vehicles,
+      // Delivery vehicle names for utilization
+      deliveries,
+    ] = await Promise.all([
+      // Vehicle counts
+      prisma.vehicle.count({ where: ownershipFilter }),
+      prisma.vehicle.count({ where: { ...ownershipFilter, status: 'active' } }),
+      // Delivery counts
+      prisma.delivery.count({ where: ownershipFilter }),
+      prisma.delivery.count({ where: { ...ownershipFilter, status: 'delivered' } }),
+      prisma.delivery.count({ where: { ...ownershipFilter, status: 'in-transit' } }),
+      prisma.delivery.count({ where: { ...ownershipFilter, status: 'pending' } }),
+      prisma.delivery.count({ where: { ...ownershipFilter, status: 'delayed' } }),
+      // Maintenance counts
+      prisma.maintenanceTask.count({ where: ownershipFilter }),
+      prisma.maintenanceTask.count({ where: { ...ownershipFilter, completed: false, dueDate: { lt: today } } }),
+      prisma.maintenanceTask.count({ where: { ...ownershipFilter, completed: false, dueDate: { gte: today, lte: twoWeeksFromNow } } }),
+      prisma.maintenanceTask.count({ where: { ...ownershipFilter, completed: true } }),
+      prisma.maintenanceTask.aggregate({ where: ownershipFilter, _sum: { costEstimate: true } }),
+      // Upcoming tasks (not completed, due in future, limit 3)
+      prisma.maintenanceTask.findMany({
+        where: { ...ownershipFilter, completed: false, dueDate: { gte: today } },
+        orderBy: { dueDate: 'asc' },
+        take: 3,
+        select: { vehicleName: true, type: true, dueDate: true },
+      }),
+      // Client count
+      prisma.client.count({ where: ownershipFilter }),
+      // Activity logs
       prisma.auditLog.findMany({
-        where: { createdAt: { gte: fromDate } },
+        where: { userId, createdAt: { gte: fromDate } },
         orderBy: { createdAt: 'asc' },
         select: { entityType: true, action: true, createdAt: true },
       }),
+      // Vehicles for utilization chart
+      prisma.vehicle.findMany({ where: ownershipFilter, select: { name: true } }),
+      // Deliveries with vehicle info for utilization
+      prisma.delivery.findMany({ where: ownershipFilter, select: { vehicleId: true, vehicle: { select: { name: true } } } }),
     ]);
 
-    const today = new Date();
-    const activeVehicles = vehicles.filter(v => v.status === 'active');
-    const fleetUtilization = vehicles.length > 0
-      ? Math.round((activeVehicles.length / vehicles.length) * 100) : 0;
+    const totalMaintCost = maintenanceCostAgg._sum.costEstimate || 0;
+    const fleetUtilization = totalVehicles > 0
+      ? Math.round((activeVehicles / totalVehicles) * 100) : 0;
 
-    const deliveredCount = deliveries.filter(d => d.status === 'delivered').length;
-    const inTransitCount = deliveries.filter(d => d.status === 'in-transit').length;
-    const pendingCount = deliveries.filter(d => d.status === 'pending').length;
-    const delayedCount = deliveries.filter(d => d.status === 'delayed').length;
-
-    const overdueCount = maintenanceTasks.filter(
-      t => !t.completed && new Date(t.dueDate) < today
-    ).length;
-    const dueSoonCount = maintenanceTasks.filter(t => {
-      const d = new Date(t.dueDate);
-      return !t.completed && d >= today && d <= new Date(today.getTime() + 14 * 86400000);
-    }).length;
-    const completedMaintCount = maintenanceTasks.filter(t => t.completed).length;
-    const totalMaintCost = maintenanceTasks.reduce((s, t) => s + ((t as any).cost || 0), 0);
-
-    const upcomingItems = maintenanceTasks
-      .filter(t => !t.completed && new Date(t.dueDate) >= today)
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      .slice(0, 3)
-      .map(t => ({
-        vehicle: (t as any).vehicleName || (t as any).vehicle || 'Unknown',
-        task: t.type,
-        dueIn: Math.ceil((new Date(t.dueDate).getTime() - today.getTime()) / 86400000),
-      }));
+    const upcomingItems = upcomingTasks.map(t => ({
+      vehicle: t.vehicleName || 'Unknown',
+      task: t.type,
+      dueIn: Math.ceil((new Date(t.dueDate).getTime() - today.getTime()) / 86400000),
+    }));
 
     // Build activity-per-day chart data
     const dayMap: Record<string, { deliveries: number; maintenance: number }> = {};
@@ -70,24 +116,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const activityOverTime = Object.entries(dayMap).map(([name, v]) => ({ name, ...v }));
 
-    // Maintenance by category
-    const catMap: Record<string, { count: number; cost: number }> = {};
-    for (const t of maintenanceTasks) {
-      const key = t.type || 'General';
-      if (!catMap[key]) catMap[key] = { count: 0, cost: 0 };
-      catMap[key].count++;
-      catMap[key].cost += (t as any).cost || 0;
-    }
-    const maintenanceByCategory = Object.keys(catMap).length
-      ? Object.entries(catMap).map(([name, v]) => ({ name, value: v.count, cost: v.cost }))
+    // Maintenance by category — use groupBy
+    const categoryGroups = await prisma.maintenanceTask.groupBy({
+      by: ['type'],
+      where: ownershipFilter,
+      _count: true,
+      _sum: { costEstimate: true },
+    });
+    const maintenanceByCategory = categoryGroups.length
+      ? categoryGroups.map(g => ({ name: g.type || 'General', value: g._count, cost: g._sum.costEstimate || 0 }))
       : [{ name: 'No tasks yet', value: 1, cost: 0 }];
 
     // Vehicle utilization (delivery assignments)
     const vDeliveries: Record<string, number> = {};
     for (const v of vehicles) vDeliveries[v.name] = 0;
     for (const d of deliveries) {
-      const dVehicle = (d as any).vehicleName || (d as any).vehicle;
-      if (dVehicle && vDeliveries[dVehicle] !== undefined) vDeliveries[dVehicle]++;
+      const vehicleName = d.vehicle?.name;
+      if (vehicleName && vDeliveries[vehicleName] !== undefined) vDeliveries[vehicleName]++;
     }
     const vehicleUtilization = Object.entries(vDeliveries)
       .sort((a, b) => b[1] - a[1])
@@ -96,10 +141,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.json({
       stats: {
-        fleetUtilization: { current: fleetUtilization, total: vehicles.length, active: activeVehicles.length },
-        deliveries: { total: deliveries.length, delivered: deliveredCount, inTransit: inTransitCount, pending: pendingCount, delayed: delayedCount },
-        maintenance: { total: maintenanceTasks.length, overdue: overdueCount, dueSoon: dueSoonCount, completed: completedMaintCount, totalCost: totalMaintCost, upcoming: upcomingItems },
-        clients: { total: clients.length },
+        fleetUtilization: { current: fleetUtilization, total: totalVehicles, active: activeVehicles },
+        deliveries: { total: totalDeliveries, delivered: deliveredCount, inTransit: inTransitCount, pending: pendingCount, delayed: delayedCount },
+        maintenance: { total: totalMaintenance, overdue: overdueCount, dueSoon: dueSoonCount, completed: completedMaintCount, totalCost: totalMaintCost, upcoming: upcomingItems },
+        clients: { total: clientCount },
       },
       charts: { activityOverTime, maintenanceByCategory, vehicleUtilization },
     });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Building, Plus, Search, Star, Phone, Mail, MapPin,
   Edit, ExternalLink,
@@ -16,6 +16,8 @@ import * as api from '../../services/apiService';
 import type { Client } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import toast from 'react-hot-toast';
+import { useDataFetch } from '../../hooks/useDataFetch';
+import { useFilteredData } from '../../hooks/useFilteredData';
 
 function StarRating({ value }: { value?: number }) {
   return (
@@ -46,37 +48,24 @@ function TypeBadge({ type }: { type?: string }) {
 
 export default function ClientsPage() {
   const router = useRouter();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const { data: clients, loading: isLoading, refetch: loadData } = useDataFetch<Client[]>(
+    api.getClients, [], []
+  );
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      const data = await api.getClients();
-      setClients(data);
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to load clients');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadData(); }, [loadData]);
-
-  const filtered = clients.filter((c) => {
-    const q = searchQuery.toLowerCase();
-    const matchSearch =
-      c.name.toLowerCase().includes(q) ||
-      c.address?.toLowerCase().includes(q) ||
-      c.phone?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.businessName?.toLowerCase().includes(q);
-    const matchType = typeFilter === 'all' || c.type === typeFilter;
-    return matchSearch && matchType;
+  const {
+    filtered,
+    searchQuery,
+    setSearchQuery,
+    filters,
+    setFilter,
+  } = useFilteredData<Client>({
+    data: clients,
+    searchFields: ['name', 'address', 'phone', 'email', 'businessName'] as (keyof Client)[],
+    filterFn: (c, f) => !f.type || f.type === 'all' || c.type === f.type,
   });
+  const typeFilter = filters.type || 'all';
 
   const stats = [
     { title: 'Total Clients', value: clients.length, icon: <Building className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
@@ -119,7 +108,7 @@ export default function ClientsPage() {
           </div>
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={(e) => setFilter('type', e.target.value)}
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
           >
             <option value="all">All Types</option>
