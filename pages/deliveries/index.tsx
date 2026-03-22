@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Package, Plus, Search, MapPin, Truck, Clock,
-  CheckCircle, Download, Navigation, Edit, Trash2,
+  CheckCircle, Download, Navigation, Edit, Trash2, ChevronDown, AlertCircle,
 } from 'lucide-react';
+import { DeliveryTimeline } from '../../components/DeliveryTimeline';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card, StatCard } from '../../components/ui/Card';
@@ -32,6 +33,28 @@ export default function DeliveriesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
+  const [lastPolled, setLastPolled] = useState<Date>(new Date());
+  const pollRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Poll in-transit deliveries every 30 seconds
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      loadData();
+      setLastPolled(new Date());
+    }, 30000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [loadData]);
+
+  const minutesAgo = Math.floor((Date.now() - lastPolled.getTime()) / 60000);
+
+  const isStale = (delivery: Delivery) => {
+    if (delivery.status !== 'in-transit' && delivery.status !== 'pending') return false;
+    // Use scheduledTime or estimatedArrival as staleness proxy since updatedAt isn't exposed
+    const ref = delivery.estimatedArrival || delivery.scheduledTime;
+    if (!ref) return false;
+    return Date.now() - new Date(ref).getTime() > 2 * 60 * 60 * 1000;
+  };
 
   const {
     filtered,
@@ -142,6 +165,12 @@ export default function DeliveriesPage() {
         </div>
       </Card>
 
+      {/* Last Updated Indicator */}
+      <div className="flex items-center justify-end mb-3 text-xs text-slate-400">
+        <Clock className="h-3 w-3 mr-1" />
+        Last updated {minutesAgo === 0 ? 'just now' : `${minutesAgo} min${minutesAgo > 1 ? 's' : ''} ago`}
+      </div>
+
       {isLoading ? <SkeletonTable rows={5} columns={5} /> : filtered.length === 0 ? (
         <Card>
           <EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results found' : 'No deliveries yet'}
@@ -151,7 +180,13 @@ export default function DeliveriesPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map((delivery) => (
-            <Card key={delivery.id} hover>
+            <Card key={delivery.id} hover className={isStale(delivery) ? 'ring-2 ring-amber-300' : ''}>
+              {isStale(delivery) && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-3">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  No update in 2+ hours
+                </div>
+              )}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="flex items-start space-x-4">
                   <div className={`p-3 rounded-xl ${delivery.status === 'delivered' ? 'bg-emerald-50 text-emerald-600' : delivery.status === 'in-transit' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
@@ -195,6 +230,19 @@ export default function DeliveriesPage() {
                   </button>
                 </div>
               </div>
+              {/* Timeline Toggle */}
+              <button
+                onClick={() => setExpandedTimeline(expandedTimeline === delivery.id ? null : delivery.id)}
+                className="mt-3 flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700"
+              >
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expandedTimeline === delivery.id ? 'rotate-180' : ''}`} />
+                {expandedTimeline === delivery.id ? 'Hide' : 'Show'} Timeline
+              </button>
+              {expandedTimeline === delivery.id && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <DeliveryTimeline deliveryId={delivery.id} />
+                </div>
+              )}
             </Card>
           ))}
         </div>

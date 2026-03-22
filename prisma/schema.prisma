@@ -373,6 +373,9 @@ model Delivery {
   // Photos (JSON string)
   photos            String?  // JSON string: DeliveryPhoto[]
   
+  // Events
+  events          DeliveryEvent[]
+
   // Indexes
   @@index([ownerId])
   @@index([teamId])
@@ -381,6 +384,21 @@ model Delivery {
   @@index([status, createdAt])
   @@index([customer])
   @@index([createdAt])
+}
+
+model DeliveryEvent {
+  id         String   @id @default(cuid())
+  deliveryId String
+  delivery   Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  status     String
+  timestamp  DateTime @default(now())
+  notes      String?
+  latitude   Float?
+  longitude  Float?
+  createdBy  String?
+
+  @@index([deliveryId])
+  @@index([timestamp])
 }
 
 model MaintenanceTask {
