@@ -1,3 +1,4 @@
+import { toast } from "react-hot-toast";
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -69,7 +70,7 @@ export default function DriverDeliveryPage() {
       }
       await refetch()
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setUpdating(false)
     }

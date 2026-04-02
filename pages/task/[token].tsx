@@ -1,3 +1,4 @@
+import { toast } from "react-hot-toast";
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -40,7 +41,7 @@ export default function MechanicTaskPage() {
 
   const handleSubmit = async () => {
     if (!form.actualCost && !form.completionNotes && !form.markComplete) {
-      alert('Please fill in at least the cost or notes before submitting.');
+      toast.error('Please fill in at least the cost or notes before submitting.');
       return;
     }
     setSubmitting(true);

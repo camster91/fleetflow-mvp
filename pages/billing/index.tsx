@@ -1,3 +1,4 @@
+import { toast } from "react-hot-toast";
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
@@ -55,10 +56,10 @@ export default function BillingPage() {
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || 'Failed to create checkout session');
+        toast.error(data.error || 'Failed to create checkout session');
       }
     } catch {
-      alert('Something went wrong. Please try again.');
+      toast.error('Something went wrong. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -73,10 +74,10 @@ export default function BillingPage() {
       if (r.ok) {
         setSub(prev => prev ? { ...prev, cancelAtPeriodEnd: true } : prev);
       } else {
-        alert(data.error || 'Failed to cancel subscription');
+        toast.error(data.error || 'Failed to cancel subscription');
       }
     } catch {
-      alert('Something went wrong.');
+      toast.error('Something went wrong.');
     } finally {
       setActionLoading(false);
     }
