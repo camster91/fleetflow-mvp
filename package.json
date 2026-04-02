@@ -5,7 +5,7 @@
   "//": "Build trigger: ensure fresh Docker layer cache",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate "build": "next build""build": "next build" prisma db push --accept-data-loss "build": "next build""build": "next build" next build",
     "start": "next start",
     "lint": "next lint",
     "seed": "node scripts/manual-seed.js",
