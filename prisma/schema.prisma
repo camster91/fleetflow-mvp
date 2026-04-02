@@ -17,6 +17,9 @@ model User {
   name          String?
   password      String?   // Nullable for OAuth users
   role          String    @default("fleet_manager")
+  driverLicense String?
+  licenseExpiry DateTime?
+  availabilityStatus String? @default("Available")
   company       String?
   emailVerified DateTime?
   image         String?
