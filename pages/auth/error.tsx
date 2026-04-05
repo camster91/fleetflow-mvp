@@ -46,7 +46,7 @@ const errorMessages: Record<string, { title: string; message: string; icon: Reac
     message: 'Your account has been temporarily locked due to too many failed login attempts. Please try again later.',
     icon: <Lock className="h-8 w-8 text-red-600" />,
     action: 'Contact Support',
-    actionHref: '/support',
+    actionHref: '/help',
   },
   OAuthSignin: {
     title: 'OAuth Error',
@@ -128,7 +128,7 @@ export default function AuthErrorPage() {
 
         <p className="mt-6 text-xs text-slate-500">
           Need help?{' '}
-          <Link href="/support" className="text-blue-900 hover:underline">
+          <Link href="/help" className="text-blue-900 hover:underline">
             Contact Support
           </Link>
         </p>

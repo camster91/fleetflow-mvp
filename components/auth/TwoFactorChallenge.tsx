@@ -208,7 +208,7 @@ export function TwoFactorChallenge({
           </p>
           <p className="text-xs text-slate-400">
             Can&apos;t sign in? Contact{' '}
-            <a href="/support" className="text-blue-900 hover:underline">
+            <a href="/help" className="text-blue-900 hover:underline">
               support
             </a>
           </p>

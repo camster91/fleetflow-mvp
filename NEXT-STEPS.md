@@ -12,7 +12,7 @@ Go to: **Coolify Dashboard → Applications → fleetflow-pro → Environment Va
 Add:
 ```env
 NEXTAUTH_URL=https://fleet.ashbi.ca
-NEXTAUTH_SECRET=tJHahWG9Lwkmfl66qShjHSjFQjVTFwPu8BNfl1jC/ek=
+NEXTAUTH_SECRET=[REDACTED]
 DATABASE_URL="file:./prod.db"
 NODE_ENV=production
 PORT=3000
@@ -31,7 +31,7 @@ Click "Redeploy" in Coolify.
 After restart, login with:
 - **URL**: https://fleet.ashbi.ca/auth/login
 - **Email**: admin@fleetflow.com
-- **Password**: admin123
+- **Password**: [REDACTED]
 
 ## **🧪 Verify Everything Works**
 Run final verification:

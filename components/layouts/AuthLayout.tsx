@@ -80,9 +80,9 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <div className="text-sm text-blue-200">
             <p>© 2026 FleetFlow Pro. All rights reserved.</p>
             <div className="mt-2 flex items-center space-x-4">
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-              <Link href="/support" className="hover:text-white transition-colors">Support</Link>
+              <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/help" className="hover:text-white transition-colors">Support</Link>
             </div>
           </div>
         </div>

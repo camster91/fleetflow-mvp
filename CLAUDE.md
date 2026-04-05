@@ -24,7 +24,7 @@ A fleet management SaaS app. Live at fleet.ashbi.ca. Next.js with pages router (
 - Branch: master (not main!)
 
 ## Release Keystore (Android)
-- File: android/app/jw-habits-release.keystore (wait — wrong app, FleetFlow is web only)
+- N/A — FleetFlow is a web-only application, no Android keystore needed
 
 ## DO NOT
 - Do not change the database URL — it points to VPS Postgres
