@@ -26,7 +26,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-.env*.local
+.env*
+!.env.example.local
 .env
 .env.local
 .env.production
@@ -51,6 +52,7 @@ dev2.err
 /generated/prisma
 # Environment files
 .env*
+!.env.example
 
 # Local database files
 *.db
