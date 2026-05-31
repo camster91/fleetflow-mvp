@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../lib/fleet'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
+  const userId = (session.user as any).id
 
   if (req.method === 'GET') {
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
@@ -15,12 +15,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const [tasks, total] = await Promise.all([
       prisma.maintenanceTask.findMany({
+        where: { ownerId: userId },
         orderBy: { dueDate: 'asc' },
         include: { vehicle: { select: { name: true } } },
         skip,
         take: limit,
       }),
-      prisma.maintenanceTask.count(),
+      prisma.maintenanceTask.count({ where: { ownerId: userId } }),
     ])
     return res.json({ data: tasks.map(dbToMaintenanceTask), total, page, limit, hasMore: skip + limit < total })
   }

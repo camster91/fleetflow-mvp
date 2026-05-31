@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../../lib/auth'
+import { getServerSession, authOptions } from '../../../../lib/auth'
 import { prisma } from '../../../../lib/prisma'
 import { dbToDelivery, logActivity } from '../../../../lib/fleet'
 
@@ -20,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` })
   }
 
-  const delivery = await prisma.delivery.findUnique({ where: { id } })
+  const delivery = await prisma.delivery.findFirst({ where: { id } })
   if (!delivery) return res.status(404).json({ error: 'Not found' })
 
   const updated = await prisma.$transaction(async (tx) => {

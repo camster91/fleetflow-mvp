@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../lib/auth'
+import { getServerSession, authOptions } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
 
 // Simple key-value storage using raw SQL (avoiding Prisma schema changes)

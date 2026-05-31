@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../../lib/auth'
+import { getServerSession, authOptions } from '../../../../lib/auth'
 import { prisma } from '../../../../lib/prisma'
 import { dbToDelivery, deliveryToDb, logActivity } from '../../../../lib/fleet'
 import { createNotification } from '../../../../lib/notifications'
@@ -14,19 +13,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = (session.user as any).id
 
   if (req.method === 'GET') {
-    const delivery = await prisma.delivery.findUnique({ where: { id } })
+    const delivery = await prisma.delivery.findFirst({ where: { id, ownerId: userId } })
     if (!delivery) return res.status(404).json({ error: 'Not found' })
     return res.json(dbToDelivery(delivery))
   }
 
   if (req.method === 'PUT') {
-    const existing = await prisma.delivery.findUnique({ where: { id } })
+    const existing = await prisma.delivery.findFirst({ where: { id, ownerId: userId } })
     if (!existing) return res.status(404).json({ error: 'Not found' })
     const { ownerId: _o, ...fields } = deliveryToDb(req.body, userId) as any
     const wasCompleted = req.body.status === 'delivered' && existing.status !== 'delivered'
 
     const delivery = await prisma.$transaction(async (tx) => {
-      const updated = await tx.delivery.update({ where: { id }, data: fields })
+      const updated = await tx.delivery.update({ where: { id, ownerId: userId }, data: fields })
       await logActivity(tx, {
         userId, userName: session.user.name, userRole: (session.user as any).role,
         action: wasCompleted ? 'completed' : 'status_changed',
@@ -74,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const delivery = await prisma.delivery.findUnique({ where: { id } })
+    const delivery = await prisma.delivery.findFirst({ where: { id, ownerId: userId } })
     if (!delivery) return res.status(404).json({ error: 'Not found' })
     await prisma.delivery.delete({ where: { id } })
     await logActivity(prisma, {

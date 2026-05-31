@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToAnnouncement, announcementToDb, logActivity } from '../../../lib/fleet'
 
@@ -11,7 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { id } = req.query as { id: string }
 
   if (req.method === 'DELETE') {
-    const ann = await prisma.announcement.findUnique({ where: { id } })
+    const ann = await prisma.announcement.findFirst({ where: { id, ownerId: userId } })
+    if (!ann) return res.status(404).json({ error: 'Not found' })
     await prisma.announcement.delete({ where: { id } })
     await logActivity(prisma, {
       userId, userName: session.user.name, userRole: (session.user as any).role,

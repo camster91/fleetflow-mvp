@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
-import type { NextApiRequest } from 'next'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { parse } from 'cookie'
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || (() => {
+const JWT_SECRET=process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || (() => {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('JWT_SECRET environment variable is not set')
   }
@@ -87,6 +87,19 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
       onboardingCompleted: dbUser.onboardingCompleted,
     },
   }
+}
+
+/**
+ * Drop-in replacement for next-auth's getServerSession.
+ * Uses our custom JWT cookie auth instead of NextAuth's session cookie.
+ * Compatible signature: (req, res, options?) => Promise<Session | null>
+ */
+export async function getServerSession(
+  req: NextApiRequest,
+  _res?: NextApiResponse,
+  _options?: any
+): Promise<Session | null> {
+  return getUserFromRequest(req)
 }
 
 /** Kept for backwards compatibility with imports referencing authOptions */

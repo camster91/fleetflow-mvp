@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../../../../lib/auth';
+import { getServerSession, authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 
 /** GET /api/vehicles/[id]/details

@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToAnnouncement, announcementToDb, logActivity } from '../../../lib/fleet'
 
@@ -10,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = (session.user as any).id
 
   if (req.method === 'GET') {
-    const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' }, take: 50 })
+    const announcements = await prisma.announcement.findMany({ where: { ownerId: userId }, orderBy: { createdAt: 'desc' }, take: 50 })
     return res.json(announcements.map(dbToAnnouncement))
   }
 

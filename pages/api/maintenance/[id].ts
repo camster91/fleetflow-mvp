@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../lib/fleet'
 
@@ -12,8 +11,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = (session.user as any).id
 
   if (req.method === 'GET') {
-    const task = await prisma.maintenanceTask.findUnique({
-      where: { id },
+    const task = await prisma.maintenanceTask.findFirst({
+      where: { id, ownerId: userId },
       include: { vehicle: { select: { name: true } } },
     })
     if (!task) return res.status(404).json({ error: 'Not found' })
@@ -21,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
-    const existing = await prisma.maintenanceTask.findUnique({ where: { id } })
+    const existing = await prisma.maintenanceTask.findFirst({ where: { id, ownerId: userId } })
     if (!existing) return res.status(404).json({ error: 'Not found' })
     let vehicleId: string | undefined = req.body.vehicleId || existing.vehicleId || undefined
     if (!vehicleId && req.body.vehicle) {
@@ -30,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const { ownerId: _o, ...fields } = maintenanceTaskToDb(req.body, userId, vehicleId) as any
     const wasCompleted = req.body.completed === true && !existing.completed
-    const task = await prisma.maintenanceTask.update({ where: { id }, data: fields })
+    const task = await prisma.maintenanceTask.update({ where: { id, ownerId: userId }, data: fields })
     await logActivity(prisma, {
       userId, userName: session.user.name, userRole: (session.user as any).role,
       action: wasCompleted ? 'completed' : 'updated',
@@ -43,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const task = await prisma.maintenanceTask.findUnique({ where: { id } })
+    const task = await prisma.maintenanceTask.findFirst({ where: { id, ownerId: userId } })
     if (!task) return res.status(404).json({ error: 'Not found' })
     await prisma.maintenanceTask.delete({ where: { id } })
     await logActivity(prisma, {

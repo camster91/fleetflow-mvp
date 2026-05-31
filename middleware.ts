@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'dev-only-placeholder-not-for-production'
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET environment variable is not set')
+  }
+  return 'dev-only-placeholder-not-for-production'
+})()
 
 // Marketing / SaaS pages that should redirect to login (private deployment)
 const REDIRECT_TO_LOGIN = new Set([

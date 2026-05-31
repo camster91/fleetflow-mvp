@@ -28,10 +28,9 @@ export function withSubscriptionGate(
   handler: (req: any, res: any) => Promise<void>
 ) {
   return async (req: any, res: any) => {
-    const { getServerSession } = await import('next-auth/next');
-    const { authOptions } = await import('./auth');
+    const { getServerSession } = await import('./auth');
 
-    const session = await getServerSession(req, res, authOptions);
+    const session = await getServerSession(req, res);
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }

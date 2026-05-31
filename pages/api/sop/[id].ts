@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToSOPCategory, logActivity } from '../../../lib/fleet'
 
@@ -13,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     const { name, description, count } = req.body
     const cat = await prisma.sOPCategory.update({
-      where: { id },
+      where: { id, ownerId: userId },
       data: { name, description: description ?? null, documentCount: count ?? undefined },
     })
     await logActivity(prisma, {
@@ -25,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const cat = await prisma.sOPCategory.findUnique({ where: { id } })
+    const cat = await prisma.sOPCategory.findFirst({ where: { id, ownerId: userId } })
+    if (!cat) return res.status(404).json({ error: 'Not found' })
     await prisma.sOPCategory.delete({ where: { id } })
     await logActivity(prisma, {
       userId, userName: session.user.name, userRole: (session.user as any).role,

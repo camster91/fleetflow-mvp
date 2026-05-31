@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import type { ActivityItem } from '../../../lib/fleet'
 
@@ -14,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const entityType = req.query.type as string | undefined
 
   const logs = await prisma.auditLog.findMany({
-    where: entityType ? { entityType } : undefined,
+    where: { userId, ...(entityType ? { entityType } : {}) },
     orderBy: { createdAt: 'desc' },
     take: limit,
   })

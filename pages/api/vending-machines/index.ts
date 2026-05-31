@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../../lib/auth'
+import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToVendingMachine, vendingMachineToDb, logActivity } from '../../../lib/fleet'
 
@@ -15,8 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const skip = (page - 1) * limit
 
     const [machines, total] = await Promise.all([
-      prisma.vendingMachine.findMany({ orderBy: { name: 'asc' }, skip, take: limit }),
-      prisma.vendingMachine.count(),
+      prisma.vendingMachine.findMany({ where: { ownerId: userId }, orderBy: { name: 'asc' }, skip, take: limit }),
+      prisma.vendingMachine.count({ where: { ownerId: userId } }),
     ])
     return res.json({ data: machines.map(dbToVendingMachine), total, page, limit, hasMore: skip + limit < total })
   }
