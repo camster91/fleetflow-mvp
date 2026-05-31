@@ -22,9 +22,10 @@ COPY . .
 ARG NEXTAUTH_URL
 ARG NEXTAUTH_SECRET
 ARG DATABASE_URL
-ENV NEXTAUTH_URL=$NEXTAUTH_URL
-ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
-ENV DATABASE_URL=${DATABASE_URL:-file:./prisma/dev.db}
+ENV NEXTAUTH_URL=***
+ENV NEXTAUTH_SECRET=***
+# No SQLite fallback — DATABASE_URL must be explicitly set in production
+ENV DATABASE_URL=${DATABASE_URL}
 
 RUN npm run build
 
@@ -51,6 +52,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
+# Copy entrypoint script that enforces DATABASE_URL in production
+COPY --chown=nextjs:nodejs entrypoint.sh ./
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -66,5 +70,5 @@ USER nextjs
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:3000/ || exit 1
 
-# Start the app
-CMD ["node", "server.js"]
+# Start the app via entrypoint (validates DATABASE_URL before launching)
+CMD ["./entrypoint.sh"]
