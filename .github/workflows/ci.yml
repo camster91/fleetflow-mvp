@@ -1,14 +1,58 @@
-name: CI
-on: [push, pull_request]
+name: CI Build
+
+# Build-only workflow: verifies the project builds cleanly. No deploy, no secrets required.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint:
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run lint || echo 'No lint'
-      - run: npm run build || echo 'No build'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          # Placeholder for prisma schema validation (no DB connection made during generate)
+          DATABASE_URL: postgresql://placeholder:***@localhost:5432/placeholder
+
+      - name: Lint
+        run: npm run lint
+        env:
+          CI: true
+        continue-on-error: true
+
+      - name: Build
+        run: npm run build
+        env:
+          # CI-safe defaults
+          NODE_ENV: production
+          CI: true
+          # NextAuth etc. may need placeholders
+          NEXTAUTH_SECRET: ci-build-placeholder-secret-that-is-at-least-32-chars-long
+          NEXTAUTH_URL: http:/***/localhost:3000
