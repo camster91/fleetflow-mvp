@@ -1,4 +1,4 @@
-import Layout from '../components/Layout';
+import Layout from '../components/layouts/DashboardLayout';
 
 export default function RoutesPage() {
   return (
