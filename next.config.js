@@ -59,7 +59,10 @@ const nextConfig = {
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
-            chunks: 'all',
+            // 'initial' only: keep eagerly-loaded deps in the shared vendors
+            // chunk, but let next/dynamic async imports (e.g. recharts in
+            // the report panels / ChartCard) split into their own lazy chunk.
+            chunks: 'initial',
           },
         },
       }
