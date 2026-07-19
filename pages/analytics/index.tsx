@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { StatCard } from '../../components/analytics/StatCard';
-import { ChartCard } from '../../components/analytics/ChartCard';
 import { DateRangePicker } from '../../components/ui/DateRangePicker';
 import { Button } from '../../components/ui/Button';
 import { subDays } from 'date-fns';
@@ -10,6 +10,13 @@ import { Truck, Wrench, Package, Users, Download } from 'lucide-react';
 import { notify } from '../../services/notifications';
 
 interface DateRange { from: Date; to: Date; label: string; }
+
+// ChartCard pulls in recharts; loading it via next/dynamic keeps recharts
+// out of the shared vendors chunk — it downloads only on this page.
+const ChartCard = dynamic(() => import('../../components/analytics/ChartCard'), {
+  ssr: false,
+  loading: () => <div className="h-80 bg-slate-100 rounded-xl animate-pulse" />,
+});
 
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState<DateRange>({
