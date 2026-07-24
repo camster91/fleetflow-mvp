@@ -17,7 +17,7 @@ FleetFlow Pro is deployed but authentication doesn't work because:
 ```env
 # REQUIRED FOR AUTHENTICATION
 NEXTAUTH_URL=https://fleet.ashbi.ca
-NEXTAUTH_SECRET=tJHahWG9Lwkmfl66qShjHSjFQjVTFwPu8BNfl1jC/ek=
+NEXTAUTH_SECRET=<GENERATE_WITH_openssl_rand_-base64_32>
 
 # DATABASE (SQLite - perfect for single user)
 DATABASE_URL="file:./prod.db"
@@ -215,7 +215,7 @@ Add Stripe API keys to enable:
 | **Admin Email** | admin@fleetflow.com |
 | **Admin Password** | admin123 |
 | **Database** | SQLite (prod.db) |
-| **Auth Secret** | tJHahWG9Lwkmfl66qShjHSjFQjVTFwPu8BNfl1jC/ek= |
+| **Auth Secret** | <GENERATE_WITH_openssl_rand_-base64_32> |
 
 ## **Need Help?**
 

@@ -1,22 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
-import { randomBytes } from 'crypto';
-
-// Generate a secure API key
-function generateApiKey(): string {
-  return 'ff_live_' + randomBytes(24).toString('hex');
-}
+import { generateAPIKey, hashToken } from '../../../lib/tokens';
+import { requireSession, assertSameOrigin } from '../../../lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const session = await requireSession(req, res);
+  if (!session) return;
 
   const userId = session.user.id;
 
@@ -29,6 +21,7 @@ export default async function handler(
             revokedAt: null,
           },
           orderBy: { createdAt: 'desc' },
+          take: 100,
           select: {
             id: true,
             name: true,
@@ -38,10 +31,13 @@ export default async function handler(
           },
         });
 
-        // Mask keys except for the last 4 characters
-        const maskedKeys = keys.map((k: { key: string; name: string; createdAt: Date; lastUsedAt: Date | null }) => ({
-          ...k,
-          key: k.key.substring(0, 12) + '••••••••' + k.key.slice(-4),
+        // Keys are stored hashed — never return recoverable secrets
+        const maskedKeys = keys.map((k) => ({
+          id: k.id,
+          name: k.name,
+          key: 'ff_••••••••••••••••',
+          createdAt: k.createdAt,
+          lastUsedAt: k.lastUsedAt,
         }));
 
         return res.status(200).json({ keys: maskedKeys });
@@ -50,37 +46,45 @@ export default async function handler(
         return res.status(500).json({ error: 'Failed to fetch API keys' });
       }
 
-    case 'POST':
+    case 'POST': {
+      if (!assertSameOrigin(req, res)) return;
       try {
-        const { name } = req.body;
+        const { name } = req.body || {};
 
-        if (!name) {
+        if (!name || typeof name !== 'string' || name.trim().length < 1 || name.length > 100) {
           return res.status(400).json({ error: 'Name is required' });
         }
 
-        const key = generateApiKey();
+        const { key, hashedKey } = generateAPIKey();
 
         const apiKey = await prisma.apiKey.create({
           data: {
             userId,
-            name,
-            key,
+            name: name.trim(),
+            key: hashedKey, // store hash only
           },
           select: {
             id: true,
             name: true,
-            key: true,
             createdAt: true,
           },
         });
 
-        return res.status(201).json({ apiKey });
+        // Return plaintext key once at creation time only
+        return res.status(201).json({
+          apiKey: {
+            ...apiKey,
+            key,
+          },
+        });
       } catch (error) {
         console.error('Failed to create API key:', error);
         return res.status(500).json({ error: 'Failed to create API key' });
       }
+    }
 
-    case 'DELETE':
+    case 'DELETE': {
+      if (!assertSameOrigin(req, res)) return;
       try {
         const { id } = req.query;
 
@@ -88,7 +92,7 @@ export default async function handler(
           return res.status(400).json({ error: 'API key ID is required' });
         }
 
-        await prisma.apiKey.updateMany({
+        const result = await prisma.apiKey.updateMany({
           where: {
             id,
             userId,
@@ -98,13 +102,23 @@ export default async function handler(
           },
         });
 
+        if (result.count === 0) {
+          return res.status(404).json({ error: 'API key not found' });
+        }
+
         return res.status(200).json({ success: true });
       } catch (error) {
         console.error('Failed to revoke API key:', error);
         return res.status(500).json({ error: 'Failed to revoke API key' });
       }
+    }
 
     default:
       return res.status(405).json({ error: 'Method not allowed' });
   }
+}
+
+/** Verify a presented API key against hashed storage (for future API auth). */
+export function verifyStoredApiKey(presented: string, storedHash: string): boolean {
+  return hashToken(presented) === storedHash;
 }

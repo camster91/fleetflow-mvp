@@ -28,10 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     const userId = (session.user as any).id
-    // Try to resolve vehicleId from name if not provided
+    // Resolve vehicle only within the caller's ownership scope (prevents cross-tenant attach)
     let vehicleId: string | undefined = req.body.vehicleId
-    if (!vehicleId && req.body.vehicle) {
-      const v = await prisma.vehicle.findFirst({ where: { name: req.body.vehicle } })
+    if (vehicleId) {
+      const owned = await prisma.vehicle.findFirst({ where: { id: vehicleId, ownerId: userId }, select: { id: true } })
+      if (!owned) return res.status(400).json({ error: 'Invalid vehicle' })
+    } else if (req.body.vehicle) {
+      const v = await prisma.vehicle.findFirst({ where: { name: req.body.vehicle, ownerId: userId } })
       vehicleId = v?.id
     }
     const data = maintenanceTaskToDb(req.body, userId, vehicleId)

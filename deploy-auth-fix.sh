@@ -52,7 +52,7 @@ echo "✅ Authentication fixes applied and container restarted."
 echo ""
 echo "⚠️  IMPORTANT: Add these environment variables to Coolify:"
 echo "   NEXTAUTH_URL=https://fleet.ashbi.ca"
-echo "   NEXTAUTH_SECRET=bxtmgQH5jEKCBHMq58Gtcm/hDTJZlaLIfZv7ad6vm4Q="
+echo "   NEXTAUTH_SECRET=<GENERATE_WITH_openssl_rand_-base64_32>"
 echo ""
 echo "📝 After adding variables, wait 2-3 minutes for app to restart."
 EOF

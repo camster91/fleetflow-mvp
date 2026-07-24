@@ -25,7 +25,7 @@ Add these **CRITICAL** variables:
 ```env
 # NextAuth Configuration (MOST IMPORTANT)
 NEXTAUTH_URL=https://fleet.ashbi.ca
-NEXTAUTH_SECRET=tJHahWG9Lwkmfl66qShjHSjFQjVTFwPu8BNfl1jC/ek=
+NEXTAUTH_SECRET=<GENERATE_WITH_openssl_rand_-base64_32>
 
 # Database (use SQLite for now)
 DATABASE_URL="file:./prod.db"

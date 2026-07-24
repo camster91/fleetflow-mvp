@@ -23,8 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existing = await prisma.maintenanceTask.findFirst({ where: { id, ownerId: userId } })
     if (!existing) return res.status(404).json({ error: 'Not found' })
     let vehicleId: string | undefined = req.body.vehicleId || existing.vehicleId || undefined
-    if (!vehicleId && req.body.vehicle) {
-      const v = await prisma.vehicle.findFirst({ where: { name: req.body.vehicle } })
+    if (req.body.vehicleId) {
+      const owned = await prisma.vehicle.findFirst({
+        where: { id: req.body.vehicleId, ownerId: userId },
+        select: { id: true },
+      })
+      if (!owned) return res.status(400).json({ error: 'Invalid vehicle' })
+      vehicleId = owned.id
+    } else if (!vehicleId && req.body.vehicle) {
+      const v = await prisma.vehicle.findFirst({ where: { name: req.body.vehicle, ownerId: userId } })
       vehicleId = v?.id
     }
     const { ownerId: _o, ...fields } = maintenanceTaskToDb(req.body, userId, vehicleId) as any

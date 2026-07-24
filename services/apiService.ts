@@ -23,7 +23,21 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || `Request failed: ${res.status}`)
+    // Prefer stable client-facing messages; avoid leaking raw backend/provider text
+    const statusMessages: Record<number, string> = {
+      400: 'Invalid request',
+      401: 'Please sign in again',
+      403: 'You do not have permission to do that',
+      404: 'Not found',
+      429: 'Too many requests — try again shortly',
+      500: 'Something went wrong — please try again',
+    }
+    const safe =
+      statusMessages[res.status] ||
+      (typeof err?.error === 'string' && err.error.length < 120 && !/exception|stack|ECONN|prisma|sql/i.test(err.error)
+        ? err.error
+        : `Request failed (${res.status})`)
+    throw new Error(safe)
   }
   return res.json()
 }

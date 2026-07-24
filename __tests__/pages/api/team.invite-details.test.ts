@@ -65,10 +65,10 @@ describe('GET /api/team/invite-details', () => {
     expect(d.invite.invitedBy).toBe('Admin User');
     expect(d.invite.role).toBe('MEMBER');
     expect(d.invite.isExpired).toBe(false);
-    expect(d.invite.inviteeEmail).toBe('invitee@example.com');
+    expect(d.invite.inviteeEmail).toBe('in***@example.com');
   });
 
-  it('marks invite as expired when older than 7 days', async () => {
+  it('returns 410 when invite is expired', async () => {
     const oldMember = {
       ...baseMember,
       invitedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
@@ -77,7 +77,6 @@ describe('GET /api/team/invite-details', () => {
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(mockInviter);
     const { req, res } = createMocks({ method: 'GET', query: { token: 'member-1' } });
     await handler(req as any, res as any);
-    const d = JSON.parse(res._getData());
-    expect(d.invite.isExpired).toBe(true);
+    expect(res._getStatusCode()).toBe(410);
   });
 });

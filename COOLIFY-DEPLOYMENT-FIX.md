@@ -38,7 +38,7 @@ EMAIL_VERIFICATION_REQUIRED=false
 ```bash
 # Generate a secure secret
 openssl rand -base64 32
-# Output: tJHahWG9Lwkmfl66qShjHSjFQjVTFwPu8BNfl1jC/ek=
+# Output: <GENERATE_WITH_openssl_rand_-base64_32>
 ```
 
 3. **Save** → Coolify auto-redeploys (2-3 minutes)

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { assertSameOrigin, isTeamInviteExpired } from '../../../lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,16 +11,17 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!assertSameOrigin(req, res)) return;
+
   const session = await getServerSession(req, res, authOptions);
 
   try {
-    const { invitationId, accept } = req.body;
+    const { invitationId, accept } = req.body || {};
 
-    if (!invitationId) {
+    if (!invitationId || typeof invitationId !== 'string') {
       return res.status(400).json({ error: 'Invitation ID required' });
     }
 
-    // Find the invitation
     const invitation = await prisma.teamMember.findUnique({
       where: { id: invitationId },
       include: {
@@ -36,30 +38,15 @@ export default async function handler(
       return res.status(400).json({ error: 'Invitation is no longer pending' });
     }
 
-    // If user is logged in, verify they match the invitation
-    if (session?.user?.id) {
-      // If invitation has a userId, verify it matches
-      if (invitation.userId && invitation.userId !== session.user.id) {
-        return res.status(403).json({ error: 'This invitation is for a different user' });
-      }
-
-      // Update the invitation
-      const updated = await prisma.teamMember.update({
+    if (isTeamInviteExpired(invitation.invitedAt)) {
+      await prisma.teamMember.update({
         where: { id: invitationId },
-        data: {
-          status: accept ? 'ACCEPTED' : 'DECLINED',
-          joinedAt: accept ? new Date() : null,
-          userId: session.user.id,
-        },
-      });
+        data: { status: 'EXPIRED' },
+      }).catch(() => undefined);
+      return res.status(410).json({ error: 'Invitation has expired' });
+    }
 
-      return res.status(200).json({
-        success: true,
-        status: updated.status,
-        team: invitation.team.name,
-      });
-    } else {
-      // User is not logged in - they need to create an account first
+    if (!session?.user?.id) {
       return res.status(401).json({
         error: 'Authentication required',
         requiresSignup: !invitation.userId,
@@ -67,6 +54,34 @@ export default async function handler(
         teamName: invitation.team.name,
       });
     }
+
+    // Bound invite to the intended user — blank userId invites must not be claimable by anyone
+    if (invitation.userId) {
+      if (invitation.userId !== session.user.id) {
+        return res.status(403).json({ error: 'This invitation is for a different user' });
+      }
+    } else if (invitation.user?.email) {
+      if (invitation.user.email.toLowerCase() !== session.user.email.toLowerCase()) {
+        return res.status(403).json({ error: 'This invitation is for a different user' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Invitation is invalid; request a new invite' });
+    }
+
+    const updated = await prisma.teamMember.update({
+      where: { id: invitationId },
+      data: {
+        status: accept ? 'ACCEPTED' : 'DECLINED',
+        joinedAt: accept ? new Date() : null,
+        userId: session.user.id,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      status: updated.status,
+      team: invitation.team.name,
+    });
   } catch (error) {
     console.error('Failed to process invitation:', error);
     return res.status(500).json({ error: 'Internal server error' });

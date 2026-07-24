@@ -18,11 +18,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PUT') {
     const { ownerId: _o, ...updateFields } = vehicleToDb(req.body, userId) as any
-    await prisma.vehicle.updateMany({
+    const result = await prisma.vehicle.updateMany({
       where: { id, ownerId: userId },
       data: { ...updateFields, lastUpdated: new Date() },
     })
-    const vehicle = await prisma.vehicle.findUnique({ where: { id } })
+    // Must re-read with owner scope — findUnique after updateMany leaked other tenants' rows
+    if (result.count === 0) return res.status(404).json({ error: 'Not found' })
+    const vehicle = await prisma.vehicle.findFirst({ where: { id, ownerId: userId } })
     if (!vehicle) return res.status(404).json({ error: 'Not found' })
     await logActivity(prisma, {
       userId, userName: session.user.name, userRole: (session.user as any).role,

@@ -54,6 +54,58 @@ function getTokenPayload(req: NextRequest) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const method = req.method.toUpperCase()
+
+  // CSRF: block cross-origin mutating API calls that rely on cookie auth
+  const csrfExempt =
+    pathname.startsWith('/api/stripe/webhook') ||
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/auth/')
+
+  if (
+    pathname.startsWith('/api/') &&
+    !csrfExempt &&
+    method !== 'GET' &&
+    method !== 'HEAD' &&
+    method !== 'OPTIONS'
+  ) {
+    const origin = req.headers.get('origin')
+    const referer = req.headers.get('referer')
+    const host = req.headers.get('host')
+    const allowed = new Set<string>()
+    if (host) allowed.add(host)
+    const appUrl = process.env.NEXTAUTH_URL || process.env.APP_URL
+    if (appUrl) {
+      try {
+        allowed.add(new URL(appUrl).host)
+      } catch {
+        /* ignore */
+      }
+    }
+
+    const hostOf = (value: string | null) => {
+      if (!value) return null
+      try {
+        return new URL(value).host
+      } catch {
+        return null
+      }
+    }
+
+    if (origin) {
+      const oHost = hostOf(origin)
+      if (!oHost || !allowed.has(oHost)) {
+        return NextResponse.json({ error: 'Forbidden origin' }, { status: 403 })
+      }
+    } else if (referer) {
+      const rHost = hostOf(referer)
+      if (!rHost || !allowed.has(rHost)) {
+        return NextResponse.json({ error: 'Forbidden origin' }, { status: 403 })
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Forbidden origin' }, { status: 403 })
+    }
+  }
 
   // Let auth API and static files pass through
   if (

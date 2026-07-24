@@ -9,6 +9,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
 
+  const userId = (session.user as { id: string }).id
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
   const limit = Math.min(Number(req.query.limit) || 20, 100)
   const entityType = req.query.type as string | undefined
 

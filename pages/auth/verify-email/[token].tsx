@@ -13,6 +13,9 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!token || typeof token !== 'string') return;
 
+    let redirectTimer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
     const verifyEmail = async () => {
       try {
         const response = await fetch('/api/auth/verify-email', {
@@ -22,13 +25,13 @@ export default function VerifyEmailPage() {
         });
 
         const data = await response.json();
+        if (cancelled) return;
 
         if (response.ok) {
           setStatus('success');
           setMessage('Your email has been verified successfully!');
           
-          // Redirect to login after 3 seconds
-          setTimeout(() => {
+          redirectTimer = setTimeout(() => {
             router.push('/auth/login?verified=true');
           }, 3000);
         } else {
@@ -44,12 +47,19 @@ export default function VerifyEmailPage() {
           }
         }
       } catch (error) {
-        setStatus('error');
-        setMessage('An unexpected error occurred. Please try again.');
+        if (!cancelled) {
+          setStatus('error');
+          setMessage('An unexpected error occurred. Please try again.');
+        }
       }
     };
 
     verifyEmail();
+
+    return () => {
+      cancelled = true;
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
   }, [token, router]);
 
   const handleResendEmail = async () => {

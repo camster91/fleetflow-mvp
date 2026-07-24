@@ -1,69 +1,55 @@
-const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+#!/usr/bin/env node
 
-async function createAdmin() {
+/**
+ * Root create-admin entrypoint.
+ * Requires ADMIN_PASSWORD — never embeds default credentials.
+ *
+ *   ADMIN_PASSWORD='your-strong-password' node create-admin.js
+ */
+
+const bcrypt = require('bcryptjs');
+
+async function main() {
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@fleetflow.com';
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (!adminPassword || adminPassword.length < 12) {
+    console.error('❌ Set ADMIN_PASSWORD (min 12 characters) before running this script.');
+    process.exit(1);
+  }
+
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+
   try {
-    console.log('🔧 Creating admin user...');
-    
-    // Check if admin already exists
-    let admin = await prisma.user.findUnique({
-      where: { email: 'admin@fleetflow.com' }
-    });
-    
-    if (!admin) {
-      // Create admin
-      const hashedPassword = await bcrypt.hash('admin123', 12);
-      admin = await prisma.user.create({
+    const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
+
+    if (existing) {
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { password: hashedPassword, emailVerified: new Date(), role: 'admin' },
+      });
+      console.log('✅ Admin password rotated for', adminEmail);
+    } else {
+      await prisma.user.create({
         data: {
           name: 'Admin User',
-          email: 'admin@fleetflow.com',
+          email: adminEmail,
           password: hashedPassword,
           role: 'admin',
           company: 'FleetFlow',
           emailVerified: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
         },
       });
-      console.log('✅ Admin user created');
-    } else if (!admin.emailVerified) {
-      // Verify existing admin
-      await prisma.user.update({
-        where: { id: admin.id },
-        data: { emailVerified: new Date() }
-      });
-      console.log('✅ Admin user verified');
-    } else {
-      console.log('✅ Admin user already exists and verified');
+      console.log('✅ Admin created:', adminEmail);
     }
-    
-    // Verify ALL existing users (bypass email verification)
-    const unverifiedUsers = await prisma.user.findMany({
-      where: { emailVerified: null }
-    });
-    
-    for (const user of unverifiedUsers) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { 
-          emailVerified: new Date(),
-          verificationToken: null
-        }
-      });
-      console.log(`✅ Verified: ${user.email}`);
-    }
-    
-    console.log('\n🎉 Auth setup complete!');
-    console.log('🔑 Login credentials:');
-    console.log('   Email: admin@fleetflow.com');
-    console.log('   Password: admin123');
-    
+  } finally {
     await prisma.$disconnect();
-  } catch (error) {
-    console.error('❌ Error:', error.message);
-    process.exit(1);
   }
 }
 
-createAdmin();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
