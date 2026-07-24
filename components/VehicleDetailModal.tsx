@@ -49,8 +49,12 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
     if (!isOpen || !vehicle?.id) return
     setLoadingDetails(true)
     fetch(`/api/vehicles/${vehicle.id}/details`)
-      .then(r => r.json())
+      .then(async (r) => {
+        if (!r.ok) return null
+        return r.json()
+      })
       .then(data => {
+        if (!data) return
         setMaintenanceTasks(data.maintenanceTasks ?? [])
         setDriverUser(data.driverUser ?? null)
       })

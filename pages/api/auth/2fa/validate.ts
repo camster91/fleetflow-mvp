@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../../lib/prisma';
+import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { rateLimitMiddleware } from '../../../../lib/rateLimit';
@@ -43,9 +44,10 @@ export default async function handler(
       });
     }
 
-    // Verify the TOTP code
+    const plaintextSecret = decryptSecret(user.twoFactorSecret);
+
     const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: plaintextSecret,
       encoding: 'base32',
       token: code,
       window: 2,

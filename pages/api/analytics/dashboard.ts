@@ -79,16 +79,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }),
       // Client count
       prisma.client.count({ where: ownershipFilter }),
-      // Activity logs
+      // Activity logs (bounded for chart aggregation)
       prisma.auditLog.findMany({
         where: { userId, createdAt: { gte: fromDate } },
         orderBy: { createdAt: 'asc' },
         select: { entityType: true, action: true, createdAt: true },
+        take: 5000,
       }),
       // Vehicles for utilization chart
-      prisma.vehicle.findMany({ where: ownershipFilter, select: { name: true } }),
+      prisma.vehicle.findMany({
+        where: ownershipFilter,
+        select: { id: true, name: true },
+        take: 500,
+      }),
       // Deliveries with vehicle info for utilization
-      prisma.delivery.findMany({ where: ownershipFilter, select: { vehicleId: true, vehicle: { select: { name: true } } } }),
+      prisma.delivery.groupBy({
+        by: ['vehicleId'],
+        where: { ...ownershipFilter, vehicleId: { not: null } },
+        _count: { _all: true },
+      }),
     ]);
 
     const totalMaintCost = maintenanceCostAgg._sum.costEstimate || 0;
@@ -127,12 +136,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? categoryGroups.map(g => ({ name: g.type || 'General', value: g._count, cost: g._sum.costEstimate || 0 }))
       : [{ name: 'No tasks yet', value: 1, cost: 0 }];
 
-    // Vehicle utilization (delivery assignments)
+    // Vehicle utilization from groupBy counts
+    const vehicleNameById = new Map(vehicles.map(v => [v.id, v.name]));
     const vDeliveries: Record<string, number> = {};
     for (const v of vehicles) vDeliveries[v.name] = 0;
-    for (const d of deliveries) {
-      const vehicleName = d.vehicle?.name;
-      if (vehicleName && vDeliveries[vehicleName] !== undefined) vDeliveries[vehicleName]++;
+    for (const row of deliveries) {
+      if (!row.vehicleId) continue;
+      const vehicleName = vehicleNameById.get(row.vehicleId);
+      if (vehicleName && vDeliveries[vehicleName] !== undefined) {
+        vDeliveries[vehicleName] += row._count._all;
+      }
     }
     const vehicleUtilization = Object.entries(vDeliveries)
       .sort((a, b) => b[1] - a[1])

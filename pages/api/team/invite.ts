@@ -1,15 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
-import { TeamRole, InvitationStatus } from '../../../types';
-import { randomBytes } from 'crypto';
-import { canManageTeam } from '../../../lib/permissions';
 import { sendTeamInvitationEmail } from '../../../lib/email';
-
-// Generate a secure invitation token
-function generateToken(): string {
-  return randomBytes(32).toString('hex');
-}
+import { assertSameOrigin } from '../../../lib/apiAuth';
+import { parseBody, teamInviteSchema } from '../../../lib/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -25,19 +19,18 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    const { teamId, emails, role, message } = req.body;
+  if (!assertSameOrigin(req, res)) return;
 
-    // Validate required fields
-    if (!teamId || !emails || !Array.isArray(emails) || emails.length === 0) {
-      return res.status(400).json({ error: 'Team ID and at least one email are required' });
+  try {
+    const parsed = parseBody(teamInviteSchema, req.body);
+    if ('error' in parsed) {
+      return res.status(400).json({ error: parsed.error });
     }
 
-    // Validate role
-    const validRoles: string[] = ['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'];
-    const assignedRole = validRoles.includes(role) ? role : 'MEMBER';
+    const { teamId, emails, role } = parsed.data;
+    const assignedRole = role || 'MEMBER';
+    const normalizedEmails = [...new Set(emails.map((e) => e.toLowerCase()))];
 
-    // Check if user has permission to invite to this team
     const team = await prisma.team.findFirst({
       where: {
         id: teamId,
@@ -63,81 +56,99 @@ export default async function handler(
       return res.status(403).json({ error: 'You do not have permission to invite to this team' });
     }
 
-    // Check team member limit (example: 10 members for free tier)
-    const memberCount = team.members.filter((m: { status: string }) => m.status === 'ACCEPTED').length;
-    if (memberCount + emails.length > 10) {
+    const memberCount = team.members.filter((m) => m.status === 'ACCEPTED').length;
+    if (memberCount + normalizedEmails.length > 10) {
       return res.status(400).json({ error: 'Team member limit would be exceeded' });
     }
 
-    const results = [];
-    const errors = [];
+    // Batch-load existing users for all emails
+    const existingUsers = await prisma.user.findMany({
+      where: { email: { in: normalizedEmails } },
+      select: { id: true, email: true },
+    });
+    const userByEmail = new Map(existingUsers.map((u) => [u.email.toLowerCase(), u]));
 
-    for (const email of emails) {
-      try {
-        const result = await prisma.$transaction(async (tx) => {
-          // Check if user already exists
-          const existingUser = await tx.user.findUnique({
-            where: { email: email.toLowerCase() },
-          });
+    // Batch-load existing memberships for this team
+    const existingMembers = await prisma.teamMember.findMany({
+      where: {
+        teamId,
+        OR: [
+          { inviteeEmail: { in: normalizedEmails } },
+          { userId: { in: existingUsers.map((u) => u.id) } },
+        ],
+      },
+    });
 
-          // Check if already a member
-          const existingMember = await tx.teamMember.findFirst({
-            where: {
-              teamId,
-              OR: [
-                { userId: existingUser?.id || '' },
-                { user: { email: email.toLowerCase() } },
-              ],
-            },
-          });
+    const memberByEmail = new Map<string, (typeof existingMembers)[0]>();
+    for (const m of existingMembers) {
+      if (m.inviteeEmail) memberByEmail.set(m.inviteeEmail.toLowerCase(), m);
+    }
+    for (const m of existingMembers) {
+      if (!m.userId) continue;
+      const u = existingUsers.find((x) => x.id === m.userId);
+      if (u) memberByEmail.set(u.email.toLowerCase(), m);
+    }
 
-          if (existingMember) {
-            if (existingMember.status === 'ACCEPTED') {
-              return { type: 'error' as const, email, error: 'Already a team member' };
-            } else if (existingMember.status === 'PENDING') {
-              await tx.teamMember.update({
-                where: { id: existingMember.id },
-                data: { invitedAt: new Date(), role: assignedRole },
-              });
-              return { type: 'resent' as const, email };
-            }
-          }
+    const results: Array<{ email: string; status: string; invitationId?: string }> = [];
+    const errors: Array<{ email: string; error: string }> = [];
+    const toCreate: Array<{ email: string; userId: string | null }> = [];
+    const toResend: Array<{ email: string; memberId: string }> = [];
 
-          // Create invitation
-          const invitation = await tx.teamMember.create({
-            data: {
-              teamId,
-              userId: existingUser?.id || '',
-              role: assignedRole,
-              invitedBy: session.user.id,
-              status: 'PENDING',
-            },
-          });
-
-          return { type: 'invited' as const, email, invitationId: invitation.id };
-        });
-
-        if (result.type === 'error') {
-          errors.push({ email: result.email, error: result.error });
-        } else if (result.type === 'resent') {
-          results.push({ email: result.email, status: 'resent' });
+    for (const email of normalizedEmails) {
+      const existing = memberByEmail.get(email);
+      if (existing) {
+        if (existing.status === 'ACCEPTED') {
+          errors.push({ email, error: 'Already a team member' });
+        } else if (existing.status === 'PENDING') {
+          toResend.push({ email, memberId: existing.id });
         } else {
-          // Send invitation email (non-blocking — don't fail the invite if email fails)
-          sendTeamInvitationEmail(
-            email,
-            (session.user as any).name || session.user.email || 'A team member',
-            assignedRole,
-            team.name,
-          ).catch((err: Error) => {
-            console.error(`Failed to send invitation email to ${email}:`, err.message);
-          });
-          results.push({ email: result.email, status: 'invited', invitationId: result.invitationId });
+          toCreate.push({ email, userId: userByEmail.get(email)?.id ?? null });
         }
-      } catch (error) {
-        console.error(`Failed to invite ${email}:`, error);
-        errors.push({ email, error: 'Failed to send invitation' });
+      } else {
+        toCreate.push({ email, userId: userByEmail.get(email)?.id ?? null });
       }
     }
+
+    // Single transaction for creates + resends
+    await prisma.$transaction(async (tx) => {
+      for (const item of toResend) {
+        await tx.teamMember.update({
+          where: { id: item.memberId },
+          data: {
+            invitedAt: new Date(),
+            role: assignedRole,
+            inviteeEmail: item.email,
+            status: 'PENDING',
+          },
+        });
+        results.push({ email: item.email, status: 'resent', invitationId: item.memberId });
+      }
+
+      for (const item of toCreate) {
+        const invitation = await tx.teamMember.create({
+          data: {
+            teamId,
+            userId: item.userId,
+            inviteeEmail: item.email,
+            role: assignedRole,
+            invitedBy: session.user.id,
+            status: 'PENDING',
+          },
+        });
+        results.push({ email: item.email, status: 'invited', invitationId: invitation.id });
+      }
+    });
+
+    // Fire-and-forget emails in parallel (don't block response)
+    const inviterName =
+      (session.user as { name?: string | null }).name || session.user.email || 'A team member';
+    await Promise.allSettled(
+      results.map((r) =>
+        sendTeamInvitationEmail(r.email, inviterName, assignedRole, team.name).catch((err: Error) => {
+          console.error(`Failed to send invitation email to ${r.email}:`, err.message);
+        })
+      )
+    );
 
     return res.status(200).json({
       success: true,

@@ -50,18 +50,23 @@ export default async function handler(
       return res.status(401).json({
         error: 'Authentication required',
         requiresSignup: !invitation.userId,
-        canLogin: !!invitation.userId,
+        canLogin: !!invitation.userId || !!invitation.inviteeEmail,
         teamName: invitation.team.name,
       });
     }
 
-    // Bound invite to the intended user — blank userId invites must not be claimable by anyone
+    const sessionEmail = session.user.email.toLowerCase();
+    const intendedEmail =
+      invitation.inviteeEmail?.toLowerCase() ||
+      invitation.user?.email?.toLowerCase() ||
+      null;
+
     if (invitation.userId) {
       if (invitation.userId !== session.user.id) {
         return res.status(403).json({ error: 'This invitation is for a different user' });
       }
-    } else if (invitation.user?.email) {
-      if (invitation.user.email.toLowerCase() !== session.user.email.toLowerCase()) {
+    } else if (intendedEmail) {
+      if (intendedEmail !== sessionEmail) {
         return res.status(403).json({ error: 'This invitation is for a different user' });
       }
     } else {
@@ -74,6 +79,7 @@ export default async function handler(
         status: accept ? 'ACCEPTED' : 'DECLINED',
         joinedAt: accept ? new Date() : null,
         userId: session.user.id,
+        inviteeEmail: intendedEmail || sessionEmail,
       },
     });
 

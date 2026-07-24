@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { rateLimitMiddleware } from '../../../lib/rateLimit';
 import { validatePassword } from '../../../lib/security';
+import { hashToken } from '../../../lib/tokens';
 import bcrypt from 'bcryptjs';
 
 export default async function handler(
@@ -29,9 +30,8 @@ async function handleValidateToken(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Token is required' });
     }
 
-    // Find user with this reset token
     const user = await prisma.user.findUnique({
-      where: { passwordResetToken: token },
+      where: { passwordResetToken: hashToken(token) },
     });
 
     if (!user) {
@@ -85,9 +85,8 @@ async function handleResetPassword(req: NextApiRequest, res: NextApiResponse) {
       });
     }
 
-    // Find user with this reset token
     const user = await prisma.user.findUnique({
-      where: { passwordResetToken: token },
+      where: { passwordResetToken: hashToken(token) },
     });
 
     if (!user) {

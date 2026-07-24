@@ -108,9 +108,12 @@ export default function EmailSettings({ isOpen, onClose }: EmailSettingsProps) {
   React.useEffect(() => {
     if (!isOpen) return
     fetch('/api/settings/notifications')
-      .then(r => r.json())
+      .then(async (r) => {
+        if (!r.ok) return null
+        return r.json()
+      })
       .then(data => {
-        if (data.notificationSettings && Object.keys(data.notificationSettings).length > 0) {
+        if (data?.notificationSettings && Object.keys(data.notificationSettings).length > 0) {
           setSettings(prev => prev.map(s => ({
             ...s,
             ...(data.notificationSettings[s.id] ?? {}),

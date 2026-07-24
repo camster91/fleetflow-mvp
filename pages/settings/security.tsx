@@ -95,10 +95,14 @@ export default function SecuritySettingsPage() {
     finally { setSettingUp2FA(false); }
   };
 
-  const disable2FA = async (code: string) => {
+  const disable2FA = async (code: string, password: string) => {
     setSettingUp2FA(true); setError('');
     try {
-      const response = await fetch('/api/auth/2fa/disable', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+      const response = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, password }),
+      });
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Failed to disable 2FA'); }
       setSuccess('Two-factor authentication disabled successfully!'); fetchSecuritySettings();
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to disable 2FA'); }
@@ -182,6 +186,22 @@ export default function SecuritySettingsPage() {
                 </div>
                 {!securitySettings?.twoFactorEnabled && (
                   <Button variant="primary" onClick={start2FASetup} loading={settingUp2FA} className="mt-4"><Shield className="h-4 w-4 mr-2" />Enable 2FA</Button>
+                )}
+                {securitySettings?.twoFactorEnabled && (
+                  <form
+                    className="mt-4 space-y-3 max-w-md"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget;
+                      const code = (form.elements.namedItem('disableCode') as HTMLInputElement).value;
+                      const password = (form.elements.namedItem('disablePassword') as HTMLInputElement).value;
+                      disable2FA(code, password);
+                    }}
+                  >
+                    <Input name="disableCode" label="Authenticator code" placeholder="6-digit code" required />
+                    <Input name="disablePassword" label="Confirm password" type="password" required />
+                    <Button type="submit" variant="outline" loading={settingUp2FA}>Disable 2FA</Button>
+                  </form>
                 )}
               </div>
             </div>

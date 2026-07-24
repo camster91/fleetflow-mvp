@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { sendBackupCodesEmail } from '../../../../lib/email';
@@ -20,7 +21,6 @@ export default async function handler(
       return res.status(400).json({ error: 'Verification code is required' });
     }
 
-    // For setup flow, we need the session
     if (isSetup) {
       const session = await getUserFromRequest(req);
       if (!session?.user?.id) {
@@ -29,39 +29,36 @@ export default async function handler(
 
       const userId = session.user.id;
 
-      // Get user with 2FA secret
       const user = await prisma.user.findUnique({
         where: { id: userId },
       });
 
       if (!user || !user.twoFactorSecret) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: '2FA setup not initiated',
-          code: 'SETUP_NOT_INITIATED'
+          code: 'SETUP_NOT_INITIATED',
         });
       }
 
-      // Verify the TOTP code
+      const plaintextSecret = decryptSecret(user.twoFactorSecret);
+
       const verified = speakeasy.totp.verify({
-        secret: user.twoFactorSecret,
+        secret: plaintextSecret,
         encoding: 'base32',
         token: code,
-        window: 2, // Allow 2 time steps of drift (±1 minute)
+        window: 2,
       });
 
       if (!verified) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid verification code',
-          code: 'INVALID_CODE'
+          code: 'INVALID_CODE',
         });
       }
 
-      // Hash backup codes
-      const hashedBackupCodes = backupCodes?.map((bc: string) => 
-        bcrypt.hashSync(bc, 10)
-      ) || [];
+      const hashedBackupCodes =
+        backupCodes?.map((bc: string) => bcrypt.hashSync(bc, 10)) || [];
 
-      // Enable 2FA
       await prisma.user.update({
         where: { id: userId },
         data: {
@@ -70,7 +67,6 @@ export default async function handler(
         },
       });
 
-      // Send backup codes via email
       try {
         await sendBackupCodesEmail(
           user.email,
@@ -81,16 +77,14 @@ export default async function handler(
         console.error('Failed to send backup codes email:', emailError);
       }
 
+      // Do not return the TOTP secret again after enablement
       return res.status(200).json({
         message: 'Two-factor authentication enabled successfully',
         enabled: true,
       });
     }
 
-    // For login flow (verify only, don't enable)
-    // This is handled during the sign-in process
     return res.status(400).json({ error: 'Use isSetup=true for initial setup' });
-
   } catch (error) {
     console.error('2FA verification error:', error);
     return res.status(500).json({ error: 'Internal server error' });

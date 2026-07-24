@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit';
-import { generatePasswordResetToken, getExpiryDate, TOKEN_EXPIRY } from '../../../lib/tokens';
+import { generatePasswordResetToken, getExpiryDate, TOKEN_EXPIRY, hashToken } from '../../../lib/tokens';
 import { sendPasswordResetEmail } from '../../../lib/email';
 
 export default async function handler(
@@ -43,20 +43,19 @@ export default async function handler(
       });
     }
 
-    // Generate password reset token
+    // Generate password reset token — store hash only
     const resetToken = generatePasswordResetToken();
     const resetExpires = getExpiryDate(TOKEN_EXPIRY.passwordReset);
 
-    // Update user with reset token
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        passwordResetToken: resetToken,
+        passwordResetToken: hashToken(resetToken),
         passwordResetExpires: resetExpires,
       },
     });
 
-    // Send password reset email
+    // Email the plaintext token; DB holds only the hash
     const emailResult = await sendPasswordResetEmail(
       user.email,
       user.name || 'there',

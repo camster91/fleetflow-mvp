@@ -15,24 +15,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(403).json({ error: 'Forbidden - Admin access required' })
   }
 
-  // GET - List all users
+  // GET - List all users (paginated)
   if (req.method === 'GET') {
     try {
-      const users = await prisma.user.findMany({
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          company: true,
-          createdAt: true,
-          updatedAt: true,
-          emailVerified: true
-        },
-        orderBy: { createdAt: 'desc' }
-      })
+      const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1)
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50))
+      const skip = (page - 1) * limit
+
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            company: true,
+            createdAt: true,
+            updatedAt: true,
+            emailVerified: true
+          },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.user.count(),
+      ])
       
-      return res.status(200).json({ users })
+      return res.status(200).json({ users, total, page, limit, hasMore: skip + limit < total })
     } catch (error) {
       console.error('Error fetching users:', error)
       return res.status(500).json({ error: 'Failed to fetch users' })

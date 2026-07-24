@@ -49,8 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       teamName: member.team.name,
       invitedBy: inviterName,
       role: member.role,
-      // Mask PII on this unauthenticated endpoint
-      inviteeEmail: maskEmail(member.user?.email),
+  // Mask PII on this unauthenticated endpoint
+      inviteeEmail: maskEmail(member.inviteeEmail || member.user?.email),
       expiresAt: expiresAt.toISOString(),
       isExpired: false,
     },

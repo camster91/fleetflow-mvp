@@ -54,37 +54,52 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       if (activeTab === 'profile') {
-        await fetch('/api/settings/profile', {
+        const r = await fetch('/api/settings/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: profile.name, company: profile.company, phone: profile.phone, bio: profile.bio }),
         });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({}));
+          notify.error(e.error || 'Failed to save profile');
+          return;
+        }
         await updateSession({ name: profile.name });
       } else if (activeTab === 'notifications') {
-        await fetch('/api/settings/profile', {
+        const r = await fetch('/api/settings/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notificationSettings: notifications }),
         });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({}));
+          notify.error(e.error || 'Failed to save notification settings');
+          return;
+        }
       } else if (activeTab === 'preferences') {
-        await fetch('/api/settings/profile', {
+        const r = await fetch('/api/settings/profile', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ preferences }),
         });
+        if (!r.ok) {
+          const e = await r.json().catch(() => ({}));
+          notify.error(e.error || 'Failed to save preferences');
+          return;
+        }
       } else if (activeTab === 'security') {
         if (security.newPassword !== security.confirmPassword) {
-          notify.error('Passwords do not match'); setSaving(false); return;
+          notify.error('Passwords do not match'); return;
         }
         if (security.newPassword.length < 8) {
-          notify.error('Password must be at least 8 characters'); setSaving(false); return;
+          notify.error('Password must be at least 8 characters'); return;
         }
         const r = await fetch('/api/auth/change-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ currentPassword: security.currentPassword, newPassword: security.newPassword }),
         });
-        if (!r.ok) { const e = await r.json(); notify.error(e.error || 'Failed to change password'); setSaving(false); return; }
+        if (!r.ok) { const e = await r.json(); notify.error(e.error || 'Failed to change password'); return; }
         setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
       }
       notify.success('Settings saved');
