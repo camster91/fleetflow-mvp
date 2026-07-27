@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { SessionProvider, useSession } from '../lib/session'
 import { AuthProvider } from '../context/AuthContext'
 import { Toaster } from 'react-hot-toast'
+import { OfflineBanner } from '../components/OfflineBanner'
 import '../styles/globals.css'
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <SessionProvider>
       <AuthProvider>
         <OnboardingGuard>
+        <OfflineBanner />
         <Head>
           <title>Fleet Manager - Fleet Management Dashboard</title>
           <meta name="viewport" content="width=device-width, initial-scale=1" />

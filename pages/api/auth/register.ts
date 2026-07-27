@@ -3,7 +3,7 @@ import { prisma } from '../../../lib/prisma';
 import { hashPassword, signToken } from '../../../lib/auth';
 import { serialize } from 'cookie';
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit';
-import { generateVerificationToken, getExpiryDate, TOKEN_EXPIRY } from '../../../lib/tokens';
+import { generateVerificationToken, hashToken } from '../../../lib/tokens';
 import { sendVerificationEmail } from '../../../lib/email';
 import { validatePassword } from '../../../lib/security';
 
@@ -76,11 +76,8 @@ export default async function handler(
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Generate verification token
     const verificationToken = generateVerificationToken();
-    const verificationExpires = getExpiryDate(TOKEN_EXPIRY.verification);
 
-    // Create user with verification token
     const user = await prisma.user.create({
       data: {
         name: name.trim(),
@@ -88,8 +85,7 @@ export default async function handler(
         password: hashedPassword,
         company: company || null,
         role: assignedRole,
-        verificationToken,
-        // Email will be verified when they click the link
+        verificationToken: hashToken(verificationToken),
         failedLoginAttempts: 0,
       },
     });

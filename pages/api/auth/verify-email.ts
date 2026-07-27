@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
-import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit';
+import { hashToken } from '../../../lib/tokens';
 import { sendWelcomeEmail } from '../../../lib/email';
 
 export default async function handler(
@@ -23,9 +23,8 @@ async function handleVerifyEmail(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Verification token is required' });
     }
 
-    // Find user with this verification token
     const user = await prisma.user.findUnique({
-      where: { verificationToken: token },
+      where: { verificationToken: hashToken(token) },
     });
 
     if (!user) {

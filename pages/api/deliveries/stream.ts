@@ -31,6 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             take: 1,
           },
         },
+        take: 200,
+        orderBy: { updatedAt: 'desc' },
       })
 
       const data = deliveries.map((d) => ({

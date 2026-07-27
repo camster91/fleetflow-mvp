@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToClient, clientToDb, logActivity } from '../../../lib/fleet'
+import { parseBody, clientBodySchema } from '../../../lib/validation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -21,10 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const data = clientToDb(req.body, (session.user as any).id)
+    const parsed = parseBody(clientBodySchema, req.body)
+    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+    const data = clientToDb({ ...req.body, ...parsed.data }, userId)
     const client = await prisma.client.create({ data })
     await logActivity(prisma, {
-      userId: (session.user as any).id,
+      userId,
       userName: session.user.name, userRole: (session.user as any).role,
       action: 'created', entityType: 'client',
       entityId: client.id, entityName: client.name,

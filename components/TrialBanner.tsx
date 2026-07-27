@@ -8,9 +8,12 @@ export function TrialBanner() {
 
   useEffect(() => {
     fetch('/api/subscription/status')
-      .then(r => r.json())
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then(d => {
-        if (d.subscription) setData(d.subscription);
+        if (d?.subscription) setData(d.subscription);
       })
       .catch(() => {});
   }, []);

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToVehicle, vehicleToDb, logActivity } from '../../../lib/fleet'
+import { parseBody, vehicleBodySchema } from '../../../lib/validation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -21,10 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const data = vehicleToDb(req.body, (session.user as any).id)
+    const parsed = parseBody(vehicleBodySchema, req.body)
+    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+    const data = vehicleToDb({ ...req.body, ...parsed.data }, userId)
     const vehicle = await prisma.vehicle.create({ data })
     await logActivity(prisma, {
-      userId: (session.user as any).id,
+      userId,
       userName: session.user.name,
       userRole: (session.user as any).role,
       action: 'created',

@@ -18,8 +18,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PUT') {
     const { ownerId: _o, ...fields } = clientToDb(req.body, userId) as any
-    await prisma.client.updateMany({ where: { id, ownerId: userId }, data: fields })
-    const client = await prisma.client.findUnique({ where: { id } })
+    const result = await prisma.client.updateMany({ where: { id, ownerId: userId }, data: fields })
+    // Must re-read with owner scope — findUnique after updateMany leaked other tenants' rows
+    if (result.count === 0) return res.status(404).json({ error: 'Not found' })
+    const client = await prisma.client.findFirst({ where: { id, ownerId: userId } })
     if (!client) return res.status(404).json({ error: 'Not found' })
     await logActivity(prisma, {
       userId, userName: session.user.name, userRole: (session.user as any).role,

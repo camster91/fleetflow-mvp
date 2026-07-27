@@ -24,7 +24,7 @@
 ```env
 # AUTHENTICATION (CRITICAL)
 NEXTAUTH_URL=https://fleet.ashbi.ca
-NEXTAUTH_SECRET=k8eLErhObBcKlxVkExTfeZZu4xLCqcdkfM7Os9A/DCo=
+NEXTAUTH_SECRET=<GENERATE_WITH_openssl_rand_-base64_32>
 NODE_ENV=production
 PORT=3000
 

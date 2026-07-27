@@ -47,26 +47,34 @@ export default async function handler(
           return res.status(403).json({ error: 'Access denied' });
         }
 
-        const members = await prisma.teamMember.findMany({
-          where: { teamId },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
+        const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '50'), 10) || 50));
+        const skip = (page - 1) * limit;
+
+        const [members, total] = await Promise.all([
+          prisma.teamMember.findMany({
+            where: { teamId },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  image: true,
+                },
               },
             },
+            orderBy: [
+              { role: 'asc' },
+              { invitedAt: 'desc' },
+            ],
+            skip,
+            take: limit,
+          }),
+          prisma.teamMember.count({ where: { teamId } }),
+        ]);
 
-          },
-          orderBy: [
-            { role: 'asc' },
-            { invitedAt: 'desc' },
-          ],
-        });
-
-        return res.status(200).json({ members });
+        return res.status(200).json({ members, total, page, limit, hasMore: skip + limit < total });
       } catch (error) {
         console.error('Failed to fetch team members:', error);
         return res.status(500).json({ error: 'Failed to fetch team members' });
@@ -90,6 +98,11 @@ export default async function handler(
           return res.status(404).json({ error: 'Member not found' });
         }
 
+        const validRoles = ['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'];
+        if (!validRoles.includes(role) && role !== 'OWNER') {
+          return res.status(400).json({ error: 'Invalid role' });
+        }
+
         // Check if user has permission to update roles
         const userMembership = await prisma.teamMember.findFirst({
           where: {
@@ -111,8 +124,8 @@ export default async function handler(
           return res.status(403).json({ error: 'Cannot change owner role' });
         }
 
-        // Only owner can assign admin role
-        if (role === 'ADMIN' && !isOwner) {
+        // Only owner can assign admin/owner role
+        if ((role === 'ADMIN' || role === 'OWNER') && !isOwner) {
           return res.status(403).json({ error: 'Only owner can assign admin role' });
         }
 

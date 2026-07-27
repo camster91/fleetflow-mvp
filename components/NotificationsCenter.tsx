@@ -72,21 +72,24 @@ export default function NotificationsCenter({ isOpen, onClose }: NotificationsCe
   }, [isOpen, onClose])
 
   const markRead = async (ids: string[]) => {
-    await fetch('/api/notifications', {
+    const r = await fetch('/api/notifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notificationIds: ids }),
     })
+    if (!r.ok) return
     setNotifications((prev) => prev.map((n) => ids.includes(n.id) ? { ...n, read: true } : n))
   }
 
   const markAllRead = async () => {
-    await fetch('/api/notifications', { method: 'PUT' })
+    const r = await fetch('/api/notifications', { method: 'PUT' })
+    if (!r.ok) return
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
   }
 
   const deleteNotification = async (id: string) => {
-    await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' })
+    const r = await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' })
+    if (!r.ok) return
     setNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 

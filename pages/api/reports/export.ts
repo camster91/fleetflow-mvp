@@ -16,12 +16,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const userId = session.user.id;
   const type = req.query.type as string;
-  const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 86400000);
-  const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+  const startRaw = req.query.startDate as string | undefined;
+  const endRaw = req.query.endDate as string | undefined;
+  const startDate = startRaw ? new Date(startRaw) : new Date(Date.now() - 30 * 86400000);
+  const endDate = endRaw ? new Date(endRaw) : new Date();
+
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return res.status(400).json({ error: 'Invalid date range' });
+  }
+  if (endDate < startDate) {
+    return res.status(400).json({ error: 'endDate must be on or after startDate' });
+  }
+  // Cap export window to limit memory / DoS via unbounded date ranges
+  const maxRangeMs = 366 * 86400000;
+  if (endDate.getTime() - startDate.getTime() > maxRangeMs) {
+    return res.status(400).json({ error: 'Date range too large (max 366 days)' });
+  }
 
   if (!['maintenance', 'deliveries', 'fleet'].includes(type)) {
     return res.status(400).json({ error: 'Invalid report type. Use: maintenance, deliveries, or fleet' });
   }
+
+  const EXPORT_ROW_LIMIT = 5000;
 
   try {
     let rows: Record<string, any>[] = [];
@@ -31,6 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { ownerId: userId, createdAt: { gte: startDate, lte: endDate } },
         include: { vehicle: { select: { name: true } } },
         orderBy: { createdAt: 'asc' },
+        take: EXPORT_ROW_LIMIT,
       });
       rows = tasks.map(t => ({
         Title: t.title,
@@ -47,6 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const deliveries = await prisma.delivery.findMany({
         where: { ownerId: userId, createdAt: { gte: startDate, lte: endDate } },
         orderBy: { createdAt: 'asc' },
+        take: EXPORT_ROW_LIMIT,
       });
       rows = deliveries.map(d => ({
         Customer: d.customer,
@@ -62,6 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const vehicles = await prisma.vehicle.findMany({
         where: { ownerId: userId },
         orderBy: { name: 'asc' },
+        take: EXPORT_ROW_LIMIT,
       });
       rows = vehicles.map(v => ({
         Name: v.name,

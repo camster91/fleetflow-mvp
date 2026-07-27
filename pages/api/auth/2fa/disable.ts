@@ -1,8 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
+import { assertSameOrigin } from '../../../../lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,8 +14,9 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!assertSameOrigin(req, res)) return;
+
   try {
-    // Check authentication
     const session = await getUserFromRequest(req);
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -31,7 +34,6 @@ export default async function handler(
 
     const userId = session.user.id;
 
-    // Get user with 2FA secret
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -47,7 +49,6 @@ export default async function handler(
       });
     }
 
-    // Verify password
     if (!user.password) {
       return res.status(400).json({ error: 'Password not set for this account' });
     }
@@ -57,9 +58,10 @@ export default async function handler(
       return res.status(400).json({ error: 'Incorrect password' });
     }
 
-    // Verify the TOTP code
+    const plaintextSecret = decryptSecret(user.twoFactorSecret);
+
     const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
+      secret: plaintextSecret,
       encoding: 'base32',
       token: code,
       window: 2,

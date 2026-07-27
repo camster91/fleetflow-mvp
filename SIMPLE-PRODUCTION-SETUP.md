@@ -24,7 +24,7 @@
 ```env
 # REQUIRED FOR AUTHENTICATION
 NEXTAUTH_URL=https://fleet.ashbi.ca
-NEXTAUTH_SECRET=Rh6rLBvT20Ut6HYUjMTuHOdONFN21baBceOwzW+Yk6I=
+NEXTAUTH_SECRET=<GENERATE_WITH_openssl_rand_-base64_32>
 
 # DATABASE (SQLite - perfect for single user)
 DATABASE_URL="file:./prod.db"

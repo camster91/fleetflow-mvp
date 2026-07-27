@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma'
 import { signToken } from '../../../lib/auth'
 import { serialize } from 'cookie'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
+import { hashToken } from '../../../lib/tokens'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -38,11 +39,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(423).json({ error: 'Account temporarily locked. Try again later.' })
   }
 
-  // Look up the verification token — token is stored as "code:randomSuffix"
+  // Look up hashed login code (email:code)
   const tokenRecord = await prisma.verificationToken.findFirst({
     where: {
       identifier: `login:${normalizedEmail}`,
-      token: { startsWith: `${code.trim()}:` },
+      token: hashToken(`${normalizedEmail}:${String(code).trim()}`),
     },
   })
 

@@ -49,21 +49,23 @@ export default function ProfileSettingsPage() {
 
   React.useEffect(() => {
     fetch('/api/settings/profile')
-      .then(r => r.json())
+      .then(async (r) => {
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then(data => {
-        if (data.user) {
-          const prefs = data.user.prefs?.preferences ?? {};
-          setProfile(prev => ({
-            ...prev,
-            name: data.user.name ?? prev.name,
-            email: data.user.email ?? prev.email,
-            phone: data.user.prefs?.phone ?? prev.phone,
-            bio: data.user.prefs?.bio ?? prev.bio,
-            timezone: prefs.timezone ?? prev.timezone,
-            language: prefs.language ?? prev.language,
-            isPublic: prefs.isPublic ?? prev.isPublic,
-          }));
-        }
+        if (!data?.user) return;
+        const prefs = data.user.prefs?.preferences ?? {};
+        setProfile(prev => ({
+          ...prev,
+          name: data.user.name ?? prev.name,
+          email: data.user.email ?? prev.email,
+          phone: data.user.prefs?.phone ?? prev.phone,
+          bio: data.user.prefs?.bio ?? prev.bio,
+          timezone: prefs.timezone ?? prev.timezone,
+          language: prefs.language ?? prev.language,
+          isPublic: prefs.isPublic ?? prev.isPublic,
+        }));
       })
       .catch(() => {});
   }, []);

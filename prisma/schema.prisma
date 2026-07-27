@@ -195,20 +195,22 @@ model Team {
 }
 
 model TeamMember {
-  id        String   @id @default(cuid())
-  teamId    String
-  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   @default("MEMBER") // OWNER, ADMIN, MANAGER, MEMBER, VIEWER
-  invitedBy String?
-  invitedAt DateTime @default(now())
-  joinedAt  DateTime?
-  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
+  id           String   @id @default(cuid())
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId       String?  // null until invite accepted for brand-new users
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inviteeEmail String?  // intended recipient when userId is not yet known
+  role         String   @default("MEMBER") // OWNER, ADMIN, MANAGER, MEMBER, VIEWER
+  invitedBy    String?
+  invitedAt    DateTime @default(now())
+  joinedAt     DateTime?
+  status       String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
 
   @@unique([teamId, userId])
   @@index([teamId])
   @@index([userId])
+  @@index([inviteeEmail])
 }
 
 // Notifications System

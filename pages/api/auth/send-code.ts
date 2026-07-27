@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
-import { generateNumericCode, generateSecureToken } from '../../../lib/tokens'
+import { generateNumericCode, hashToken } from '../../../lib/tokens'
 import { sendLoginCodeEmail } from '../../../lib/email'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 
@@ -9,7 +9,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // IP-based rate limiting
   const ip = getClientIP(req)
   const ipAllowed = await rateLimitMiddleware(req, res, 'login', ip)
   if (!ipAllowed) return
@@ -21,33 +20,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const normalizedEmail = email.toLowerCase().trim()
 
-  // Per-email rate limiting: 5 attempts per 15 minutes
   const emailAllowed = await rateLimitMiddleware(req, res, 'loginEmail', normalizedEmail)
   if (!emailAllowed) return
 
-  // Find user — only existing users can log in
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
   })
 
-  // Always return success to prevent email enumeration
   if (!user) {
     return res.json({ message: 'If an account exists, a login code has been sent.' })
   }
 
-  // Check account lockout
   if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
     return res.json({ message: 'If an account exists, a login code has been sent.' })
   }
 
-  // Generate a 6-digit code
   const code = generateNumericCode(6)
-  const expires = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
-  // Use a unique token (code + random suffix) since the token field has @unique
-  const uniqueToken = `${code}:${generateSecureToken(8)}`
+  const expires = new Date(Date.now() + 10 * 60 * 1000)
+  // Store only a hash of email+code — never the plaintext code
+  const hashedToken = hashToken(`${normalizedEmail}:${code}`)
 
-  // Store code in VerificationToken table
-  // Delete any existing codes for this email first
   await prisma.verificationToken.deleteMany({
     where: { identifier: `login:${normalizedEmail}` },
   })
@@ -55,12 +47,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await prisma.verificationToken.create({
     data: {
       identifier: `login:${normalizedEmail}`,
-      token: uniqueToken,
+      token: hashedToken,
       expires,
     },
   })
 
-  // Send the code via email
   try {
     await sendLoginCodeEmail(normalizedEmail, user.name || '', code)
   } catch (err) {

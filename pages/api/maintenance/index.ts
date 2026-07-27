@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../lib/fleet'
+import { parseBody, maintenanceBodySchema } from '../../../lib/validation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getServerSession(req, res, authOptions)
@@ -27,14 +28,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
-    const userId = (session.user as any).id
-    // Try to resolve vehicleId from name if not provided
-    let vehicleId: string | undefined = req.body.vehicleId
-    if (!vehicleId && req.body.vehicle) {
-      const v = await prisma.vehicle.findFirst({ where: { name: req.body.vehicle } })
+    const parsed = parseBody(maintenanceBodySchema, req.body)
+    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+    const body = { ...req.body, ...parsed.data }
+
+    let vehicleId: string | undefined = body.vehicleId
+    if (vehicleId) {
+      const owned = await prisma.vehicle.findFirst({ where: { id: vehicleId, ownerId: userId }, select: { id: true } })
+      if (!owned) return res.status(400).json({ error: 'Invalid vehicle' })
+    } else if (body.vehicle) {
+      const v = await prisma.vehicle.findFirst({ where: { name: body.vehicle, ownerId: userId } })
       vehicleId = v?.id
     }
-    const data = maintenanceTaskToDb(req.body, userId, vehicleId)
+    const data = maintenanceTaskToDb(body, userId, vehicleId)
     const task = await prisma.maintenanceTask.create({ data })
     await logActivity(prisma, {
       userId, userName: session.user.name, userRole: (session.user as any).role,

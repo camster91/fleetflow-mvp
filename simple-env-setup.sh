@@ -3,7 +3,7 @@
 echo "# 🚀 COPY AND PASTE THESE INTO COOLIFY ENVIRONMENT VARIABLES"
 echo ""
 echo "NEXTAUTH_URL=https://fleet.ashbi.ca"
-echo "NEXTAUTH_SECRET=Rh6rLBvT20Ut6HYUjMTuHOdONFN21baBceOwzW+Yk6I="
+echo "NEXTAUTH_SECRET=<GENERATE_WITH_openssl_rand_-base64_32>"
 echo "DATABASE_URL=\"file:./prod.db\""
 echo "NODE_ENV=production"
 echo "PORT=3000"

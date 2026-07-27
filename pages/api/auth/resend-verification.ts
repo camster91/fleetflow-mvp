@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit';
-import { generateVerificationToken, getExpiryDate, TOKEN_EXPIRY } from '../../../lib/tokens';
+import { generateVerificationToken, hashToken } from '../../../lib/tokens';
 import { sendVerificationEmail } from '../../../lib/email';
 
 export default async function handler(
@@ -44,18 +44,15 @@ export default async function handler(
       });
     }
 
-    // Generate new verification token
     const verificationToken = generateVerificationToken();
 
-    // Update user with new token
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        verificationToken,
+        verificationToken: hashToken(verificationToken),
       },
     });
 
-    // Send verification email
     const emailResult = await sendVerificationEmail(
       user.email,
       user.name || 'there',
