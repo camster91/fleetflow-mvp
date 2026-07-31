@@ -34,13 +34,25 @@ interface EmailResult {
  * Send email via Mailgun API
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
-  // If no API key, log and return success in development
+  // If no API key, behavior depends on environment:
+  //   - dev (NODE_ENV !== 'production'): log and return success so local
+  //     testing works without real Mailgun credentials.
+  //   - production: THROW so the misconfig is visible (caller logs the
+  //     error, alerting the operator). Silently returning success in
+  //     prod means emails disappear without anyone noticing.
   if (!MAILGUN_API_KEY) {
-    console.log('📧 Email would be sent (no API key configured):', {
-      to: options.to,
-      subject: options.subject
-    })
-    return { success: true, messageId: 'dev-mode' }
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📧 Email would be sent (no API key configured):', {
+        to: options.to,
+        subject: options.subject
+      })
+      return { success: true, messageId: 'dev-mode' }
+    }
+    throw new Error(
+      'MAILGUN_API_KEY must be set in production. ' +
+      'Emails are silently dropped without it. Set it in Coolify ' +
+      '→ fleetflow-pro → Environment Variables and restart.',
+    )
   }
 
   try {
