@@ -153,14 +153,18 @@ export async function sendEmail({
   from?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    // If Mailgun is not configured, log the email for development
+    // If Mailgun is not configured, log the email for development only.
+    // Production (NODE_ENV=production) must not leak email bodies to logs —
+    // that's a PII / GDPR / PCI concern.
     if (!mg || !domain) {
-      console.log('=== EMAIL (Mailgun not configured) ===');
-      console.log('To:', to);
-      console.log('From:', from);
-      console.log('Subject:', subject);
-      console.log('Text:', text);
-      console.log('======================================');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('=== EMAIL (Mailgun not configured) ===');
+        console.log('To:', to);
+        console.log('From:', from);
+        console.log('Subject:', subject);
+        console.log('Text:', text);
+        console.log('======================================');
+      }
       return { success: true };
     }
 
