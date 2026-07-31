@@ -83,7 +83,7 @@ dev2.err
 /tmp
 /temp
 
-# Coolify deployment temporary files (generated scripts)
+# Coolify deployment temporary files (generated scripts and exports)
 apply_fixes.sh
 deploy-fixes.sh
 deploy-master.sh
@@ -93,3 +93,6 @@ fix-pricing-patch.sh
 ONE-COMMAND-FIX.sh
 *.tar.gz
 *.tar
+docker-compose-new.yml
+docker-compose-final.yml
+docker-compose.coolify.yml
