@@ -3,38 +3,47 @@
 
 import { sendEmail, sendBulkEmail, APP_URL, FROM_EMAIL } from '../services/emailService'
 import * as templates from '../services/emailTemplates'
+import type { DeliveryEmailPayload, DeliveryStatusPayload } from '../services/emailTemplates'
 
 // Re-export for convenience
 export { sendEmail, sendBulkEmail, APP_URL, FROM_EMAIL, templates }
 
 // Helper to send vehicle-related emails
-export async function notifyVehicleAdded(vehicle: any, addedBy: string, recipientEmails: string[]) {
+export async function notifyVehicleAdded(
+  vehicle: { name: string; type?: string; driver?: string; licensePlate?: string },
+  addedBy: string,
+  recipientEmails: string[]
+) {
   const { html, text } = templates.vehicleAddedEmail(vehicle, addedBy)
-  
+
   return sendBulkEmail(recipientEmails, `New Vehicle Added: ${vehicle.name}`, html, text)
 }
 
 // Helper to send maintenance notifications
-export async function notifyMaintenanceDue(vehicle: any, tasks: string[], recipientEmails: string[]) {
+export async function notifyMaintenanceDue(
+  vehicle: { name: string; mileage?: number; nextService?: string },
+  tasks: string[],
+  recipientEmails: string[]
+) {
   const { html, text } = templates.maintenanceDueEmail(vehicle, tasks)
-  
+
   return sendBulkEmail(
-    recipientEmails, 
-    `🔧 Maintenance Due: ${vehicle.name}`, 
-    html, 
+    recipientEmails,
+    `🔧 Maintenance Due: ${vehicle.name}`,
+    html,
     text
   )
 }
 
 // Helper to send delivery assignment
 export async function notifyDeliveryAssigned(
-  delivery: any, 
-  driverName: string, 
+  delivery: DeliveryEmailPayload,
+  driverName: string,
   driverEmail: string,
   assignedBy: string
 ) {
   const { html, text } = templates.deliveryAssignedEmail(delivery, driverName, assignedBy)
-  
+
   return sendEmail({
     to: driverEmail,
     subject: `New Delivery Assignment: ${delivery.customer}`,
@@ -45,12 +54,12 @@ export async function notifyDeliveryAssigned(
 
 // Helper to send delivery status updates
 export async function notifyDeliveryStatus(
-  delivery: any,
+  delivery: DeliveryStatusPayload,
   recipientEmails: string[],
   recipientType: 'customer' | 'admin' = 'admin'
 ) {
   const { html, text } = templates.deliveryStatusUpdateEmail(delivery, recipientType)
-  
+
   return sendBulkEmail(
     recipientEmails,
     `Delivery Update: ${delivery.customer} - ${delivery.status}`,
@@ -60,9 +69,20 @@ export async function notifyDeliveryStatus(
 }
 
 // Helper to send daily reports
-export async function sendDailyReport(report: any, recipientEmails: string[]) {
+export async function sendDailyReport(
+  report: {
+    date: string;
+    totalDeliveries: number;
+    completedDeliveries: number;
+    pendingDeliveries: number;
+    activeVehicles: number;
+    maintenanceTasks: number;
+    alerts: string[];
+  },
+  recipientEmails: string[]
+) {
   const { html, text } = templates.dailyReportEmail(report)
-  
+
   return sendBulkEmail(
     recipientEmails,
     `Daily Fleet Report - ${new Date(report.date).toLocaleDateString()}`,

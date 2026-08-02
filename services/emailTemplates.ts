@@ -3,6 +3,33 @@
 
 import { APP_URL } from './emailService'
 
+// Shared payload types — extracted so the email layer can't drift from
+// the Prisma schema again. (History: v1→v2→v3 of PR #54 had to chase
+// three separate type bugs (id: number vs string, Date? vs string?,
+// string? vs string) because the inline types in lib/email.server.ts
+// and the template signatures here were duplicated. Now they share a
+// single source of truth.)
+//
+// These are intentionally a subset of the Prisma model — only the
+// fields the email layer actually uses. Callers pass Prisma objects
+// directly; structural typing makes the assignment work without
+// explicit cast.
+export type DeliveryEmailPayload = {
+  id: string
+  customer: string
+  address: string
+  items: number
+  scheduledTime?: Date | null
+}
+
+export type DeliveryStatusPayload = {
+  id: string
+  customer: string
+  status: string
+  progress: number
+  driver: string | null
+}
+
 // Brand colors
 const BRAND = {
   primary: '#3B82F6',
@@ -217,13 +244,7 @@ export function maintenanceDueEmail(vehicle: {
 
 // ==================== DELIVERY EMAILS ====================
 
-export function deliveryAssignedEmail(delivery: {
-  id: number
-  customer: string
-  address: string
-  items: number
-  scheduledTime?: string
-}, driverName: string, assignedBy: string) {
+export function deliveryAssignedEmail(delivery: DeliveryEmailPayload, driverName: string, assignedBy: string) {
   const content = `
     <h2>📦 New Delivery Assignment</h2>
     <p>Hello ${driverName},</p>
@@ -260,13 +281,7 @@ export function deliveryAssignedEmail(delivery: {
   return wrapEmail(content, 'New Delivery Assignment')
 }
 
-export function deliveryStatusUpdateEmail(delivery: {
-  id: number
-  customer: string
-  status: string
-  progress: number
-  driver: string
-}, recipientType: 'customer' | 'admin') {
+export function deliveryStatusUpdateEmail(delivery: DeliveryStatusPayload, recipientType: 'customer' | 'admin') {
   const statusColors: Record<string, string> = {
     'pending': BRAND.warning,
     'in-transit': BRAND.primary,
