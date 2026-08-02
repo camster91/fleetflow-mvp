@@ -92,7 +92,7 @@ export function Footer() {
           {/* Brand Column */}
           <div className="col-span-2">
             <Link href="/" className="flex items-center mb-4">
-              <img 
+              <img loading="lazy" 
                 src="/brand/logo/logo-horizontal-dark.svg" 
                 alt="FleetFlow" 
                 className="h-8 w-auto"

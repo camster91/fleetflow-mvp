@@ -45,7 +45,7 @@ export function TestimonialCard({
       <div className="flex items-center space-x-3">
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={author} className="w-full h-full rounded-full object-cover" />
+            <img loading="lazy" src={avatarUrl} alt={author} className="w-full h-full rounded-full object-cover" />
           ) : (
             author.split(' ').map(n => n[0]).join('')
           )}
@@ -100,7 +100,7 @@ export function TestimonialCardHorizontal({
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium text-sm">
             {avatarUrl ? (
-              <img src={avatarUrl} alt={author} className="w-full h-full rounded-full object-cover" />
+              <img loading="lazy" src={avatarUrl} alt={author} className="w-full h-full rounded-full object-cover" />
             ) : (
               author.split(' ').map(n => n[0]).join('')
             )}

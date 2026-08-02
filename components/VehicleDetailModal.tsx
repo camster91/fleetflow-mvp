@@ -281,7 +281,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                         <div className="flex items-center space-x-4">
                           <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
                             {driverUser?.image
-                              ? <img src={driverUser.image} alt={vehicle.driver} className="w-12 h-12 rounded-full object-cover" />
+                              ? <img loading="lazy" src={driverUser.image} alt={vehicle.driver} className="w-12 h-12 rounded-full object-cover" />
                               : <span className="text-primary-600 font-bold text-lg">{driverInitials}</span>}
                           </div>
                           <div className="flex-1">

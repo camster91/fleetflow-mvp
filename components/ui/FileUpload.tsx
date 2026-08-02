@@ -164,7 +164,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg"
             >
               {preview.url ? (
-                <img
+                <img loading="lazy"
                   src={preview.url}
                   alt={preview.file.name}
                   className="h-10 w-10 object-cover rounded"

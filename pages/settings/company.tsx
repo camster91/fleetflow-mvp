@@ -58,7 +58,7 @@ export default function CompanySettingsPage() {
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 bg-slate-100 rounded-lg flex items-center justify-center">
               {company.logo ? (
-                <img src={company.logo} alt="Logo" className="w-full h-full object-contain" />
+                <img loading="lazy" src={company.logo} alt="Logo" className="w-full h-full object-contain" />
               ) : (
                 <Building className="h-10 w-10 text-slate-400" />
               )}
