@@ -153,9 +153,13 @@ export async function sendEmail({
   from?: string;
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    // If Mailgun is not configured, log the email for development only.
-    // Production (NODE_ENV=production) must not leak email bodies to logs —
-    // that's a PII / GDPR / PCI concern.
+    // If Mailgun is not configured, behavior depends on environment:
+    //   - dev (NODE_ENV !== 'production'): log the email, return success
+    //     so local testing works without real Mailgun credentials.
+    //   - production: THROW so the misconfig is visible (caller logs the
+    //     error, alerting the operator). Silently returning success in
+    //     prod means transactional emails (notifications, invites, etc.)
+    //     disappear without anyone noticing.
     if (!mg || !domain) {
       if (process.env.NODE_ENV !== 'production') {
         console.log('=== EMAIL (Mailgun not configured) ===');
@@ -164,8 +168,13 @@ export async function sendEmail({
         console.log('Subject:', subject);
         console.log('Text:', text);
         console.log('======================================');
+        return { success: true };
       }
-      return { success: true };
+      throw new Error(
+        'MAILGUN_API_KEY and MAILGUN_DOMAIN must be set in production. ' +
+        'Emails are silently dropped without these. Set them in Coolify ' +
+        '→ fleetflow-pro → Environment Variables and restart.',
+      );
     }
 
     await mg.messages.create(domain, {
