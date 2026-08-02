@@ -278,7 +278,7 @@ export default function SecuritySettingsPage() {
               <h2 className="text-xl font-semibold text-slate-900">Set Up Two-Factor Authentication</h2>
               <p className="text-sm text-slate-600 mt-2">Scan the QR code with your authenticator app</p>
             </div>
-            <div className="flex justify-center mb-6"><img src={twoFASetup.qrCode} alt="2FA QR Code" className="w-48 h-48 border-4 border-white shadow-lg rounded-lg" /></div>
+            <div className="flex justify-center mb-6"><img loading="lazy" src={twoFASetup.qrCode} alt="2FA QR Code" className="w-48 h-48 border-4 border-white shadow-lg rounded-lg" /></div>
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-slate-600 mb-2">Can&apos;t scan? Enter this code manually:</p>
               <code className="block bg-slate-100 rounded px-3 py-2 text-sm font-mono break-all">{twoFASetup.secret}</code>

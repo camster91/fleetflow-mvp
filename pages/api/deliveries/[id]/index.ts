@@ -49,7 +49,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data: { deliveryId: delivery.id, customer: delivery.customer },
         })
         if (driverUser.email) {
-          notifyDeliveryAssigned(delivery, driverUser.name || delivery.driver, driverUser.email, session.user.name || 'Manager').catch(console.error)
+          notifyDeliveryAssigned(
+            delivery,
+            driverUser.name || delivery.driver || 'Unknown driver',
+            driverUser.email,
+            session.user.name || 'Manager',
+          ).catch(console.error)
         }
       }
     }
