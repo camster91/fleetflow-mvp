@@ -34,12 +34,15 @@ interface EmailResult {
  * Send email via Mailgun API
  */
 export async function sendEmail(options: SendEmailOptions): Promise<EmailResult> {
-  // If no API key, log and return success in development
+  // If no API key, log and return success in development only.
+  // Production (NODE_ENV=production) must not leak recipient/subject to logs.
   if (!MAILGUN_API_KEY) {
-    console.log('📧 Email would be sent (no API key configured):', {
-      to: options.to,
-      subject: options.subject
-    })
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📧 Email would be sent (no API key configured):', {
+        to: options.to,
+        subject: options.subject
+      })
+    }
     return { success: true, messageId: 'dev-mode' }
   }
 

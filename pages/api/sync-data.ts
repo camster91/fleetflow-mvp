@@ -21,7 +21,9 @@ async function initTable() {
         UNIQUE(user_id, data_type)
       )
     `
-    console.log('user_data table ready')
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('user_data table ready')
+    }
   } catch (error) {
     console.error('Failed to create user_data table:', error)
     // Table might already exist with different schema
