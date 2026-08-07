@@ -3,6 +3,7 @@
  */
 
 import { prisma } from './prisma';
+import type { Prisma } from '@prisma/client';
 // Notification types (stored as String in DB)
 export type NotificationType = 
   | 'MAINTENANCE_DUE' 
@@ -36,7 +37,7 @@ export interface CreateNotificationInput {
   type: NotificationType;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 /**
@@ -189,7 +190,7 @@ export async function getNotifications(
   const skip = (page - 1) * limit;
 
   try {
-    const where: any = { userId };
+    const where: Prisma.NotificationWhereInput = { userId };
     if (type) where.type = type;
     if (unreadOnly) where.read = false;
 
@@ -276,7 +277,7 @@ export async function notifyTeamInvite(
 export async function notifyBilling(
   userId: string,
   event: string,
-  details: Record<string, any>
+  details: Record<string, unknown>
 ) {
   const titles: Record<string, string> = {
     payment_success: 'Payment Successful',
@@ -290,7 +291,7 @@ export async function notifyBilling(
     userId,
     type: NotificationTypes.BILLING,
     title: titles[event] || 'Billing Update',
-    message: details.message || 'There is an update regarding your billing.',
+    message: typeof details.message === 'string' ? details.message : 'There is an update regarding your billing.',
     data: { event, ...details },
   });
 }
@@ -301,7 +302,7 @@ export async function notifyBilling(
 export async function notifySecurityAlert(
   userId: string,
   event: string,
-  details: Record<string, any>
+  details: Record<string, unknown>
 ) {
   const titles: Record<string, string> = {
     new_login: 'New Login Detected',
@@ -315,7 +316,7 @@ export async function notifySecurityAlert(
     userId,
     type: NotificationTypes.SECURITY,
     title: titles[event] || 'Security Alert',
-    message: details.message || 'A security-related event has occurred on your account.',
+    message: typeof details.message === 'string' ? details.message : 'A security-related event has occurred on your account.',
     data: { event, ...details },
   });
 }
@@ -327,7 +328,7 @@ export async function notifySystem(
   userId: string,
   title: string,
   message: string,
-  data?: Record<string, any>
+  data?: Record<string, unknown>
 ) {
   return createNotification({
     userId,

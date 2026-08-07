@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { X, Truck, MapPin, Battery, Calendar, Wrench, Navigation, Phone, Mail, FileText, Loader2, CheckCircle, Clock } from 'lucide-react'
-import { notify } from '../services/notifications'
+import Image from 'next/image'
+import { X, Truck, MapPin, Battery, Calendar, Wrench, Navigation, Mail, FileText, Loader2, CheckCircle, Clock } from 'lucide-react'
 
 interface Vehicle {
   id: string
@@ -66,17 +66,6 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
     if (!vehicle) return
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(vehicle.location)}`
     window.open(mapsUrl, '_blank')
-  }
-
-  const handleCallDriver = () => {
-    if (!vehicle) return
-    const phone = driverUser ? null : null // phone from driver record
-    const driverPhone = (driverUser as any)?.phone
-    if (driverPhone) {
-      window.location.href = `tel:${driverPhone.replace(/[^\d+]/g, '')}`
-    } else {
-      notify.info(`No phone number on file for ${vehicle.driver}. Add their phone in team settings.`)
-    }
   }
 
   if (!isOpen || !vehicle) return null
@@ -186,20 +175,13 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
 
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Quick Actions</h4>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <button
                         onClick={handleNavigate}
                         className="p-3 border border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition flex flex-col items-center justify-center"
                       >
                         <Navigation className="h-5 w-5 text-primary-600 mb-2" />
                         <span className="text-sm font-medium text-gray-900">Navigate To</span>
-                      </button>
-                      <button
-                        onClick={handleCallDriver}
-                        className="p-3 border border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition flex flex-col items-center justify-center"
-                      >
-                        <Phone className="h-5 w-5 text-primary-600 mb-2" />
-                        <span className="text-sm font-medium text-gray-900">Call Driver</span>
                       </button>
                     </div>
                   </div>
@@ -281,7 +263,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                         <div className="flex items-center space-x-4">
                           <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
                             {driverUser?.image
-                              ? <img loading="lazy" src={driverUser.image} alt={vehicle.driver} className="w-12 h-12 rounded-full object-cover" />
+                              ? <Image unoptimized src={driverUser.image} alt={vehicle.driver} width={48} height={48} className="w-12 h-12 rounded-full object-cover" />
                               : <span className="text-primary-600 font-bold text-lg">{driverInitials}</span>}
                           </div>
                           <div className="flex-1">
@@ -312,14 +294,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                       </div>
 
                       {driverUser?.email && (
-                        <div className="grid grid-cols-2 gap-3">
-                          <a
-                            href={`tel:`}
-                            className="p-3 border border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition flex flex-col items-center justify-center"
-                          >
-                            <Phone className="h-5 w-5 text-primary-600 mb-2" />
-                            <span className="text-sm font-medium text-gray-900">Call</span>
-                          </a>
+                        <div className="grid grid-cols-1 gap-3">
                           <a
                             href={`mailto:${driverUser.email}`}
                             className="p-3 border border-gray-300 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition flex flex-col items-center justify-center"

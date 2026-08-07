@@ -35,7 +35,7 @@ export default function DeliveriesPage() {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
   const [lastPolled, setLastPolled] = useState<Date>(new Date());
-  const pollRef = useRef<ReturnType<typeof setInterval>>();
+  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   // Poll in-transit deliveries every 30 seconds
   useEffect(() => {
@@ -87,7 +87,7 @@ export default function DeliveriesPage() {
           await api.deleteDelivery(d.id);
           notify.success(`Delivery for "${d.customer}" deleted`);
           await loadData();
-        } catch (err: any) { toast.error(err.message); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete delivery'); }
       },
     });
   };
@@ -222,7 +222,7 @@ export default function DeliveriesPage() {
                         await api.updateDelivery(delivery.id, { status: 'delivered', progress: 100, completedTime: new Date().toISOString() });
                         notify.success(`Delivery for ${delivery.customer} marked as delivered`);
                         await loadData();
-                      } catch (err: any) { toast.error(err.message); }
+                      } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to update delivery'); }
                     }}>Mark Delivered</Button>
                   )}
                   <button onClick={() => handleDelete(delivery)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">

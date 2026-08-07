@@ -11,5 +11,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Not authenticated' })
   }
 
-  return res.json({ user: session.user })
+  return res.json({ user: session.user, expires: session.expires })
 }

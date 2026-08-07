@@ -1,22 +1,22 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import type { ActivityItem } from '../../../lib/fleet'
+import { requireTenantContext } from '../../../lib/apiAuth'
+import { canViewBusinessData } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
-
-  const userId = (session.user as { id: string }).id
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { tenant } = context
+  if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
   const limit = Math.min(Number(req.query.limit) || 20, 100)
   const entityType = req.query.type as string | undefined
 
   const logs = await prisma.auditLog.findMany({
-    where: { userId, ...(entityType ? { entityType } : {}) },
+    where: { AND: [tenant.auditWhere, ...(entityType ? [{ entityType }] : [])] },
     orderBy: { createdAt: 'desc' },
     take: limit,
   })

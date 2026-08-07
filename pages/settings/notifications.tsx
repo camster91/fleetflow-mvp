@@ -24,7 +24,7 @@ export default function NotificationSettingsPage() {
     { type: 'deliveries', label: 'Delivery Updates', description: 'Notifications about delivery status changes', email: true, push: false, inApp: true },
     { type: 'team', label: 'Team Invitations', description: 'When someone invites you to join a team', email: true, push: true, inApp: true },
     { type: 'billing', label: 'Billing & Payments', description: 'Payment confirmations and billing alerts', email: true, push: false, inApp: true },
-    { type: 'security', label: 'Security Alerts', description: 'New logins, password changes, and security events', email: true, push: true, inApp: true },
+    { type: 'security', label: 'Security Alerts', description: 'New logins, 2FA changes, and security events', email: true, push: true, inApp: true },
     { type: 'reports', label: 'Scheduled Reports', description: 'When your scheduled reports are ready', email: true, push: false, inApp: false },
   ]);
 

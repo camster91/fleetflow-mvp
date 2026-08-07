@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Upload, X, File, Image as ImageIcon } from 'lucide-react';
 import { Button } from './Button';
+import Image from 'next/image';
 
 interface FileUploadProps {
   accept?: string;
@@ -164,9 +165,11 @@ export const FileUpload: React.FC<FileUploadProps> = ({
               className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg"
             >
               {preview.url ? (
-                <img loading="lazy"
+                <Image unoptimized
                   src={preview.url}
                   alt={preview.file.name}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 object-cover rounded"
                 />
               ) : (

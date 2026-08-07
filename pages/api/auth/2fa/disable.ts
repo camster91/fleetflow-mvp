@@ -22,14 +22,10 @@ export default async function handler(
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { code, password } = req.body;
+    const { code } = req.body;
 
     if (!code || typeof code !== 'string') {
       return res.status(400).json({ error: '2FA code is required' });
-    }
-
-    if (!password || typeof password !== 'string') {
-      return res.status(400).json({ error: 'Password confirmation is required to disable 2FA' });
     }
 
     const userId = session.user.id;
@@ -47,15 +43,6 @@ export default async function handler(
         error: 'Two-factor authentication is not enabled',
         code: '2FA_NOT_ENABLED'
       });
-    }
-
-    if (!user.password) {
-      return res.status(400).json({ error: 'Password not set for this account' });
-    }
-
-    const passwordValid = await bcrypt.compare(password, user.password);
-    if (!passwordValid) {
-      return res.status(400).json({ error: 'Incorrect password' });
     }
 
     const plaintextSecret = decryptSecret(user.twoFactorSecret);

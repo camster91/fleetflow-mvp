@@ -1,13 +1,12 @@
 import { createMocks } from 'node-mocks-http';
 import handler from '../../../pages/api/analytics/reports';
 
-jest.mock('next-auth/next', () => ({ getServerSession: jest.fn() }));
 jest.mock('../../../lib/prisma', () => ({
   prisma: { user: { findUnique: jest.fn(), update: jest.fn() } },
 }));
-jest.mock('../../../lib/auth', () => ({ authOptions: {} }));
+jest.mock('../../../lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }));
 
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 const mockSession = { user: { id: 'user-1' } };

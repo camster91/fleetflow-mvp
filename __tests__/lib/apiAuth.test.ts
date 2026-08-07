@@ -18,13 +18,14 @@ function mockRes() {
 
 describe('assertSameOrigin', () => {
   const prev = process.env.NODE_ENV;
+  const mutableEnv = process.env as Record<string, string | undefined>;
 
   afterEach(() => {
-    process.env.NODE_ENV = prev;
+    mutableEnv.NODE_ENV = prev;
   });
 
   it('allows matching Origin', () => {
-    process.env.NODE_ENV = 'production';
+    mutableEnv.NODE_ENV = 'production';
     const res = mockRes();
     const ok = assertSameOrigin(
       { method: 'POST', headers: { host: 'fleet.ashbi.ca', origin: 'https://fleet.ashbi.ca' } } as any,
@@ -34,7 +35,7 @@ describe('assertSameOrigin', () => {
   });
 
   it('rejects mismatched Origin in production', () => {
-    process.env.NODE_ENV = 'production';
+    mutableEnv.NODE_ENV = 'production';
     const res = mockRes();
     const ok = assertSameOrigin(
       { method: 'POST', headers: { host: 'fleet.ashbi.ca', origin: 'https://evil.example' } } as any,
@@ -45,7 +46,7 @@ describe('assertSameOrigin', () => {
   });
 
   it('rejects missing Origin/Referer in production', () => {
-    process.env.NODE_ENV = 'production';
+    mutableEnv.NODE_ENV = 'production';
     const res = mockRes();
     const ok = assertSameOrigin(
       { method: 'DELETE', headers: { host: 'fleet.ashbi.ca' } } as any,

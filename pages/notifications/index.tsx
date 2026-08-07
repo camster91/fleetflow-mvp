@@ -36,10 +36,11 @@ export default function NotificationsPage() {
   const [cursor, setCursor] = useState<string | undefined>();
   const [hasMore, setHasMore] = useState(false);
 
-  const load = useCallback(async (reset = true) => {
+  const load = useCallback(async (requestCursor?: string) => {
+    const reset = !requestCursor;
     if (reset) setIsLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '20', ...(filter === 'unread' && { unreadOnly: 'true' }), ...(!reset && cursor ? { cursor } : {}) });
+      const params = new URLSearchParams({ limit: '20', ...(filter === 'unread' && { unreadOnly: 'true' }), ...(requestCursor ? { cursor: requestCursor } : {}) });
       const r = await fetch('/api/notifications?' + params);
       if (r.ok) {
         const data = await r.json();
@@ -48,9 +49,9 @@ export default function NotificationsPage() {
         setCursor(data.nextCursor);
       }
     } finally { setIsLoading(false); }
-  }, [filter, cursor]);
+  }, [filter]);
 
-  useEffect(() => { load(true); }, [filter]);
+  useEffect(() => { void load(); }, [load]);
 
   const markRead = async (ids: string[]) => {
     const r = await fetch('/api/notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notificationIds: ids }) });
@@ -131,7 +132,7 @@ export default function NotificationsPage() {
         )}
         {hasMore && (
           <div className="p-4 text-center border-t border-slate-100">
-            <Button variant="outline" size="sm" onClick={() => load(false)}>Load more</Button>
+            <Button variant="outline" size="sm" onClick={() => cursor && load(cursor)}>Load more</Button>
           </div>
         )}
       </Card>

@@ -29,7 +29,7 @@ const errorMessages: Record<string, { title: string; message: string; icon: Reac
   },
   CredentialsSignin: {
     title: 'Invalid Credentials',
-    message: 'The email or password you entered is incorrect. Please try again.',
+    message: 'The email or one-time code is incorrect. Please try again.',
     icon: <Lock className="h-8 w-8 text-red-600" />,
     action: 'Try Again',
     actionHref: '/auth/login',

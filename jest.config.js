@@ -1,5 +1,6 @@
 /** @type {import('jest').Config} */
 const config = {
+  modulePathIgnorePatterns: ['<rootDir>/.next/'],
   // API route tests run in Node (no DOM needed); component/page tests use jsdom
   projects: [
     {
@@ -13,6 +14,7 @@ const config = {
       transform: {
         '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
       },
+      modulePathIgnorePatterns: ['<rootDir>/.next/'],
       testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
     },
     {
@@ -20,8 +22,7 @@ const config = {
       testEnvironment: 'jsdom',
       testMatch: [
         '<rootDir>/__tests__/components/**/*.test.{ts,tsx}',
-        '<rootDir>/__tests__/pages/[^a]**/*.test.{ts,tsx}',
-        '<rootDir>/__tests__/pages/dashboard.test.tsx',
+        '<rootDir>/__tests__/pages/**/*.test.{ts,tsx}',
         '<rootDir>/__tests__/services/**/*.test.ts',
       ],
       setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
@@ -41,7 +42,12 @@ const config = {
           presets: [['next/babel', { 'preset-react': { runtime: 'automatic' } }]],
         }],
       },
-      testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+      modulePathIgnorePatterns: ['<rootDir>/.next/'],
+      testPathIgnorePatterns: [
+        '<rootDir>/node_modules/',
+        '<rootDir>/.next/',
+        '<rootDir>/__tests__/pages/api/',
+      ],
     },
     {
       displayName: 'unit',
@@ -54,6 +60,7 @@ const config = {
       transform: {
         '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
       },
+      modulePathIgnorePatterns: ['<rootDir>/.next/'],
       testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
     },
   ],

@@ -25,7 +25,7 @@ export default function SOPPage() {
     try {
       const data = await api.getSOPCategories();
       setCategories(data);
-    } catch (err: any) { toast.error(err.message || 'Failed to load SOPs'); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to load SOPs'); }
     finally { setIsLoading(false); }
   }, []);
 
@@ -46,7 +46,7 @@ export default function SOPPage() {
           await api.deleteSOPCategory(cat.id);
           notify.success(`Category "${cat.name}" deleted`);
           await loadData();
-        } catch (err: any) { toast.error(err.message); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete category'); }
       },
     });
   };

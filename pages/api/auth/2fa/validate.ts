@@ -4,6 +4,8 @@ import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { rateLimitMiddleware } from '../../../../lib/rateLimit';
+import { parse, serialize } from 'cookie';
+import { signToken, verifyToken } from '../../../../lib/auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,11 +20,14 @@ export default async function handler(
   if (!allowed) return;
 
   try {
-    const { userId, code, rememberDevice = false } = req.body;
+    const { code, rememberDevice = false } = req.body;
 
-    if (!userId || typeof userId !== 'string') {
-      return res.status(400).json({ error: 'User ID is required' });
+    const challengeToken = parse(req.headers.cookie || '').two_factor_challenge;
+    const challenge = challengeToken ? verifyToken(challengeToken) : null;
+    if (!challenge?.sub || challenge.purpose !== 'two-factor') {
+      return res.status(401).json({ error: 'Two-factor challenge expired or invalid' });
     }
+    const userId = challenge.sub;
 
     if (!code || typeof code !== 'string') {
       return res.status(400).json({ error: '2FA code is required' });
@@ -34,7 +39,7 @@ export default async function handler(
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(401).json({ error: 'Two-factor challenge expired or invalid' });
     }
 
     if (!user.twoFactorEnabled || !user.twoFactorSecret) {
@@ -99,6 +104,25 @@ export default async function handler(
         lockedUntil: null,
       },
     });
+
+    const sessionToken = signToken({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      purpose: 'session',
+    });
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+    };
+    res.setHeader('Set-Cookie', [
+      serialize('token', sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 }),
+      serialize('two_factor_challenge', '', { ...cookieOptions, maxAge: 0 }),
+      serialize('fleetflow_team', '', { ...cookieOptions, maxAge: 0 }),
+    ]);
 
     return res.status(200).json({
       message: '2FA verification successful',

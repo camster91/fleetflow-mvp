@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import { useSession, signOut } from '@/lib/session';
 import { LayoutDashboard, Car, Package, Wrench, Users, BarChart3, Settings, Search, Menu, X, ChevronDown, ChevronRight, LogOut, HelpCircle, FileText, MoreHorizontal, BookOpen, ShoppingCart, Building, ClipboardList } from 'lucide-react';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { TrialBanner } from '@/components/TrialBanner';
+import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher';
 
 interface NavItem { id: string; label: string; icon: React.ElementType; href?: string; children?: { id: string; label: string; href: string }[]; }
 
@@ -125,6 +127,18 @@ interface DashboardLayoutProps {
   breadcrumbs?: { label: string; href?: string }[];
 }
 
+interface SearchResultItem {
+  id: string;
+  name?: string;
+  customer?: string;
+  vehicle?: string;
+  address?: string;
+  location?: string;
+  driver?: string;
+}
+
+type SearchResults = Record<'vehicles' | 'deliveries' | 'clients' | 'maintenance', SearchResultItem[]>;
+
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title, subtitle, actions, breadcrumbs }) => {
   const { data: session } = useSession();
   const router = useRouter();
@@ -133,7 +147,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any>(null);
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
   const [searchDropOpen, setSearchDropOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -145,7 +159,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
     debounceRef.current = setTimeout(async () => {
       try {
         const r = await fetch('/api/search?q=' + encodeURIComponent(q));
-        if (r.ok) { setSearchResults(await r.json()); setSearchDropOpen(true); }
+        if (r.ok) { setSearchResults(await r.json() as SearchResults); setSearchDropOpen(true); }
       } catch {}
     }, 300);
   };
@@ -202,7 +216,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
       <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
           <Link href="/dashboard">
-            <img src="/brand/logo/logo-horizontal.svg" alt="Fleet Manager" className="h-7 w-auto" />
+            <Image src="/brand/logo/logo-horizontal.svg" alt="Fleet Manager" width={128} height={28} className="h-7 w-auto" priority />
           </Link>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg">
             <X className="h-5 w-5" />
@@ -254,7 +268,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
           <div className="mt-8 pt-6 border-t border-slate-200">
             <p className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Resources</p>
             <div className="space-y-1">
-              <Link href="/docs" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+              <Link href="/help" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
                 <FileText className="h-5 w-5 text-slate-400" /><span>Documentation</span>
               </Link>
               <Link href="/help" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors">
@@ -330,6 +344,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
               )}
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
+              <WorkspaceSwitcher />
               <div className="hidden md:block">
                 <div className="relative" ref={searchRef}>
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -343,14 +358,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                   />
                   {searchDropOpen && searchResults && (
                     <div className="absolute top-full left-0 mt-1 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden">
-                      {['vehicles','deliveries','clients','maintenance'].map(cat => {
+                      {(['vehicles','deliveries','clients','maintenance'] as const).map(cat => {
                         const items = searchResults[cat] ?? [];
                         if (!items.length) return null;
                         const hrefs: Record<string,string> = { vehicles: '/vehicles', deliveries: '/deliveries', clients: '/clients', maintenance: '/maintenance' };
                         return (
                           <div key={cat}>
                             <p className="px-3 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wide">{cat}</p>
-                            {items.map((item: any) => (
+                            {items.map((item) => (
                               <a key={item.id} href={hrefs[cat]} onClick={() => setSearchDropOpen(false)}
                                 className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-sm text-slate-700">
                                 <span className="font-medium">{item.name || item.customer || item.vehicle}</span>
@@ -362,7 +377,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                           </div>
                         );
                       })}
-                      {['vehicles','deliveries','clients','maintenance'].every(c => !(searchResults[c]?.length)) && (
+                      {(['vehicles','deliveries','clients','maintenance'] as const).every(c => !(searchResults[c]?.length)) && (
                         <p className="px-3 py-4 text-sm text-slate-400 text-center">No results for "{searchQuery}"</p>
                       )}
                     </div>

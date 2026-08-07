@@ -1,17 +1,14 @@
 import { createMocks } from 'node-mocks-http';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Mock next-auth before importing handler
-jest.mock('next-auth/next', () => ({
-  getServerSession: jest.fn().mockResolvedValue(null),
-}));
-
 jest.mock('@/lib/auth', () => ({
+  getServerSession: jest.fn().mockResolvedValue(null),
   authOptions: {},
 }));
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
+    team: { findMany: jest.fn() },
     vehicle: { findMany: jest.fn(), count: jest.fn(), create: jest.fn() },
   },
 }));
@@ -23,6 +20,8 @@ jest.mock('@/lib/fleet', () => ({
 }));
 
 import handler from '@/pages/api/vehicles/index';
+import { getServerSession } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 describe('GET /api/vehicles', () => {
   it('returns 401 without a valid session', async () => {
@@ -47,5 +46,39 @@ describe('POST /api/vehicles', () => {
     await handler(req, res);
 
     expect(res._getStatusCode()).toBe(401);
+  });
+
+  it('denies a viewer from creating a vehicle', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'viewer-1' } });
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'VIEWER' }] },
+    ]);
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      method: 'POST', body: { name: 'Truck 1', status: 'active' },
+    });
+
+    await handler(req, res);
+
+    expect(res._getStatusCode()).toBe(403);
+    expect(prisma.vehicle.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('tenant vehicle access', () => {
+  it('reads the selected team scope for an accepted member', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'member-1' } });
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'MEMBER' }] },
+    ]);
+    (prisma.vehicle.findMany as jest.Mock).mockResolvedValue([]);
+    (prisma.vehicle.count as jest.Mock).mockResolvedValue(0);
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({ method: 'GET' });
+
+    await handler(req, res);
+
+    expect(res._getStatusCode()).toBe(200);
+    expect(prisma.vehicle.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] },
+    }));
   });
 });

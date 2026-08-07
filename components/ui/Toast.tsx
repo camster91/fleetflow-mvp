@@ -144,18 +144,21 @@ export const Toast: React.FC<ToastProps> = ({
   const duration = toast.duration ?? 5000;
   const showProgress = toast.showProgress ?? true;
   const dismissible = toast.dismissible ?? true;
+  const toastId = toast.id;
+  const toastType = toast.type;
+  const onToastDismiss = toast.onDismiss;
 
   const handleDismiss = useCallback(() => {
     setIsExiting(true);
     setTimeout(() => {
-      onDismiss(toast.id);
-      toast.onDismiss?.();
+      onDismiss(toastId);
+      onToastDismiss?.();
     }, 300);
-  }, [onDismiss, toast.id, toast.onDismiss]);
+  }, [onDismiss, onToastDismiss, toastId]);
 
   // Auto-dismiss logic with RAF for smooth progress
   useEffect(() => {
-    if (toast.type === 'loading' || duration === null) return;
+    if (toastType === 'loading' || duration === null) return;
     if (isPaused) return;
 
     const updateProgress = () => {
@@ -181,7 +184,7 @@ export const Toast: React.FC<ToastProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [duration, isPaused, toast.type, handleDismiss]);
+  }, [duration, isPaused, toastType, handleDismiss]);
 
   const styles = toastStyles[toast.type];
   const Icon = styles.Icon;

@@ -58,11 +58,7 @@ export {
 // Modal Component
 export { 
   Modal, 
-  ModalFooter,
-  ConfirmModal,
   type ModalProps,
-  type ModalFooterProps,
-  type ConfirmModalProps,
 } from './Modal';
 
 // Alert Component
@@ -98,17 +94,6 @@ export {
   type SkeletonVariant,
   type SkeletonAnimation,
 } from './Skeleton';
-
-// Table Component
-export { 
-  Table, 
-  useTableSort,
-  usePagination,
-  type TableProps,
-  type Column,
-  type PaginationInfo,
-  type SortDirection,
-} from './Table';
 
 // Toast Component
 export { 

@@ -14,14 +14,38 @@ import {
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-export function MaintenanceReport({ data }: { data: any }) {
+interface StatusBreakdown { status: string; count: number }
+interface UpcomingTask {
+  id: string; title: string; vehicleName: string; type: string; dueDate: string;
+  priority: string; costEstimate: number | null;
+}
+export interface MaintenanceReportData {
+  totalCost: number; totalTasks: number; upcomingTasks: UpcomingTask[];
+  costByVehicle: Array<{ vehicle: string; cost: number }>;
+  costOverTime: Array<{ month: string; cost: number }>;
+}
+export interface DeliveriesReportData {
+  totalDeliveries: number; onTimeRate: number; avgDeliveryTime: number;
+  topDrivers: Array<{ driver: string; deliveries: number }>;
+  statusBreakdown: StatusBreakdown[];
+}
+interface MaintenanceVehicle {
+  id: string; name: string; vehicleType: string | null; mileage: number | null;
+  lastService: string | null; driver: string | null;
+}
+export interface FleetReportData {
+  totalVehicles: number; statusBreakdown: StatusBreakdown[];
+  vehiclesNeedingMaintenance: MaintenanceVehicle[];
+}
+
+export function MaintenanceReport({ data }: { data: MaintenanceReportData }) {
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard title="Total Maintenance Cost" value={`$${data.totalCost.toLocaleString()}`} icon={DollarSign} />
-        <StatCard title="Total Tasks" value={data.totalTasks} icon={Wrench} />
-        <StatCard title="Upcoming Tasks (30d)" value={data.upcomingTasks.length} icon={Clock} />
+        <StatCard title="Total Maintenance Cost" value={`$${data.totalCost.toLocaleString()}`} icon={<DollarSign />} />
+        <StatCard title="Total Tasks" value={data.totalTasks} icon={<Wrench />} />
+        <StatCard title="Upcoming Tasks (30d)" value={data.upcomingTasks.length} icon={<Clock />} />
       </div>
 
       {/* Charts */}
@@ -34,7 +58,7 @@ export function MaintenanceReport({ data }: { data: any }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="vehicle" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Cost']} />
+                <Tooltip formatter={(value) => [`$${Number(value ?? 0).toLocaleString()}`, 'Cost']} />
                 <Bar dataKey="cost" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -49,7 +73,7 @@ export function MaintenanceReport({ data }: { data: any }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Cost']} />
+                <Tooltip formatter={(value) => [`$${Number(value ?? 0).toLocaleString()}`, 'Cost']} />
                 <Line type="monotone" dataKey="cost" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
@@ -74,7 +98,7 @@ export function MaintenanceReport({ data }: { data: any }) {
                 </tr>
               </thead>
               <tbody>
-                {data.upcomingTasks.map((t: any) => (
+                {data.upcomingTasks.map((t) => (
                   <tr key={t.id} className="border-b border-slate-100">
                     <td className="py-2 px-3 text-slate-900">{t.title}</td>
                     <td className="py-2 px-3 text-slate-600">{t.vehicleName}</td>
@@ -97,15 +121,15 @@ export function MaintenanceReport({ data }: { data: any }) {
   );
 }
 
-export function DeliveriesReport({ data }: { data: any }) {
+export function DeliveriesReport({ data }: { data: DeliveriesReportData }) {
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="Total Deliveries" value={data.totalDeliveries} icon={Package} />
-        <StatCard title="On-Time Rate" value={`${data.onTimeRate}%`} icon={TrendingUp} />
-        <StatCard title="Avg. Delivery Time" value={`${data.avgDeliveryTime}h`} icon={Clock} />
-        <StatCard title="Active Drivers" value={data.topDrivers.length} icon={Users} />
+        <StatCard title="Total Deliveries" value={data.totalDeliveries} icon={<Package />} />
+        <StatCard title="On-Time Rate" value={`${data.onTimeRate}%`} icon={<TrendingUp />} />
+        <StatCard title="Avg. Delivery Time" value={`${data.avgDeliveryTime}h`} icon={<Clock />} />
+        <StatCard title="Active Drivers" value={data.topDrivers.length} icon={<Users />} />
       </div>
 
       {/* Charts */}
@@ -122,9 +146,12 @@ export function DeliveriesReport({ data }: { data: any }) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ status, count }: any) => `${status} (${count})`}
+                  label={(props) => {
+                    const item = props.payload as StatusBreakdown
+                    return `${item.status} (${item.count})`
+                  }}
                 >
-                  {data.statusBreakdown.map((_: any, i: number) => (
+                  {data.statusBreakdown.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -154,17 +181,17 @@ export function DeliveriesReport({ data }: { data: any }) {
   );
 }
 
-export function FleetReport({ data }: { data: any }) {
+export function FleetReport({ data }: { data: FleetReportData }) {
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard title="Total Vehicles" value={data.totalVehicles} icon={Truck} />
-        <StatCard title="Needing Maintenance" value={data.vehiclesNeedingMaintenance.length} icon={AlertTriangle} />
+        <StatCard title="Total Vehicles" value={data.totalVehicles} icon={<Truck />} />
+        <StatCard title="Needing Maintenance" value={data.vehiclesNeedingMaintenance.length} icon={<AlertTriangle />} />
         <StatCard
           title="Fleet Health"
           value={`${data.totalVehicles > 0 ? Math.round(((data.totalVehicles - data.vehiclesNeedingMaintenance.length) / data.totalVehicles) * 100) : 0}%`}
-          icon={TrendingUp}
+          icon={<TrendingUp />}
         />
       </div>
 
@@ -182,9 +209,12 @@ export function FleetReport({ data }: { data: any }) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={({ status, count }: any) => `${status} (${count})`}
+                  label={(props) => {
+                    const item = props.payload as StatusBreakdown
+                    return `${item.status} (${item.count})`
+                  }}
                 >
-                  {data.statusBreakdown.map((_: any, i: number) => (
+                  {data.statusBreakdown.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -200,7 +230,7 @@ export function FleetReport({ data }: { data: any }) {
           <h3 className="text-base font-semibold text-slate-900 mb-4">Vehicles Needing Maintenance</h3>
           {data.vehiclesNeedingMaintenance.length > 0 ? (
             <div className="space-y-3 max-h-[300px] overflow-y-auto">
-              {data.vehiclesNeedingMaintenance.map((v: any) => (
+              {data.vehiclesNeedingMaintenance.map((v) => (
                 <div key={v.id} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <div>
                     <p className="font-medium text-slate-900">{v.name}</p>

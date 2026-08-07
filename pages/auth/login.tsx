@@ -9,9 +9,10 @@ import toast from 'react-hot-toast';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [step, setStep] = useState<'email' | 'code'>('email');
+  const [step, setStep] = useState<'email' | 'code' | 'two-factor'>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -81,8 +82,8 @@ export default function LoginPage() {
   };
 
   const handleVerifyCode = async (codeStr?: string) => {
-    const fullCode = codeStr || code.join('');
-    if (fullCode.length !== 6) {
+    const fullCode = step === 'two-factor' ? twoFactorCode.trim() : (codeStr || code.join(''));
+    if (step !== 'two-factor' && fullCode.length !== 6) {
       setError('Please enter the full 6-digit code');
       return;
     }
@@ -90,17 +91,33 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
 
-    const result = await signIn('credentials', {
-      email: email.toLowerCase().trim(),
-      code: fullCode,
-      redirect: false,
-    });
+    const result = step === 'two-factor'
+      ? await fetch('/api/auth/2fa/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: fullCode }),
+        }).then(async (response) => ({
+          ok: response.ok,
+          error: response.ok ? null : (await response.json()).error || 'Invalid verification code',
+        }))
+      : await signIn('credentials', {
+          email: email.toLowerCase().trim(),
+          code: fullCode,
+          redirect: false,
+        });
 
     if (!result || result.error) {
       setError(result?.error || 'Invalid code');
       toast.error(result?.error || 'Invalid code');
       setCode(['', '', '', '', '', '']);
       codeRefs.current[0]?.focus();
+      setLoading(false);
+      return;
+    }
+
+    if ('requiresTwoFactor' in result && result.requiresTwoFactor) {
+      setStep('two-factor');
+      setCode(['', '', '', '', '', '']);
       setLoading(false);
       return;
     }
@@ -173,9 +190,13 @@ export default function LoginPage() {
             <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
               <KeyRound className="h-6 w-6 text-blue-600" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">Check your email</h2>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {step === 'two-factor' ? 'Two-factor authentication' : 'Check your email'}
+            </h2>
             <p className="mt-2 text-sm text-slate-600">
-              We sent a 6-digit code to <strong>{email}</strong>
+              {step === 'two-factor'
+                ? 'Enter the code from your authenticator app or a backup code.'
+                : <>We sent a 6-digit code to <strong>{email}</strong></>}
             </p>
           </div>
 
@@ -187,7 +208,16 @@ export default function LoginPage() {
               </div>
             )}
 
-            <div className="flex justify-center gap-2" onPaste={handleCodePaste}>
+            {step === 'two-factor' ? (
+              <Input
+                label="Authenticator or backup code"
+                value={twoFactorCode}
+                onChange={(event) => setTwoFactorCode(event.target.value)}
+                placeholder="123456 or 1234-5678-9012"
+                autoComplete="one-time-code"
+                required
+              />
+            ) : <div className="flex justify-center gap-2" onPaste={handleCodePaste}>
               {code.map((digit, i) => (
                 <input
                   key={i}
@@ -202,7 +232,7 @@ export default function LoginPage() {
                   autoComplete="one-time-code"
                 />
               ))}
-            </div>
+            </div>}
 
             <Button
               type="button"
@@ -211,12 +241,12 @@ export default function LoginPage() {
               size="lg"
               loading={loading}
               onClick={() => handleVerifyCode()}
-              disabled={code.some(d => !d)}
+              disabled={step === 'two-factor' ? !twoFactorCode.trim() : code.some(d => !d)}
             >
-              Verify Code
+              {step === 'two-factor' ? 'Verify and sign in' : 'Verify Code'}
             </Button>
 
-            <div className="flex items-center justify-between text-sm">
+            {step === 'code' ? <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
                 onClick={() => { setStep('email'); setError(''); setCode(['', '', '', '', '', '']); }}
@@ -234,7 +264,15 @@ export default function LoginPage() {
               >
                 {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend code'}
               </button>
-            </div>
+            </div> : (
+              <button
+                type="button"
+                onClick={() => { setStep('email'); setTwoFactorCode(''); setError(''); }}
+                className="flex items-center text-sm text-slate-600 hover:text-slate-900"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" /> Start over
+              </button>
+            )}
           </div>
         </>
       )}

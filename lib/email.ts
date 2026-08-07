@@ -9,7 +9,7 @@ const apiKey = process.env.MAILGUN_API_KEY;
 const domain = process.env.MAILGUN_DOMAIN;
 const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3';
 
-let mg: any;
+let mg: ReturnType<Mailgun['client']> | undefined;
 if (apiKey && domain) {
   mg = mailgun.client({
     username: 'api',
@@ -186,11 +186,11 @@ export async function sendEmail({
     });
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Email sending error:', error);
     return { 
       success: false, 
-      error: error.message || 'Failed to send email' 
+      error: error instanceof Error ? error.message : 'Failed to send email'
     };
   }
 }
@@ -636,9 +636,10 @@ export async function sendTeamInvitationEmail(
   email: string,
   invitedByName: string,
   role: string,
-  teamName: string
+  teamName: string,
+  invitationId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const registerUrl = `${APP_URL}/auth/register`;
+  const inviteUrl = `${APP_URL}/accept-invite/${encodeURIComponent(invitationId)}`;
   const displayRole = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   const html = getBaseEmailTemplate(`
@@ -647,18 +648,18 @@ export async function sendTeamInvitationEmail(
     <p><strong>${invitedByName}</strong> has invited you to join <strong>${teamName}</strong> on ${APP_NAME} as a <strong>${displayRole}</strong>.</p>
 
     <div style="text-align: center; margin: 32px 0;">
-      <a href="${registerUrl}" class="button">Accept Invitation</a>
+      <a href="${inviteUrl}" class="button">Accept Invitation</a>
     </div>
 
     <div class="info-box">
       <p style="margin: 0;"><strong>Or copy and paste this link:</strong></p>
       <p style="margin: 8px 0 0 0; word-break: break-all;">
-        <a href="${registerUrl}" style="color: #1e40af;">${registerUrl}</a>
+        <a href="${inviteUrl}" style="color: #1e40af;">${inviteUrl}</a>
       </p>
     </div>
 
     <p style="color: #64748b; font-size: 14px;">
-      Create your account with this email address to automatically join the team. If you weren't expecting this invitation, you can safely ignore this email.
+      Sign in with this email address and its one-time login code to accept the invitation. If you weren't expecting this invitation, you can safely ignore this email.
     </p>
   `);
 
@@ -669,8 +670,8 @@ Hi there,
 
 ${invitedByName} has invited you to join ${teamName} on ${APP_NAME} as a ${displayRole}.
 
-Create your account here to accept:
-${registerUrl}
+Sign in here to accept:
+${inviteUrl}
 
 If you weren't expecting this invitation, you can safely ignore this email.
 

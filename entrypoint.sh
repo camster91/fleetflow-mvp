@@ -12,7 +12,7 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-echo "Starting FleetFlow with database: ${DATABASE_URL%%\?*}"  # log URL without query params
+echo "Database configuration detected."
 
 # Run Prisma migrations (idempotent)
 echo "Running database migrations..."

@@ -1,6 +1,7 @@
 // Security utilities for FleetFlow
 import { NextApiRequest, NextApiResponse } from 'next'
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible'
+import { prisma } from './prisma'
 
 // Rate limiters for different endpoints
 const rateLimiters = {
@@ -135,7 +136,7 @@ export const securityHeaders = {
  */
 export const contentSecurityPolicy = {
   'default-src': ["'self'"],
-  'script-src': ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+  'script-src': ["'self'", "'unsafe-inline'"],
   'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
   'img-src': ["'self'", 'data:', 'blob:', 'https:'],
   'font-src': ["'self'", 'https://fonts.gstatic.com'],
@@ -161,14 +162,25 @@ export async function auditLog(action: {
   type: string
   userId: string
   targetId?: string
-  details: Record<string, any>
+  details: Record<string, unknown>
   ip?: string
   userAgent?: string
 }) {
-  // In production, write to database or external service
-  console.log('AUDIT LOG:', {
-    timestamp: new Date().toISOString(),
-    ...action
+  await prisma.auditLog.create({
+    data: {
+      userId: action.userId,
+      action: action.type,
+      entityType: 'user',
+      entityId: action.targetId,
+      description: action.targetId
+        ? `${action.type} for user ${action.targetId}`
+        : action.type,
+      metadata: JSON.stringify({
+        ...action.details,
+        ...(action.ip ? { ip: action.ip } : {}),
+        ...(action.userAgent ? { userAgent: action.userAgent } : {}),
+      }),
+    },
   })
 }
 
@@ -176,7 +188,7 @@ export async function auditLog(action: {
  * Input validation helper
  */
 export function validateInput(
-  value: any,
+  value: unknown,
   rules: {
     required?: boolean
     type?: 'string' | 'number' | 'email' | 'uuid'
@@ -210,8 +222,13 @@ export function validateInput(
         }
         break
       case 'email':
-        if (!isValidEmail(value)) {
+        if (typeof value !== 'string' || !isValidEmail(value)) {
           return { valid: false, error: 'Invalid email format' }
+        }
+        break
+      case 'uuid':
+        if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+          return { valid: false, error: 'Invalid UUID format' }
         }
         break
     }

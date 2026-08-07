@@ -285,7 +285,7 @@ export function resetBruteForceProtection(identifier: string): void {
 }
 
 // Clean up old entries periodically (every hour)
-setInterval(() => {
+const cleanupInterval = setInterval(() => {
   const now = Date.now();
   const oneHour = 60 * 60 * 1000;
   
@@ -295,3 +295,7 @@ setInterval(() => {
     }
   });
 }, 60 * 60 * 1000);
+
+// Do not keep short-lived workers, CLI checks, or test processes alive solely
+// for this best-effort in-memory cleanup task.
+cleanupInterval.unref?.();

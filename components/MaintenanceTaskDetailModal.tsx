@@ -54,7 +54,7 @@ export default function MaintenanceTaskDetailModal({ isOpen, task, onClose, onUp
       const updated = await api.updateMaintenanceTask(task.id, {
         type: form.type,
         dueDate: form.dueDate,
-        priority: form.priority as any,
+        priority: form.priority as MaintenanceTask['priority'],
         notes: form.notes || undefined,
         costEstimate: form.costEstimate ? parseFloat(form.costEstimate) : undefined,
         estimatedDuration: form.estimatedDuration || undefined,

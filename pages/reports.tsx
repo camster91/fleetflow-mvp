@@ -10,6 +10,11 @@ import { downloadCSV } from '../lib/csvExport';
 import { subDays, format } from 'date-fns';
 import { Download, Wrench, Package, Truck } from 'lucide-react';
 import { notify } from '../services/notifications';
+import type {
+  MaintenanceReportData,
+  DeliveriesReportData,
+  FleetReportData,
+} from '../components/reports/ReportPanels';
 
 interface DateRange { from: Date; to: Date; label: string; }
 
@@ -41,7 +46,7 @@ export default function ReportsPage() {
   const [dateRange, setDateRange] = useState<DateRange>({
     from: subDays(new Date(), 30), to: new Date(), label: 'Last 30 days',
   });
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<MaintenanceReportData | DeliveriesReportData | FleetReportData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -153,9 +158,9 @@ export default function ReportsPage() {
         </div>
       ) : data ? (
         <>
-          {activeTab === 'maintenance' && <MaintenanceReport data={data} />}
-          {activeTab === 'deliveries' && <DeliveriesReport data={data} />}
-          {activeTab === 'fleet' && <FleetReport data={data} />}
+          {activeTab === 'maintenance' && <MaintenanceReport data={data as MaintenanceReportData} />}
+          {activeTab === 'deliveries' && <DeliveriesReport data={data as DeliveriesReportData} />}
+          {activeTab === 'fleet' && <FleetReport data={data as FleetReportData} />}
         </>
       ) : (
         <Card className="p-12 text-center">

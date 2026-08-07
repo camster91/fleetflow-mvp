@@ -19,13 +19,9 @@ RUN npx prisma generate
 COPY . .
 
 # Build the application
-ARG NEXTAUTH_URL
-ARG NEXTAUTH_SECRET
-ARG DATABASE_URL
-ENV NEXTAUTH_URL=***
-ENV NEXTAUTH_SECRET=***
+ENV NEXTAUTH_URL=http://localhost:3000
 # No SQLite fallback — DATABASE_URL must be explicitly set in production
-ENV DATABASE_URL=${DATABASE_URL}
+ENV DATABASE_URL=postgresql://fleetflow:build-only@localhost:5432/fleetflow
 
 RUN npm run build
 
@@ -51,9 +47,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/create-admin.js ./create-admin.js
 
 # Copy entrypoint script that enforces DATABASE_URL in production
 COPY --chown=nextjs:nodejs entrypoint.sh ./
+RUN sed -i 's/\r$//' entrypoint.sh && chmod 755 entrypoint.sh
 
 # Set environment variables
 ENV NODE_ENV=production

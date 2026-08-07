@@ -25,7 +25,6 @@ export default async function handler(
       select: {
         twoFactorEnabled: true,
         lastLoginAt: true,
-        updatedAt: true,
       },
     });
 
@@ -42,7 +41,6 @@ export default async function handler(
 
     return res.status(200).json({
       twoFactorEnabled: user.twoFactorEnabled,
-      lastPasswordChange: user.updatedAt,
       lastLoginAt: user.lastLoginAt,
       loginHistory: loginHistory.map((record: { id: string; timestamp: Date; ipAddress: string | null; userAgent: string | null; success: boolean }) => ({
         id: record.id,

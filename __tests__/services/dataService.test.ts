@@ -244,11 +244,11 @@ describe('DataService', () => {
   describe('Client Operations', () => {
     const testClient = {
       name: 'Test Client',
-      location: '123 Test St',
-      contactPerson: 'Test Contact',
+      type: 'other' as const,
+      address: '123 Test St',
+      contactPerson: { name: 'Test Contact' },
       phone: '(555) 123-4567',
       email: 'test@client.com',
-      deliveriesCompleted: 0,
     };
 
     test('getClients returns all clients', () => {
@@ -280,10 +280,10 @@ describe('DataService', () => {
       ];
       localStorageMock.setItem('fleetflow-clients', JSON.stringify(clients));
       
-      const updates = { deliveriesCompleted: 10 };
+      const updates = { rating: 4 as const };
       const result = dataService.updateClient(1, updates);
       
-      expect(result?.deliveriesCompleted).toBe(10);
+      expect(result?.rating).toBe(4);
     });
   });
 

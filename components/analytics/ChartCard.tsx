@@ -32,7 +32,7 @@ interface ChartCardProps {
   title: string;
   subtitle?: string;
   type: ChartType;
-  data: any[];
+  data: Array<Record<string, string | number | null | undefined>>;
   dataKey: string;
   xAxisKey?: string;
   series?: Array<{

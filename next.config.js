@@ -16,7 +16,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob:",
       "font-src 'self' https://fonts.gstatic.com",
@@ -29,7 +29,9 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  typescript: { ignoreBuildErrors: true },
+  turbopack: {
+    root: __dirname,
+  },
   
   // Ensure static files in public are served
   poweredByHeader: false,
@@ -75,16 +77,6 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: securityHeaders,
-      },
-      // Cache static assets
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
       },
     ]
   },

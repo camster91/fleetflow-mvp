@@ -6,8 +6,139 @@ import { getServerSession, authOptions, type Session } from './auth'
 import { prisma } from './prisma'
 import { canManageTeam } from './permissions'
 import type { TeamRole } from '../types'
+import { parse as parseCookie } from 'cookie'
 
 export type AuthedSession = Session & { user: Session['user'] & { id: string } }
+
+export class TenantContextError extends Error {
+  constructor(
+    public code: 'TENANT_SELECTION_REQUIRED' | 'TENANT_FORBIDDEN',
+    message: string
+  ) {
+    super(message)
+    this.name = 'TenantContextError'
+  }
+}
+
+export interface TenantContext {
+  ownerId: string
+  teamId: string | null
+  role: TeamRole
+  resourceWhere:
+    | { ownerId: string; teamId: null }
+    | { OR: Array<{ teamId: string } | { ownerId: string; teamId: null }> }
+  auditWhere:
+    | { userId: string; teamId: null }
+    | { OR: Array<{ teamId: string } | { userId: string; teamId: null }> }
+}
+
+/**
+ * Resolve the tenant selected by the authenticated user.
+ *
+ * Existing owner-only rows have a null teamId, so a team may read those legacy
+ * rows only when their owner is the team owner. New writes should persist both
+ * ownerId and teamId from this context. Users with multiple teams must select
+ * one explicitly; silently merging tenants would leak data across workspaces.
+ */
+export async function resolveTenantContext(
+  userId: string,
+  selectedTeamId?: string
+): Promise<TenantContext> {
+  const teams = await prisma.team.findMany({
+    where: {
+      OR: [
+        { ownerId: userId },
+        { members: { some: { userId, status: 'ACCEPTED' } } },
+      ],
+    },
+    select: {
+      id: true,
+      ownerId: true,
+      members: {
+        where: { userId, status: 'ACCEPTED' },
+        select: { role: true },
+      },
+    },
+  })
+
+  if (teams.length === 0) {
+    if (selectedTeamId) {
+      throw new TenantContextError('TENANT_FORBIDDEN', 'Workspace access denied')
+    }
+    return {
+      ownerId: userId,
+      teamId: null,
+      role: 'OWNER',
+      resourceWhere: { ownerId: userId, teamId: null },
+      auditWhere: { userId, teamId: null },
+    }
+  }
+
+  const team = selectedTeamId
+    ? teams.find((candidate) => candidate.id === selectedTeamId)
+    : teams.length === 1
+      ? teams[0]
+      : null
+
+  if (selectedTeamId && !team) {
+    throw new TenantContextError('TENANT_FORBIDDEN', 'Workspace access denied')
+  }
+  if (!team) {
+    throw new TenantContextError(
+      'TENANT_SELECTION_REQUIRED',
+      'Select a workspace before accessing business data'
+    )
+  }
+
+  const role = team.ownerId === userId
+    ? 'OWNER'
+    : team.members[0]?.role as TeamRole | undefined
+  if (!role) {
+    throw new TenantContextError('TENANT_FORBIDDEN', 'Workspace access denied')
+  }
+
+  return {
+    ownerId: team.ownerId,
+    teamId: team.id,
+    role,
+    resourceWhere: {
+      OR: [
+        { teamId: team.id },
+        { ownerId: team.ownerId, teamId: null },
+      ],
+    },
+    auditWhere: {
+      OR: [
+        { teamId: team.id },
+        { userId: team.ownerId, teamId: null },
+      ],
+    },
+  }
+}
+
+/** Authenticate and resolve the request's selected workspace in one step. */
+export async function requireTenantContext(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<{ session: AuthedSession; tenant: TenantContext } | null> {
+  const session = await requireSession(req, res)
+  if (!session) return null
+
+  const requested = req.headers['x-team-id']
+  const headerTeamId = Array.isArray(requested) ? requested[0] : requested
+  const selectedTeamId = headerTeamId || parseCookie(req.headers.cookie || '').fleetflow_team
+  try {
+    const tenant = await resolveTenantContext(session.user.id, selectedTeamId)
+    return { session, tenant }
+  } catch (error) {
+    if (error instanceof TenantContextError) {
+      const status = error.code === 'TENANT_SELECTION_REQUIRED' ? 409 : 403
+      res.status(status).json({ error: error.message, code: error.code })
+      return null
+    }
+    throw error
+  }
+}
 
 /** Require an authenticated session; returns null after writing 401. */
 export async function requireSession(

@@ -1,17 +1,17 @@
 import { createMocks } from 'node-mocks-http';
 import handler from '../../../pages/api/vehicles/[id]/details';
 
-jest.mock('next-auth/next', () => ({ getServerSession: jest.fn() }));
 jest.mock('../../../lib/prisma', () => ({
   prisma: {
+    team: { findMany: jest.fn() },
     vehicle: { findFirst: jest.fn() },
     maintenanceTask: { findMany: jest.fn() },
     user: { findFirst: jest.fn() },
   },
 }));
-jest.mock('../../../lib/auth', () => ({ authOptions: {} }));
+jest.mock('../../../lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }));
 
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
 const mockSession = { user: { id: 'user-1' } };
@@ -24,7 +24,10 @@ const mockTasks = [
   { id: 't-1', title: 'Oil Change', type: 'Oil Change', dueDate: new Date(), priority: 'high', completed: false, completedDate: null, costEstimate: 50, serviceProvider: 'Jiffy Lube' },
 ];
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  (prisma.team.findMany as jest.Mock).mockResolvedValue([]);
+});
 
 describe('GET /api/vehicles/[id]/details', () => {
   it('returns 401 when unauthenticated', async () => {

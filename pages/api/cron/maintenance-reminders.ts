@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { notifyMaintenanceDue } from '../../../lib/email.server'
 import { createNotification } from '../../../lib/notifications'
+import { constantTimeCompare } from '../../../lib/tokens'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,7 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const cronSecret = req.headers['x-cron-secret']
-  if (!cronSecret || cronSecret !== process.env.CRON_SECRET) {
+  const configuredSecret = process.env.CRON_SECRET
+  if (typeof cronSecret !== 'string' || !configuredSecret || !constantTimeCompare(cronSecret, configuredSecret)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 

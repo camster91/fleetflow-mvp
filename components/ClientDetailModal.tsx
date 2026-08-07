@@ -95,7 +95,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, onClientUpd
     setEditedClient(null)
   }
 
-  const handleEditField = (field: keyof dataService.Client, value: any) => {
+  const handleEditField = <K extends keyof dataService.Client>(field: K, value: dataService.Client[K]) => {
     if (!client) return
     setEditedClient(prev => ({
       ...prev,
@@ -249,7 +249,7 @@ export default function ClientDetailModal({ isOpen, onClose, client, onClientUpd
                           {isEditing ? (
                             <select
                               value={editedClient?.type ?? client.type}
-                              onChange={(e) => handleEditField('type', e.target.value)}
+                        onChange={(e) => handleEditField('type', e.target.value as dataService.Client['type'])}
                               className="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500"
                             >
                               <option value="restaurant">Restaurant</option>

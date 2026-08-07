@@ -1,33 +1,38 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToVehicle, vehicleToDb, logActivity } from '../../../lib/fleet'
+import { requireTenantContext } from '../../../lib/apiAuth'
+import { canManageVehicles, canViewVehicles } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { session, tenant } = context
 
   const { id } = req.query as { id: string }
-  const userId = (session.user as any).id
+  const userId = session.user.id
+  const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
 
   if (req.method === 'GET') {
-    const vehicle = await prisma.vehicle.findFirst({ where: { id, ownerId: userId } })
+    if (!canViewVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const vehicle = await prisma.vehicle.findFirst({ where: scopedWhere })
     if (!vehicle) return res.status(404).json({ error: 'Not found' })
     return res.json(dbToVehicle(vehicle))
   }
 
   if (req.method === 'PUT') {
-    const { ownerId: _o, ...updateFields } = vehicleToDb(req.body, userId) as any
+    if (!canManageVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const { ownerId: _ownerId, ...updateFields } = vehicleToDb(req.body, tenant.ownerId)
     const result = await prisma.vehicle.updateMany({
-      where: { id, ownerId: userId },
+      where: scopedWhere,
       data: { ...updateFields, lastUpdated: new Date() },
     })
     // Must re-read with owner scope — findUnique after updateMany leaked other tenants' rows
     if (result.count === 0) return res.status(404).json({ error: 'Not found' })
-    const vehicle = await prisma.vehicle.findFirst({ where: { id, ownerId: userId } })
+    const vehicle = await prisma.vehicle.findFirst({ where: scopedWhere })
     if (!vehicle) return res.status(404).json({ error: 'Not found' })
     await logActivity(prisma, {
-      userId, userName: session.user.name, userRole: (session.user as any).role,
+      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
       action: 'updated', entityType: 'vehicle', entityId: id, entityName: vehicle.name,
       description: `Vehicle "${vehicle.name}" was updated`,
     })
@@ -35,11 +40,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const vehicle = await prisma.vehicle.findFirst({ where: { id, ownerId: userId } })
+    if (!canManageVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const vehicle = await prisma.vehicle.findFirst({ where: scopedWhere })
     if (!vehicle) return res.status(404).json({ error: 'Not found' })
     await prisma.vehicle.delete({ where: { id } })
     await logActivity(prisma, {
-      userId, userName: session.user.name, userRole: (session.user as any).role,
+      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
       action: 'deleted', entityType: 'vehicle', entityId: id, entityName: vehicle.name,
       description: `Vehicle "${vehicle.name}" was removed from the fleet`,
     })

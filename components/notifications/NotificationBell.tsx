@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from '@/lib/session';
 import { Bell, Check, Trash2, Settings, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -14,7 +14,7 @@ interface Notification {
   message: string;
   read: boolean;
   createdAt: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 export const NotificationBell: React.FC = () => {
@@ -27,7 +27,7 @@ export const NotificationBell: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!session?.user) return;
     
     try {
@@ -40,7 +40,7 @@ export const NotificationBell: React.FC = () => {
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
-  };
+  }, [session?.user]);
 
   useEffect(() => {
     fetchNotifications();
@@ -48,7 +48,7 @@ export const NotificationBell: React.FC = () => {
     // Poll for new notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
-  }, [session]);
+  }, [fetchNotifications]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

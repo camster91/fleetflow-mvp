@@ -7,6 +7,7 @@ jest.mock('../../../lib/auth', () => ({
 
 jest.mock('../../../lib/prisma', () => ({
   prisma: {
+    team: { findMany: jest.fn() },
     delivery: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   },
@@ -21,7 +22,10 @@ import handler from '../../../pages/api/deliveries/[id]/status';
 import { getServerSession } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  (prisma.team.findMany as jest.Mock).mockResolvedValue([]);
+});
 
 describe('PATCH /api/deliveries/[id]/status — tenant isolation', () => {
   it('scopes lookup by ownerId (prevents cross-tenant IDOR)', async () => {
@@ -40,7 +44,7 @@ describe('PATCH /api/deliveries/[id]/status — tenant isolation', () => {
     await handler(req as any, res as any);
 
     expect(prisma.delivery.findFirst).toHaveBeenCalledWith({
-      where: { id: 'delivery-owned-by-b', ownerId: 'user-a' },
+      where: { AND: [{ id: 'delivery-owned-by-b' }, { ownerId: 'user-a', teamId: null }] },
     });
     expect(res._getStatusCode()).toBe(404);
     expect(prisma.$transaction).not.toHaveBeenCalled();

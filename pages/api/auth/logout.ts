@@ -6,13 +6,14 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  res.setHeader('Set-Cookie', serialize('token', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 0,
-  }))
+  const expiredCookie = (name: string) => serialize(name, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
+    })
+  res.setHeader('Set-Cookie', [expiredCookie('token'), expiredCookie('fleetflow_team')])
 
   return res.json({ ok: true })
 }

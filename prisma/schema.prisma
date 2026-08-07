@@ -422,6 +422,7 @@ model MaintenanceTask {
   estimatedDuration String?
   serviceProvider   String?
   costEstimate      Float?
+  actualCost        Float?
   
   // Relationships
   vehicleId         String?  // optional FK to Vehicle
@@ -591,6 +592,7 @@ model UserData {
 model AuditLog {
   id          String   @id @default(cuid())
   userId      String
+  teamId      String?
   userName    String?
   userRole    String?
   action      String   // created, updated, deleted, completed, status_changed
@@ -602,6 +604,7 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   @@index([userId])
+  @@index([teamId])
   @@index([entityType])
   @@index([createdAt])
 }
@@ -636,6 +639,8 @@ model TaskShareLink {
   ownerId   String
   owner     User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
   usedAt    DateTime?
 
   @@index([token])

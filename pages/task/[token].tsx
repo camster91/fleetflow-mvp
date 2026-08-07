@@ -19,11 +19,26 @@ function priorityColor(p: string) {
   return 'bg-slate-100 text-slate-600 border-slate-200';
 }
 
+interface SharedTask {
+  id: string;
+  vehicle: string;
+  type: string;
+  dueDate: string;
+  priority: 'high' | 'medium' | 'low';
+  notes?: string | null;
+  estimatedDuration?: string | null;
+  serviceProvider?: string | null;
+  completed: boolean;
+  completedDate?: string | null;
+  actualCost?: number | null;
+  costEstimate?: number | null;
+}
+
 export default function MechanicTaskPage() {
   const router = useRouter();
   const { token } = router.query;
 
-  const [task, setTask] = useState<any>(null);
+  const [task, setTask] = useState<SharedTask | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);

@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken'
+import type { SignOptions } from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -16,7 +17,9 @@ export interface TokenPayload {
   email: string
   name: string | null
   role: string
+  purpose?: 'session' | 'two-factor'
   iat?: number
+  exp?: number
 }
 
 export interface SessionUser {
@@ -29,6 +32,7 @@ export interface SessionUser {
 
 export interface Session {
   user: SessionUser
+  expires?: string
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -39,8 +43,11 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash)
 }
 
-export function signToken(payload: Omit<TokenPayload, 'iat'>, expiresIn = '7d'): string {
-  return jwt.sign(payload, JWT_SECRET as string, { expiresIn })
+export function signToken(
+  payload: Omit<TokenPayload, 'iat'>,
+  expiresIn: SignOptions['expiresIn'] = '7d'
+): string {
+  return jwt.sign({ purpose: 'session', ...payload }, JWT_SECRET as string, { expiresIn })
 }
 
 export function verifyToken(token: string): TokenPayload | null {
@@ -63,7 +70,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   if (!token) return null
 
   const payload = verifyToken(token)
-  if (!payload?.sub) return null
+  if (!payload?.sub || payload.purpose === 'two-factor') return null
 
   // Check if password was changed after token was issued (invalidate old tokens)
   const dbUser = await prisma.user.findUnique({
@@ -79,6 +86,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   }
 
   return {
+    expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : undefined,
     user: {
       id: payload.sub,
       email: dbUser.email,
@@ -97,7 +105,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
 export async function getServerSession(
   req: NextApiRequest,
   _res?: NextApiResponse,
-  _options?: any
+  _options?: unknown
 ): Promise<Session | null> {
   return getUserFromRequest(req)
 }

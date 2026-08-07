@@ -1,15 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import Link from 'next/link';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import {
-  Link2,
-  Check,
-  X,
-  RefreshCw,
-  Settings,
   ExternalLink,
   Cloud,
   MapPin,
@@ -17,7 +12,6 @@ import {
   Calculator,
   FileSpreadsheet,
 } from 'lucide-react';
-import { notify } from '../../services/notifications';
 
 interface Integration {
   id: string;
@@ -25,8 +19,7 @@ interface Integration {
   description: string;
   icon: React.ReactNode;
   category: string;
-  connected: boolean;
-  comingSoon?: boolean;
+  comingSoon: boolean;
 }
 
 const integrations: Integration[] = [
@@ -36,7 +29,7 @@ const integrations: Integration[] = [
     description: 'Sync expenses and invoices with QuickBooks Online',
     icon: <Calculator className="h-6 w-6 text-emerald-600" />,
     category: 'Accounting',
-    connected: false,
+    comingSoon: true,
   },
   {
     id: 'xero',
@@ -44,7 +37,7 @@ const integrations: Integration[] = [
     description: 'Connect your Xero account for financial tracking',
     icon: <FileSpreadsheet className="h-6 w-6 text-blue-600" />,
     category: 'Accounting',
-    connected: false,
+    comingSoon: true,
   },
   {
     id: 'google-maps',
@@ -52,7 +45,7 @@ const integrations: Integration[] = [
     description: 'Enhanced routing and location services',
     icon: <MapPin className="h-6 w-6 text-red-500" />,
     category: 'Navigation',
-    connected: true,
+    comingSoon: true,
   },
   {
     id: 'stripe',
@@ -60,7 +53,7 @@ const integrations: Integration[] = [
     description: 'Process payments and manage billing',
     icon: <CreditCard className="h-6 w-6 text-purple-600" />,
     category: 'Payments',
-    connected: true,
+    comingSoon: true,
   },
   {
     id: 'fuel-cards',
@@ -68,7 +61,6 @@ const integrations: Integration[] = [
     description: 'Import fuel transactions automatically',
     icon: <CreditCard className="h-6 w-6 text-amber-600" />,
     category: 'Fuel',
-    connected: false,
     comingSoon: true,
   },
   {
@@ -77,38 +69,11 @@ const integrations: Integration[] = [
     description: 'Connect your existing GPS tracking devices',
     icon: <Cloud className="h-6 w-6 text-blue-500" />,
     category: 'GPS',
-    connected: false,
     comingSoon: true,
   },
 ];
 
 export default function IntegrationsPage() {
-  const [connectedIntegrations, setConnectedIntegrations] = useState<Set<string>>(
-    new Set(integrations.filter(i => i.connected).map(i => i.id))
-  );
-
-  const handleConnect = (id: string) => {
-    notify.info(`Redirecting to ${integrations.find(i => i.id === id)?.name}...`);
-    // In a real app, this would redirect to OAuth flow
-    setTimeout(() => {
-      setConnectedIntegrations(prev => new Set(Array.from(prev).concat(id)));
-      notify.success(`Connected to ${integrations.find(i => i.id === id)?.name}`);
-    }, 1500);
-  };
-
-  const handleDisconnect = (id: string) => {
-    if (!confirm('Are you sure you want to disconnect this integration?')) return;
-    
-    const newConnected = new Set(connectedIntegrations);
-    newConnected.delete(id);
-    setConnectedIntegrations(newConnected);
-    notify.success('Integration disconnected');
-  };
-
-  const handleSync = (id: string) => {
-    notify.success(`Syncing with ${integrations.find(i => i.id === id)?.name}...`);
-  };
-
   const categories = Array.from(new Set(integrations.map(i => i.category)));
 
   return (
@@ -131,7 +96,6 @@ export default function IntegrationsPage() {
             {integrations
               .filter((i) => i.category === category)
               .map((integration) => {
-                const isConnected = connectedIntegrations.has(integration.id);
                 return (
                   <Card key={integration.id}>
                     <div className="flex items-start gap-4">
@@ -142,48 +106,11 @@ export default function IntegrationsPage() {
                           {integration.comingSoon && (
                             <Badge variant="default" size="sm">Coming Soon</Badge>
                           )}
-                          {isConnected && (
-                            <Badge variant="success" size="sm">Connected</Badge>
-                          )}
                         </div>
                         <p className="text-sm text-slate-500 mt-1">
                           {integration.description}
                         </p>
                         
-                        {!integration.comingSoon && (
-                          <div className="flex items-center gap-2 mt-3">
-                            {isConnected ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleSync(integration.id)}
-                                  iconLeft={<RefreshCw className="h-4 w-4" />}
-                                >
-                                  Sync Now
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDisconnect(integration.id)}
-                                  className="text-red-600 hover:text-red-800"
-                                  iconLeft={<X className="h-4 w-4" />}
-                                >
-                                  Disconnect
-                                </Button>
-                              </>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleConnect(integration.id)}
-                                iconLeft={<Link2 className="h-4 w-4" />}
-                              >
-                                Connect
-                              </Button>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </Card>
@@ -202,13 +129,13 @@ export default function IntegrationsPage() {
               Our API allows you to build custom integrations for your specific needs.
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="border-white text-white hover:bg-white hover:text-blue-600"
-            iconLeft={<ExternalLink className="h-4 w-4" />}
+          <Link
+            href="/settings/api"
+            className="inline-flex items-center gap-2 rounded-lg border border-white px-4 py-2 text-sm font-medium text-white hover:bg-white hover:text-blue-600"
           >
+            <ExternalLink className="h-4 w-4" />
             View API Docs
-          </Button>
+          </Link>
         </div>
       </Card>
     </DashboardLayout>

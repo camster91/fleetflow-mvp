@@ -2,7 +2,15 @@
  * Fleet data helpers: DB↔Client conversion and audit logging.
  * Single source of truth for fleet TypeScript types used across API routes.
  */
-import type { PrismaClient } from '@prisma/client'
+import type {
+  Announcement as DbAnnouncement,
+  Client as DbClient,
+  MaintenanceTask as DbMaintenanceTask,
+  PrismaClient,
+  SOPCategory as DbSOPCategory,
+  Vehicle as DbVehicle,
+  VendingMachine as DbVendingMachine,
+} from '@prisma/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +158,7 @@ export interface Announcement {
 
 // ─── DB ↔ Client converters ──────────────────────────────────────────────────
 
-export function dbToSOPCategory(db: any): SOPCategory {
+export function dbToSOPCategory(db: DbSOPCategory): SOPCategory {
   return {
     id: db.id,
     name: db.name,
@@ -169,7 +177,7 @@ export function sopCategoryToDb(cat: Partial<SOPCategory>, ownerId: string) {
   }
 }
 
-export function dbToVendingMachine(db: any): VendingMachine {
+export function dbToVendingMachine(db: DbVendingMachine): VendingMachine {
   return {
     id: db.id,
     name: db.name,
@@ -202,7 +210,7 @@ export function vendingMachineToDb(vm: Partial<VendingMachine>, ownerId: string)
   }
 }
 
-export function dbToAnnouncement(db: any): Announcement {
+export function dbToAnnouncement(db: DbAnnouncement): Announcement {
   return {
     id: db.id,
     message: db.message,
@@ -239,7 +247,7 @@ export interface ActivityItem {
   user: string
   userRole: string
   timestamp: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 // ─── JSON helpers ─────────────────────────────────────────────────────────────
@@ -249,7 +257,7 @@ const parseJson = <T>(s: string | null | undefined): T | undefined => {
   try { return JSON.parse(s) as T } catch { return undefined }
 }
 
-const toJsonStr = (v: any): string | null =>
+const toJsonStr = (v: unknown): string | null =>
   v == null ? null : JSON.stringify(v)
 
 const toDateStr = (d: Date | string | null | undefined): string | undefined =>
@@ -263,7 +271,7 @@ const toDateOnly = (d: Date | string | null | undefined): string | undefined => 
 
 // ─── Vehicle converters ───────────────────────────────────────────────────────
 
-export function dbToVehicle(v: any): Vehicle {
+export function dbToVehicle(v: DbVehicle): Vehicle {
   return {
     id: v.id,
     name: v.name,
@@ -305,7 +313,7 @@ export function vehicleToDb(v: Omit<Vehicle, 'id'>, ownerId: string) {
 
 // ─── Delivery converters ──────────────────────────────────────────────────────
 
-export function dbToDelivery(d: any): Delivery {
+export function dbToDelivery(d: import('@prisma/client').Delivery): Delivery {
   return {
     id: d.id,
     address: d.address,
@@ -359,7 +367,7 @@ export function deliveryToDb(d: Omit<Delivery, 'id'>, ownerId: string) {
 
 // ─── MaintenanceTask converters ───────────────────────────────────────────────
 
-export function dbToMaintenanceTask(t: any): MaintenanceTask {
+export function dbToMaintenanceTask(t: DbMaintenanceTask & { vehicle?: { name: string } | null }): MaintenanceTask {
   return {
     id: t.id,
     vehicle: t.vehicleName ?? t.vehicle?.name ?? '',
@@ -398,7 +406,7 @@ export function maintenanceTaskToDb(t: Omit<MaintenanceTask, 'id'>, ownerId: str
 
 // ─── Client converters ────────────────────────────────────────────────────────
 
-export function dbToClient(c: any): Client {
+export function dbToClient(c: DbClient): Client {
   return {
     id: c.id,
     name: c.name,
@@ -411,7 +419,7 @@ export function dbToClient(c: any): Client {
     businessHours: c.businessHours ?? undefined,
     notes: c.notes ?? undefined,
     lastDeliveryDate: toDateOnly(c.lastDeliveryDate),
-    deliveryFrequency: c.deliveryFrequency ?? undefined,
+    deliveryFrequency: (c.deliveryFrequency as Client['deliveryFrequency']) ?? undefined,
     rating: c.rating ?? undefined,
     contactPerson: parseJson<ContactPerson>(c.contactPerson),
     preferredDeliveryTimes: parseJson<string[]>(c.preferredDeliveryTimes),
@@ -461,9 +469,10 @@ export function clientToDb(c: Omit<Client, 'id' | 'created' | 'updated'>, ownerI
 // ─── Audit logging ────────────────────────────────────────────────────────────
 
 export async function logActivity(
-  prisma: any,
+  prisma: Pick<PrismaClient, 'auditLog'>,
   opts: {
     userId: string
+    teamId?: string | null
     userName?: string | null
     userRole?: string | null
     action: string
@@ -471,13 +480,14 @@ export async function logActivity(
     entityId?: string
     entityName?: string
     description: string
-    metadata?: any
+    metadata?: Record<string, unknown>
   }
 ) {
   try {
     await prisma.auditLog.create({
       data: {
         userId: opts.userId,
+        teamId: opts.teamId || null,
         userName: opts.userName || null,
         userRole: opts.userRole || null,
         action: opts.action,

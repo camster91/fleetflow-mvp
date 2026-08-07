@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { User } from 'lucide-react';
+import Image from 'next/image';
 
 /**
  * Avatar size variants
@@ -169,9 +170,12 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           aria-label={alt || fallback || 'Avatar'}
         >
           {hasImage ? (
-            <img
+            <Image
+              unoptimized
               src={src}
               alt={alt}
+              width={128}
+              height={128}
               onError={handleImageError}
               className={`w-full h-full object-cover ${imgClassName}`}
               loading="lazy"

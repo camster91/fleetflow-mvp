@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -37,9 +38,11 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           {/* Logo */}
           <div>
             <Link href="/" className="flex items-center group">
-              <img 
+              <Image
                 src="/brand/logo/logo-horizontal-dark.svg" 
                 alt="FleetFlow" 
+                width={200}
+                height={40}
                 className="h-10 w-auto"
               />
             </Link>
@@ -59,10 +62,10 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             {/* Feature List */}
             <div className="space-y-4">
               {[
-                'Real-time vehicle tracking',
-                'Smart route optimization',
+                'Vehicle and delivery records',
+                'Fleet reports and CSV exports',
                 'Maintenance scheduling',
-                'Team collaboration tools',
+                'Role-based team workspaces',
               ].map((feature, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <div className="h-6 w-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
@@ -93,9 +96,11 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         {/* Mobile Header */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-white">
           <Link href="/" className="flex items-center">
-            <img 
+            <Image
               src="/brand/logo/logo-horizontal.svg" 
               alt="FleetFlow" 
+              width={140}
+              height={28}
               className="h-7 w-auto"
             />
           </Link>

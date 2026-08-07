@@ -1,18 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useSession } from '@/lib/session';
 import { useRouter } from 'next/router';
+import Image from 'next/image';
 import { 
   Shield, 
-  Lock, 
   Smartphone, 
   AlertCircle, 
   CheckCircle, 
   Loader2,
-  Eye,
-  EyeOff,
-  Key,
   History,
-  Trash2,
   Download,
   RefreshCw,
   Copy,
@@ -25,7 +21,6 @@ import { PageHeader } from '../../components/PageHeader';
 
 interface SecuritySettings {
   twoFactorEnabled: boolean;
-  lastPasswordChange: string | null;
   lastLoginAt: string | null;
   loginHistory: LoginRecord[];
 }
@@ -49,12 +44,6 @@ export default function SecuritySettingsPage() {
   const [twoFASetup, setTwoFASetup] = useState<{ secret: string; qrCode: string; backupCodes: string[]; } | null>(null);
   const [twoFACode, setTwoFACode] = useState('');
   const [settingUp2FA, setSettingUp2FA] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [changingPassword, setChangingPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -95,30 +84,18 @@ export default function SecuritySettingsPage() {
     finally { setSettingUp2FA(false); }
   };
 
-  const disable2FA = async (code: string, password: string) => {
+  const disable2FA = async (code: string) => {
     setSettingUp2FA(true); setError('');
     try {
       const response = await fetch('/api/auth/2fa/disable', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, password }),
+        body: JSON.stringify({ code }),
       });
       if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Failed to disable 2FA'); }
       setSuccess('Two-factor authentication disabled successfully!'); fetchSecuritySettings();
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to disable 2FA'); }
     finally { setSettingUp2FA(false); }
-  };
-
-  const changePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) { setError('New passwords do not match'); return; }
-    setChangingPassword(true); setError('');
-    try {
-      const response = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) });
-      if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Failed to change password'); }
-      setSuccess('Password changed successfully!'); setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Failed to change password'); }
-    finally { setChangingPassword(false); }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -174,7 +151,7 @@ export default function SecuritySettingsPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-slate-900 font-medium">{securitySettings?.twoFactorEnabled ? 'Two-factor authentication is enabled' : 'Add an extra layer of security'}</p>
-                    <p className="text-sm text-slate-600 mt-1">{securitySettings?.twoFactorEnabled ? 'Your account is protected with an authenticator app.' : 'Protect your account by requiring a verification code in addition to your password.'}</p>
+                    <p className="text-sm text-slate-600 mt-1">{securitySettings?.twoFactorEnabled ? 'Your account is protected with an authenticator app.' : 'Require an authenticator code after the emailed sign-in code.'}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     {securitySettings?.twoFactorEnabled ? (
@@ -194,30 +171,13 @@ export default function SecuritySettingsPage() {
                       e.preventDefault();
                       const form = e.currentTarget;
                       const code = (form.elements.namedItem('disableCode') as HTMLInputElement).value;
-                      const password = (form.elements.namedItem('disablePassword') as HTMLInputElement).value;
-                      disable2FA(code, password);
+                      disable2FA(code);
                     }}
                   >
                     <Input name="disableCode" label="Authenticator code" placeholder="6-digit code" required />
-                    <Input name="disablePassword" label="Confirm password" type="password" required />
                     <Button type="submit" variant="outline" loading={settingUp2FA}>Disable 2FA</Button>
                   </form>
                 )}
-              </div>
-            </div>
-
-            {/* Change Password */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <div className="flex items-center space-x-3"><Lock className="h-5 w-5 text-slate-600" /><h2 className="text-lg font-semibold text-slate-900">Change Password</h2></div>
-              </div>
-              <div className="p-6">
-                <form onSubmit={changePassword} className="space-y-4">
-                  <Input label="Current Password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required rightIcon={<button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="text-slate-400 hover:text-slate-600">{showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
-                  <Input label="New Password" type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required rightIcon={<button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="text-slate-400 hover:text-slate-600">{showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>} />
-                  <Input label="Confirm New Password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required error={confirmPassword && newPassword !== confirmPassword ? 'Passwords do not match' : undefined} />
-                  <Button type="submit" variant="primary" loading={changingPassword} disabled={!currentPassword || !newPassword || newPassword !== confirmPassword}><Key className="h-4 w-4 mr-2" />Update Password</Button>
-                </form>
               </div>
             </div>
 
@@ -252,18 +212,11 @@ export default function SecuritySettingsPage() {
             <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50"><h2 className="text-lg font-semibold text-slate-900">Security Status</h2></div>
               <div className="p-6 space-y-4">
-                <div className="flex items-center space-x-3"><CheckCircle className="h-5 w-5 text-green-500" /><span className="text-sm text-slate-700">Password set</span></div>
+                <div className="flex items-center space-x-3"><CheckCircle className="h-5 w-5 text-green-500" /><span className="text-sm text-slate-700">Passwordless email sign-in</span></div>
                 <div className="flex items-center space-x-3">
                   {securitySettings?.twoFactorEnabled ? (<><CheckCircle className="h-5 w-5 text-green-500" /><span className="text-sm text-slate-700">2FA enabled</span></>) : (<><AlertCircle className="h-5 w-5 text-amber-500" /><span className="text-sm text-slate-700">2FA not enabled</span></>)}
                 </div>
                 <div className="flex items-center space-x-3"><CheckCircle className="h-5 w-5 text-green-500" /><span className="text-sm text-slate-700">Email verified</span></div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-sm border border-red-200 overflow-hidden">
-              <div className="px-6 py-4 border-b border-red-200 bg-red-50"><h2 className="text-lg font-semibold text-red-900">Danger Zone</h2></div>
-              <div className="p-6">
-                <p className="text-sm text-slate-600 mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-                <Button variant="danger" fullWidth><Trash2 className="h-4 w-4 mr-2" />Delete Account</Button>
               </div>
             </div>
           </div>
@@ -278,7 +231,7 @@ export default function SecuritySettingsPage() {
               <h2 className="text-xl font-semibold text-slate-900">Set Up Two-Factor Authentication</h2>
               <p className="text-sm text-slate-600 mt-2">Scan the QR code with your authenticator app</p>
             </div>
-            <div className="flex justify-center mb-6"><img loading="lazy" src={twoFASetup.qrCode} alt="2FA QR Code" className="w-48 h-48 border-4 border-white shadow-lg rounded-lg" /></div>
+            <div className="flex justify-center mb-6"><Image unoptimized src={twoFASetup.qrCode} alt="2FA QR Code" width={192} height={192} className="w-48 h-48 border-4 border-white shadow-lg rounded-lg" /></div>
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-slate-600 mb-2">Can&apos;t scan? Enter this code manually:</p>
               <code className="block bg-slate-100 rounded px-3 py-2 text-sm font-mono break-all">{twoFASetup.secret}</code>

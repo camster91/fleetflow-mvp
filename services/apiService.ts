@@ -43,27 +43,32 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 const get = <T>(url: string) => apiFetch<T>(url)
-const post = <T>(url: string, body: any) => apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
-const put = <T>(url: string, body: any) => apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) })
+type CollectionResponse<T> = T[] | { data: T[] }
+const getCollection = async <T>(url: string): Promise<T[]> => {
+  const response = await get<CollectionResponse<T>>(url)
+  return Array.isArray(response) ? response : response.data
+}
+const post = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
+const put = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) })
 const del = <T>(url: string) => apiFetch<T>(url, { method: 'DELETE' })
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 
-export const getVehicles = () => get<Vehicle[]>('/api/vehicles')
+export const getVehicles = () => getCollection<Vehicle>('/api/vehicles')
 export const addVehicle = (v: Omit<Vehicle, 'id'>) => post<Vehicle>('/api/vehicles', v)
 export const updateVehicle = (id: string, v: Partial<Vehicle>) => put<Vehicle>(`/api/vehicles/${id}`, v)
 export const deleteVehicle = (id: string) => del<{ success: boolean }>(`/api/vehicles/${id}`)
 
 // ─── Deliveries ───────────────────────────────────────────────────────────────
 
-export const getDeliveries = () => get<Delivery[]>('/api/deliveries')
+export const getDeliveries = () => getCollection<Delivery>('/api/deliveries')
 export const addDelivery = (d: Omit<Delivery, 'id'>) => post<Delivery>('/api/deliveries', d)
 export const updateDelivery = (id: string, d: Partial<Delivery>) => put<Delivery>(`/api/deliveries/${id}`, d)
 export const deleteDelivery = (id: string) => del<{ success: boolean }>(`/api/deliveries/${id}`)
 
 // ─── Maintenance ──────────────────────────────────────────────────────────────
 
-export const getMaintenanceTasks = () => get<MaintenanceTask[]>('/api/maintenance')
+export const getMaintenanceTasks = () => getCollection<MaintenanceTask>('/api/maintenance')
 export const addMaintenanceTask = (t: Omit<MaintenanceTask, 'id'>) => post<MaintenanceTask>('/api/maintenance', t)
 export const updateMaintenanceTask = (id: string, t: Partial<MaintenanceTask>) =>
   put<MaintenanceTask>(`/api/maintenance/${id}`, t)
@@ -71,7 +76,7 @@ export const deleteMaintenanceTask = (id: string) => del<{ success: boolean }>(`
 
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
-export const getClients = () => get<Client[]>('/api/clients')
+export const getClients = () => getCollection<Client>('/api/clients')
 export const addClient = (c: Omit<Client, 'id' | 'created' | 'updated'>) => post<Client>('/api/clients', c)
 export const updateClient = (id: string, c: Partial<Client>) => put<Client>(`/api/clients/${id}`, c)
 export const deleteClient = (id: string) => del<{ success: boolean }>(`/api/clients/${id}`)
@@ -90,13 +95,13 @@ export const searchClients = async (query: string): Promise<Client[]> => {
 
 // ─── SOP Categories (stored as JSON blob per org for now) ─────────────────────
 // ─── SOP Categories ───────────────────────────────────────────────────────────
-export const getSOPCategories = () => get<SOPCategory[]>('/api/sop')
+export const getSOPCategories = () => getCollection<SOPCategory>('/api/sop')
 export const addSOPCategory = (cat: Omit<SOPCategory, 'id'>) => post<SOPCategory>('/api/sop', cat)
 export const updateSOPCategory = (id: string, data: Partial<SOPCategory>) => put<SOPCategory>(`/api/sop/${id}`, data)
 export const deleteSOPCategory = (id: string) => del<{ success: boolean }>(`/api/sop/${id}`)
 
 // ─── Vending Machines ─────────────────────────────────────────────────────────
-export const getVendingMachines = () => get<VendingMachine[]>('/api/vending-machines')
+export const getVendingMachines = () => getCollection<VendingMachine>('/api/vending-machines')
 export const addVendingMachine = (vm: Omit<VendingMachine, 'id'>) => post<VendingMachine>('/api/vending-machines', vm)
 export const updateVendingMachine = (id: string, data: Partial<VendingMachine>) =>
   put<VendingMachine>(`/api/vending-machines/${id}`, data)

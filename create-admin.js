@@ -1,55 +1,33 @@
 #!/usr/bin/env node
 
-/**
- * Root create-admin entrypoint.
- * Requires ADMIN_PASSWORD — never embeds default credentials.
- *
- *   ADMIN_PASSWORD='your-strong-password' node create-admin.js
- */
-
-const bcrypt = require('bcryptjs');
-
+/** One-time bootstrap for a brand-new database. Login remains passwordless. */
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@fleetflow.com';
-  const adminPassword = process.env.ADMIN_PASSWORD;
-
-  if (!adminPassword || adminPassword.length < 12) {
-    console.error('❌ Set ADMIN_PASSWORD (min 12 characters) before running this script.');
-    process.exit(1);
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase()
+  const name = process.env.ADMIN_NAME?.trim() || 'FleetFlow Admin'
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Set ADMIN_EMAIL to a valid administrator email address.')
+  }
+  if (process.env.CONFIRM_ADMIN_BOOTSTRAP !== 'yes') {
+    throw new Error('Set CONFIRM_ADMIN_BOOTSTRAP=yes to confirm this one-time operation.')
   }
 
-  const { PrismaClient } = require('@prisma/client');
-  const prisma = new PrismaClient();
-
+  const { PrismaClient } = require('@prisma/client')
+  const prisma = new PrismaClient()
   try {
-    const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
-    const hashedPassword = await bcrypt.hash(adminPassword, 12);
-
-    if (existing) {
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { password: hashedPassword, emailVerified: new Date(), role: 'admin' },
-      });
-      console.log('✅ Admin password rotated for', adminEmail);
-    } else {
-      await prisma.user.create({
-        data: {
-          name: 'Admin User',
-          email: adminEmail,
-          password: hashedPassword,
-          role: 'admin',
-          company: 'FleetFlow',
-          emailVerified: new Date(),
-        },
-      });
-      console.log('✅ Admin created:', adminEmail);
+    const userCount = await prisma.user.count()
+    if (userCount !== 0) {
+      throw new Error('Bootstrap refused: the database already contains users.')
     }
+    await prisma.user.create({
+      data: { email, name, role: 'admin', emailVerified: new Date(), onboardingCompleted: true },
+    })
+    console.log(`Administrator bootstrapped for ${email}. Use the emailed one-time code to sign in.`)
   } finally {
-    await prisma.$disconnect();
+    await prisma.$disconnect()
   }
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch(error => {
+  console.error(error instanceof Error ? error.message : 'Administrator bootstrap failed.')
+  process.exit(1)
+})

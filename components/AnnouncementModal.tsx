@@ -25,8 +25,8 @@ export default function AnnouncementModal({ isOpen, onClose, onSend }: Announcem
       onSend(message, priority, recipients)
       setMessage('')
       onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to send announcement')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send announcement')
     } finally {
       setIsSending(false)
     }

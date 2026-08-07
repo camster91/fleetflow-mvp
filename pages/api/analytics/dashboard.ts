@@ -1,14 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromRequest } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { subDays } from 'date-fns';
+import { requireTenantContext } from '../../../lib/apiAuth';
+import { canViewReports } from '../../../lib/permissions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getUserFromRequest(req);
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-
-  const userId = session.user.id;
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  const { tenant } = context;
+  if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
 
   try {
     const days = Math.max(7, Math.min(365, parseInt(req.query.days as string) || 30));
@@ -16,17 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const today = new Date();
     const twoWeeksFromNow = new Date(today.getTime() + 14 * 86400000);
 
-    // Find teams the user belongs to for team-scoped data access
-    const teamMemberships = await prisma.teamMember.findMany({
-      where: { userId },
-      select: { teamId: true },
-    });
-    const teamIds = teamMemberships.map(tm => tm.teamId);
-
-    // Build ownership filter: user's own data OR data belonging to their teams
-    const ownershipFilter = teamIds.length > 0
-      ? { OR: [{ ownerId: userId }, { teamId: { in: teamIds } }] }
-      : { ownerId: userId };
+    const ownershipFilter = tenant.resourceWhere;
 
     const [
       // Vehicle counts by status
@@ -81,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.client.count({ where: ownershipFilter }),
       // Activity logs (bounded for chart aggregation)
       prisma.auditLog.findMany({
-        where: { userId, createdAt: { gte: fromDate } },
+        where: { AND: [tenant.auditWhere, { createdAt: { gte: fromDate } }] },
         orderBy: { createdAt: 'asc' },
         select: { entityType: true, action: true, createdAt: true },
         take: 5000,

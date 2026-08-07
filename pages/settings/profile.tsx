@@ -26,7 +26,7 @@ export default function ProfileSettingsPage() {
           body: JSON.stringify({ image: dataUrl }),
         });
         if (res.ok) {
-          await update({});
+          await update();
           notify.success('Avatar updated');
         } else {
           notify.error('Failed to upload avatar');
@@ -84,7 +84,7 @@ export default function ProfileSettingsPage() {
         }),
       });
       if (!res.ok) throw new Error('Save failed');
-      await update({ name: profile.name });
+      await update();
       notify.success('Profile updated successfully');
     } catch (error) {
       notify.error('Failed to update profile');

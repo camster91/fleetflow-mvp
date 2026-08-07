@@ -69,8 +69,8 @@ export default function DriverDeliveryPage() {
         throw new Error(err.error || 'Failed to update')
       }
       await refetch()
-    } catch (err: any) {
-      toast.error(err.message)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update delivery')
     } finally {
       setUpdating(false)
     }
