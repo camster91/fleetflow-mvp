@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
-import { generateAPIKey, hashToken } from '../../../lib/tokens';
+import { constantTimeCompare, generateAPIKey, hashToken } from '../../../lib/tokens';
 import { requireSession, assertSameOrigin } from '../../../lib/apiAuth';
 
 export default async function handler(
@@ -120,5 +120,5 @@ export default async function handler(
 
 /** Verify a presented API key against hashed storage (for future API auth). */
 export function verifyStoredApiKey(presented: string, storedHash: string): boolean {
-  return hashToken(presented) === storedHash;
+  return constantTimeCompare(hashToken(presented), storedHash);
 }

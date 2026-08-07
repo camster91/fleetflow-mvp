@@ -5,7 +5,13 @@ import {
   validateInput,
   buildCSP,
   contentSecurityPolicy,
+  auditLog,
 } from '@/lib/security';
+
+jest.mock('@/lib/prisma', () => ({
+  prisma: { auditLog: { create: jest.fn() } },
+}))
+import { prisma } from '@/lib/prisma'
 
 describe('sanitizeInput', () => {
   it('escapes HTML special characters', () => {
@@ -91,4 +97,29 @@ describe('buildCSP', () => {
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("img-src 'self' data:");
   });
+
+  it('does not permit unsafe eval', () => {
+    expect(contentSecurityPolicy['script-src']).not.toContain("'unsafe-eval'")
+  })
 });
+
+describe('auditLog', () => {
+  it('persists sensitive admin actions', async () => {
+    await auditLog({
+      type: 'USER_ROLE_CHANGED',
+      userId: 'admin-1',
+      targetId: 'user-2',
+      details: { newRole: 'viewer' },
+    })
+
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'admin-1',
+        action: 'USER_ROLE_CHANGED',
+        entityType: 'user',
+        entityId: 'user-2',
+        metadata: JSON.stringify({ newRole: 'viewer' }),
+      }),
+    })
+  })
+})

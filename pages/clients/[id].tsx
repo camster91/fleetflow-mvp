@@ -26,7 +26,7 @@ export default function ClientDetailPage() {
       const data = await api.getClientById(id);
       setClient(data);
       setEditForm(data);
-    } catch (err: any) { toast.error(err.message || 'Failed to load client'); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to load client'); }
     finally { setIsLoading(false); }
   }, [id]);
 
@@ -41,11 +41,12 @@ export default function ClientDetailPage() {
       setEditForm(updated);
       setIsEditing(false);
       notify.success(`${updated.name} updated`);
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to update client'); }
     finally { setIsSaving(false); }
   };
 
-  const set = (field: keyof Client, value: any) => setEditForm((prev) => ({ ...prev, [field]: value }));
+  const set = <K extends keyof Client>(field: K, value: Client[K]) =>
+    setEditForm((prev) => ({ ...prev, [field]: value }));
 
   if (isLoading) return (
     <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Clients', href: '/clients' }, { label: '...' }]}>
@@ -100,8 +101,10 @@ export default function ClientDetailPage() {
                   <div><label className="block text-xs font-medium text-slate-500 mb-1">Client Name</label><input value={editForm.name ?? ''} onChange={(e) => set('name', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                   <div><label className="block text-xs font-medium text-slate-500 mb-1">Business Name</label><input value={editForm.businessName ?? ''} onChange={(e) => set('businessName', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>
                   <div><label className="block text-xs font-medium text-slate-500 mb-1">Type</label>
-                    <select value={editForm.type ?? 'business'} onChange={(e) => set('type', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                      <option value="business">Business</option><option value="residential">Residential</option><option value="government">Government</option><option value="non-profit">Non-profit</option>
+                    <select value={editForm.type ?? 'other'} onChange={(e) => set('type', e.target.value as Client['type'])} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                      {(['restaurant', 'hotel', 'office', 'retail', 'warehouse', 'cafe', 'institution', 'other'] as const).map((type) => (
+                        <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                      ))}
                     </select>
                   </div>
                   <div><label className="block text-xs font-medium text-slate-500 mb-1">Address</label><input value={editForm.address ?? ''} onChange={(e) => set('address', e.target.value)} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm" /></div>

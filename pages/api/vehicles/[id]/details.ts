@@ -1,32 +1,32 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession, authOptions } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
+import { requireTenantContext } from '../../../../lib/apiAuth';
+import { canViewVehicles } from '../../../../lib/permissions';
 
 /** GET /api/vehicles/[id]/details
  * Returns vehicle + real maintenance tasks + driver user info if matched */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
-  const userId = (session.user as any).id;
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  const { tenant } = context;
+  if (!canViewVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
 
   const { id } = req.query;
   if (!id || typeof id !== 'string') return res.status(400).json({ error: 'Vehicle id required' });
 
   const vehicle = await prisma.vehicle.findFirst({
-    where: { id, ownerId: userId },
+    where: { AND: [{ id }, tenant.resourceWhere] },
   });
   if (!vehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
   // Fetch real maintenance tasks for this vehicle
   const maintenanceTasks = await prisma.maintenanceTask.findMany({
-    where: {
-      OR: [
+    where: { AND: [tenant.resourceWhere, { OR: [
         { vehicleId: id },
-        { vehicleName: vehicle.name, ownerId: userId },
-      ],
-    },
+        { vehicleName: vehicle.name },
+      ] }] },
     orderBy: [{ completed: 'asc' }, { dueDate: 'asc' }],
     take: 10,
     select: {
@@ -41,11 +41,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (vehicle.driver) {
     driverUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { name: { equals: vehicle.driver } },
-          { email: { contains: vehicle.driver.toLowerCase().replace(/\s+/g, '.') } },
+        AND: [
+          { OR: [
+            { name: { equals: vehicle.driver } },
+            { email: { contains: vehicle.driver.toLowerCase().replace(/\s+/g, '.') } },
+          ] },
+          tenant.teamId
+            ? { OR: [
+              { id: tenant.ownerId },
+              { teamMemberships: { some: { teamId: tenant.teamId, status: 'ACCEPTED' } } },
+            ] }
+            : { id: tenant.ownerId },
         ],
-        id: userId, // stay within owner's org for now
       },
       select: { name: true, email: true, image: true },
     }).catch(() => null);

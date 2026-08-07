@@ -17,6 +17,7 @@ interface SessionUser {
 
 interface Session {
   user: SessionUser
+  expires?: string
 }
 
 type SessionStatus = 'loading' | 'authenticated' | 'unauthenticated'
@@ -42,7 +43,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/auth/me')
       if (res.ok) {
         const data = await res.json()
-        setSession({ user: data.user })
+        setSession({ user: data.user, expires: data.expires })
         setStatus('authenticated')
       } else {
         setSession(null)
@@ -58,8 +59,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     fetchSession()
   }, [fetchSession])
 
+  const refreshSession = useCallback(async () => {
+    const res = await fetch('/api/auth/refresh', { method: 'POST' })
+    if (!res.ok) {
+      setSession(null)
+      setStatus('unauthenticated')
+      return
+    }
+    await fetchSession()
+  }, [fetchSession])
+
   return (
-    <SessionContext.Provider value={{ data: session, status, update: fetchSession }}>
+    <SessionContext.Provider value={{ data: session, status, update: refreshSession }}>
       {children}
     </SessionContext.Provider>
   )
@@ -106,7 +117,7 @@ export async function signIn(
     if (!res.ok) {
       return { error: data.error || 'CredentialsSignin', ok: false }
     }
-    return { error: null, ok: true }
+    return { error: null, ok: true, requiresTwoFactor: data.requiresTwoFactor === true }
   } catch {
     return { error: 'Login failed', ok: false }
   }

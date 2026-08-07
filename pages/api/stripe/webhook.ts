@@ -18,6 +18,25 @@ async function getRawBody(req: NextApiRequest): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+export function getSubscriptionPeriod(subscription: {
+  items?: { data?: Array<{ current_period_start?: number; current_period_end?: number }> };
+}): { start: number; end: number } | null {
+  const item = subscription.items?.data?.[0];
+  if (!item?.current_period_start || !item.current_period_end) return null;
+  return { start: item.current_period_start, end: item.current_period_end };
+}
+
+export function getInvoiceSubscriptionId(invoice: {
+  parent?: {
+    type?: string;
+    subscription_details?: { subscription?: string | { id?: string } } | null;
+  } | null;
+}): string | null {
+  const subscription = invoice.parent?.subscription_details?.subscription;
+  if (typeof subscription === 'string') return subscription;
+  return subscription?.id || null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -64,6 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
+        const period = getSubscriptionPeriod(subscription);
         const subRecord = await prisma.subscription.findUnique({
           where: { stripeSubscriptionId: subscription.id },
         });
@@ -79,8 +99,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             where: { stripeSubscriptionId: subscription.id },
             data: {
               status: statusMap[subscription.status] || 'ACTIVE',
-              currentPeriodStart: new Date(subscription.current_period_start * 1000),
-              currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+              currentPeriodStart: period ? new Date(period.start * 1000) : undefined,
+              currentPeriodEnd: period ? new Date(period.end * 1000) : undefined,
               cancelAtPeriodEnd: subscription.cancel_at_period_end,
               stripePriceId: subscription.items.data[0]?.price?.id || null,
             },
@@ -105,13 +125,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        if (invoice.subscription) {
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
+        if (subscriptionId) {
           const subRecord = await prisma.subscription.findUnique({
-            where: { stripeSubscriptionId: invoice.subscription as string },
+            where: { stripeSubscriptionId: subscriptionId },
           });
           if (subRecord) {
             await prisma.subscription.update({
-              where: { stripeSubscriptionId: invoice.subscription as string },
+              where: { stripeSubscriptionId: subscriptionId },
               data: { status: 'PAST_DUE' },
             });
           }
@@ -121,7 +142,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     console.error('Webhook handler error:', error);
-    // Still return 200 to avoid Stripe retrying
+    return res.status(500).json({ error: 'Webhook processing failed' });
   }
 
   // Always return 200 for all events

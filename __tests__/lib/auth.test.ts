@@ -1,4 +1,6 @@
-import { verifyToken, signToken, hashPassword, verifyPassword } from '@/lib/auth';
+import { verifyToken, signToken, hashPassword, verifyPassword, getUserFromRequest } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import type { NextApiRequest } from 'next';
 
 // Mock prisma so importing auth doesn't blow up
 jest.mock('@/lib/prisma', () => ({
@@ -35,5 +37,37 @@ describe('hashPassword / verifyPassword', () => {
   it('rejects wrong password', async () => {
     const hash = await hashPassword('SecureP@ss1');
     expect(await verifyPassword('WrongPass', hash)).toBe(false);
+  });
+});
+
+describe('getUserFromRequest', () => {
+  it('never accepts a two-factor challenge as an authenticated session', async () => {
+    const token = signToken({
+      sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', purpose: 'two-factor',
+    } as any, '5m');
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
+
+    await expect(getUserFromRequest(req)).resolves.toBeNull();
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('returns the signed token expiry with the custom session', async () => {
+    const token = signToken(
+      { sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' },
+      '1h'
+    );
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      passwordChangedAt: null,
+      role: 'fleet_manager',
+      email: 'a@b.com',
+      name: 'A',
+      onboardingCompleted: true,
+    });
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
+
+    const session = await getUserFromRequest(req);
+
+    expect(session?.expires).toEqual(expect.any(String));
+    expect(new Date(session!.expires!).getTime()).toBeGreaterThan(Date.now());
   });
 });

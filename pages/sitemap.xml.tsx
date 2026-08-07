@@ -1,8 +1,8 @@
 import type { GetServerSideProps } from 'next'
 
-const SITE_URL = 'https://fleet.ashbi.ca'
+const SITE_URL = (process.env.NEXTAUTH_URL || 'https://fleet.ashbi.ca').replace(/\/$/, '')
 
-const publicPages = ['/', '/pricing', '/about', '/auth/login']
+const publicPages = ['/', '/pricing', '/help', '/privacy-policy', '/terms-of-service', '/cookie-policy', '/gdpr']
 
 function generateSitemap(): string {
   return `<?xml version="1.0" encoding="UTF-8"?>

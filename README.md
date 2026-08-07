@@ -1,196 +1,76 @@
-# FleetFlow MVP
+# FleetFlow
 
-**A modern SaaS platform for fleet management, dispatch operations, and logistics tracking.**
+FleetFlow is a multi-tenant fleet operations SaaS built with the Next.js Pages Router, React, TypeScript, Prisma, and PostgreSQL. It includes vehicles, deliveries, maintenance, clients, team workspaces, reporting, subscription billing, and role-based access control.
 
-FleetFlow MVP is a production-ready fleet management system designed to streamline logistics operations. Built with Next.js 15 and featuring real-time dashboards, intelligent dispatching, and comprehensive analytics, it provides fleet managers with the tools needed for efficient operations.
+## Local setup
 
-## Tech Stack
-
-### Frontend
-- **Next.js 15** - React framework with App Router
-- **React 19** - Latest React with server components
-- **Tailwind CSS** - Utility-first styling
-- **Recharts** - Data visualization and charts
-- **Lucide React** - Modern icon library
-
-### Backend & Database
-- **Prisma** - Type-safe ORM for PostgreSQL
-- **PostgreSQL** - Primary database
-- **NextAuth.js** - Authentication with Prisma adapter
-
-### Services & Integrations
-- **Stripe** - Payment processing and subscription billing
-- **SendGrid/Mailgun** - Email delivery services
-- **QRCode** - QR code generation for driver/vehicle identification
-
-### Security
-- **bcryptjs** - Password hashing
-- **jsonwebtoken** - JWT token management
-- **Speakeasy** - Two-factor authentication (TOTP)
-- **rate-limiter-flexible** - API rate limiting protection
-- **Helmet** - HTTP security headers
-
-### Testing
-- **Jest** - Unit testing framework
-- **Playwright** - End-to-end testing
-- **Testing Library** - React component testing
-
-## Key Features
-
-### Fleet Management
-- Vehicle tracking and status management
-- Driver assignment and coordination
-- Real-time fleet overview dashboard
-- Vehicle maintenance scheduling
-
-### Dispatch System
-- Intelligent job dispatching
-- Route optimization tools
-- Driver availability tracking
-- Job status monitoring
-
-### Analytics Dashboard
-- Fleet performance metrics
-- Revenue and operational reports
-- Visual data charts
-- Custom reporting capabilities
-
-### Authentication & Security
-- Secure user authentication with NextAuth
-- Two-factor authentication (2FA) support
-- Role-based access control
-- API rate limiting protection
-
-### Billing & Subscriptions
-- Stripe-powered payment processing
-- Subscription tier management
-- Invoice generation
-- Payment history tracking
-
-## Installation
-
-### Prerequisites
-- Node.js 18+
-- PostgreSQL database
-- Stripe account (for payments)
-
-### Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/camster91/fleetflow-mvp.git
-   cd fleetflow-mvp
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Required environment variables:
-   ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/fleetflow"
-   NEXTAUTH_SECRET="your-secret-key-here"
-   NEXTAUTH_URL="http://localhost:3000"
-   STRIPE_SECRET_KEY="sk_test_..."
-   STRIPE_WEBHOOK_SECRET="whsec_..."
-   SENDGRID_API_KEY="SG..."
-   ```
-
-4. **Initialize the database**
-   ```bash
-   npx prisma generate
-   npx prisma db push
-   npm run db:seed
-   ```
-
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
-
-Visit `http://localhost:3000` to access the application.
-
-## Usage
-
-### Development Commands
+Requirements: Node.js 20+, npm, and PostgreSQL 16 (or Docker).
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run test         # Run unit tests
-npm run test:watch   # Run tests in watch mode
-npm run test:coverage # Generate coverage report
-npm run test:e2e     # Run Playwright e2e tests
+npm ci
+copy .env.example .env.local
+npx prisma generate
+npx prisma migrate deploy
+npm run dev
 ```
 
-### Database Management
+Set a unique database password and a cryptographically random `JWT_SECRET` of at least 32 characters before starting. The app is available at `http://localhost:3000` by default.
+
+For a brand-new database, bootstrap the first administrator once. This intentionally refuses to run after any user exists:
 
 ```bash
-npm run db:push      # Push schema changes to database
-npm run db:seed      # Seed database with sample data
-npm run db:studio    # Open Prisma Studio GUI
+set ADMIN_EMAIL=owner@example.com
+set CONFIRM_ADMIN_BOOTSTRAP=yes
+npm run admin:bootstrap
 ```
 
-### API Endpoints
+The administrator signs in with the one-time code sent to that email. Subsequent users are provisioned through team invitations.
 
-RESTful API routes available at `/api/`:
-- `GET/POST /api/fleet` - Fleet operations
-- `GET/PUT/DELETE /api/fleet/:id` - Single fleet item
-- `GET/POST /api/dispatch` - Dispatch operations
-- `GET/POST /api/drivers` - Driver management
-- `GET/POST /api/analytics` - Reporting data
+For the production Docker container, run the same guarded operation against the running application image:
 
-## Project Structure
-
+```bash
+docker exec -e ADMIN_EMAIL=owner@example.com -e CONFIRM_ADMIN_BOOTSTRAP=yes <container> node create-admin.js
 ```
-fleetflow-mvp/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Authentication routes
-│   ├── (dashboard)/       # Protected dashboard routes
-│   ├── api/               # API route handlers
-│   └── layout.tsx         # Root layout
-├── components/            # Reusable UI components
-├── lib/                   # Utility functions
-├── prisma/                # Database schema and seeds
-│   ├── schema.prisma      # Prisma schema definition
-│   └── seed.ts           # Database seeding script
-├── public/                # Static assets
-└── scripts/               # Utility scripts
+
+Do not use `prisma db push` for production. Production startup runs the committed PostgreSQL migrations before starting the server.
+
+## Mandatory checks
+
+```bash
+npm run ci
 ```
+
+That command runs the dependency audit, lint, strict typecheck, deterministic Jest suite, and production build. Browser tests are separate:
+
+```bash
+npm run test:e2e
+```
+
+The production-container visual harness is `scripts/visual-qa-release.cjs`. It accepts `VISUAL_QA_BASE_URL`, `VISUAL_QA_USER_ID`, `VISUAL_QA_USER_EMAIL`, and `VISUAL_QA_JWT_SECRET`; use only isolated QA credentials and infrastructure.
+
+## Architecture
+
+- Next.js 16 Pages Router (`pages/` and `pages/api/`)
+- React 19 and Tailwind CSS
+- Custom signed HTTP-only cookie sessions with optional TOTP 2FA
+- Prisma 5 with PostgreSQL
+- Tenant selection through an HTTP-only workspace cookie
+- Stripe subscriptions and signed webhooks
+- Jest and Playwright
+- Docker/Coolify deployment
+
+Business records are scoped to a personal workspace or an accepted team workspace. Team roles are enforced in API routes; a workspace switcher selects the active tenant.
 
 ## Deployment
 
-### Docker
+The Docker entrypoint runs `prisma migrate deploy` and then starts the standalone Next.js server. GitHub Actions CI builds but does not publish or deploy. Production deployment is a manual, environment-protected workflow that requires the exact approved `master` commit SHA.
 
-```bash
-docker build -t fleetflow-mvp .
-docker run -p 3000:3000 --env-file .env.production fleetflow-mvp
-```
+See [release readiness](docs/release-readiness.md), [deploy and rollback](docs/runbooks/deploy-and-rollback.md), and [backup and restore](docs/runbooks/backup-restore.md). No production deployment, DNS change, or live account change is implied by a passing local build.
 
-### Coolify / Self-Hosted
+## Database baseline
 
-See `DEPLOYMENT-CHECKLIST.md` and `COOLIFY-POSTGRES-GUIDE.md` for detailed deployment instructions.
-
-## Roadmap
-
-- [ ] Integrate GlowOS text-to-speech for automated dispatch calls
-- [ ] Implement comprehensive driver mobile app view
-- [ ] Finalize multi-tenant architecture for SaaS release
-- [ ] Add real-time GPS tracking integration
-- [ ] Implement route optimization algorithms
+The repository contains a PostgreSQL baseline migration for a new database. If a database already contains FleetFlow tables from an older `db push` or SQLite-era process, do not run deployment migrations blindly. Back it up, compare it with the current Prisma schema, and follow the existing-database procedure in the deployment runbook.
 
 ## License
 
-Private - This project is proprietary and confidential.
-
-## Author
-
-Developed by Cameron Ashley / Nexus AI.
+Private and proprietary.

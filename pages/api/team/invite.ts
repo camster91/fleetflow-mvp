@@ -56,11 +56,6 @@ export default async function handler(
       return res.status(403).json({ error: 'You do not have permission to invite to this team' });
     }
 
-    const memberCount = team.members.filter((m) => m.status === 'ACCEPTED').length;
-    if (memberCount + normalizedEmails.length > 10) {
-      return res.status(400).json({ error: 'Team member limit would be exceeded' });
-    }
-
     // Batch-load existing users for all emails
     const existingUsers = await prisma.user.findMany({
       where: { email: { in: normalizedEmails } },
@@ -109,6 +104,14 @@ export default async function handler(
       }
     }
 
+    // Pending invitations reserve a seat. Resends do not consume another seat.
+    const occupiedSeats = team.members.filter((m) =>
+      m.status === 'ACCEPTED' || m.status === 'PENDING'
+    ).length;
+    if (occupiedSeats + toCreate.length > 10) {
+      return res.status(400).json({ error: 'Team member limit would be exceeded' });
+    }
+
     // Single transaction for creates + resends
     await prisma.$transaction(async (tx) => {
       for (const item of toResend) {
@@ -125,10 +128,20 @@ export default async function handler(
       }
 
       for (const item of toCreate) {
+        let invitedUserId = item.userId;
+        if (!invitedUserId) {
+          const invitedUser = await tx.user.upsert({
+            where: { email: item.email },
+            create: { email: item.email, role: 'viewer' },
+            update: {},
+            select: { id: true },
+          });
+          invitedUserId = invitedUser.id;
+        }
         const invitation = await tx.teamMember.create({
           data: {
             teamId,
-            userId: item.userId,
+            userId: invitedUserId,
             inviteeEmail: item.email,
             role: assignedRole,
             invitedBy: session.user.id,
@@ -144,7 +157,7 @@ export default async function handler(
       (session.user as { name?: string | null }).name || session.user.email || 'A team member';
     await Promise.allSettled(
       results.map((r) =>
-        sendTeamInvitationEmail(r.email, inviterName, assignedRole, team.name).catch((err: Error) => {
+        sendTeamInvitationEmail(r.email, inviterName, assignedRole, team.name, r.invitationId!).catch((err: Error) => {
           console.error(`Failed to send invitation email to ${r.email}:`, err.message);
         })
       )

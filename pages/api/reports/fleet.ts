@@ -1,17 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromRequest } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { requireTenantContext } from '../../../lib/apiAuth';
+import { canViewReports } from '../../../lib/permissions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getUserFromRequest(req);
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-
-  const userId = session.user.id;
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  const { tenant } = context;
+  if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
 
   try {
     const vehicles = await prisma.vehicle.findMany({
-      where: { ownerId: userId },
+      where: tenant.resourceWhere,
       select: {
         id: true,
         name: true,

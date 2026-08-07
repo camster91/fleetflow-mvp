@@ -1,23 +1,59 @@
 name: Deploy to Coolify
 
 on:
-  push:
-    branches: [master]
   workflow_dispatch:
+    inputs:
+      confirmed_sha:
+        description: Exact commit SHA that passed CI and is approved for production
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: fleetflow-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    name: Trigger approved production deployment
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
     steps:
-      - name: Trigger Coolify Deploy
+      - name: Verify approved SHA is current master
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRMED_SHA: ${{ inputs.confirmed_sha }}
         run: |
-          response=$(curl -s -w "\n%{http_code}" \
-            "${{ secrets.COOLIFY_WEBHOOK }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}")
-          http_code=$(echo "$response" | tail -1)
-          body=$(echo "$response" | head -n -1)
-          echo "$body"
-          if [ "$http_code" != "200" ]; then
-            echo "Deploy failed with status $http_code"
+          master_sha=$(gh api repos/${{ github.repository }}/commits/master --jq .sha)
+          if [ "$CONFIRMED_SHA" != "$master_sha" ]; then
+            echo "Confirmed SHA does not match current master."
+            exit 1
+          fi
+      - name: Verify CI succeeded for approved SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIRMED_SHA: ${{ inputs.confirmed_sha }}
+        run: |
+          gh api --method GET "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=master&per_page=100" \
+            | jq --exit-status --arg sha "$CONFIRMED_SHA" \
+              'any(.workflow_runs[]; .head_sha == $sha and .conclusion == "success")'
+      - name: Trigger Coolify webhook
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          test -n "$COOLIFY_WEBHOOK"
+          test -n "$COOLIFY_TOKEN"
+          response_file=$(mktemp)
+          http_code=$(curl --silent --show-error --output "$response_file" --write-out "%{http_code}" \
+            --request POST "$COOLIFY_WEBHOOK" \
+            --header "Authorization: Bearer $COOLIFY_TOKEN")
+          cat "$response_file"
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Coolify rejected the deployment with HTTP $http_code."
             exit 1
           fi

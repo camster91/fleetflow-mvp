@@ -32,7 +32,7 @@ export default function VendingMachinesPage() {
     try {
       const data = await api.getVendingMachines();
       setMachines(data);
-    } catch (err: any) { toast.error(err.message || 'Failed to load machines'); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to load machines'); }
     finally { setIsLoading(false); }
   }, []);
 
@@ -55,7 +55,7 @@ export default function VendingMachinesPage() {
           await api.deleteVendingMachine(m.id);
           notify.success(`"${m.name}" deleted`);
           await loadData();
-        } catch (err: any) { toast.error(err.message); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete machine'); }
       },
     });
   };
@@ -66,7 +66,7 @@ export default function VendingMachinesPage() {
       await api.updateVendingMachine(m.id, { ...m, status: next });
       notify.success(`${m.name} set to ${next}`);
       await loadData();
-    } catch (err: any) { toast.error(err.message); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to update machine'); }
   };
 
   const stats = [
@@ -177,12 +177,12 @@ export default function VendingMachinesPage() {
                     await api.updateVendingMachine(editingMachine.id, data);
                     notify.success(`"${data.name}" updated`);
                   } else {
-                    await api.addVendingMachine(data as any);
+                    await api.addVendingMachine(data);
                     notify.success(`"${data.name}" added`);
                   }
                   setIsFormOpen(false); setEditingMachine(null);
                   await loadData();
-                } catch (err: any) { toast.error(err.message); }
+                } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to save machine'); }
               }}
               onCancel={() => { setIsFormOpen(false); setEditingMachine(null); }}
             />
@@ -202,12 +202,14 @@ export default function VendingMachinesPage() {
   );
 }
 
+type VendingMachineFormData = Omit<VendingMachine, 'id'>;
+
 function VendingMachineForm({ machine, onSave, onCancel }: {
   machine: VendingMachine | null;
-  onSave: (data: Partial<VendingMachine>) => Promise<void>;
+  onSave: (data: VendingMachineFormData) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<VendingMachineFormData>({
     name: machine?.name ?? '',
     location: machine?.location ?? '',
     type: machine?.type ?? 'other',
@@ -239,7 +241,7 @@ function VendingMachineForm({ machine, onSave, onCancel }: {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as any })}
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as VendingMachine['type'] })}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
             {['snacks','beverages','combo','coffee','fresh-food','other'].map((t) => (
               <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1).replace('-',' ')}</option>
@@ -248,7 +250,7 @@ function VendingMachineForm({ machine, onSave, onCancel }: {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as any })}
+          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as VendingMachine['status'] })}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
             <option value="active">Active</option>
             <option value="maintenance">Maintenance</option>

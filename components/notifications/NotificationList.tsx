@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/lib/session';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { PageHeader } from '../PageHeader';
@@ -33,7 +33,7 @@ interface Notification {
   read: boolean;
   readAt: string | null;
   createdAt: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 const typeIcons: Record<NotificationType, React.ReactNode> = {
@@ -64,7 +64,7 @@ export const NotificationList: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!session?.user) return;
     
     setIsLoading(true);
@@ -87,11 +87,11 @@ export const NotificationList: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session?.user, page, selectedType]);
 
   useEffect(() => {
     fetchNotifications();
-  }, [session, page, selectedType]);
+  }, [fetchNotifications]);
 
   const handleMarkAsRead = async (notificationIds: string[]) => {
     try {

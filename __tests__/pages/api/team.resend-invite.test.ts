@@ -1,20 +1,20 @@
 import { createMocks } from 'node-mocks-http';
 import handler from '../../../pages/api/team/resend-invite';
 
-jest.mock('next-auth/next', () => ({ getServerSession: jest.fn() }));
 jest.mock('../../../lib/prisma', () => ({
   prisma: {
-    teamMember: { findUnique: jest.fn(), findFirst: jest.fn() },
+    teamMember: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
   },
 }));
-jest.mock('../../../lib/auth', () => ({ authOptions: {} }));
-jest.mock('../../../services/emailService', () => ({
-  sendEmail: jest.fn().mockResolvedValue(true),
+jest.mock('../../../lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }));
+jest.mock('../../../lib/email', () => ({
+  sendTeamInvitationEmail: jest.fn().mockResolvedValue({ success: true }),
 }));
+jest.mock('../../../lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }));
 
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
-import { sendEmail } from '../../../services/emailService';
+import { sendTeamInvitationEmail } from '../../../lib/email';
 
 const mockSession = { user: { id: 'user-owner' } };
 
@@ -54,7 +54,7 @@ describe('POST /api/team/resend-invite', () => {
     (getServerSession as jest.Mock).mockResolvedValue(mockSession);
     (prisma.teamMember.findUnique as jest.Mock).mockResolvedValue({
       id: 'm1', status: 'ACCEPTED', teamId: 't1',
-      team: { name: 'Team A' },
+      team: { name: 'Team A', ownerId: 'another-owner' },
       user: { email: 'user@test.com', name: 'User' },
     });
     const { req, res } = createMocks({ method: 'POST', body: { memberId: 'm1' } });
@@ -66,7 +66,7 @@ describe('POST /api/team/resend-invite', () => {
     (getServerSession as jest.Mock).mockResolvedValue(mockSession);
     (prisma.teamMember.findUnique as jest.Mock).mockResolvedValue({
       id: 'm1', status: 'PENDING', teamId: 't1',
-      team: { name: 'Team A' },
+      team: { name: 'Team A', ownerId: 'another-owner' },
       user: { email: 'invitee@test.com', name: 'Invitee' },
       invitationToken: 'tok123', invitedEmail: 'invitee@test.com',
     });
@@ -80,7 +80,8 @@ describe('POST /api/team/resend-invite', () => {
     (getServerSession as jest.Mock).mockResolvedValue(mockSession);
     (prisma.teamMember.findUnique as jest.Mock).mockResolvedValue({
       id: 'm1', status: 'PENDING', teamId: 't1',
-      team: { name: 'Acme Fleet' },
+      team: { name: 'Acme Fleet', ownerId: 'user-owner' },
+      role: 'MEMBER', inviteeEmail: 'invitee@test.com',
       user: { email: 'invitee@test.com', name: 'Invitee' },
       invitationToken: 'tok123', invitedEmail: 'invitee@test.com',
     });
@@ -90,8 +91,8 @@ describe('POST /api/team/resend-invite', () => {
     expect(res._getStatusCode()).toBe(200);
     const d = JSON.parse(res._getData());
     expect(d.success).toBe(true);
-    expect(sendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: 'invitee@test.com', subject: expect.stringContaining('Acme Fleet') })
+    expect(sendTeamInvitationEmail).toHaveBeenCalledWith(
+      'invitee@test.com', expect.any(String), 'MEMBER', 'Acme Fleet', 'm1'
     );
   });
 });

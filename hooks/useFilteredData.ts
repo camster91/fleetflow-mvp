@@ -24,7 +24,7 @@ export function useFilteredData<T>({
   const [searchQuery, setSearchQueryRaw] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const setSearchQuery = useCallback(
     (q: string) => {

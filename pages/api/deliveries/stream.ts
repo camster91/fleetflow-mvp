@@ -1,14 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
+import { requireTenantContext } from '../../../lib/apiAuth'
+import { canViewDeliveries } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
-
-  const userId = (session.user as any).id
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { tenant } = context
+  if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -21,10 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const interval = setInterval(async () => {
     try {
       const deliveries = await prisma.delivery.findMany({
-        where: {
-          ownerId: userId,
-          status: { in: ['pending', 'picked-up', 'in-transit'] },
-        },
+        where: { AND: [tenant.resourceWhere, { status: { in: ['pending', 'picked-up', 'in-transit'] } }] },
         include: {
           events: {
             orderBy: { timestamp: 'desc' },

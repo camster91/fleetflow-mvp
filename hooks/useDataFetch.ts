@@ -22,8 +22,8 @@ export function useDataFetch<T>(
     try {
       const result = await fetcher()
       setData(result)
-    } catch (err: any) {
-      setError(err.message || 'Failed to load data')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
     }

@@ -18,6 +18,29 @@ export function canViewVehicles(role: TeamRole): boolean {
   return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'].includes(role);
 }
 
+const OPERATIONAL_MANAGERS: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER'];
+const BUSINESS_READERS: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'];
+
+export function canViewBusinessData(role: TeamRole): boolean {
+  return BUSINESS_READERS.includes(role);
+}
+
+export function canManageClients(role: TeamRole): boolean {
+  return OPERATIONAL_MANAGERS.includes(role);
+}
+
+export function canManageSOP(role: TeamRole): boolean {
+  return OPERATIONAL_MANAGERS.includes(role);
+}
+
+export function canManageVendingMachines(role: TeamRole): boolean {
+  return OPERATIONAL_MANAGERS.includes(role);
+}
+
+export function canManageAnnouncements(role: TeamRole): boolean {
+  return OPERATIONAL_MANAGERS.includes(role);
+}
+
 /**
  * Check if a role can manage team members (invite, change roles, remove)
  */

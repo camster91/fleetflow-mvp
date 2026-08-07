@@ -26,7 +26,7 @@ if (!webhookSecret) {
 console.log('🔧 FleetFlow Webhook Testing Utility\n');
 
 // Test webhook payload construction
-function createMockCheckoutSession(userId: string): any {
+function createMockCheckoutSession(userId: string) {
   return {
     id: 'cs_test_' + Math.random().toString(36).substring(7),
     object: 'checkout.session',
@@ -40,7 +40,7 @@ function createMockCheckoutSession(userId: string): any {
   };
 }
 
-function createMockSubscription(userId: string, plan: PlanType): any {
+function createMockSubscription(userId: string, plan: PlanType) {
   const priceIds: Record<PlanType, string> = {
     'PER_USER': 'price_peruser_monthly',
     'UNLIMITED': 'price_unlimited_monthly',
@@ -67,7 +67,7 @@ function createMockSubscription(userId: string, plan: PlanType): any {
   };
 }
 
-function createMockInvoice(subscriptionId: string): any {
+function createMockInvoice(subscriptionId: string) {
   return {
     id: 'in_test_' + Math.random().toString(36).substring(7),
     object: 'invoice',

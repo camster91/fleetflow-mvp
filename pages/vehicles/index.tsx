@@ -68,7 +68,7 @@ export default function VehiclesPage() {
           await api.deleteVehicle(vehicle.id);
           notify.success(`Vehicle "${vehicle.name}" deleted`);
           await loadVehicles();
-        } catch (err: any) { toast.error(err.message); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete vehicle'); }
       },
     });
   };

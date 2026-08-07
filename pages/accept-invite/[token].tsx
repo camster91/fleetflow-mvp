@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSession, signIn } from '@/lib/session';
+import { useSession } from '@/lib/session';
 import { AuthLayout } from '../../components/layouts/AuthLayout';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
@@ -182,18 +182,14 @@ export default function AcceptInvitePage() {
             <Button
               variant="primary"
               fullWidth
-              onClick={() => signIn(undefined, { callbackUrl: router.asPath })}
+              onClick={() => router.push(`/auth/login?callbackUrl=${encodeURIComponent(router.asPath)}`)}
             >
               Sign in to Accept
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
-            <Button
-              variant="outline"
-              fullWidth
-              onClick={() => router.push('/auth/register')}
-            >
-              Create an Account
-            </Button>
+            <p className="text-center text-sm text-slate-500">
+              We&apos;ll email the invited address a one-time code. No password is required.
+            </p>
           </div>
         </Card>
       </AuthLayout>

@@ -154,7 +154,7 @@ test.describe('FleetFlow Pro UI Verification', () => {
           await page.goBack({ waitUntil: 'networkidle' });
         }
       } catch (error) {
-        console.log(`⚠️  Button ${i + 1} not clickable: ${error.message}`);
+        console.log(`⚠️  Button ${i + 1} not clickable: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     
@@ -176,7 +176,7 @@ test.describe('FleetFlow Pro UI Verification', () => {
           await page.goBack({ waitUntil: 'networkidle' });
         }
       } catch (error) {
-        console.log(`⚠️  Link ${i + 1} not clickable: ${error.message}`);
+        console.log(`⚠️  Link ${i + 1} not clickable: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     

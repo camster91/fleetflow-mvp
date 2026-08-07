@@ -1,22 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromRequest } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { requireTenantContext } from '../../../lib/apiAuth';
+import { canViewReports } from '../../../lib/permissions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getUserFromRequest(req);
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-
-  const userId = session.user.id;
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  const { tenant } = context;
+  if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
   const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 86400000);
   const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
 
   try {
     const tasks = await prisma.maintenanceTask.findMany({
-      where: {
-        ownerId: userId,
-        createdAt: { gte: startDate, lte: endDate },
-      },
+      where: { AND: [tenant.resourceWhere, { createdAt: { gte: startDate, lte: endDate } }] },
       include: { vehicle: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
     });
@@ -43,11 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const now = new Date();
     const thirtyDaysOut = new Date(Date.now() + 30 * 86400000);
     const upcomingTasks = await prisma.maintenanceTask.findMany({
-      where: {
-        ownerId: userId,
-        completed: false,
-        dueDate: { gte: now, lte: thirtyDaysOut },
-      },
+      where: { AND: [tenant.resourceWhere, { completed: false, dueDate: { gte: now, lte: thirtyDaysOut } }] },
       include: { vehicle: { select: { name: true } } },
       orderBy: { dueDate: 'asc' },
       take: 20,

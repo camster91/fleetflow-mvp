@@ -1,19 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { requireTenantContext } from '../../../lib/apiAuth';
+import { canViewBilling } from '../../../lib/permissions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  if (!canViewBilling(context.tenant.role)) return res.status(403).json({ error: 'Forbidden' });
 
   const subscription = await prisma.subscription.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: context.tenant.ownerId },
   });
 
   if (!subscription) {
@@ -27,8 +27,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       trialEndsAt: subscription.trialEndsAt,
       currentPeriodEnd: subscription.currentPeriodEnd,
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-      stripeCustomerId: subscription.stripeCustomerId,
-      stripeSubscriptionId: subscription.stripeSubscriptionId,
     },
   });
 }

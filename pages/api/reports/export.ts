@@ -1,20 +1,21 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromRequest } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import { requireTenantContext } from '../../../lib/apiAuth';
+import { canExportData } from '../../../lib/permissions';
 
-function toCsv(rows: Record<string, any>[]): string {
+function toCsv(rows: Record<string, unknown>[]): string {
   if (!rows.length) return '';
   const keys = Object.keys(rows[0]);
-  const escape = (v: any) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+  const escape = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
   return [keys.map(escape).join(','), ...rows.map(r => keys.map(k => escape(r[k])).join(','))].join('\n');
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getUserFromRequest(req);
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-
-  const userId = session.user.id;
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  const { tenant } = context;
+  if (!canExportData(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
   const type = req.query.type as string;
   const startRaw = req.query.startDate as string | undefined;
   const endRaw = req.query.endDate as string | undefined;
@@ -40,11 +41,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const EXPORT_ROW_LIMIT = 5000;
 
   try {
-    let rows: Record<string, any>[] = [];
+    let rows: Record<string, unknown>[] = [];
 
     if (type === 'maintenance') {
       const tasks = await prisma.maintenanceTask.findMany({
-        where: { ownerId: userId, createdAt: { gte: startDate, lte: endDate } },
+        where: { AND: [tenant.resourceWhere, { createdAt: { gte: startDate, lte: endDate } }] },
         include: { vehicle: { select: { name: true } } },
         orderBy: { createdAt: 'asc' },
         take: EXPORT_ROW_LIMIT,
@@ -62,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }));
     } else if (type === 'deliveries') {
       const deliveries = await prisma.delivery.findMany({
-        where: { ownerId: userId, createdAt: { gte: startDate, lte: endDate } },
+        where: { AND: [tenant.resourceWhere, { createdAt: { gte: startDate, lte: endDate } }] },
         orderBy: { createdAt: 'asc' },
         take: EXPORT_ROW_LIMIT,
       });
@@ -78,7 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }));
     } else if (type === 'fleet') {
       const vehicles = await prisma.vehicle.findMany({
-        where: { ownerId: userId },
+        where: tenant.resourceWhere,
         orderBy: { name: 'asc' },
         take: EXPORT_ROW_LIMIT,
       });

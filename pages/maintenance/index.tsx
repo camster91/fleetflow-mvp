@@ -37,7 +37,7 @@ export default function MaintenancePage() {
     try {
       const [t, v] = await Promise.all([api.getMaintenanceTasks(), api.getVehicles()]);
       setTasks(t); setVehicles(v);
-    } catch (err: any) { toast.error(err.message || 'Failed to load data'); }
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to load data'); }
     finally { setIsLoading(false); }
   }, []);
 
@@ -79,7 +79,7 @@ export default function MaintenancePage() {
           await api.updateMaintenanceTask(task.id, { completed: true, completedDate: new Date().toISOString().split('T')[0] });
           notify.success('Maintenance task completed');
           await loadData();
-        } catch (err: any) { toast.error(err.message); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to complete task'); }
       },
     });
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from '@/lib/session';
-import { User, Bell, Shield, Palette, Save, Camera, Eye, EyeOff, Moon, Sun } from 'lucide-react';
+import { User, Bell, Palette, Save, Camera, Moon, Sun } from 'lucide-react';
 import { useDarkMode } from '../../hooks/useDarkMode';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
@@ -8,14 +8,13 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { notify } from '../../services/notifications';
 
-type TabId = 'profile' | 'notifications' | 'security' | 'preferences';
+type TabId = 'profile' | 'notifications' | 'preferences';
 
 export default function SettingsPage() {
   const { data: session, update: updateSession } = useSession();
   const [activeTab, setActiveTab] = useState<TabId>('profile');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
 
   const [profile, setProfile] = useState({ name: '', email: '', company: '', phone: '', bio: '' });
   const [notifications, setNotifications] = useState({
@@ -25,7 +24,6 @@ export default function SettingsPage() {
   const [preferences, setPreferences] = useState({
     language: 'en', timezone: 'America/Toronto', dateFormat: 'MM/DD/YYYY', theme: 'light',
   });
-  const [security, setSecurity] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [isDark, toggleDark] = useDarkMode();
 
   // Load profile on mount
@@ -64,7 +62,7 @@ export default function SettingsPage() {
           notify.error(e.error || 'Failed to save profile');
           return;
         }
-        await updateSession({ name: profile.name });
+        await updateSession();
       } else if (activeTab === 'notifications') {
         const r = await fetch('/api/settings/profile', {
           method: 'PUT',
@@ -87,20 +85,6 @@ export default function SettingsPage() {
           notify.error(e.error || 'Failed to save preferences');
           return;
         }
-      } else if (activeTab === 'security') {
-        if (security.newPassword !== security.confirmPassword) {
-          notify.error('Passwords do not match'); return;
-        }
-        if (security.newPassword.length < 8) {
-          notify.error('Password must be at least 8 characters'); return;
-        }
-        const r = await fetch('/api/auth/change-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ currentPassword: security.currentPassword, newPassword: security.newPassword }),
-        });
-        if (!r.ok) { const e = await r.json(); notify.error(e.error || 'Failed to change password'); return; }
-        setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
       }
       notify.success('Settings saved');
     } catch { notify.error('Failed to save settings'); }
@@ -113,7 +97,6 @@ export default function SettingsPage() {
   const tabs = [
     { id: 'profile' as TabId, label: 'Profile', icon: User },
     { id: 'notifications' as TabId, label: 'Notifications', icon: Bell },
-    { id: 'security' as TabId, label: 'Security', icon: Shield },
     { id: 'preferences' as TabId, label: 'Preferences', icon: Palette },
   ];
 
@@ -187,27 +170,6 @@ export default function SettingsPage() {
                       </button>
                     </div>
                   ))}
-                </div>
-              )}
-
-              {activeTab === 'security' && (
-                <div className="space-y-5">
-                  <h2 className="font-semibold text-slate-900">Change Password</h2>
-                  <div className="space-y-4">
-                    <div><label className={labelCls}>Current Password</label>
-                      <div className="relative">
-                        <input type={showPassword ? 'text' : 'password'} value={security.currentPassword}
-                          onChange={e => setSecurity(s => ({...s, currentPassword: e.target.value}))}
-                          className={inputCls + ' pr-10'} />
-                        <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div><label className={labelCls}>New Password</label><input type="password" value={security.newPassword} onChange={e => setSecurity(s => ({...s, newPassword: e.target.value}))} className={inputCls} /></div>
-                    <div><label className={labelCls}>Confirm New Password</label><input type="password" value={security.confirmPassword} onChange={e => setSecurity(s => ({...s, confirmPassword: e.target.value}))} className={inputCls} /></div>
-                  </div>
-                  <p className="text-xs text-slate-500">Password must be at least 8 characters and contain a mix of letters, numbers, and symbols.</p>
                 </div>
               )}
 

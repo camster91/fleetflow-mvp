@@ -10,6 +10,22 @@ import { Truck, Wrench, Package, Users, Download } from 'lucide-react';
 import { notify } from '../../services/notifications';
 
 interface DateRange { from: Date; to: Date; label: string; }
+interface AnalyticsData {
+  stats: {
+    fleetUtilization: { current: number; total: number; active: number };
+    deliveries: { total: number; delivered: number; inTransit: number; pending: number; delayed: number };
+    maintenance: {
+      total: number; overdue: number; dueSoon: number; completed: number; totalCost: number;
+      upcoming: Array<{ vehicle: string; task: string; dueIn: number }>;
+    };
+    clients: { total: number };
+  };
+  charts: {
+    activityOverTime: Array<{ name: string; deliveries: number; maintenance: number }>;
+    maintenanceByCategory: Array<{ name: string; value: number; cost: number }>;
+    vehicleUtilization: Array<{ name: string; deliveries: number }>;
+  };
+}
 
 // ChartCard pulls in recharts; loading it via next/dynamic keeps recharts
 // out of the shared vendors chunk — it downloads only on this page.
@@ -23,7 +39,7 @@ export default function AnalyticsPage() {
     from: subDays(new Date(), 30), to: new Date(), label: 'Last 30 days',
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnalyticsData | null>(null);
 
   const fetchAnalytics = useCallback(async () => {
     setIsLoading(true);
@@ -189,7 +205,7 @@ export default function AnalyticsPage() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
           <h3 className="font-semibold text-slate-900 mb-3">Upcoming Maintenance</h3>
           <div className="divide-y divide-slate-50">
-            {s.maintenance.upcoming.map((item: any, i: number) => (
+            {s?.maintenance.upcoming.map((item, i) => (
               <div key={i} className="flex items-center justify-between py-2.5">
                 <div>
                   <p className="text-sm font-medium text-slate-900">{item.vehicle}</p>

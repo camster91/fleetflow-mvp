@@ -70,15 +70,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }),
     prisma.user.update({
       where: { id: user.id },
-      data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
+      data: {
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date(),
+        emailVerified: user.emailVerified ?? new Date(),
+      },
     }),
   ])
 
   // Check if 2FA is enabled — require separate validation step
   if (user.twoFactorEnabled && user.twoFactorSecret) {
+    const challenge = signToken({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      purpose: 'two-factor',
+    }, '5m')
+    res.setHeader('Set-Cookie', serialize('two_factor_challenge', challenge, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 5 * 60,
+    }))
     return res.json({
       requiresTwoFactor: true,
-      userId: user.id,
     })
   }
 

@@ -1,30 +1,35 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToClient, clientToDb, logActivity } from '../../../lib/fleet'
+import { requireTenantContext } from '../../../lib/apiAuth'
+import { canManageClients, canViewBusinessData } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { session, tenant } = context
 
   const { id } = req.query as { id: string }
-  const userId = (session.user as any).id
+  const userId = session.user.id
+  const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
 
   if (req.method === 'GET') {
-    const client = await prisma.client.findFirst({ where: { id, ownerId: userId } })
+    if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const client = await prisma.client.findFirst({ where: scopedWhere })
     if (!client) return res.status(404).json({ error: 'Not found' })
     return res.json(dbToClient(client))
   }
 
   if (req.method === 'PUT') {
-    const { ownerId: _o, ...fields } = clientToDb(req.body, userId) as any
-    const result = await prisma.client.updateMany({ where: { id, ownerId: userId }, data: fields })
+    if (!canManageClients(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const { ownerId: _ownerId, ...fields } = clientToDb(req.body, tenant.ownerId)
+    const result = await prisma.client.updateMany({ where: scopedWhere, data: fields })
     // Must re-read with owner scope — findUnique after updateMany leaked other tenants' rows
     if (result.count === 0) return res.status(404).json({ error: 'Not found' })
-    const client = await prisma.client.findFirst({ where: { id, ownerId: userId } })
+    const client = await prisma.client.findFirst({ where: scopedWhere })
     if (!client) return res.status(404).json({ error: 'Not found' })
     await logActivity(prisma, {
-      userId, userName: session.user.name, userRole: (session.user as any).role,
+      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
       action: 'updated', entityType: 'client', entityId: id, entityName: client.name,
       description: `Client "${client.name}" was updated`,
     })
@@ -32,11 +37,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const client = await prisma.client.findFirst({ where: { id, ownerId: userId } })
+    if (!canManageClients(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const client = await prisma.client.findFirst({ where: scopedWhere })
     if (!client) return res.status(404).json({ error: 'Not found' })
-    await prisma.client.deleteMany({ where: { id, ownerId: userId } })
+    await prisma.client.deleteMany({ where: scopedWhere })
     await logActivity(prisma, {
-      userId, userName: session.user.name, userRole: (session.user as any).role,
+      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
       action: 'deleted', entityType: 'client', entityId: id, entityName: client.name,
       description: `Client "${client.name}" was deleted`,
     })

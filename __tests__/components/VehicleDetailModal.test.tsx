@@ -1,10 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import VehicleDetailModal from '../../components/VehicleDetailModal';
-import { notify } from '../../services/notifications';
-
-// Mock the notifications service
-jest.mock('../../services/notifications');
 
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
@@ -25,7 +21,7 @@ jest.mock('lucide-react', () => ({
 
 describe('VehicleDetailModal', () => {
   const mockVehicle = {
-    id: 1,
+    id: '1',
     name: 'Ford Transit Van',
     status: 'active' as const,
     driver: 'Maria Rodriguez',
@@ -132,19 +128,15 @@ describe('VehicleDetailModal', () => {
     );
   });
 
-  test('call driver button shows notification when no phone', async () => {
+  test('does not show a call action without a driver phone field', async () => {
     await act(async () => {
       render(
         <VehicleDetailModal isOpen={true} onClose={mockOnClose} vehicle={mockVehicle} />
       );
     });
 
-    const callButton = screen.getByText('Call Driver');
-    fireEvent.click(callButton);
-
-    expect(notify.info).toHaveBeenCalledWith(
-      expect.stringContaining('Maria Rodriguez')
-    );
+    expect(screen.queryByText('Call Driver')).not.toBeInTheDocument();
+    expect(screen.getByText('Navigate To')).toBeInTheDocument();
   });
 
   test('close button calls onClose handler', async () => {

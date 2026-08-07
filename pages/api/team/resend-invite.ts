@@ -1,58 +1,59 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession, authOptions } from '../../../lib/auth';
-import { prisma } from '../../../lib/prisma';
-import { sendEmail } from '../../../services/emailService';
+import { NextApiRequest, NextApiResponse } from 'next'
+import { getServerSession, authOptions } from '../../../lib/auth'
+import { prisma } from '../../../lib/prisma'
+import { sendTeamInvitationEmail } from '../../../lib/email'
+import { assertSameOrigin } from '../../../lib/apiAuth'
 
-/** POST /api/team/resend-invite -- body: { memberId } */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' });
-  const requesterId = (session.user as any).id;
+  const session = await getServerSession(req, res, authOptions)
+  if (!session?.user?.id) return res.status(401).json({ error: 'Unauthorized' })
+  if (!assertSameOrigin(req, res)) return
 
-  const { memberId } = req.body;
-  if (!memberId) return res.status(400).json({ error: 'memberId required' });
+  const { memberId } = req.body ?? {}
+  if (!memberId || typeof memberId !== 'string') {
+    return res.status(400).json({ error: 'memberId required' })
+  }
 
   const member = await prisma.teamMember.findUnique({
     where: { id: memberId },
     include: {
-      team: { select: { name: true } },
+      team: { select: { name: true, ownerId: true } },
       user: { select: { email: true, name: true } },
     },
-  });
-
-  if (!member) return res.status(404).json({ error: 'Invitation not found' });
-  if (member.status !== 'PENDING') return res.status(400).json({ error: 'Invitation is not pending' });
-
-  // Verify requester belongs to the same team
-  const requesterMembership = await prisma.teamMember.findFirst({
-    where: { userId: requesterId, teamId: member.teamId, status: 'ACCEPTED' },
-  });
-  if (!requesterMembership) return res.status(403).json({ error: 'Forbidden' });
-
-  const inviteToken = member.id; // token IS the member id
-  const inviteUrl = `${process.env.NEXTAUTH_URL}/accept-invite/${inviteToken}`;
-  const inviteeName = member.user?.name || 'Team Member';
-  const inviteeEmail = member.user?.email;
-
-  if (!inviteeEmail) return res.status(400).json({ error: 'No email address for this invite' });
-
-  try {
-    await sendEmail({
-      to: inviteeEmail,
-      subject: `Reminder: You have been invited to join ${member.team.name}`,
-      html: `
-        <h2>You have a pending invitation</h2>
-        <p>Hi ${inviteeName},</p>
-        <p>This is a reminder that you have been invited to join <strong>${member.team.name}</strong> on FleetFlow.</p>
-        <p><a href="${inviteUrl}" style="background:#1e40af;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;">Accept Invitation</a></p>
-        <p>This link will expire 7 days from when it was first sent.</p>
-      `,
-    });
-    return res.json({ success: true, message: 'Invitation resent successfully' });
-  } catch (err) {
-    console.error('Failed to send invite email:', err);
-    return res.status(500).json({ error: 'Failed to send email' });
+  })
+  if (!member) return res.status(404).json({ error: 'Invitation not found' })
+  if (member.status !== 'PENDING') {
+    return res.status(400).json({ error: 'Invitation is not pending' })
   }
+
+  const requesterMembership = await prisma.teamMember.findFirst({
+    where: {
+      userId: session.user.id,
+      teamId: member.teamId,
+      status: 'ACCEPTED',
+      role: { in: ['OWNER', 'ADMIN'] },
+    },
+  })
+  if (member.team.ownerId !== session.user.id && !requesterMembership) {
+    return res.status(403).json({ error: 'Forbidden' })
+  }
+
+  const inviteeEmail = member.inviteeEmail || member.user?.email
+  if (!inviteeEmail) return res.status(400).json({ error: 'No email address for this invite' })
+
+  await prisma.teamMember.update({
+    where: { id: member.id },
+    data: { invitedAt: new Date() },
+  })
+  const result = await sendTeamInvitationEmail(
+    inviteeEmail,
+    session.user.name || session.user.email || 'A team admin',
+    member.role,
+    member.team.name,
+    member.id
+  )
+  if (!result.success) return res.status(502).json({ error: 'Failed to send invitation email' })
+  return res.json({ success: true, message: 'Invitation resent successfully' })
 }

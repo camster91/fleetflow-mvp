@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
-import { Button } from '../ui/Button';
 
 const navLinks = [
-  { href: '/features', label: 'Features' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/about', label: 'About' },
-  { href: '/blog', label: 'Blog' },
+  { href: '/help', label: 'Help' },
 ];
 
 export function Navbar() {
@@ -34,9 +32,11 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <img 
+            <Image
               src="/brand/logo/logo-horizontal.svg" 
               alt="FleetFlow" 
+              width={160}
+              height={32}
               className="h-8 w-auto"
             />
           </Link>
@@ -60,18 +60,10 @@ export function Navbar() {
           <div className="hidden lg:flex items-center space-x-4">
             <Link
               href="/auth/login"
-              className={`text-sm font-medium transition-colors hover:text-blue-600 ${
-                isScrolled ? 'text-slate-600' : 'text-slate-700'
-              }`}
+              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
             >
-              Login
+              Sign in
             </Link>
-            <Button
-              variant="primary"
-              onClick={() => window.location.href = '/auth/register'}
-            >
-              Start Free Trial
-            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -105,17 +97,11 @@ export function Navbar() {
               <hr className="border-slate-200" />
               <Link
                 href="/auth/login"
-                className="text-slate-600 font-medium hover:text-blue-600 transition-colors"
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Login
+                Sign in
               </Link>
-              <Button
-                variant="primary"
-                onClick={() => window.location.href = '/auth/register'}
-              >
-                Start Free Trial
-              </Button>
             </div>
           </div>
         )}

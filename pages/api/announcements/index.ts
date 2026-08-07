@@ -1,23 +1,31 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { dbToAnnouncement, announcementToDb, logActivity } from '../../../lib/fleet'
+import { requireTenantContext } from '../../../lib/apiAuth'
+import { canManageAnnouncements, canViewBusinessData } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions)
-  if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
-  const userId = (session.user as any).id
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { session, tenant } = context
+  const userId = session.user.id
 
   if (req.method === 'GET') {
-    const announcements = await prisma.announcement.findMany({ where: { ownerId: userId }, orderBy: { createdAt: 'desc' }, take: 50 })
+    if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const announcements = await prisma.announcement.findMany({ where: tenant.resourceWhere, orderBy: { createdAt: 'desc' }, take: 50 })
     return res.json(announcements.map(dbToAnnouncement))
   }
 
   if (req.method === 'POST') {
-    const data = announcementToDb(req.body, userId, session.user.name)
+    if (!canManageAnnouncements(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const data = {
+      ...announcementToDb(req.body, tenant.ownerId, session.user.name),
+      ownerId: tenant.ownerId,
+      teamId: tenant.teamId,
+    }
     const ann = await prisma.announcement.create({ data })
     await logActivity(prisma, {
-      userId, userName: session.user.name, userRole: (session.user as any).role,
+      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
       action: 'created', entityType: 'announcement', entityId: ann.id,
       description: `Announcement sent: "${ann.message.substring(0, 60)}${ann.message.length > 60 ? '...' : ''}"`,
     })

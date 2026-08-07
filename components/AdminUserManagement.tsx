@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useSession } from '@/lib/session'
 import { 
-  Users, Shield, UserCheck, UserX, Edit2, Trash2, 
-  Eye, EyeOff, Search, AlertTriangle, CheckCircle, X,
-  Crown, User, Truck, Wrench, FileText, DollarSign, EyeIcon
+  Users, Shield, Edit2, Trash2, Search, AlertTriangle, CheckCircle, X,
+  Crown, User, Truck, Wrench, DollarSign, EyeIcon
 } from 'lucide-react'
 import FormModal from './FormModal'
 import ConfirmModal from './ConfirmModal'
@@ -30,7 +28,6 @@ const ROLE_OPTIONS = [
 ]
 
 export default function AdminUserManagement() {
-  const { data: session, update: updateSession } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -38,17 +35,6 @@ export default function AdminUserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [isImpersonating, setIsImpersonating] = useState(false)
-  const [impersonatedUser, setImpersonatedUser] = useState<string | null>(null)
-  
-  // Check if currently impersonating on mount
-  useEffect(() => {
-    if (session?.impersonation?.isImpersonating) {
-      setIsImpersonating(true)
-      setImpersonatedUser(session.impersonation.impersonatedUserName || 'User')
-    }
-  }, [session])
-
   // Fetch users
   useEffect(() => {
     fetchUsers()
@@ -109,51 +95,6 @@ export default function AdminUserManagement() {
     }
   }
 
-  const handleImpersonate = async (user: User) => {
-    try {
-      const response = await fetch('/api/admin/impersonate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
-      })
-      
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to impersonate user')
-      }
-      
-      const data = await response.json()
-      
-      // Update session with impersonation data
-      await updateSession({ impersonation: data.impersonation })
-      
-      setIsImpersonating(true)
-      setImpersonatedUser(user.name || user.email)
-      
-      // Reload page to apply new role/permissions
-      window.location.reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to impersonate user')
-    }
-  }
-
-  const handleStopImpersonating = async () => {
-    try {
-      await fetch('/api/admin/impersonate', { method: 'DELETE' })
-      
-      // Clear impersonation from session
-      await updateSession({ impersonation: null })
-      
-      setIsImpersonating(false)
-      setImpersonatedUser(null)
-      
-      // Reload page to restore original permissions
-      window.location.reload()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop impersonating')
-    }
-  }
-
   const filteredUsers = users.filter(user =>
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -172,29 +113,6 @@ export default function AdminUserManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Impersonation Banner */}
-      {isImpersonating && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Eye className="h-5 w-5 text-orange-600" />
-            <div>
-              <p className="font-medium text-orange-900">
-                Impersonating: {impersonatedUser}
-              </p>
-              <p className="text-sm text-orange-700">
-                You are viewing the system as this user. Some admin features may be limited.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleStopImpersonating}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
-          >
-            Stop Impersonating
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -275,17 +193,6 @@ export default function AdminUserManagement() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {/* Impersonate button */}
-                      {user.id !== session?.user?.id && user.role !== 'admin' && !isImpersonating && (
-                        <button
-                          onClick={() => handleImpersonate(user)}
-                          className="p-2 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition"
-                          title="Impersonate user" aria-label="Impersonate user"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      )}
-                      
                       {/* Edit role button */}
                       <button
                         onClick={() => {

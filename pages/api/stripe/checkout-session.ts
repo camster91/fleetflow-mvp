@@ -1,17 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { createCheckoutSession, createStripeCustomer } from '../../../lib/stripe';
+import { assertSameOrigin, requireTenantContext } from '../../../lib/apiAuth';
+import { canManageBilling } from '../../../lib/permissions';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  if (!canManageBilling(context.tenant.role)) return res.status(403).json({ error: 'Forbidden' });
+  if (!assertSameOrigin(req, res)) return;
 
   const { interval = 'monthly' } = req.body;
 
@@ -25,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: context.tenant.ownerId },
       include: { subscription: true },
     });
 

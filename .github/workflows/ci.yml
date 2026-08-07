@@ -1,6 +1,4 @@
-name: CI Build
-
-# Build-only workflow: verifies the project builds cleanly. No deploy, no secrets required.
+name: CI
 
 on:
   push:
@@ -13,46 +11,43 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-build-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build
+  quality:
+    name: Audit, lint, typecheck, test, and build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 25
+    env:
+      CI: true
+      NODE_ENV: production
+      DATABASE_URL: postgresql://fleetflow:ci-only@localhost:5432/fleetflow
+      JWT_SECRET: ci-only-signing-secret-at-least-32-characters
+      NEXTAUTH_URL: http://localhost:3000
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Validate database schema and migrations
+        run: npx prisma validate
+      - name: Run mandatory release gate
+        run: npm run ci
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-        env:
-          # Placeholder for prisma schema validation (no DB connection made during generate)
-          DATABASE_URL: postgresql://placeholder:***@localhost:5432/placeholder
-
-      - name: Lint
-        run: npm run lint
-        env:
-          CI: true
-        continue-on-error: true
-
-      - name: Build
-        run: npm run build
-        env:
-          # CI-safe defaults
-          NODE_ENV: production
-          CI: true
-          # NextAuth etc. may need placeholders
-          NEXTAUTH_SECRET: ci-build-placeholder-secret-that-is-at-least-32-chars-long
-          NEXTAUTH_URL: http:/***/localhost:3000
+  container:
+    name: Build production container
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build without publishing
+        run: docker build --tag fleetflow:${{ github.sha }} .

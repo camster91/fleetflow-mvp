@@ -1,16 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../../lib/prisma'
 import { dbToDelivery, logActivity } from '../../../../lib/fleet'
-import { requireSession, assertSameOrigin } from '../../../../lib/apiAuth'
+import { requireTenantContext, assertSameOrigin } from '../../../../lib/apiAuth'
+import { canManageDeliveries } from '../../../../lib/permissions'
 
 const VALID_STATUSES = ['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'cancelled']
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
 
-  const session = await requireSession(req, res)
-  if (!session) return
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { session, tenant } = context
   if (!assertSameOrigin(req, res)) return
+  if (!canManageDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
@@ -21,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Owner-scoped lookup prevents cross-tenant status mutation (IDOR)
-  const delivery = await prisma.delivery.findFirst({ where: { id, ownerId: userId } })
+  const delivery = await prisma.delivery.findFirst({ where: { AND: [{ id }, tenant.resourceWhere] } })
   if (!delivery) return res.status(404).json({ error: 'Not found' })
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -47,8 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await logActivity(tx, {
       userId,
+      teamId: tenant.teamId,
       userName: session.user.name,
-      userRole: session.user.role,
+      userRole: tenant.role,
       action: status === 'delivered' ? 'completed' : 'status_changed',
       entityType: 'delivery',
       entityId: id,

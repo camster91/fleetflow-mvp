@@ -10,8 +10,7 @@ export default function UnauthorizedPage() {
   }
 
   const handleLogout = async () => {
-    await signOut({ redirect: false })
-    router.push('/auth/login')
+    await signOut({ callbackUrl: '/auth/login' })
   }
 
   return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession, signIn } from '@/lib/session';
+import { useSession } from '@/lib/session';
 import { AlertCircle, Clock, RefreshCw, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 
@@ -11,7 +11,7 @@ const WARNING_THRESHOLD = 5 * 60 * 1000;
 const CHECK_INTERVAL = 30 * 1000;
 
 export function SessionExpiryWarning() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [showWarning, setShowWarning] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -52,17 +52,8 @@ export function SessionExpiryWarning() {
   const handleExtendSession = async () => {
     setRefreshing(true);
     try {
-      // Trigger session update
-      const result = await signIn('credentials', {
-        redirect: false,
-        callbackUrl: window.location.pathname,
-      });
-
-      if (result?.ok) {
-        setShowWarning(false);
-        // Force a page reload to get fresh session data
-        window.location.reload();
-      }
+      await update();
+      setShowWarning(false);
     } catch (error) {
       console.error('Failed to extend session:', error);
     } finally {
@@ -146,7 +137,7 @@ export function SessionStatusIndicator() {
     }
 
     const calculateRemaining = () => {
-      const expiryTime = new Date(session.expires).getTime();
+      const expiryTime = new Date(session.expires!).getTime();
       const remaining = expiryTime - Date.now();
       setTimeRemaining(Math.max(0, remaining));
     };
@@ -191,7 +182,7 @@ export function useSessionManager() {
     }
 
     const checkExpiry = () => {
-      const expiryTime = new Date(session.expires).getTime();
+      const expiryTime = new Date(session.expires!).getTime();
       const remaining = expiryTime - Date.now();
       setIsExpiring(remaining <= WARNING_THRESHOLD);
     };
