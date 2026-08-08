@@ -19,8 +19,77 @@ if (apiKey && domain) {
 }
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>';
-const APP_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const APP_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera';
+const MAILGUN_DOMAIN = domain || '';
+
+export interface EmailAttachment {
+  filename: string;
+  data: Buffer | string;
+  contentType?: string;
+}
+
+export interface DeliveryMetadata { correlationId?: string }
+
+export interface SendEmailOptions {
+  to: string | string[];
+  subject: string;
+  html: string;
+  text?: string;
+  from?: string;
+  attachments?: EmailAttachment[];
+  cc?: string | string[];
+  bcc?: string | string[];
+  replyTo?: string;
+  metadata?: DeliveryMetadata;
+}
+
+export interface EmailResult {
+  success: boolean;
+  messageId?: string;
+  /** Sanitized compatibility alias; never contains provider response text. */
+  error?: string;
+  errorCode?: 'configuration_error' | 'provider_unavailable' | 'provider_rate_limited' | 'provider_rejected' | 'delivery_exception' | 'delivery_timeout';
+}
+
+export type EmailReadiness = { ready: boolean; errors: string[] };
+
+/** Validate production delivery configuration without breaking dev/test builds. */
+export function validateEmailReadiness(env: NodeJS.ProcessEnv = process.env): EmailReadiness {
+  const errors: string[] = [];
+  const configuredDomain = env.MAILGUN_DOMAIN?.trim();
+  const verifiedDomain = env.MAILGUN_VERIFIED_DOMAIN?.trim();
+  const sender = env.FROM_EMAIL?.trim();
+  const applicationUrl = (env.NEXTAUTH_URL || env.NEXT_PUBLIC_APP_URL)?.trim();
+
+  if (!env.MAILGUN_API_KEY?.trim()) errors.push('MAILGUN_API_KEY is missing');
+  if (!configuredDomain) errors.push('MAILGUN_DOMAIN is missing');
+  if (!verifiedDomain) errors.push('MAILGUN_VERIFIED_DOMAIN is missing');
+  if (configuredDomain && verifiedDomain && configuredDomain !== verifiedDomain) {
+    errors.push('MAILGUN_DOMAIN does not match MAILGUN_VERIFIED_DOMAIN');
+  }
+  if (!sender || !/^[^<>\s]+@[^<>\s]+\.[^<>\s]+$|^.+ <[^<>\s]+@[^<>\s]+\.[^<>\s]+>$/.test(sender)) {
+    errors.push('FROM_EMAIL must contain a valid sender address');
+  } else if (configuredDomain) {
+    const address = sender.match(/<([^>]+)>$/)?.[1] || sender;
+    const senderDomain = address.split('@')[1]?.toLowerCase();
+    if (senderDomain !== configuredDomain.toLowerCase()) {
+      errors.push('FROM_EMAIL must use the configured sending domain');
+    }
+  }
+  if (!applicationUrl) {
+    errors.push('NEXTAUTH_URL or NEXT_PUBLIC_APP_URL is missing');
+  } else {
+    try {
+      const url = new URL(applicationUrl);
+      if (url.protocol !== 'https:') errors.push('Production application URL must use HTTPS');
+    } catch {
+      errors.push('Application URL must be an absolute HTTP(S) URL');
+    }
+  }
+
+  return { ready: errors.length === 0, errors };
+}
 
 // Base email template with brand styling
 function getBaseEmailTemplate(content: string): string {
@@ -140,19 +209,15 @@ function getBaseEmailTemplate(content: string): string {
 
 // Send email wrapper with error handling
 export async function sendEmail({
-  to,
-  subject,
-  html,
-  text,
-  from = FROM_EMAIL,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-  from?: string;
-}): Promise<{ success: boolean; error?: string }> {
+  to, subject, html, text = '', from = FROM_EMAIL, attachments, cc, bcc, replyTo, metadata,
+}: SendEmailOptions): Promise<EmailResult> {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      const readiness = validateEmailReadiness();
+      if (!readiness.ready) {
+        throw new Error(`Transactional email is not ready: ${readiness.errors.join('; ')}`);
+      }
+    }
     // If Mailgun is not configured, behavior depends on environment:
     //   - dev (NODE_ENV !== 'production'): log the email, return success
     //     so local testing works without real Mailgun credentials.
@@ -162,12 +227,13 @@ export async function sendEmail({
     //     disappear without anyone noticing.
     if (!mg || !domain) {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('=== EMAIL (Mailgun not configured) ===');
-        console.log('To:', to);
-        console.log('From:', from);
-        console.log('Subject:', subject);
-        console.log('Text:', text);
-        console.log('======================================');
+        console.info({
+          event: 'email.delivery.skipped',
+          provider: 'mailgun',
+          recipientCount: Array.isArray(to) ? to.length : 1,
+          hasAttachments: Boolean(attachments?.length),
+          correlationId: metadata?.correlationId,
+        });
         return { success: true };
       }
       throw new Error(
@@ -177,21 +243,30 @@ export async function sendEmail({
       );
     }
 
-    await mg.messages.create(domain, {
+    const result = await mg.messages.create(domain, {
       from,
       to,
+      cc,
+      bcc,
       subject,
       html,
       text,
-    });
+      'h:Reply-To': replyTo,
+      attachment: attachments,
+      'v:correlation-id': metadata?.correlationId,
+    } as Parameters<typeof mg.messages.create>[1]);
 
-    return { success: true };
+    return { success: true, messageId: result.id };
   } catch (error: unknown) {
-    console.error('Email sending error:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to send email'
-    };
+    const status = typeof error === 'object' && error && 'status' in error
+      ? Number((error as { status?: unknown }).status) : undefined;
+    const errorCode: EmailResult['errorCode'] =
+      status === 429 ? 'provider_rate_limited'
+      : status && status >= 500 ? 'provider_unavailable'
+      : status ? 'provider_rejected'
+      : process.env.NODE_ENV === 'production' && !validateEmailReadiness().ready
+        ? 'configuration_error' : 'delivery_exception';
+    return { success: false, errorCode, error: errorCode };
   }
 }
 
@@ -585,8 +660,9 @@ ${APP_URL}
 export async function sendLoginCodeEmail(
   email: string,
   name: string,
-  code: string
-): Promise<{ success: boolean; error?: string }> {
+  code: string,
+  metadata?: DeliveryMetadata
+): Promise<EmailResult> {
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Your Login Code</h2>
     <p>Hi ${name || 'there'},</p>
@@ -628,6 +704,7 @@ ${APP_URL}
     subject: `${code} is your ${APP_NAME} login code`,
     html,
     text,
+    metadata,
   });
 }
 
@@ -688,4 +765,4 @@ ${APP_URL}
   });
 }
 
-export { FROM_EMAIL, APP_URL, APP_NAME };
+export { FROM_EMAIL, APP_URL, APP_NAME, MAILGUN_DOMAIN };
