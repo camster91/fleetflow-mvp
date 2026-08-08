@@ -2,6 +2,7 @@
  * Shared Zod schemas for API request validation.
  */
 import { z } from 'zod'
+import { deliveryStatusTransitionSchema } from '@/lib/deliveryTransitions'
 
 export const cuidLike = z.string().min(1).max(64)
 
@@ -12,10 +13,12 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
 })
 
+export const vehicleStatusSchema = z.enum(['active', 'inactive', 'delayed'])
+
 export const vehicleBodySchema = z
   .object({
     name: z.string().min(1).max(120).optional(),
-    status: z.enum(['active', 'inactive', 'maintenance', 'retired']).optional(),
+    status: vehicleStatusSchema.optional(),
     driver: z.string().max(120).nullable().optional(),
     location: z.string().max(240).nullable().optional(),
     mileage: z.number().nonnegative().nullable().optional(),
@@ -60,6 +63,30 @@ export const maintenanceBodySchema = z
     serviceProvider: z.string().max(200).nullable().optional(),
   })
   .passthrough()
+
+const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}, 'Invalid calendar date')
+
+/** Exact create contract shared by the maintenance UI/API and suggested actions. */
+export const maintenanceCreateValuesSchema = z.object({
+  vehicle: z.string().trim().min(1).max(120),
+  type: z.string().trim().min(1).max(200),
+  dueDate: dateOnlySchema,
+  priority: z.enum(['low', 'medium', 'high']),
+  notes: z.string().max(2000).optional(),
+  estimatedDuration: z.string().max(100).optional(),
+  partsNeeded: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
+  serviceProvider: z.string().max(200).optional(),
+  costEstimate: z.number().nonnegative().max(10_000_000).optional(),
+}).strict()
+
+/** Exact status-update contract shared by the delivery status API and actions. */
+export const deliveryStatusUpdateSchema = deliveryStatusTransitionSchema.extend({ status: z.enum(['pending', 'in-transit', 'delivered', 'cancelled']) })
+
+export const vehicleEditPrefillSchema = z.object({ status: vehicleStatusSchema.optional(), mileage: z.number().int().nonnegative().max(10_000_000).optional() }).strict()
+export const deliveryEditPrefillSchema = deliveryStatusUpdateSchema.partial().strict()
 
 export const teamInviteSchema = z.object({
   teamId: cuidLike,

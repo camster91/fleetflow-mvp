@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import {
   Truck, Plus, Search, Edit, Trash2,
   MapPin, Battery, Download, Grid, List,
@@ -22,6 +23,7 @@ import { useFilteredData } from '../../hooks/useFilteredData';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function VehiclesPage() {
+  const router = useRouter();
   const { data: vehicles, loading: isLoading, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
     api.getVehicles, [], []
   );
@@ -55,7 +57,13 @@ export default function VehiclesPage() {
   ];
 
   const handleAdd = () => { setEditingVehicle(null); setIsFormOpen(true); };
-  const handleEdit = (v: Vehicle) => { setEditingVehicle(v); setIsFormOpen(true); };
+  const handleEdit = (v: Vehicle) => {
+    const rawStatus = Array.isArray(router.query.status) ? router.query.status[0] : router.query.status;
+    const rawMileage = Array.isArray(router.query.mileage) ? router.query.mileage[0] : router.query.mileage;
+    const status = rawStatus && ['active', 'inactive', 'delayed'].includes(rawStatus) ? rawStatus as Vehicle['status'] : v.status;
+    const mileage = rawMileage && /^\d+$/.test(rawMileage) ? Number(rawMileage) : v.mileage;
+    setEditingVehicle({ ...v, status, mileage }); setIsFormOpen(true);
+  };
   const handleView = (v: Vehicle) => { setSelectedVehicle(v); setIsDetailOpen(true); };
 
   useRecordQuery({
@@ -63,6 +71,7 @@ export default function VehiclesPage() {
     loading: isLoading,
     resource: 'vehicles',
     onMatch: handleView,
+    onEdit: handleEdit,
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
   });
 

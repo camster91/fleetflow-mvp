@@ -49,4 +49,19 @@ describe('PATCH /api/deliveries/[id]/status — tenant isolation', () => {
     expect(res._getStatusCode()).toBe(404);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
+  it('preserves picked-up and bounded coordinates', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-a', role: 'user' } });
+    const delivery = { id: 'd1', customer: 'A', status: 'pending', notes: null, progress: 0, completedTime: null };
+    (prisma.delivery.findFirst as jest.Mock).mockResolvedValue(delivery);
+    const tx = { delivery: { update: jest.fn().mockResolvedValue({ ...delivery, status: 'picked-up', progress: 25 }) }, deliveryEvent: { create: jest.fn() } };
+    (prisma.$transaction as jest.Mock).mockImplementation(async (fn: Function) => fn(tx));
+    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'localhost:3000', origin: 'http://localhost:3000' }, query: { id: 'd1' }, body: { status: 'picked-up', latitude: 43.65, longitude: -79.38 } });
+    await handler(req as any, res as any); expect(res._getStatusCode()).toBe(200);
+    expect(tx.deliveryEvent.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ latitude: 43.65, longitude: -79.38 }) }));
+  });
+  it.each([[91, 0], [0, 181]])('rejects out-of-range coordinates', async (latitude, longitude) => {
+    (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-a', role: 'user' } });
+    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'localhost:3000', origin: 'http://localhost:3000' }, query: { id: 'd1' }, body: { status: 'failed', latitude, longitude } });
+    await handler(req as any, res as any); expect(res._getStatusCode()).toBe(400); expect(prisma.delivery.findFirst).not.toHaveBeenCalled();
+  });
 });

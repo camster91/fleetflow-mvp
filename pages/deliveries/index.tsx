@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import {
   Package, Plus, Search, MapPin, Truck, Clock,
   CheckCircle, Download, Navigation, Edit, Trash2, ChevronDown, AlertCircle,
@@ -22,6 +23,7 @@ import { useFilteredData } from '../../hooks/useFilteredData';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function DeliveriesPage() {
+  const router = useRouter();
   const { data: allData, loading: isLoading, refetch: loadData } = useDataFetch(
     async () => {
       const [d, v, c] = await Promise.all([api.getDeliveries(), api.getVehicles(), api.getClients()]);
@@ -77,12 +79,18 @@ export default function DeliveriesPage() {
     { title: 'Delivered', value: deliveries.filter((d) => d.status === 'delivered').length, icon: <CheckCircle className="h-6 w-6 text-emerald-600" />, iconBgColor: 'bg-emerald-50' },
   ];
 
-  const handleEdit = (d: Delivery) => { setEditingDelivery(d); setIsFormOpen(true); };
+  const handleEdit = (d: Delivery) => {
+    const rawStatus = Array.isArray(router.query.status) ? router.query.status[0] : router.query.status;
+    const rawNotes = Array.isArray(router.query.notes) ? router.query.notes[0] : router.query.notes;
+    const status = rawStatus && ['pending', 'in-transit', 'delivered', 'cancelled'].includes(rawStatus) ? rawStatus as Delivery['status'] : d.status;
+    setEditingDelivery({ ...d, status, ...(typeof rawNotes === 'string' ? { notes: rawNotes.slice(0, 2000) } : {}) }); setIsFormOpen(true);
+  };
   useRecordQuery({
     records: deliveries,
     loading: isLoading,
     resource: 'deliveries',
     onMatch: handleEdit,
+    onEdit: handleEdit,
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
   });
   const handleDelete = (d: Delivery) => {

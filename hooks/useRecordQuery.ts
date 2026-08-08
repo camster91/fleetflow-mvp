@@ -5,6 +5,7 @@ interface UseRecordQueryOptions<T extends { id: string }> {
   records: T[]
   loading: boolean
   onMatch: (record: T) => void
+  onEdit?: (record: T) => void
   resource: 'vehicles' | 'deliveries' | 'maintenance'
   onUnavailable: () => void
 }
@@ -19,6 +20,7 @@ export function useRecordQuery<T extends { id: string }>({
   records,
   loading,
   onMatch,
+  onEdit,
   resource,
   onUnavailable,
 }: UseRecordQueryOptions<T>): void {
@@ -26,15 +28,18 @@ export function useRecordQuery<T extends { id: string }>({
   const processed = useRef<string | null>(null)
   const inFlight = useRef<string | null>(null)
   const onMatchRef = useRef(onMatch)
+  const onEditRef = useRef(onEdit)
   const onUnavailableRef = useRef(onUnavailable)
 
   useEffect(() => {
     onMatchRef.current = onMatch
+    onEditRef.current = onEdit
     onUnavailableRef.current = onUnavailable
-  }, [onMatch, onUnavailable])
+  }, [onMatch, onEdit, onUnavailable])
 
-  const raw = router.query.record
+  const raw = router.query.edit ?? router.query.record
   const recordId = Array.isArray(raw) ? raw[0] : raw
+  const editMode = Boolean(router.query.edit)
 
   useEffect(() => {
     if (!router.isReady || loading) return
@@ -48,7 +53,7 @@ export function useRecordQuery<T extends { id: string }>({
     const controller = new AbortController()
 
     const consumeQuery = async () => {
-      const { record: _record, ...remainingQuery } = router.query
+      const { record: _record, edit: _edit, ...remainingQuery } = router.query
       try {
         await router.replace(
           { pathname: router.pathname, query: remainingQuery },
@@ -66,7 +71,7 @@ export function useRecordQuery<T extends { id: string }>({
       if (local) {
         processed.current = recordId
         inFlight.current = null
-        onMatchRef.current(local)
+        ;(editMode ? onEditRef.current ?? onMatchRef.current : onMatchRef.current)(local)
         await consumeQuery()
         return
       }
@@ -85,7 +90,7 @@ export function useRecordQuery<T extends { id: string }>({
             candidate && typeof candidate === 'object' &&
             (candidate as { id?: unknown }).id === recordId
           ) {
-            onMatchRef.current(candidate as T)
+            ;(editMode ? onEditRef.current ?? onMatchRef.current : onMatchRef.current)(candidate as T)
           } else {
             onUnavailableRef.current()
           }
@@ -109,5 +114,5 @@ export function useRecordQuery<T extends { id: string }>({
       controller.abort()
       if (inFlight.current === recordId) inFlight.current = null
     }
-  }, [loading, recordId, records, resource, router])
+  }, [editMode, loading, recordId, records, resource, router])
 }

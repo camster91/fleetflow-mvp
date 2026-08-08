@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma'
 import { dbToVehicle, vehicleToDb, logActivity } from '../../../lib/fleet'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canManageVehicles, canViewVehicles } from '../../../lib/permissions'
+import { parseBody, vehicleBodySchema } from '../../../lib/validation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -22,7 +23,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PUT') {
     if (!canManageVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const { ownerId: _ownerId, ...updateFields } = vehicleToDb(req.body, tenant.ownerId)
+    const parsed = parseBody(vehicleBodySchema, req.body)
+    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+    const { ownerId: _ownerId, ...updateFields } = vehicleToDb({ ...req.body, ...parsed.data }, tenant.ownerId)
     const result = await prisma.vehicle.updateMany({
       where: scopedWhere,
       data: { ...updateFields, lastUpdated: new Date() },

@@ -5,7 +5,7 @@ import { canViewBusinessData } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { rateLimitMiddleware } from '@/lib/rateLimit'
 
-const querySchema = z.object({ type: z.enum(['vehicle', 'client']), q: z.string().trim().max(100).optional().default('') })
+const querySchema = z.object({ type: z.enum(['vehicle', 'delivery', 'client']), q: z.string().trim().max(100).optional().default('') })
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }) }
@@ -18,6 +18,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (parsed.data.type === 'vehicle') {
       const rows = await prisma.vehicle.findMany({ where: parsed.data.q ? { AND: [context.tenant.resourceWhere, { name: { contains: parsed.data.q, mode: 'insensitive' } }] } : context.tenant.resourceWhere, select: { id: true, name: true }, orderBy: [{ name: 'asc' }, { id: 'asc' }], take: 20 })
       return res.status(200).json({ entities: rows.map(row => ({ id: row.id, label: row.name.slice(0, 120) })) })
+    }
+    if (parsed.data.type === 'delivery') {
+      const rows = await prisma.delivery.findMany({ where: parsed.data.q ? { AND: [context.tenant.resourceWhere, { customer: { contains: parsed.data.q, mode: 'insensitive' } }] } : context.tenant.resourceWhere, select: { id: true, customer: true }, orderBy: [{ customer: 'asc' }, { id: 'asc' }], take: 20 })
+      return res.status(200).json({ entities: rows.map(row => ({ id: row.id, label: row.customer.slice(0, 120) })) })
     }
     const rows = await prisma.client.findMany({ where: parsed.data.q ? { AND: [context.tenant.resourceWhere, { OR: [{ businessName: { contains: parsed.data.q, mode: 'insensitive' } }, { name: { contains: parsed.data.q, mode: 'insensitive' } }] }] } : context.tenant.resourceWhere, select: { id: true, name: true, businessName: true }, orderBy: [{ businessName: 'asc' }, { name: 'asc' }, { id: 'asc' }], take: 20 })
     return res.status(200).json({ entities: rows.map(row => ({ id: row.id, label: (row.businessName || row.name).slice(0, 120) })) })

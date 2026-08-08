@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, ChevronDown, Check, ThumbsDown, ThumbsUp, X } from 'lucide-react'
+import { ActionPreview } from '@/components/assistant/ActionPreview'
 
 export interface BriefEvidence {
   entityType: 'vehicle' | 'delivery' | 'maintenance' | 'client'
@@ -53,9 +54,14 @@ function presentValue(value: BriefEvidence['value']): string {
 
 export function FindingCard({ finding, canManage, canFeedback, busy = false, onAction, cardRef }: FindingCardProps) {
   const [expanded, setExpanded] = useState(false)
+  const [deliveryStatus, setDeliveryStatus] = useState<'pending' | 'in-transit' | 'delivered' | 'cancelled'>('in-transit')
+  const [maintenanceType, setMaintenanceType] = useState('')
   const severity = ['high', 'medium', 'low'].includes(finding.severity) ? finding.severity : 'unknown'
   const urgency = severity === 'high' ? 'High urgency' : severity === 'medium' ? 'Medium urgency' : severity === 'low' ? 'Low urgency' : 'Urgency unavailable'
   const disclosureId = `finding-evidence-${finding.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+  const deliveryEvidence = finding.evidence.find(item => item.entityType === 'delivery' && item.timestamp)
+  const vehicleEvidence = finding.evidence.find(item => item.entityType === 'vehicle' && item.timestamp)
+  const today = new Date().toISOString().slice(0, 10)
 
   return (
     <article ref={cardRef} tabIndex={-1} data-testid="finding-card" className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
@@ -107,6 +113,11 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
           <button disabled={busy} type="button" aria-label={`Resolve ${finding.title}`} onClick={() => onAction(finding, 'RESOLVE')} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"><Check className="h-4 w-4" aria-hidden="true" />Resolve</button>
         </>}
       </div>
+      {canManage && finding.evidenceValid && (deliveryEvidence || vehicleEvidence) && <section aria-label={`Suggested actions for ${finding.title}`} className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+        <p className="text-sm font-semibold text-slate-800">Suggested actions</p>
+        {deliveryEvidence && <div className="space-y-2"><label className="block text-xs font-medium text-slate-700">Delivery status<select value={deliveryStatus} onChange={event => setDeliveryStatus(event.target.value as typeof deliveryStatus)} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"><option value="pending">Pending</option><option value="in-transit">In transit</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><ActionPreview sourceFindingId={finding.id} action={{ type: 'update_delivery_status', deliveryId: deliveryEvidence.entityId, values: { status: deliveryStatus }, expectedUpdatedAt: deliveryEvidence.timestamp! }} /></div>}
+        {vehicleEvidence && <div className="space-y-2"><label className="block text-xs font-medium text-slate-700">Maintenance task type<input value={maintenanceType} maxLength={200} onChange={event => setMaintenanceType(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600" /></label>{maintenanceType.trim() && <ActionPreview sourceFindingId={finding.id} action={{ type: 'create_maintenance_task', vehicleId: vehicleEvidence.entityId, values: { vehicle: 'Authorized vehicle', type: maintenanceType.trim(), dueDate: today, priority: finding.severity === 'high' ? 'high' : finding.severity === 'medium' ? 'medium' : 'low' }, expectedVehicleUpdatedAt: vehicleEvidence.timestamp! }} />}</div>}
+      </section>}
     </article>
   )
 }

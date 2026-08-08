@@ -678,6 +678,27 @@ model AuditLog {
   @@index([createdAt])
 }
 
+// Durable single-use receipt for a confirmed assistant action. The unique
+// signed-preview nonce is required to make retries and concurrent submits safe.
+model ActionExecution {
+  id              String   @id @default(cuid())
+  previewNonce    String   @unique
+  ownerId         String
+  teamId          String?
+  proposerId      String
+  confirmerId     String
+  sourceFindingId String?
+  actionType      String
+  result          String
+  createdAt       DateTime @default(now())
+
+  @@index([ownerId, teamId, createdAt])
+  @@index([proposerId, createdAt])
+  @@index([confirmerId, createdAt])
+  @@index([sourceFindingId])
+  @@index([teamId, createdAt])
+}
+
 model Announcement {
   id          String   @id @default(cuid())
   message     String

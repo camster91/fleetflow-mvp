@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../lib/fleet'
-import { parseBody, maintenanceBodySchema } from '../../../lib/validation'
+import { parseBody, maintenanceCreateValuesSchema } from '../../../lib/validation'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 
@@ -32,18 +32,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const parsed = parseBody(maintenanceBodySchema, req.body)
+    const parsed = parseBody(maintenanceCreateValuesSchema, req.body)
     if ('error' in parsed) return res.status(400).json({ error: parsed.error })
-    const body = { ...req.body, ...parsed.data }
+    const body = parsed.data
 
-    let vehicleId: string | undefined = body.vehicleId
-    if (vehicleId) {
-      const owned = await prisma.vehicle.findFirst({ where: { AND: [{ id: vehicleId }, tenant.resourceWhere] }, select: { id: true } })
-      if (!owned) return res.status(400).json({ error: 'Invalid vehicle' })
-    } else if (body.vehicle) {
-      const v = await prisma.vehicle.findFirst({ where: { AND: [{ name: body.vehicle }, tenant.resourceWhere] } })
-      vehicleId = v?.id
-    }
+    const v = await prisma.vehicle.findFirst({ where: { AND: [{ name: body.vehicle }, tenant.resourceWhere] } })
+    const vehicleId = v?.id
     const data = {
       ...maintenanceTaskToDb(body, tenant.ownerId, vehicleId),
       ownerId: tenant.ownerId,
