@@ -8,6 +8,8 @@ import { Button } from '../../components/ui/Button';
 import { subDays } from 'date-fns';
 import { Truck, Wrench, Package, Users, Download } from 'lucide-react';
 import { notify } from '../../services/notifications';
+import { MaintenanceRiskBadge } from '../../components/intelligence/MaintenanceRiskBadge';
+import type { MaintenanceRiskResult } from '../../lib/intelligence/maintenanceRisk';
 
 interface DateRange { from: Date; to: Date; label: string; }
 interface AnalyticsData {
@@ -24,6 +26,11 @@ interface AnalyticsData {
     activityOverTime: Array<{ name: string; deliveries: number; maintenance: number }>;
     maintenanceByCategory: Array<{ name: string; value: number; cost: number }>;
     vehicleUtilization: Array<{ name: string; deliveries: number }>;
+  };
+  maintenanceRisk: {
+    items: MaintenanceRiskResult[];
+    evaluatedVehicles: number;
+    coverage: { vehiclesComplete: boolean; tasksComplete: boolean };
   };
 }
 
@@ -130,6 +137,17 @@ export default function AnalyticsPage() {
           loading={isLoading}
         />
       </div>
+
+      <section aria-labelledby="maintenance-risk-heading" className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-3">
+          <h2 id="maintenance-risk-heading" className="font-semibold text-slate-950">Maintenance attention</h2>
+          <p className="mt-1 text-sm text-slate-600">Transparent rules rank recorded operational indicators. Scores are not failure predictions.</p>
+        </div>
+        {isLoading ? <div role="status" className="h-20 animate-pulse rounded-xl bg-slate-100"><span className="sr-only">Loading maintenance attention scores</span></div>
+          : (data?.maintenanceRisk?.items.length ?? 0) === 0 ? <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-600">No vehicles are available to assess.</p>
+          : <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{data?.maintenanceRisk?.items.map(risk => <MaintenanceRiskBadge key={risk.vehicleId} risk={risk} />)}</div>}
+        {data?.maintenanceRisk && (!data.maintenanceRisk.coverage.vehiclesComplete || !data.maintenanceRisk.coverage.tasksComplete) && <p role="note" className="mt-3 text-sm text-amber-800">This view reached its bounded record limit. Scores cover only the evaluated records shown.</p>}
+      </section>
 
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
