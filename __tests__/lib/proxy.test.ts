@@ -20,7 +20,7 @@ describe('public and protected route policy', () => {
     )
   })
 
-  it.each(['/clients', '/sop', '/vending-machines', '/driver/delivery/1', '/routes'])(
+  it.each(['/clients', '/sop', '/vending-machines', '/driver/delivery/1', '/routes', '/intelligence'])(
     'protects application surface %s',
     async (pathname) => {
       const response = await proxy(new NextRequest(`https://fleet.example${pathname}`))

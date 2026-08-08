@@ -8,12 +8,12 @@ import { resolveApiCursorSecret } from '@/lib/publicApi'
 import { constantTimeCompare } from '@/lib/tokens'
 import { assessDataQuality } from '@/lib/intelligence/dataQuality'
 import { generateFindings } from '@/lib/intelligence/generateFindings'
-import type { Finding, FindingEvidence, IntelligenceRecords } from '@/lib/intelligence/types'
+import type { Finding, IntelligenceRecords } from '@/lib/intelligence/types'
+import { packFindingEvidence, parseStoredEvidence, presentStoredFinding } from '@/lib/intelligence/presentation'
+export { FINDING_EVIDENCE_BYTES_MAX, FINDING_EVIDENCE_ITEMS_MAX, packFindingEvidence, parseStoredEvidence } from '@/lib/intelligence/presentation'
 
 export const FINDING_SOURCE_LIMIT = 500
 export const FINDING_PAGE_LIMIT_MAX = 50
-export const FINDING_EVIDENCE_BYTES_MAX = 16_384
-export const FINDING_EVIDENCE_ITEMS_MAX = 100
 export const FINDING_PERSIST_LIMIT = 500
 export const FINDING_RECONCILE_LIMIT = 500
 export const FINDING_TRANSACTION_MAX_WAIT_MS = 10_000
@@ -21,10 +21,7 @@ export const FINDING_TRANSACTION_TIMEOUT_MS = 30_000
 
 const READ_STATUSES = new Set(['OPEN', 'DISMISSED', 'RESOLVED', 'EXPIRED'])
 const PATCH_ACTIONS = new Set(['HELPFUL', 'NOT_HELPFUL', 'DISMISS', 'RESOLVE'])
-const EVIDENCE_ENTITY_TYPES = new Set(['vehicle', 'delivery', 'maintenance', 'client'])
-const STORED_STATUSES = new Set(['OPEN', 'DISMISSED', 'RESOLVED'])
 const STORED_FEEDBACK = new Set(['HELPFUL', 'NOT_HELPFUL'])
-const EVIDENCE_KEYS = ['entityId', 'entityType', 'field', 'timestamp', 'value']
 const FINDING_CURSOR_ENDPOINT = 'intelligence/findings'
 
 const findingSelect = {
@@ -51,6 +48,7 @@ const clientSelect = {
 } as const
 
 class FindingIdentityConflict extends Error {}
+class InvalidFindingTransition extends Error {}
 class ConcurrentFindingUpdate extends Error {
   code = 'P2034'
 }
@@ -66,78 +64,6 @@ function positiveInteger(value: string | undefined, fallback: number, maximum = 
   return Number.isSafeInteger(parsed) && parsed > 0 && parsed <= maximum ? parsed : null
 }
 
-function finitePrimitive(value: unknown): boolean {
-  return value === null || typeof value === 'string' || typeof value === 'boolean' ||
-    (typeof value === 'number' && Number.isFinite(value))
-}
-
-function validEvidenceItem(item: unknown): item is FindingEvidence {
-  if (!item || typeof item !== 'object' || Array.isArray(item)) return false
-  const value = item as Record<string, unknown>
-  const keys = Object.keys(value).sort()
-  return keys.length === EVIDENCE_KEYS.length && keys.every((key, index) => key === EVIDENCE_KEYS[index]) &&
-    typeof value.entityType === 'string' && EVIDENCE_ENTITY_TYPES.has(value.entityType) &&
-    typeof value.entityId === 'string' && value.entityId.length > 0 && value.entityId.length <= 128 &&
-    typeof value.field === 'string' && value.field.length > 0 && value.field.length <= 128 &&
-    finitePrimitive(value.value) &&
-    (value.timestamp === null || (
-      typeof value.timestamp === 'string' && value.timestamp.length <= 64 &&
-      Number.isFinite(new Date(value.timestamp).getTime())
-    ))
-}
-
-export interface ParsedFindingEvidence {
-  evidence: FindingEvidence[]
-  valid: boolean
-  evidenceTotal: number | null
-  evidenceTruncated: boolean
-}
-
-export function parseStoredEvidence(value: unknown): ParsedFindingEvidence {
-  if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') > FINDING_EVIDENCE_BYTES_MAX) {
-    return { evidence: [], valid: false, evidenceTotal: null, evidenceTruncated: true }
-  }
-  try {
-    const parsed: unknown = JSON.parse(value)
-    // Read legacy array rows safely while all new writes use the completeness envelope.
-    if (Array.isArray(parsed)) {
-      if (parsed.length > FINDING_EVIDENCE_ITEMS_MAX || !parsed.every(validEvidenceItem)) {
-        return { evidence: [], valid: false, evidenceTotal: null, evidenceTruncated: true }
-      }
-      return { evidence: parsed, valid: true, evidenceTotal: parsed.length, evidenceTruncated: false }
-    }
-    if (!parsed || typeof parsed !== 'object') {
-      return { evidence: [], valid: false, evidenceTotal: null, evidenceTruncated: true }
-    }
-    const envelope = parsed as Record<string, unknown>
-    const keys = Object.keys(envelope).sort()
-    const items = envelope.items
-    const total = envelope.total
-    const truncated = envelope.truncated
-    const envelopeKeys = ['items', 'total', 'truncated']
-    if (
-      keys.length !== envelopeKeys.length || !keys.every((key, index) => key === envelopeKeys[index]) ||
-      !Array.isArray(items) || items.length > FINDING_EVIDENCE_ITEMS_MAX || !items.every(validEvidenceItem) ||
-      !Number.isSafeInteger(total) || (total as number) < items.length ||
-      typeof truncated !== 'boolean' || truncated !== ((total as number) > items.length)
-    ) return { evidence: [], valid: false, evidenceTotal: null, evidenceTruncated: true }
-    return { evidence: items, valid: true, evidenceTotal: total as number, evidenceTruncated: truncated }
-  } catch {
-    return { evidence: [], valid: false, evidenceTotal: null, evidenceTruncated: true }
-  }
-}
-
-export function packFindingEvidence(evidence: readonly FindingEvidence[]): string {
-  const valid = evidence.filter(validEvidenceItem)
-  const items: FindingEvidence[] = []
-  for (const item of valid) {
-    if (items.length >= FINDING_EVIDENCE_ITEMS_MAX) break
-    const candidate = [...items, item]
-    const encoded = JSON.stringify({ items: candidate, total: valid.length, truncated: candidate.length < valid.length })
-    if (Buffer.byteLength(encoded, 'utf8') <= FINDING_EVIDENCE_BYTES_MAX) items.push(item)
-  }
-  return JSON.stringify({ items, total: valid.length, truncated: items.length < valid.length })
-}
 
 type ExistingFindingLifecycle = {
   id?: string
@@ -184,6 +110,11 @@ function findingTenantKey(tenant: TenantContext): string {
   return tenant.teamId ? `team:${tenant.teamId}` : `personal:${tenant.ownerId}`
 }
 
+export function intelligenceRunId(tenant: TenantContext): string {
+  const key = findingTenantKey(tenant)
+  return key.length <= 191 ? key : `${tenant.teamId ? 'team' : 'personal'}:sha256:${crypto.createHash('sha256').update(key).digest('hex')}`
+}
+
 export function createFindingCursor(
   tenant: TenantContext,
   status: string,
@@ -221,29 +152,7 @@ function readFindingCursor(
   }
 }
 
-function serializeFinding(row: Record<string, unknown>, now: Date) {
-  const parsed = parseStoredEvidence(row.evidence)
-  const expiresAt = row.expiresAt instanceof Date ? row.expiresAt : null
-  const statusValid = typeof row.status === 'string' && STORED_STATUSES.has(row.status)
-  const status = statusValid ? row.status : 'UNKNOWN'
-  const feedbackValid = row.feedback === null || (typeof row.feedback === 'string' && STORED_FEEDBACK.has(row.feedback))
-  const feedback = feedbackValid ? row.feedback : null
-  const expired = status === 'OPEN' && expiresAt !== null && expiresAt.getTime() <= now.getTime()
-  const { evidence: _rawEvidence, ...safe } = row
-  return {
-    ...safe,
-    status,
-    statusValid,
-    feedback,
-    feedbackValid,
-    evidence: parsed.evidence,
-    evidenceValid: parsed.valid,
-    evidenceTotal: parsed.evidenceTotal,
-    evidenceTruncated: parsed.evidenceTruncated,
-    expired,
-    effectiveStatus: expired ? 'EXPIRED' : status,
-  }
-}
+const serializeFinding = presentStoredFinding
 
 function auditData(
   session: { user: { id: string } },
@@ -415,6 +324,10 @@ async function persistFindingSnapshot(
   const generatedTotal = snapshot.findings.length
   const persistedFindings = snapshot.findings.slice(0, FINDING_PERSIST_LIMIT)
   const findingsTruncated = generatedTotal > persistedFindings.length
+  const evidenceComplete = !findingsTruncated && persistedFindings.every(finding => {
+    const parsed = parseStoredEvidence(packFindingEvidence(finding.evidence))
+    return parsed.valid && !parsed.evidenceTruncated && parsed.evidenceTotal === finding.evidence.length
+  })
   const persistedIds = persistedFindings.map(finding => finding.id)
   const existing = persistedIds.length > 0 ? await tx.intelligenceFinding.findMany({
     where: { AND: [scopedFindingWhere(tenant), { id: { in: persistedIds } }] },
@@ -484,16 +397,36 @@ async function persistFindingSnapshot(
   }
   if (audits.length > 0) await tx.auditLog.createMany({ data: audits })
 
+  const sourceComplete = !snapshot.sourceTruncated
+  const findingsComplete = !findingsTruncated
+  const runData = {
+    ownerId: tenant.ownerId,
+    teamId: tenant.teamId,
+    generatedAt: now,
+    sourceComplete,
+    findingsComplete,
+    reconciliationComplete,
+    evidenceComplete,
+    findingTotal: generatedTotal,
+    sourceCounts: JSON.stringify(snapshot.recordsScannedByEntity),
+  }
+  await tx.intelligenceRun.upsert({
+    where: { id: intelligenceRunId(tenant) },
+    create: { id: intelligenceRunId(tenant), ...runData },
+    update: runData,
+  })
+
   return {
     generatedTotal,
     persistedTotal: persistedFindings.length,
     findingsTruncated,
     autoResolved,
     coverage: {
-      complete: coverageComplete,
+      complete: coverageComplete && evidenceComplete,
       sourceTruncated: snapshot.sourceTruncated,
       findingsTruncated,
       reconciliationComplete,
+      evidenceComplete,
       sourceLimitPerEntity: FINDING_SOURCE_LIMIT,
       findingPersistLimit: FINDING_PERSIST_LIMIT,
       reconciliationLimit: FINDING_RECONCILE_LIMIT,
@@ -571,6 +504,12 @@ async function patchFinding(req: NextApiRequest, res: NextApiResponse, context: 
         where: { AND: [{ id }, scopedFindingWhere(context.tenant)] },
       })
       if (!finding) return null
+      const expired = finding.expiresAt instanceof Date && finding.expiresAt.getTime() <= now.getTime()
+      const lifecycle = action === 'DISMISS' || action === 'RESOLVE'
+      if ((lifecycle && (finding.status !== 'OPEN' || expired)) || (!lifecycle && expired)) {
+        throw new InvalidFindingTransition()
+      }
+      if (!lifecycle && finding.feedback === action) return { row: finding, noop: true }
       const data = action === 'HELPFUL' || action === 'NOT_HELPFUL'
         ? { feedback: action }
         : action === 'DISMISS'
@@ -595,11 +534,12 @@ async function patchFinding(req: NextApiRequest, res: NextApiResponse, context: 
           ...(action === 'HELPFUL' || action === 'NOT_HELPFUL' ? { feedback: action } : { status: data.status as string }),
         }),
       })
-      return { ...finding, ...data }
+      return { row: { ...finding, ...data }, noop: false }
     }, FINDING_TRANSACTION_OPTIONS))
     if (!result) return res.status(404).json({ error: 'Finding not found' })
-    return res.status(200).json({ finding: serializeFinding(result as unknown as Record<string, unknown>, now) })
-  } catch {
+    return res.status(200).json({ finding: serializeFinding(result.row as unknown as Record<string, unknown>, now), noop: result.noop })
+  } catch (error) {
+    if (error instanceof InvalidFindingTransition) return res.status(409).json({ error: 'INVALID_TRANSITION' })
     console.error('Intelligence finding update failed')
     return res.status(500).json({ error: 'Unable to update finding' })
   }

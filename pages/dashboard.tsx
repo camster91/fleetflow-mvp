@@ -24,6 +24,7 @@ import { notify } from '../services/notifications';
 import { OnboardingModal } from '../components/onboarding/OnboardingModal';
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
 import { DataQualityCard } from '../components/intelligence/DataQualityCard';
+import { IntelligenceBrief } from '../components/intelligence/IntelligenceBrief';
 
 // Import modals
 import AnnouncementModal from '../components/AnnouncementModal';
@@ -239,6 +240,10 @@ export default function Dashboard() {
         </Button>
       }
     >
+      <div className="mb-6">
+        <IntelligenceBrief />
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {stats.map((stat, index) => (

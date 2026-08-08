@@ -84,6 +84,12 @@ jest.mock('../../components/onboarding/OnboardingModal', () => ({
 jest.mock('../../components/onboarding/SetupChecklist', () => ({
   SetupChecklist: () => <div data-testid="setup-checklist">Setup Checklist</div>,
 }));
+jest.mock('../../components/intelligence/IntelligenceBrief', () => ({
+  IntelligenceBrief: () => <section aria-label="Fleet intelligence brief">What needs attention today</section>,
+}));
+jest.mock('../../components/intelligence/DataQualityCard', () => ({
+  DataQualityCard: () => <section aria-label="Data quality">Data quality</section>,
+}));
 
 // Mock modals (default exports)
 jest.mock('../../components/AnnouncementModal', () => () => <div data-testid="announcement-modal" />);

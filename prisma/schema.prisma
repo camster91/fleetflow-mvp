@@ -89,6 +89,7 @@ model User {
   announcements   Announcement[]
   taskShareLinks TaskShareLink[]
   intelligenceFindings IntelligenceFinding[]
+  intelligenceRuns IntelligenceRun[]
 
   @@index([email])
   @@index([googleId])
@@ -182,6 +183,7 @@ model Team {
   vendingMachines VendingMachine[]
   announcements   Announcement[]
   intelligenceFindings IntelligenceFinding[]
+  intelligenceRuns IntelligenceRun[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -334,6 +336,24 @@ model IntelligenceFinding {
   @@index([ownerId, teamId, score(sort: Desc), id])
   @@index([ownerId, teamId, status, score(sort: Desc), id])
   @@index([expiresAt])
+}
+
+model IntelligenceRun {
+  id                     String   @id
+  ownerId                String
+  owner                  User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId                 String?
+  team                   Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  generatedAt            DateTime @default(now())
+  sourceComplete         Boolean
+  findingsComplete       Boolean
+  reconciliationComplete Boolean
+  evidenceComplete       Boolean
+  findingTotal           Int
+  sourceCounts           String
+
+  @@index([ownerId, teamId])
+  @@index([generatedAt])
 }
 
 // Core Business Models

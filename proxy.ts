@@ -40,6 +40,7 @@ const PROTECTED_PREFIXES = [
   '/vending-machines',
   '/driver',
   '/routes',
+  '/intelligence',
 ]
 
 const PUBLIC_API_PREFIXES = ['/api/auth', '/api/task']

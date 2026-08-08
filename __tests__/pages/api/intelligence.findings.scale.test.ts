@@ -42,6 +42,7 @@ function createWriteTx() {
       createMany: jest.fn().mockImplementation(async ({ data }: { data: unknown[] }) => ({ count: data.length })),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    intelligenceRun: { upsert: jest.fn() },
     auditLog: {
       createMany: jest.fn().mockImplementation(async ({ data }: { data: unknown[] }) => ({ count: data.length })),
     },

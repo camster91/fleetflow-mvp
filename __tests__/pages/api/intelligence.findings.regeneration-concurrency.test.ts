@@ -47,6 +47,7 @@ function transactionState(options: {
         return { count: 1 }
       }),
     },
+    intelligenceRun: { upsert: jest.fn() },
     auditLog: { createMany: jest.fn() },
     $executeRaw: jest.fn().mockImplementation(async () => {
       if (options.updateConflict) throw Object.assign(new Error('serialization conflict'), { code: 'P2034' })

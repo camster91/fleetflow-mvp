@@ -48,6 +48,7 @@ function createTx() {
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findFirst: jest.fn().mockResolvedValue(stored()),
     },
+    intelligenceRun: { upsert: jest.fn() },
     auditLog: {
       createMany: jest.fn(),
       create: jest.fn(),
@@ -98,6 +99,25 @@ describe('/api/intelligence/findings', () => {
     }))
   })
 
+  it('renders the explicit dismissed lifecycle filter in exact workspace scope', async () => {
+    ;(prisma.intelligenceFinding.findMany as jest.Mock).mockResolvedValue([stored({ status: 'DISMISSED' })])
+    const { req, res } = createMocks({ method: 'GET', query: { status: 'DISMISSED' } })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(200)
+    expect(prisma.intelligenceFinding.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { AND: [scope, { status: 'DISMISSED' }] } }))
+    expect(res._getJSONData().findings[0].effectiveStatus).toBe('DISMISSED')
+  })
+
+  it('redacts schema-valid legacy PII from the full findings route', async () => {
+    ;(prisma.intelligenceFinding.findMany as jest.Mock).mockResolvedValue([stored({ evidence: JSON.stringify({
+      items: [{ entityType: 'client', entityId: 'c-1', field: 'email', value: 'private@example.test', timestamp: null }], total: 1, truncated: false,
+    }) })])
+    const { req, res } = createMocks({ method: 'GET' })
+    await handler(req as never, res as never)
+    expect(res._getJSONData().findings[0]).toEqual(expect.objectContaining({ evidence: [], evidenceValid: false, evidenceTruncated: true }))
+    expect(res._getData()).not.toContain('private@example.test')
+  })
+
   it.each([
     [{ status: 'INVALID' }, 'Invalid status filter'],
     [{ status: ['OPEN', 'RESOLVED'] }, 'Invalid status filter'],
@@ -143,6 +163,11 @@ describe('/api/intelligence/findings', () => {
     expect(creates).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: 'attacker' })]))
     expect(creates[0]).toEqual(expect.objectContaining(scope))
     expect(tx.auditLog.createMany).toHaveBeenCalledTimes(1)
+    expect(tx.intelligenceRun.upsert).toHaveBeenCalledWith({
+      where: { id: 'team:team-1' },
+      create: expect.objectContaining({ id: 'team:team-1', ...scope, generatedAt: NOW, sourceComplete: true, findingsComplete: true, reconciliationComplete: true, evidenceComplete: true }),
+      update: expect.objectContaining({ ...scope, generatedAt: NOW, findingTotal: expect.any(Number), sourceCounts: expect.any(String) }),
+    })
     expect(JSON.stringify(tx.auditLog.createMany.mock.calls)).not.toContain('Member')
   })
 
@@ -230,6 +255,34 @@ describe('/api/intelligence/findings', () => {
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(403)
     expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
+
+  it.each(['DISMISSED', 'RESOLVED'])('rejects lifecycle transition from %s without update or audit', async status => {
+    tx.intelligenceFinding.findFirst.mockResolvedValue(stored({ status }))
+    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'x', origin: 'http://x' }, body: { id: stored().id, action: 'RESOLVE' } })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(409)
+    expect(res._getJSONData()).toEqual({ error: 'INVALID_TRANSITION' })
+    expect(tx.intelligenceFinding.updateMany).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+  })
+
+  it('returns a deliberate feedback no-op without update or audit and exposes only public finding keys', async () => {
+    tx.intelligenceFinding.findFirst.mockResolvedValue(stored({ feedback: 'HELPFUL' }))
+    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'x', origin: 'http://x' }, body: { id: stored().id, action: 'HELPFUL' } })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(200)
+    expect(res._getJSONData().noop).toBe(true)
+    expect(tx.intelligenceFinding.updateMany).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+    expect(res._getJSONData().finding).not.toHaveProperty('ownerId')
+    expect(res._getJSONData().finding).not.toHaveProperty('teamId')
+    expect(Object.keys(res._getJSONData().finding).sort()).toEqual([
+      'action', 'actionUrl', 'confidence', 'effectiveStatus', 'evidence', 'evidenceTotal',
+      'evidenceTruncated', 'evidenceValid', 'expired', 'expiresAt', 'explanation', 'feedback',
+      'feedbackValid', 'generatedAt', 'id', 'resolvedAt', 'ruleVersion', 'score', 'severity',
+      'status', 'statusValid', 'title', 'type',
+    ].sort())
   })
 
   it.each([
