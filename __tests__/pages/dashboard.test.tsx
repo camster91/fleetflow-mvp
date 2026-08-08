@@ -37,6 +37,10 @@ jest.mock('lucide-react', () => ({
   Calendar: ({ className }: any) => <span className={className}>Calendar</span>,
   BarChart3: ({ className }: any) => <span className={className}>BarChart3</span>,
   MessageSquare: ({ className }: any) => <span className={className}>MessageSquare</span>,
+  AlertCircle: ({ className }: any) => <span className={className}>AlertCircle</span>,
+  CheckCircle2: ({ className }: any) => <span className={className}>CheckCircle</span>,
+  Database: ({ className }: any) => <span className={className}>Database</span>,
+  RefreshCw: ({ className }: any) => <span className={className}>Refresh</span>,
 }));
 
 // Mock components — dashboard uses named imports

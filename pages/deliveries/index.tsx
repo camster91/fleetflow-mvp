@@ -19,6 +19,7 @@ import ConfirmModal from '../../components/ConfirmModal';
 import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
+import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function DeliveriesPage() {
   const { data: allData, loading: isLoading, refetch: loadData } = useDataFetch(
@@ -77,6 +78,13 @@ export default function DeliveriesPage() {
   ];
 
   const handleEdit = (d: Delivery) => { setEditingDelivery(d); setIsFormOpen(true); };
+  useRecordQuery({
+    records: deliveries,
+    loading: isLoading,
+    resource: 'deliveries',
+    onMatch: handleEdit,
+    onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
+  });
   const handleDelete = (d: Delivery) => {
     setConfirmModal({
       isOpen: true,

@@ -18,6 +18,7 @@ import ConfirmModal from '../../components/ConfirmModal';
 import MaintenanceTaskDetailModal from '../../components/MaintenanceTaskDetailModal';
 import toast from 'react-hot-toast';
 import { downloadCSV } from '../../lib/csvExport';
+import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function MaintenancePage() {
   const parseDateOnly = (value: string) => new Date(`${value.split('T')[0]}T12:00:00`);
@@ -84,6 +85,14 @@ export default function MaintenancePage() {
       },
     });
   };
+
+  useRecordQuery({
+    records: tasks,
+    loading: isLoading,
+    resource: 'maintenance',
+    onMatch: (task) => { setSelectedTask(task); setIsDetailOpen(true); },
+    onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
+  });
 
   
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();

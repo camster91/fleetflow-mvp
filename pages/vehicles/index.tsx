@@ -19,6 +19,7 @@ import ConfirmModal from '../../components/ConfirmModal';
 import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
+import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function VehiclesPage() {
   const { data: vehicles, loading: isLoading, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
@@ -56,6 +57,14 @@ export default function VehiclesPage() {
   const handleAdd = () => { setEditingVehicle(null); setIsFormOpen(true); };
   const handleEdit = (v: Vehicle) => { setEditingVehicle(v); setIsFormOpen(true); };
   const handleView = (v: Vehicle) => { setSelectedVehicle(v); setIsDetailOpen(true); };
+
+  useRecordQuery({
+    records: vehicles,
+    loading: isLoading,
+    resource: 'vehicles',
+    onMatch: handleView,
+    onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
+  });
 
   const handleDelete = (vehicle: Vehicle) => {
     setConfirmModal({
