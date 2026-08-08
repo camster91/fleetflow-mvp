@@ -365,6 +365,11 @@ export function deliveryToDb(d: Omit<Delivery, 'id'>, ownerId: string) {
   }
 }
 
+/** Preserve omitted fields when applying a partial delivery update. */
+export function mergeDeliveryUpdate(existing: import('@prisma/client').Delivery, update: Partial<Delivery>): Delivery {
+  return { ...dbToDelivery(existing), ...update }
+}
+
 // ─── MaintenanceTask converters ───────────────────────────────────────────────
 
 export function dbToMaintenanceTask(t: DbMaintenanceTask & { vehicle?: { name: string } | null }): MaintenanceTask {
@@ -402,6 +407,11 @@ export function maintenanceTaskToDb(t: Omit<MaintenanceTask, 'id'>, ownerId: str
     costEstimate: t.costEstimate || null,
     ownerId,
   }
+}
+
+/** Preserve required task fields when applying a partial maintenance update. */
+export function mergeMaintenanceUpdate(existing: DbMaintenanceTask, update: Partial<MaintenanceTask>): MaintenanceTask {
+  return { ...dbToMaintenanceTask(existing), ...update }
 }
 
 // ─── Client converters ────────────────────────────────────────────────────────

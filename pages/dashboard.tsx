@@ -23,7 +23,6 @@ import * as dataService from '../services/apiService';
 import { notify } from '../services/notifications';
 import { OnboardingModal } from '../components/onboarding/OnboardingModal';
 import { SetupChecklist } from '../components/onboarding/SetupChecklist';
-import { isOnboardingComplete } from '../lib/onboarding';
 
 // Import modals
 import AnnouncementModal from '../components/AnnouncementModal';
@@ -78,13 +77,13 @@ export default function Dashboard() {
   // Check onboarding status
   useEffect(() => {
     const checkOnboarding = () => {
-      const completed = isOnboardingComplete();
+      const completed = session?.user?.onboardingCompleted === true;
       setIsNewUser(!completed);
       setShowOnboarding(!completed);
       setShowChecklist(!completed);
     };
     checkOnboarding();
-  }, []);
+  }, [session?.user?.onboardingCompleted]);
 
   // Load data
   useEffect(() => {
@@ -578,8 +577,8 @@ export default function Dashboard() {
       {/* Onboarding Modal */}
       <OnboardingModal
         isOpen={showOnboarding}
-        onClose={() => setShowOnboarding(false)}
-        onComplete={() => setShowChecklist(true)}
+          onClose={() => { setShowOnboarding(false); setShowChecklist(false); setIsNewUser(false); }}
+          onComplete={() => { setShowOnboarding(false); setShowChecklist(false); setIsNewUser(false); }}
       />
 
       <QuickActions

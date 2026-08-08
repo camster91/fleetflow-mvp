@@ -305,6 +305,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                   Business Name
                 </label>
                 <AutocompleteInput
+                  ariaLabel="Business Name"
                   value={formData.businessName}
                   onChange={(value) => handleChange('businessName', value)}
                   recentItems={recents.clientBusinessNames}
@@ -319,6 +320,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                   Contact Name <span className="text-red-500">*</span>
                 </label>
                 <AutocompleteInput
+                  ariaLabel="Contact Name"
                   value={formData.name}
                   onChange={(value) => handleChange('name', value)}
                   recentItems={recents.contactNames}
@@ -358,6 +360,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                   Address <span className="text-red-500">*</span>
                 </label>
                 <AutocompleteInput
+                  ariaLabel="Address"
                   value={formData.address}
                   onChange={(value) => handleChange('address', value)}
                   recentItems={recents.addresses}
@@ -373,6 +376,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                   Phone
                 </label>
                 <AutocompleteInput
+                  ariaLabel="Phone"
                   value={formData.phone}
                   onChange={(value) => handleChange('phone', value)}
                   recentItems={recents.contactPhones}
@@ -387,6 +391,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                   Email
                 </label>
                 <AutocompleteInput
+                  ariaLabel="Email"
                   value={formData.email}
                   onChange={(value) => handleChange('email', value)}
                   recentItems={recents.contactEmails}

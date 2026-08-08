@@ -223,7 +223,8 @@ export default function ClientsPage() {
         onClose={() => { setIsFormOpen(false); setEditingClient(null); }}
         client={editingClient}
         onSubmit={async (client) => {
-          notify.success(editingClient ? `${client.name} updated` : `${client.name} added`);
+          const displayName = client.businessName || client.name;
+          notify.success(editingClient ? `${displayName} updated` : `${displayName} added`);
           setIsFormOpen(false);
           setEditingClient(null);
           await loadData();

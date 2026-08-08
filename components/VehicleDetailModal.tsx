@@ -164,7 +164,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                       <div className="flex-1">
                         <h4 className="text-sm font-medium text-blue-900">Vehicle Mileage</h4>
                         <p className="mt-1 text-sm text-blue-700">
-                          {(vehicle.mileage ?? 0).toLocaleString()} km • Next service at {((Math.floor((vehicle.mileage ?? 0) / 5000) + 1) * 5000).toLocaleString()} km
+                          {(vehicle.mileage ?? 0).toLocaleString()} mi • Next service at {((Math.floor((vehicle.mileage ?? 0) / 5000) + 1) * 5000).toLocaleString()} mi
                         </p>
                         <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
                           <div className="h-full bg-blue-600 rounded-full" style={{ width: `${((vehicle.mileage ?? 0) % 5000) / 5000 * 100}%` }} />

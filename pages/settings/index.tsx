@@ -120,7 +120,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 max-w-2xl">
+        <div className="flex-1 min-w-0 w-full max-w-2xl">
           {loading ? (
             <Card><div className="h-64 animate-pulse bg-slate-100 rounded-xl" /></Card>
           ) : (
@@ -133,17 +133,17 @@ export default function SettingsPage() {
                     <div className="h-16 w-16 rounded-full bg-blue-900 flex items-center justify-center text-white text-xl font-bold shrink-0">
                       {profile.name.charAt(0).toUpperCase() || 'U'}
                     </div>
-                    <button className="flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
+                    <button type="button" disabled title="Photo uploads are coming soon" className="flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg text-sm text-slate-400 cursor-not-allowed">
                       <Camera className="h-4 w-4" /> Change photo
                     </button>
                   </div>
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <div><label className={labelCls}>Full Name</label><input value={profile.name} onChange={e => setProfile(p => ({...p, name: e.target.value}))} className={inputCls} /></div>
-                    <div><label className={labelCls}>Email</label><input value={profile.email} disabled className={inputCls + ' bg-slate-50 cursor-not-allowed'} /></div>
-                    <div><label className={labelCls}>Company</label><input value={profile.company} onChange={e => setProfile(p => ({...p, company: e.target.value}))} className={inputCls} placeholder="Your company" /></div>
-                    <div><label className={labelCls}>Phone</label><input value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))} className={inputCls} placeholder="+1 (555) 000-0000" /></div>
+                    <div><label htmlFor="settings-name" className={labelCls}>Full Name</label><input id="settings-name" value={profile.name} onChange={e => setProfile(p => ({...p, name: e.target.value}))} className={inputCls} /></div>
+                    <div><label htmlFor="settings-email" className={labelCls}>Email</label><input id="settings-email" value={profile.email} disabled className={inputCls + ' bg-slate-50 cursor-not-allowed'} /></div>
+                    <div><label htmlFor="settings-company" className={labelCls}>Company</label><input id="settings-company" value={profile.company} onChange={e => setProfile(p => ({...p, company: e.target.value}))} className={inputCls} placeholder="Your company" /></div>
+                    <div><label htmlFor="settings-phone" className={labelCls}>Phone</label><input id="settings-phone" value={profile.phone} onChange={e => setProfile(p => ({...p, phone: e.target.value}))} className={inputCls} placeholder="+1 (555) 000-0000" /></div>
                   </div>
-                  <div><label className={labelCls}>Bio</label><textarea value={profile.bio} onChange={e => setProfile(p => ({...p, bio: e.target.value}))} className={inputCls + ' resize-none'} rows={3} placeholder="Tell your team a little about yourself" /></div>
+                  <div><label htmlFor="settings-bio" className={labelCls}>Bio</label><textarea id="settings-bio" value={profile.bio} onChange={e => setProfile(p => ({...p, bio: e.target.value}))} className={inputCls + ' resize-none'} rows={3} placeholder="Tell your team a little about yourself" /></div>
                 </div>
               )}
 
@@ -160,6 +160,10 @@ export default function SettingsPage() {
                     <div key={key} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                       <div><p className="text-sm font-medium text-slate-900">{label}</p><p className="text-xs text-slate-500">{desc}</p></div>
                       <button
+                        type="button"
+                        role="switch"
+                        aria-checked={notifications[key as keyof typeof notifications]}
+                        aria-label={label}
                         onClick={() => setNotifications(n => ({ ...n, [key]: !n[key as keyof typeof n] }))}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                           notifications[key as keyof typeof notifications] ? 'bg-blue-600' : 'bg-slate-200'
@@ -183,8 +187,8 @@ export default function SettingsPage() {
                       { key: 'dateFormat', label: 'Date Format', options: [['MM/DD/YYYY','MM/DD/YYYY'],['DD/MM/YYYY','DD/MM/YYYY'],['YYYY-MM-DD','YYYY-MM-DD']] },
                     ].map(({ key, label, options }) => (
                       <div key={key}>
-                        <label className={labelCls}>{label}</label>
-                        <select value={preferences[key as keyof typeof preferences]}
+                        <label htmlFor={`settings-${key}`} className={labelCls}>{label}</label>
+                        <select id={`settings-${key}`} value={preferences[key as keyof typeof preferences]}
                           onChange={e => setPreferences(p => ({ ...p, [key]: e.target.value }))}
                           className={inputCls}>
                           {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -196,6 +200,10 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-3 mt-1">
                         <Sun className="h-4 w-4 text-slate-500" />
                         <button
+                          type="button"
+                          role="switch"
+                          aria-checked={isDark}
+                          aria-label="Dark theme"
                           onClick={toggleDark}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                             isDark ? 'bg-blue-600' : 'bg-slate-200'

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../../lib/prisma'
-import { dbToDelivery, deliveryToDb, logActivity } from '../../../../lib/fleet'
+import { dbToDelivery, deliveryToDb, logActivity, mergeDeliveryUpdate } from '../../../../lib/fleet'
 import { createNotification } from '../../../../lib/notifications'
 import { notifyDeliveryAssigned, notifyDeliveryStatus } from '../../../../lib/email.server'
 import { requireTenantContext } from '../../../../lib/apiAuth'
@@ -26,11 +26,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!canManageDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const existing = await prisma.delivery.findFirst({ where: scopedWhere })
     if (!existing) return res.status(404).json({ error: 'Not found' })
-    const { ownerId: _ownerId, ...fields } = deliveryToDb(req.body, tenant.ownerId)
+    // Status controls submit partial records. Preserve all existing delivery data
+    // instead of resetting omitted fields such as item count to defaults.
+    const merged = mergeDeliveryUpdate(existing, req.body)
+    const { ownerId: _ownerId, ...fields } = deliveryToDb(merged, tenant.ownerId)
     const wasCompleted = req.body.status === 'delivered' && existing.status !== 'delivered'
 
     const delivery = await prisma.$transaction(async (tx) => {
       const updated = await tx.delivery.update({ where: { id }, data: fields })
+      if (req.body.status && req.body.status !== existing.status) {
+        await tx.deliveryEvent.create({
+          data: {
+            deliveryId: id,
+            status: req.body.status,
+            notes: typeof req.body.notes === 'string' ? req.body.notes.slice(0, 2000) : null,
+            createdBy: userId,
+          },
+        })
+      }
       await logActivity(tx, {
         userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
         action: wasCompleted ? 'completed' : 'status_changed',

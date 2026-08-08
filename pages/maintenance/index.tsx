@@ -20,6 +20,7 @@ import toast from 'react-hot-toast';
 import { downloadCSV } from '../../lib/csvExport';
 
 export default function MaintenancePage() {
+  const parseDateOnly = (value: string) => new Date(`${value.split('T')[0]}T12:00:00`);
   const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function MaintenancePage() {
 
   const today = new Date();
   const filteredTasks = tasks.filter((task) => {
-    const dueDate = new Date(task.dueDate);
+    const dueDate = parseDateOnly(task.dueDate);
     const isOverdue = dueDate < today && !task.completed;
     const isUpcoming = dueDate >= today && !task.completed;
     switch (filter) {
@@ -58,8 +59,8 @@ export default function MaintenancePage() {
 
   const stats = [
     { title: 'Total Tasks', value: tasks.length, icon: <Wrench className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
-    { title: 'Overdue', value: tasks.filter((t) => new Date(t.dueDate) < today && !t.completed).length, icon: <AlertTriangle className="h-6 w-6 text-red-600" />, iconBgColor: 'bg-red-50' },
-    { title: 'Due This Week', value: tasks.filter((t) => { const d = new Date(t.dueDate); return d >= today && d <= new Date(today.getTime() + 7 * 86400000) && !t.completed; }).length, icon: <Clock className="h-6 w-6 text-amber-600" />, iconBgColor: 'bg-amber-50' },
+    { title: 'Overdue', value: tasks.filter((t) => parseDateOnly(t.dueDate) < today && !t.completed).length, icon: <AlertTriangle className="h-6 w-6 text-red-600" />, iconBgColor: 'bg-red-50' },
+    { title: 'Due This Week', value: tasks.filter((t) => { const d = parseDateOnly(t.dueDate); return d >= today && d <= new Date(today.getTime() + 7 * 86400000) && !t.completed; }).length, icon: <Clock className="h-6 w-6 text-amber-600" />, iconBgColor: 'bg-amber-50' },
     { title: 'Completed', value: tasks.filter((t) => t.completed).length, icon: <CheckCircle className="h-6 w-6 text-emerald-600" />, iconBgColor: 'bg-emerald-50' },
   ];
 
@@ -166,13 +167,13 @@ export default function MaintenancePage() {
                 </tr></thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredTasks.map(task => {
-                    const isOverdueTask = new Date(task.dueDate) < today && !task.completed;
+                    const isOverdueTask = parseDateOnly(task.dueDate) < today && !task.completed;
                     return (
                       <tr key={task.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => { setSelectedTask(task); setIsDetailOpen(true); }}>
                         <td className="py-3 px-4 font-medium text-slate-900">{task.vehicle}</td>
                         <td className="py-3 px-4 text-slate-700">{task.type}</td>
                         <td className={`py-3 px-4 ${ isOverdueTask ? 'text-red-600 font-medium' : 'text-slate-600' }`}>
-                          {new Date(task.dueDate).toLocaleDateString()}
+                          {parseDateOnly(task.dueDate).toLocaleDateString()}
                           {isOverdueTask && <span className="ml-1 text-xs">(Overdue)</span>}
                         </td>
                         <td className="py-3 px-4">{getPriorityBadge(task.priority)}</td>
@@ -217,7 +218,7 @@ export default function MaintenancePage() {
           </div>
 
           {isLoading ? <SkeletonTable rows={5} columns={7} /> : (
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
+            <div className="max-w-full overflow-x-auto">
             <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden min-w-[640px]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                 <div key={day} className="bg-slate-50 p-2 text-center text-xs font-semibold text-slate-500 uppercase">{day}</div>
@@ -231,7 +232,7 @@ export default function MaintenancePage() {
                     <div className={`text-sm font-medium mb-2 ${isToday ? 'text-blue-600' : 'text-slate-900'}`}>{day}</div>
                     <div className="space-y-1">
                       {dayTasks.slice(0, 3).map((task) => {
-                        const isOverdue = new Date(task.dueDate) < today;
+                        const isOverdue = parseDateOnly(task.dueDate) < today;
                         return (
                           <div key={task.id} onClick={() => { setSelectedTask(task); setIsDetailOpen(true); }}
                             className={`text-xs p-1.5 rounded cursor-pointer transition-colors ${

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
@@ -30,6 +30,17 @@ export default function InvitePage() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState<number | null>(null);
+  const [teamId, setTeamId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/team/workspaces')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Unable to load workspace');
+        return response.json();
+      })
+      .then((data) => setTeamId(data.activeTeamId || data.workspaces?.[0]?.id || null))
+      .catch(() => notify.error('Unable to load your active workspace'));
+  }, []);
 
   const roles = getAllRoles().filter(r => r.value !== 'OWNER');
 
@@ -58,6 +69,10 @@ export default function InvitePage() {
       notify.error('Please enter at least one valid email address');
       return;
     }
+    if (!teamId) {
+      notify.error('Your active workspace is still loading. Please try again.');
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -65,7 +80,7 @@ export default function InvitePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          teamId: 'default-team', // Would come from context
+          teamId,
           emails: validInvites.map(i => i.email),
           role: validInvites[0].role, // For simplicity, using first role
           message,
@@ -113,6 +128,7 @@ export default function InvitePage() {
                     <div className="flex-1 relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <Input
+                        label={`Invite ${index + 1} email address`}
                         type="email"
                         placeholder="colleague@company.com"
                         value={invite.email}
@@ -123,6 +139,8 @@ export default function InvitePage() {
                     
                     <div className="relative">
                       <button
+                        type="button"
+                        aria-label={`Choose role for invite ${index + 1}`}
                         onClick={() => setShowRoleDropdown(showRoleDropdown === index ? null : index)}
                         className="h-full px-4 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-2"
                       >
@@ -135,10 +153,12 @@ export default function InvitePage() {
                           <div
                             className="fixed inset-0 z-40"
                             onClick={() => setShowRoleDropdown(null)}
+                            aria-hidden="true"
                           />
                           <div className="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1">
                             {roles.map((role) => (
                               <button
+                                type="button"
                                 key={role.value}
                                 onClick={() => {
                                   updateInvite(index, { role: role.value });

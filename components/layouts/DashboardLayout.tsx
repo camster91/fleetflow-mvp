@@ -132,6 +132,8 @@ interface SearchResultItem {
   name?: string;
   customer?: string;
   vehicle?: string;
+  vehicleName?: string;
+  type?: string;
   address?: string;
   location?: string;
   driver?: string;
@@ -368,7 +370,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
                             {items.map((item) => (
                               <a key={item.id} href={hrefs[cat]} onClick={() => setSearchDropOpen(false)}
                                 className="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 text-sm text-slate-700">
-                                <span className="font-medium">{item.name || item.customer || item.vehicle}</span>
+                                <span className="font-medium">{item.name || item.customer || item.vehicle || item.vehicleName || item.type}</span>
                                 {(item.address || item.location || item.driver) && (
                                   <span className="text-slate-400 text-xs truncate">{item.address || item.location || item.driver}</span>
                                 )}

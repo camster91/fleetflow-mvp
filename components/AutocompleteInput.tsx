@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useId, useState, useRef, useEffect } from 'react'
 import { Search, Clock, X, ChevronDown } from 'lucide-react'
 
 interface AutocompleteInputProps {
@@ -8,6 +8,7 @@ interface AutocompleteInputProps {
   suggestions?: string[]
   placeholder?: string
   label?: string
+  ariaLabel?: string
   icon?: React.ReactNode
   allowNew?: boolean
   onSelect?: (value: string) => void
@@ -22,6 +23,7 @@ export default function AutocompleteInput({
   suggestions = [],
   placeholder = 'Type to search...',
   label,
+  ariaLabel,
   icon,
   allowNew = true,
   onSelect,
@@ -33,6 +35,7 @@ export default function AutocompleteInput({
   const [highlightedIndex, setHighlightedIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const inputId = useId()
 
   // Update input value when prop changes
   useEffect(() => {
@@ -123,7 +126,7 @@ export default function AutocompleteInput({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1">
           {label}
         </label>
       )}
@@ -136,6 +139,7 @@ export default function AutocompleteInput({
         )}
         
         <input
+          id={inputId}
           ref={inputRef}
           type="text"
           value={inputValue}
@@ -144,6 +148,11 @@ export default function AutocompleteInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
+          aria-label={ariaLabel || label || placeholder}
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${inputId}-listbox`}
+          aria-autocomplete="list"
           className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition ${
             icon ? 'pl-10' : ''
           } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
@@ -154,6 +163,7 @@ export default function AutocompleteInput({
             type="button"
             onClick={handleClear}
             className="absolute right-8 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+            aria-label={`Clear ${label || placeholder}`}
           >
             <X className="h-4 w-4" />
           </button>
@@ -168,7 +178,7 @@ export default function AutocompleteInput({
 
       {/* Dropdown */}
       {isOpen && (hasResults || !inputValue) && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
+        <div id={`${inputId}-listbox`} role="listbox" className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
           {/* Recent Items Section */}
           {filteredRecent.length > 0 && (
             <div>

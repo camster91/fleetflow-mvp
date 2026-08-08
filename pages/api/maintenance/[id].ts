@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
-import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../lib/fleet'
+import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity, mergeMaintenanceUpdate } from '../../../lib/fleet'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 
@@ -39,7 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const v = await prisma.vehicle.findFirst({ where: { AND: [{ name: req.body.vehicle }, tenant.resourceWhere] } })
       vehicleId = v?.id
     }
-    const { ownerId: _ownerId, ...fields } = maintenanceTaskToDb(req.body, tenant.ownerId, vehicleId)
+    // The client sends partial updates (for example only `completed`). Merge them
+    // with the stored task before converting so required fields are never erased.
+    const merged = mergeMaintenanceUpdate(existing, req.body)
+    const { ownerId: _ownerId, ...fields } = maintenanceTaskToDb(merged, tenant.ownerId, vehicleId)
     const wasCompleted = req.body.completed === true && !existing.completed
     const task = await prisma.maintenanceTask.update({ where: { id }, data: fields })
     await logActivity(prisma, {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
@@ -27,7 +27,6 @@ interface ApiKey {
   key: string;
   createdAt: string;
   lastUsedAt: string | null;
-  permissions: string[];
 }
 
 interface WebhookConfig {
@@ -39,39 +38,43 @@ interface WebhookConfig {
 }
 
 export default function APISettingsPage() {
-  const [apiKeys, setApiKeys] = useState<ApiKey[]>([
-    {
-      id: '1',
-      name: 'Production API Key',
-      key: 'ff_live_xxxxxxxxxxxx1234',
-      createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
-      lastUsedAt: new Date(Date.now() - 3600000).toISOString(),
-      permissions: ['read', 'write'],
-    },
-  ]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showNewKey, setShowNewKey] = useState<string | null>(null);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+  const [keyName, setKeyName] = useState('Production API Key');
+  const [loading, setLoading] = useState(true);
 
-  const generateKey = () => {
-    const newKey: ApiKey = {
-      id: Date.now().toString(),
-      name: 'New API Key',
-      key: 'ff_live_' + Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join(''),
-      createdAt: new Date().toISOString(),
-      lastUsedAt: null,
-      permissions: ['read'],
-    };
-    setApiKeys([...apiKeys, newKey]);
-    setShowNewKey(newKey.key);
+  useEffect(() => {
+    fetch('/api/settings/api-keys')
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Failed to load API keys');
+        return response.json();
+      })
+      .then((data) => setApiKeys(data.keys || []))
+      .catch(() => notify.error('Failed to load API keys'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const generateKey = async () => {
+    const response = await fetch('/api/settings/api-keys', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: keyName }),
+    });
+    const data = await response.json();
+    if (!response.ok) return notify.error(data.error || 'Failed to generate API key');
+    setApiKeys((current) => [data.apiKey, ...current]);
+    setShowNewKey(data.apiKey.key);
     setShowKeyModal(false);
     notify.success('API key generated successfully');
   };
 
-  const revokeKey = (id: string) => {
+  const revokeKey = async (id: string) => {
     if (!confirm('Are you sure you want to revoke this API key?')) return;
+    const response = await fetch(`/api/settings/api-keys?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!response.ok) return notify.error('Failed to revoke API key');
     setApiKeys(apiKeys.filter(k => k.id !== id));
     notify.success('API key revoked');
   };
@@ -122,7 +125,7 @@ export default function APISettingsPage() {
           </Button>
         </div>
 
-        {apiKeys.length === 0 ? (
+        {loading ? <p className="py-8 text-center text-slate-500">Loading API keys...</p> : apiKeys.length === 0 ? (
           <div className="text-center py-8 bg-slate-50 rounded-lg">
             <Key className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-600">No API keys yet</p>
@@ -149,6 +152,7 @@ export default function APISettingsPage() {
                     <button
                       onClick={() => toggleKeyVisibility(apiKey.id)}
                       className="p-1 hover:bg-slate-100 rounded"
+                      aria-label={`${visibleKeys.has(apiKey.id) ? 'Hide' : 'Show'} ${apiKey.name}`}
                     >
                       {visibleKeys.has(apiKey.id) ? (
                         <EyeOff className="h-4 w-4 text-slate-500" />
@@ -176,6 +180,7 @@ export default function APISettingsPage() {
                   size="sm"
                   onClick={() => revokeKey(apiKey.id)}
                   className="text-red-600 hover:text-red-800"
+                  aria-label={`Revoke ${apiKey.name}`}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -207,10 +212,10 @@ export default function APISettingsPage() {
           </div>
           <Button
             variant="outline"
-            onClick={() => setShowWebhookModal(true)}
+            disabled
             iconLeft={<Plus className="h-4 w-4" />}
           >
-            Add Webhook
+            Webhooks coming soon
           </Button>
         </div>
 
@@ -245,6 +250,12 @@ export default function APISettingsPage() {
       </Card>
 
       {/* New Key Modal */}
+      <Modal isOpen={showKeyModal} onClose={() => setShowKeyModal(false)} title="Generate API Key" size="sm">
+        <div className="space-y-4">
+          <Input label="Key name" value={keyName} onChange={(event) => setKeyName(event.target.value)} fullWidth />
+          <Button variant="primary" fullWidth disabled={!keyName.trim()} onClick={generateKey}>Generate secure key</Button>
+        </div>
+      </Modal>
       <Modal
         isOpen={!!showNewKey}
         onClose={() => setShowNewKey(null)}
