@@ -238,12 +238,21 @@ model ApiKey {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   key         String   @unique
+  scopes      String   @default("")
   lastUsedAt  DateTime?
   createdAt   DateTime @default(now())
   revokedAt   DateTime?
 
   @@index([userId])
-  @@index([key])
+}
+
+model ApiRateLimit {
+  keyId       String
+  bucketStart DateTime
+  count       Int      @default(0)
+
+  @@id([keyId, bucketStart])
+  @@index([bucketStart])
 }
 
 // Subscription & Billing Models

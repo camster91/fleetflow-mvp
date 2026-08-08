@@ -18,6 +18,7 @@ jest.mock('../../../lib/prisma', () => ({
 jest.mock('../../../lib/tokens', () => ({
   generateAPIKey: () => ({ key: 'ff_plaintext_once', hashedKey: 'hashed-value' }),
   hashToken: (t: string) => `hash(${t})`,
+  constantTimeCompare: (a: string, b: string) => a === b,
 }));
 
 import handler from '../../../pages/api/settings/api-keys';
@@ -52,6 +53,10 @@ describe('/api/settings/api-keys', () => {
     );
     const body = JSON.parse(res._getData());
     expect(body.apiKey.key).toBe('ff_plaintext_once');
+    expect(body.apiKey.scopes).toEqual(['read']);
+    expect(prisma.apiKey.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ scopes: 'read' }),
+    }));
   });
 
   it('never returns stored key material on list', async () => {
@@ -59,7 +64,7 @@ describe('/api/settings/api-keys', () => {
       user: { id: 'u1', email: 'u@x.com', name: 'U', role: 'user' },
     });
     (prisma.apiKey.findMany as jest.Mock).mockResolvedValue([
-      { id: 'k1', name: 'CI', key: 'hashed-value', createdAt: new Date(), lastUsedAt: null },
+      { id: 'k1', name: 'CI', key: 'hashed-value', scopes: 'read', createdAt: new Date(), lastUsedAt: null },
     ]);
 
     const { req, res } = createMocks({ method: 'GET' });
@@ -67,5 +72,6 @@ describe('/api/settings/api-keys', () => {
     const body = JSON.parse(res._getData());
     expect(body.keys[0].key).toMatch(/•/);
     expect(body.keys[0].key).not.toContain('hashed-value');
+    expect(body.keys[0].scopes).toEqual(['read']);
   });
 });

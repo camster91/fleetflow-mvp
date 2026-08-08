@@ -26,6 +26,7 @@ export default async function handler(
             id: true,
             name: true,
             key: true,
+            scopes: true,
             createdAt: true,
             lastUsedAt: true,
           },
@@ -35,6 +36,7 @@ export default async function handler(
         const maskedKeys = keys.map((k) => ({
           id: k.id,
           name: k.name,
+          scopes: k.scopes.split(/[\s,]+/).filter(Boolean),
           key: 'ff_••••••••••••••••',
           createdAt: k.createdAt,
           lastUsedAt: k.lastUsedAt,
@@ -62,6 +64,7 @@ export default async function handler(
             userId,
             name: name.trim(),
             key: hashedKey, // store hash only
+            scopes: 'read',
           },
           select: {
             id: true,
@@ -75,6 +78,7 @@ export default async function handler(
           apiKey: {
             ...apiKey,
             key,
+            scopes: ['read'],
           },
         });
       } catch (error) {

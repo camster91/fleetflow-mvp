@@ -11,8 +11,6 @@ import {
   Plus,
   Copy,
   Trash2,
-  Eye,
-  EyeOff,
   Webhook,
   Clock,
   AlertTriangle,
@@ -27,7 +25,10 @@ interface ApiKey {
   key: string;
   createdAt: string;
   lastUsedAt: string | null;
+  scopes: string[];
 }
+
+const MASKED_API_KEY = `ff_${'•'.repeat(16)}`;
 
 interface WebhookConfig {
   id: string;
@@ -43,9 +44,11 @@ export default function APISettingsPage() {
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [showNewKey, setShowNewKey] = useState<string | null>(null);
   const [showWebhookModal, setShowWebhookModal] = useState(false);
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [keyName, setKeyName] = useState('Production API Key');
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     fetch('/api/settings/api-keys')
@@ -59,39 +62,61 @@ export default function APISettingsPage() {
   }, []);
 
   const generateKey = async () => {
-    const response = await fetch('/api/settings/api-keys', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: keyName }),
-    });
-    const data = await response.json();
-    if (!response.ok) return notify.error(data.error || 'Failed to generate API key');
-    setApiKeys((current) => [data.apiKey, ...current]);
-    setShowNewKey(data.apiKey.key);
-    setShowKeyModal(false);
-    notify.success('API key generated successfully');
+    if (generating) return;
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/settings/api-keys', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: keyName }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.apiKey?.key) {
+        const message = typeof data?.error === 'string' ? data.error : data?.error?.message;
+        notify.error(message || 'Failed to generate API key');
+        return;
+      }
+      const { key: plaintextKey, ...createdKey } = data.apiKey;
+      setApiKeys((current) => [{ ...createdKey, key: MASKED_API_KEY, scopes: createdKey.scopes || ['read'] }, ...current]);
+      setShowNewKey(plaintextKey);
+      setShowKeyModal(false);
+      notify.success('API key generated successfully');
+    } catch {
+      notify.error('Failed to generate API key');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const revokeKey = async (id: string) => {
     if (!confirm('Are you sure you want to revoke this API key?')) return;
-    const response = await fetch(`/api/settings/api-keys?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    if (!response.ok) return notify.error('Failed to revoke API key');
-    setApiKeys(apiKeys.filter(k => k.id !== id));
-    notify.success('API key revoked');
-  };
-
-  const copyKey = (key: string) => {
-    navigator.clipboard.writeText(key);
-    notify.success('Copied to clipboard');
-  };
-
-  const toggleKeyVisibility = (id: string) => {
-    const newVisible = new Set(visibleKeys);
-    if (newVisible.has(id)) {
-      newVisible.delete(id);
-    } else {
-      newVisible.add(id);
+    setRevokingId(id);
+    try {
+      const response = await fetch(`/api/settings/api-keys?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!response.ok) {
+        notify.error('Failed to revoke API key');
+        return;
+      }
+      setApiKeys((current) => current.filter(k => k.id !== id));
+      notify.success('API key revoked');
+    } catch {
+      notify.error('Failed to revoke API key');
+    } finally {
+      setRevokingId(null);
     }
-    setVisibleKeys(newVisible);
+  };
+
+  const copyNewKey = async () => {
+    if (!showNewKey || copying) return;
+    setCopying(true);
+    try {
+      await navigator.clipboard.writeText(showNewKey);
+      notify.success('Copied to clipboard');
+      setShowNewKey(null);
+    } catch {
+      notify.error('Could not copy the API key. Copy it manually before closing.');
+    } finally {
+      setCopying(false);
+    }
   };
 
   return (
@@ -141,32 +166,22 @@ export default function APISettingsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium text-slate-900">{apiKey.name}</h4>
-                    <Badge variant="success" size="sm">Active</Badge>
+                    {apiKey.scopes?.includes('read') ? (
+                      <Badge variant="success" size="sm">Active</Badge>
+                    ) : (
+                      <Badge variant="warning" size="sm">Legacy / inert</Badge>
+                    )}
+                    {(apiKey.scopes || []).map((scope) => (
+                      <Badge key={scope} variant="default" size="sm">{scope}</Badge>
+                    ))}
                   </div>
+                  {!apiKey.scopes?.includes('read') && (
+                    <p className="mt-1 text-sm text-amber-700">Generate a replacement key to use the read API.</p>
+                  )}
                   <div className="flex items-center gap-2 mt-1">
                     <code className="text-sm bg-slate-100 px-2 py-0.5 rounded">
-                      {visibleKeys.has(apiKey.id) || showNewKey === apiKey.key
-                        ? apiKey.key
-                        : apiKey.key.substring(0, 12) + '••••••••'}
+                      {MASKED_API_KEY}
                     </code>
-                    <button
-                      onClick={() => toggleKeyVisibility(apiKey.id)}
-                      className="p-1 hover:bg-slate-100 rounded"
-                      aria-label={`${visibleKeys.has(apiKey.id) ? 'Hide' : 'Show'} ${apiKey.name}`}
-                    >
-                      {visibleKeys.has(apiKey.id) ? (
-                        <EyeOff className="h-4 w-4 text-slate-500" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-slate-500" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => copyKey(apiKey.key)}
-                      className="p-1 hover:bg-slate-100 rounded"
-                      title="Copy to clipboard"
-                    >
-                      <Copy className="h-4 w-4 text-slate-500" />
-                    </button>
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                     <span>Created {formatDistanceToNow(new Date(apiKey.createdAt))} ago</span>
@@ -179,6 +194,8 @@ export default function APISettingsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => revokeKey(apiKey.id)}
+                  loading={revokingId === apiKey.id}
+                  disabled={revokingId !== null}
                   className="text-red-600 hover:text-red-800"
                   aria-label={`Revoke ${apiKey.name}`}
                 >
@@ -253,7 +270,7 @@ export default function APISettingsPage() {
       <Modal isOpen={showKeyModal} onClose={() => setShowKeyModal(false)} title="Generate API Key" size="sm">
         <div className="space-y-4">
           <Input label="Key name" value={keyName} onChange={(event) => setKeyName(event.target.value)} fullWidth />
-          <Button variant="primary" fullWidth disabled={!keyName.trim()} onClick={generateKey}>Generate secure key</Button>
+          <Button variant="primary" fullWidth disabled={!keyName.trim()} loading={generating} onClick={generateKey}>Generate secure key</Button>
         </div>
       </Modal>
       <Modal
@@ -278,10 +295,8 @@ export default function APISettingsPage() {
           <Button
             variant="primary"
             fullWidth
-            onClick={() => {
-              copyKey(showNewKey!);
-              setShowNewKey(null);
-            }}
+            onClick={copyNewKey}
+            loading={copying}
             iconLeft={<Copy className="h-4 w-4" />}
           >
             Copy to Clipboard

@@ -7,6 +7,8 @@ import { prisma } from './prisma'
 import { canManageTeam } from './permissions'
 import type { TeamRole } from '../types'
 import { parse as parseCookie } from 'cookie'
+import { constantTimeCompare, hashToken } from './tokens'
+import { consumePublicApiQuota } from './apiRateLimit'
 
 export type AuthedSession = Session & { user: Session['user'] & { id: string } }
 
@@ -30,6 +32,110 @@ export interface TenantContext {
   auditWhere:
     | { userId: string; teamId: null }
     | { OR: Array<{ teamId: string } | { userId: string; teamId: null }> }
+}
+
+export type ApiKeyScope = 'read'
+
+export interface ApiKeyContext {
+  apiKeyId: string
+  user: { id: string; email: string; name: string | null }
+  scopes: ApiKeyScope[]
+  tenant: TenantContext
+  apiResourceWhere: { teamId: string } | { ownerId: string; teamId: null }
+}
+
+export function apiError(res: NextApiResponse, status: number, code: string, message: string) {
+  return res.status(status).json({ error: { code, message } })
+}
+
+function parseScopes(value: string): ApiKeyScope[] {
+  return value.split(/[\s,]+/).filter((scope): scope is ApiKeyScope => scope === 'read')
+}
+
+/** Authenticate a public API request with a generated, hashed API key. */
+export async function requireApiKey(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  requiredScope: ApiKeyScope = 'read'
+): Promise<ApiKeyContext | null> {
+  const authorization = req.headers.authorization
+  if (!authorization) {
+    apiError(res, 401, 'API_KEY_MISSING', 'Provide an API key using Authorization: Bearer <key>')
+    return null
+  }
+
+  const match = /^Bearer (ff_[a-f0-9]{64})$/i.exec(authorization)
+  if (!match) {
+    apiError(res, 401, 'API_KEY_MALFORMED', 'The Authorization header is malformed')
+    return null
+  }
+
+  const presentedKey = match[1]
+  const candidateHash = hashToken(presentedKey)
+  let record
+  try {
+    record = await prisma.apiKey.findUnique({
+      where: { key: candidateHash },
+      select: {
+        id: true, userId: true, key: true, scopes: true, revokedAt: true,
+        user: { select: { id: true, email: true, name: true } },
+      },
+    })
+  } catch {
+    console.error('API key authentication lookup failed')
+    apiError(res, 500, 'INTERNAL_ERROR', 'Authentication could not be completed')
+    return null
+  }
+
+  if (!record || record.revokedAt || !constantTimeCompare(candidateHash, record.key)) {
+    apiError(res, 401, 'API_KEY_INVALID', 'The API key is invalid or revoked')
+    return null
+  }
+
+  const scopes = parseScopes(record.scopes)
+  if (!scopes.includes(requiredScope)) {
+    apiError(res, 403, 'INSUFFICIENT_SCOPE', `This API key requires the ${requiredScope} scope`)
+    return null
+  }
+
+  let quota
+  try {
+    quota = await consumePublicApiQuota(prisma, record.id)
+  } catch {
+    console.error('Public API durable rate limit failed')
+    apiError(res, 503, 'RATE_LIMIT_UNAVAILABLE', 'Request quota could not be verified')
+    return null
+  }
+  if (!quota.allowed) {
+    const retryAfter = quota.retryAfter
+    res.setHeader('Retry-After', String(retryAfter))
+    apiError(res, 429, 'RATE_LIMITED', `Too many requests; try again in ${retryAfter} seconds`)
+    return null
+  }
+  res.setHeader('X-RateLimit-Remaining', String(quota.remaining))
+
+  const requested = req.headers['x-team-id']
+  const selectedTeamId = Array.isArray(requested) ? requested[0] : requested
+  let tenant: TenantContext
+  try {
+    tenant = await resolveTenantContext(record.userId, selectedTeamId)
+  } catch (error) {
+    if (error instanceof TenantContextError) {
+      apiError(res, error.code === 'TENANT_SELECTION_REQUIRED' ? 409 : 403, error.code, error.message)
+      return null
+    }
+    throw error
+  }
+
+  void prisma.apiKey.update({
+    where: { id: record.id },
+    data: { lastUsedAt: new Date() },
+  }).catch(() => console.error('API key last-used update failed'))
+
+  const apiResourceWhere = tenant.teamId
+    ? { teamId: tenant.teamId }
+    : { ownerId: record.userId, teamId: null as null }
+  return { apiKeyId: record.id, user: record.user, scopes, tenant, apiResourceWhere }
 }
 
 /**
