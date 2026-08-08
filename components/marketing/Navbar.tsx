@@ -34,7 +34,7 @@ export function Navbar() {
           <Link href="/" className="flex items-center">
             <Image
               src="/brand/logo/logo-horizontal.svg" 
-              alt="FleetFlow" 
+              alt="Fleetvera"
               width={160}
               height={32}
               className="h-8 w-auto"
@@ -47,7 +47,7 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                className={`text-sm font-medium transition-colors hover:text-emerald-800 ${
                   isScrolled ? 'text-slate-600' : 'text-slate-700'
                 }`}
               >
@@ -60,7 +60,7 @@ export function Navbar() {
           <div className="hidden lg:flex items-center space-x-4">
             <Link
               href="/auth/login"
-              className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+              className="inline-flex items-center justify-center rounded-xl bg-emerald-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
             >
               Sign in
             </Link>
@@ -88,7 +88,7 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="text-slate-600 font-medium hover:text-blue-600 transition-colors"
+                  className="text-slate-600 font-medium hover:text-emerald-800 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {link.label}
@@ -97,7 +97,7 @@ export function Navbar() {
               <hr className="border-slate-200" />
               <Link
                 href="/auth/login"
-                className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                className="inline-flex items-center justify-center rounded-xl bg-emerald-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Sign in

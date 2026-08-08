@@ -110,7 +110,7 @@ export default function APISettingsPage() {
           <div>
             <h3 className="text-lg font-semibold text-slate-900">API Keys</h3>
             <p className="text-sm text-slate-500">
-              Use these keys to access the FleetFlow API programmatically
+              Use these keys to access the Fleetvera API programmatically
             </p>
           </div>
           <Button

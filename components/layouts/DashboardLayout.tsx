@@ -216,9 +216,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, titl
       <aside className={`fixed top-0 left-0 z-50 h-full w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
           <Link href="/dashboard">
-            <Image src="/brand/logo/logo-horizontal.svg" alt="Fleet Manager" width={128} height={28} className="h-7 w-auto" priority />
+            <Image src="/brand/logo/logo-horizontal.svg" alt="Fleetvera" width={140} height={28} className="h-7 w-auto" priority />
           </Link>
-          <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg">
+          <button onClick={() => setSidebarOpen(false)} aria-label="Close menu" className="lg:hidden p-2 text-slate-400 hover:text-slate-600 rounded-lg">
             <X className="h-5 w-5" />
           </button>
         </div>

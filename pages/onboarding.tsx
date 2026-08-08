@@ -141,7 +141,7 @@ export default function OnboardingPage() {
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
                   <Sparkles className="h-8 w-8 text-blue-600" />
                 </div>
-                <h1 className="text-2xl font-bold text-slate-900">Welcome to FleetFlow!</h1>
+                <h1 className="text-2xl font-bold text-slate-900">Welcome to Fleetvera!</h1>
                 <p className="text-slate-500 mt-2">Let&apos;s get your fleet set up in a few quick steps.</p>
               </div>
 

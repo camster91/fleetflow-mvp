@@ -1,7 +1,7 @@
 /**
  * Button Component
  * 
- * A comprehensive button system for FleetFlow with multiple variants, sizes,
+ * A comprehensive button system for Fleetvera with multiple variants, sizes,
  * and states. Supports loading states and icons.
  * 
  * @example
@@ -22,8 +22,8 @@ import { Loader2 } from 'lucide-react';
  * Button variant styles mapping
  */
 const variantStyles = {
-  primary: 'bg-blue-900 text-white hover:bg-blue-800 active:bg-blue-950 focus:ring-blue-500',
-  secondary: 'bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700 focus:ring-blue-500',
+  primary: 'bg-emerald-900 text-white hover:bg-emerald-800 active:bg-emerald-950 focus:ring-emerald-500',
+  secondary: 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500',
   ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-400',
   danger: 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 focus:ring-red-500',
   outline: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 active:bg-slate-100 focus:ring-slate-400',

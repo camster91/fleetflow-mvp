@@ -1,10 +1,10 @@
 // Email Service using Mailgun API
-// Sends transactional emails for all FleetFlow features
+// Sends transactional emails for Fleetvera features
 
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || ''
 const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || 'fleetflow.ashbi.ca'
 const MAILGUN_BASE_URL = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3'
-const FROM_EMAIL = process.env.FROM_EMAIL || 'FleetFlow <notifications@fleetflow.ashbi.ca>'
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://fleet.ashbi.ca'
 
 interface EmailAttachment {

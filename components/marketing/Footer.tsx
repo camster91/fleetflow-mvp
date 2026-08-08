@@ -19,14 +19,14 @@ const footerLinks = {
 
 export function Footer() {
   return (
-    <footer className="bg-slate-900 text-slate-300">
+    <footer className="bg-emerald-950 text-emerald-50/80">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-8 md:grid-cols-3 lg:grid-cols-6">
           <div className="col-span-2">
             <Link href="/" className="mb-4 flex items-center">
               <Image
                 src="/brand/logo/logo-horizontal-dark.svg"
-                alt="FleetFlow"
+                alt="Fleetvera"
                 width={160}
                 height={32}
                 className="h-8 w-auto"
@@ -57,7 +57,7 @@ export function Footer() {
       <div className="border-t border-slate-800">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} FleetFlow. All rights reserved.
+            © {new Date().getFullYear()} Fleetvera. All rights reserved.
           </p>
         </div>
       </div>

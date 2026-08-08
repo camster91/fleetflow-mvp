@@ -31,7 +31,7 @@ export function TrialBanner() {
       <div className="flex items-center gap-2">
         <Clock className="h-4 w-4 shrink-0" />
         {expired ? (
-          <span>Your trial has expired. <Link href="/billing" className="font-medium underline">Subscribe now</Link> to keep using FleetFlow.</span>
+          <span>Your trial has expired. <Link href="/billing" className="font-medium underline">Subscribe now</Link> to keep using Fleetvera.</span>
         ) : (
           <span>{daysLeft} day{daysLeft !== 1 ? 's' : ''} left in your trial. <Link href="/billing" className="font-medium underline">Subscribe</Link></span>
         )}

@@ -17,21 +17,22 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>FleetFlow | Fleet operations in one workspace</title>
-        <meta name="description" content="Manage vehicles, deliveries, maintenance, clients, reports, and team access with FleetFlow." />
+        <title>Fleetvera | Fleet operations, organized</title>
+        <meta name="description" content="Fleetvera keeps vehicles, deliveries, maintenance, clients, reports, and team access organized in one workspace." />
       </Head>
       <div className="min-h-screen bg-white text-slate-900">
         <Navbar />
         <main>
-          <section className="bg-gradient-to-b from-blue-50 to-white px-4 pb-24 pt-36 text-center sm:px-6">
+          <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-white to-white px-4 pb-24 pt-36 text-center sm:px-6">
+            <div className="pointer-events-none absolute left-1/2 top-20 h-80 w-80 -translate-x-1/2 rounded-full bg-teal-200/30 blur-3xl" />
             <div className="mx-auto max-w-4xl">
-              <p className="mb-4 text-sm font-semibold uppercase tracking-widest text-blue-700">Fleet operations software</p>
-              <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">Keep fleet work organized in one place</h1>
+              <p className="relative mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">Fleet operations software</p>
+              <h1 className="relative text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">Fleet operations,<br className="hidden sm:block" /> organized.</h1>
               <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-                FleetFlow brings vehicle records, deliveries, maintenance, clients, reports, and team workspaces together.
+                Fleetvera brings vehicle records, deliveries, maintenance, clients, reports, and team workspaces together.
               </p>
               <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-                <Link href="/auth/login" className="rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white hover:bg-blue-800">
+                <Link href="/auth/login" className="rounded-xl bg-emerald-900 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-800">
                   Sign in
                 </Link>
                 <Link href="/pricing" className="rounded-xl border border-slate-300 px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50">
@@ -50,8 +51,8 @@ export default function HomePage() {
               </div>
               <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {features.map(({ title, description, icon: Icon }) => (
-                  <article key={title} className="rounded-2xl border border-slate-200 p-6 shadow-sm">
-                    <Icon className="h-7 w-7 text-blue-700" />
+                  <article key={title} className="rounded-2xl border border-emerald-950/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+                    <div className="inline-flex rounded-xl bg-emerald-50 p-3"><Icon className="h-6 w-6 text-emerald-800" /></div>
                     <h3 className="mt-4 text-lg font-semibold">{title}</h3>
                     <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
                   </article>
@@ -60,8 +61,8 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="bg-slate-950 px-4 py-20 text-center text-white sm:px-6">
-            <h2 className="text-3xl font-bold">Already invited to FleetFlow?</h2>
+          <section className="bg-emerald-950 px-4 py-20 text-center text-white sm:px-6">
+            <h2 className="text-3xl font-bold">Already invited to Fleetvera?</h2>
             <p className="mx-auto mt-4 max-w-xl text-slate-300">Use your email address to receive a one-time sign-in code.</p>
             <Link href="/auth/login" className="mt-8 inline-block rounded-xl bg-white px-6 py-3 font-semibold text-slate-950 hover:bg-slate-100">
               Continue to sign in

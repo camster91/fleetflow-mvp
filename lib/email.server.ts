@@ -112,7 +112,7 @@ export async function sendWelcomeEmail(userName: string, userEmail: string, logi
   
   return sendEmail({
     to: userEmail,
-    subject: 'Welcome to FleetFlow!',
+    subject: 'Welcome to Fleetvera!',
     html,
     text
   })

@@ -18,9 +18,9 @@ if (apiKey && domain) {
   });
 }
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'FleetFlow <notifications@fleetflow.ashbi.ca>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>';
 const APP_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'FleetFlow';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera';
 
 // Base email template with brand styling
 function getBaseEmailTemplate(content: string): string {

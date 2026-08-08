@@ -4,6 +4,51 @@ import path from 'path'
 const root = path.resolve(__dirname, '../..')
 
 describe('release quality gates', () => {
+  test('customer-facing product identity is consistently Fleetvera', () => {
+    const brandedFiles = [
+      'components/ui/Logo.tsx',
+      'components/layouts/AuthLayout.tsx',
+      'components/onboarding/OnboardingModal.tsx',
+      'pages/index.tsx',
+      'pages/_app.tsx',
+      'pages/_document.tsx',
+      'public/manifest.json',
+    ]
+
+    for (const file of brandedFiles) {
+      const source = fs.readFileSync(path.join(root, file), 'utf8')
+      expect(source).toContain('Fleetvera')
+      expect(source).not.toMatch(/FleetFlow|Fleet Manager/)
+    }
+
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(root, 'public/manifest.json'), 'utf8')
+    ) as { name?: string; short_name?: string; description?: string; theme_color?: string }
+
+    expect(manifest.name).toBe('Fleetvera - Fleet Operations')
+    expect(manifest.short_name).toBe('Fleetvera')
+    expect(manifest.description).toContain('organized')
+    expect(manifest.theme_color).toBe('#123C36')
+  })
+
+  test('reports controls remain usable without widening a mobile viewport', () => {
+    const reports = fs.readFileSync(path.join(root, 'pages/reports.tsx'), 'utf8')
+
+    expect(reports).toContain('overflow-x-auto')
+    expect(reports).toContain('min-w-max')
+    expect(reports).toContain('flex-col sm:flex-row')
+    expect(reports).toContain('role="tablist"')
+    expect(reports).toContain('aria-selected={activeTab === key}')
+  })
+
+  test('network status starts with the same value on server and client', () => {
+    const performanceHook = fs.readFileSync(path.join(root, 'lib/performance.ts'), 'utf8')
+
+    expect(performanceHook).toContain('useState(true)')
+    expect(performanceHook).toContain('setIsOnline(navigator.onLine)')
+    expect(performanceHook).not.toContain("typeof navigator === 'undefined' ? true : navigator.onLine")
+  })
+
   test('package scripts expose deterministic type and CI checks', () => {
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(root, 'package.json'), 'utf8')

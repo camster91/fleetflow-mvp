@@ -180,7 +180,7 @@ export const SetupChecklist: React.FC<SetupChecklistProps> = ({
           <div>
             <h3 className="font-semibold text-slate-900">Setup Checklist</h3>
             <p className="text-sm text-slate-500">
-              Complete these steps to get the most out of FleetFlow
+              Complete these steps to get the most out of Fleetvera
             </p>
           </div>
         </div>

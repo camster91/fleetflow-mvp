@@ -26,15 +26,15 @@ export default function HelpPage() {
   return (
     <>
       <Head>
-        <title>FleetFlow help</title>
-        <meta name="description" content="Quick-start guidance for signing in and operating a FleetFlow workspace." />
+        <title>Fleetvera help</title>
+        <meta name="description" content="Quick-start guidance for signing in and operating a Fleetvera workspace." />
       </Head>
       <div className="min-h-screen bg-slate-50">
         <Navbar />
         <main className="px-4 pb-24 pt-32 sm:px-6">
           <div className="mx-auto max-w-4xl">
             <div className="text-center">
-              <h1 className="text-4xl font-bold tracking-tight text-slate-950">FleetFlow help</h1>
+              <h1 className="text-4xl font-bold tracking-tight text-slate-950">Fleetvera help</h1>
               <p className="mx-auto mt-4 max-w-2xl text-slate-600">A practical quick start for invited workspace members.</p>
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-2">

@@ -1,11 +1,11 @@
 {
-  "name": "FleetFlow - Fleet Management",
-  "short_name": "FleetFlow",
-  "description": "Modern fleet management SaaS platform",
+  "name": "Fleetvera - Fleet Operations",
+  "short_name": "Fleetvera",
+  "description": "Fleet operations, organized.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1E3A5F",
-  "theme_color": "#1E3A5F",
+  "background_color": "#F4F8F7",
+  "theme_color": "#123C36",
   "orientation": "portrait-primary",
   "icons": [
     {

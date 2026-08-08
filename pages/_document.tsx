@@ -26,19 +26,19 @@ export default function Document() {
         <link rel="manifest" href="/manifest.json" />
         
         {/* Theme Color */}
-        <meta name="theme-color" content="#1E3A5F" />
-        <meta name="msapplication-TileColor" content="#1E3A5F" />
+        <meta name="theme-color" content="#123C36" />
+        <meta name="msapplication-TileColor" content="#123C36" />
         
         {/* Open Graph / Social Media */}
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="Fleet Manager" />
-        <meta property="og:image" content="https://fleet.ashbi.ca/brand/og-image.png" />
+        <meta property="og:site_name" content="Fleetvera" />
+        <meta property="og:image" content="/brand/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://fleet.ashbi.ca/brand/twitter-card.png" />
+        <meta name="twitter:image" content="/brand/twitter-card.png" />
         
         {/* Description (will be overridden by page-specific meta) */}
         <meta name="description" content="Fleet management dashboard — vehicles, maintenance, deliveries and analytics." />

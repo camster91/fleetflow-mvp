@@ -81,7 +81,7 @@ export default function MechanicTaskPage() {
   return (
     <>
       <Head>
-        <title>Maintenance Task — FleetFlow</title>
+        <title>Maintenance Task — Fleetvera</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -93,7 +93,7 @@ export default function MechanicTaskPage() {
             <Wrench className="h-4 w-4 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-900">FleetFlow</p>
+            <p className="text-sm font-semibold text-slate-900">Fleetvera</p>
             <p className="text-xs text-slate-500">Maintenance Task</p>
           </div>
         </div>
@@ -255,7 +255,7 @@ export default function MechanicTaskPage() {
                 )}
 
                 <p className="text-center text-xs text-slate-400">
-                  Powered by FleetFlow &middot; This link is specific to this task
+                  Powered by Fleetvera &middot; This link is specific to this task
                 </p>
               </div>
             )}

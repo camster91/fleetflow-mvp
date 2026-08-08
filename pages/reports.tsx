@@ -118,7 +118,7 @@ export default function ReportsPage() {
         title="Reports"
         subtitle="Analyze fleet performance, maintenance costs, and delivery metrics"
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <DateRangePicker value={dateRange} onChange={setDateRange} />
             <Button
               variant="outline"
@@ -132,10 +132,13 @@ export default function ReportsPage() {
       />
 
       {/* Tab Navigation */}
-      <div className="flex gap-1 mb-6 bg-slate-100 p-1 rounded-lg w-fit">
-        {tabs.map(({ key, label, icon: Icon }) => (
+      <div className="mb-6 max-w-full overflow-x-auto pb-1">
+        <div className="flex min-w-max gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Report type">
+          {tabs.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
+            role="tab"
+            aria-selected={activeTab === key}
             onClick={() => setActiveTab(key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === key
@@ -146,7 +149,8 @@ export default function ReportsPage() {
             <Icon className="h-4 w-4" />
             {label}
           </button>
-        ))}
+          ))}
+        </div>
       </div>
 
       {loading ? (
