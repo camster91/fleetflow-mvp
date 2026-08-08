@@ -121,8 +121,10 @@ export function sortRuleFindings(findings: readonly UnrankedFinding[]): Unranked
 
 function recordUrl(entityType: FindingEvidence['entityType'], entityId: string): string {
   const id = encodeURIComponent(entityId)
-  if (entityType === 'client') return `/clients/${id}`
-  return `/${entityType === 'maintenance' ? 'maintenance' : `${entityType}s`}?record=${id}`
+  const collection = entityType === 'delivery' ? 'deliveries'
+    : entityType === 'maintenance' ? 'maintenance'
+      : `${entityType}s`
+  return entityType === 'client' ? `/clients/${id}` : `/${collection}?record=${id}`
 }
 
 function expires(nowMs: number, durationMs: number): Date {

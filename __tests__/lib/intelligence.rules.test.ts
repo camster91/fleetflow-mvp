@@ -127,6 +127,8 @@ describe('deterministic intelligence rules', () => {
       ] }))
       expect(findings.map(finding => finding.evidence[0].entityId)).toEqual(['delayed-late', 'pending-late', 'picked-late'])
       expect(findings.map(finding => finding.severity)).toEqual(['high', 'medium', 'high'])
+      expect(findings.find(finding => finding.evidence[0].entityId === 'pending-late')?.actionUrl)
+        .toBe('/deliveries?record=pending-late')
     })
 
     it('counts active deliveries per vehicle at the documented load threshold', () => {
@@ -160,6 +162,8 @@ describe('deterministic intelligence rules', () => {
       expect(findings).toHaveLength(3)
       expect(findings[0].evidence.map(item => item.field)).toEqual(['vehicleId', 'driver'])
       expect(findings.find(finding => finding.evidence[0].entityId === 'driver')?.severity).toBe('high')
+      expect(findings.find(finding => finding.evidence[0].entityId === 'driver')?.actionUrl)
+        .toBe('/deliveries?record=driver')
     })
   })
 

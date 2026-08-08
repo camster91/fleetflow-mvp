@@ -88,6 +88,7 @@ model User {
   vendingMachines VendingMachine[]
   announcements   Announcement[]
   taskShareLinks TaskShareLink[]
+  intelligenceFindings IntelligenceFinding[]
 
   @@index([email])
   @@index([googleId])
@@ -180,6 +181,7 @@ model Team {
   sopCategories SOPCategory[]
   vendingMachines VendingMachine[]
   announcements   Announcement[]
+  intelligenceFindings IntelligenceFinding[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -304,6 +306,34 @@ model StripeWebhookEvent {
   processedAt DateTime @default(now())
 
   @@index([processedAt])
+}
+
+model IntelligenceFinding {
+  id          String   @id
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  type        String
+  severity    String
+  confidence  Float
+  score       Int
+  ruleVersion String
+  title       String
+  explanation String
+  evidence    String
+  action      String?
+  actionUrl   String?
+  status      String   @default("OPEN")
+  feedback    String?
+  generatedAt DateTime @default(now())
+  expiresAt   DateTime?
+  resolvedAt  DateTime?
+
+  @@index([ownerId, teamId, status, severity])
+  @@index([ownerId, teamId, score(sort: Desc), id])
+  @@index([ownerId, teamId, status, score(sort: Desc), id])
+  @@index([expiresAt])
 }
 
 // Core Business Models
