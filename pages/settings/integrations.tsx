@@ -86,7 +86,7 @@ export default function IntegrationsPage() {
     >
       <PageHeader
         title="Integrations"
-        subtitle="Connect FleetFlow with your favorite tools and services"
+        subtitle="Connect Fleetvera with your favorite tools and services"
       />
 
       {categories.map((category) => (

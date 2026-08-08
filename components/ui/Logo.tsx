@@ -23,7 +23,7 @@ const defaultDimensions = {
 };
 
 /**
- * FleetFlow Logo Component
+ * Fleetvera Logo Component
  * 
  * Usage:
  * <Logo /> - Default horizontal logo (200x40)
@@ -44,7 +44,7 @@ export const Logo: React.FC<LogoProps> = ({
   return (
     <Image
       src={logoPaths[variant]}
-      alt="FleetFlow"
+      alt="Fleetvera"
       width={finalWidth}
       height={finalHeight}
       className={className}

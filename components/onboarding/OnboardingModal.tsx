@@ -53,7 +53,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const steps: Step[] = [
     {
       id: 0,
-      title: 'Welcome to FleetFlow',
+      title: 'Welcome to Fleetvera',
       description: 'Let\'s get you set up in just a few steps',
       icon: <Sparkles className="h-8 w-8 text-amber-500" />,
       content: (
@@ -62,7 +62,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <Sparkles className="h-10 w-10 text-blue-600" />
           </div>
           <h3 className="text-xl font-semibold text-slate-900">
-            Welcome to FleetFlow!
+            Welcome to Fleetvera!
           </h3>
           <p className="text-slate-600 max-w-sm mx-auto">
             We\'re excited to help you manage your fleet more efficiently. 
@@ -236,7 +236,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
       } else {
         saveLocalOnboardingProgress({ completed: true });
       }
-      notify.success('Welcome to FleetFlow! Your setup is complete.');
+      notify.success('Welcome to Fleetvera! Your setup is complete.');
       onComplete?.();
       onClose();
     } catch (error) {

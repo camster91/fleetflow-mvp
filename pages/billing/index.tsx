@@ -104,7 +104,7 @@ export default function BillingPage() {
 
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Billing' }]}>
-      <PageHeader title="Billing & Subscription" subtitle="Manage your FleetFlow subscription" />
+      <PageHeader title="Billing & Subscription" subtitle="Manage your Fleetvera subscription" />
       <div className="max-w-2xl mx-auto space-y-6">
 
         {/* Current subscription info */}
@@ -115,7 +115,7 @@ export default function BillingPage() {
               <StatusBadge status={sub.status} cancelAtPeriodEnd={sub.cancelAtPeriodEnd} />
             </div>
             <div className="space-y-2 text-sm text-slate-600">
-              <p><span className="font-medium text-slate-800">Plan:</span> FleetFlow {sub.plan === 'UNLIMITED' ? 'Unlimited' : 'Per User'}</p>
+              <p><span className="font-medium text-slate-800">Plan:</span> Fleetvera {sub.plan === 'UNLIMITED' ? 'Unlimited' : 'Per User'}</p>
               {sub.status === 'TRIAL' && (
                 <p>
                   <span className="font-medium text-slate-800">Trial:</span>{' '}
@@ -153,7 +153,7 @@ export default function BillingPage() {
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-50 mb-5">
               <CreditCard className="h-8 w-8 text-blue-900" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">FleetFlow Pro</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Fleetvera Pro</h2>
             <div className="grid sm:grid-cols-2 gap-4 text-left mb-8">
               {[
                 'Unlimited vehicles', 'Unlimited deliveries',

@@ -10,13 +10,13 @@ interface AuthLayoutProps {
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
   children,
-  title = 'FleetFlow Pro',
-  subtitle = 'Fleet Management Simplified',
+  title = 'Fleetvera',
+  subtitle = 'Fleet operations, organized.',
 }) => {
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-800 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -40,7 +40,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
             <Link href="/" className="flex items-center group">
               <Image
                 src="/brand/logo/logo-horizontal-dark.svg" 
-                alt="FleetFlow" 
+                alt="Fleetvera"
                 width={200}
                 height={40}
                 className="h-10 w-auto"
@@ -81,7 +81,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
           {/* Footer */}
           <div className="text-sm text-blue-200">
-            <p>© 2026 FleetFlow Pro. All rights reserved.</p>
+            <p>© 2026 Fleetvera. All rights reserved.</p>
             <div className="mt-2 flex items-center space-x-4">
               <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
               <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms</Link>
@@ -98,7 +98,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <Link href="/" className="flex items-center">
             <Image
               src="/brand/logo/logo-horizontal.svg" 
-              alt="FleetFlow" 
+              alt="Fleetvera"
               width={140}
               height={28}
               className="h-7 w-auto"
@@ -115,7 +115,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
         {/* Mobile Footer */}
         <div className="lg:hidden p-4 text-center text-sm text-slate-500 border-t border-slate-200">
-          <p>© 2026 FleetFlow Pro</p>
+          <p>© 2026 Fleetvera</p>
         </div>
       </div>
     </div>

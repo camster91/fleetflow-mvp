@@ -104,7 +104,7 @@ export default function SecuritySettingsPage() {
 
   const downloadBackupCodes = () => {
     if (!twoFASetup) return;
-    const content = `FleetFlow 2FA Backup Codes\nGenerated: ${new Date().toLocaleString()}\n\n${twoFASetup.backupCodes.join('\n')}\n\nIMPORTANT: Keep these codes in a safe place. Each code can only be used once.`;
+    const content = `Fleetvera 2FA Backup Codes\nGenerated: ${new Date().toLocaleString()}\n\n${twoFASetup.backupCodes.join('\n')}\n\nIMPORTANT: Keep these codes in a safe place. Each code can only be used once.`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

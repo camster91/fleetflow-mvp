@@ -47,7 +47,7 @@ export default function MobileMenu({ activeTab, setActiveTab }: MobileMenuProps)
                   <Truck className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="font-bold text-gray-900">FleetFlow Pro</h2>
+                  <h2 className="font-bold text-gray-900">Fleetvera</h2>
                   <p className="text-xs text-gray-600">Mobile Menu</p>
                 </div>
               </div>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Fleetvera</title><desc id="desc">Fleet operations, organized.</desc>
+  <rect width="1200" height="630" fill="#082B27"/>
+  <circle cx="1030" cy="80" r="320" fill="#123C36"/><circle cx="1030" cy="80" r="190" fill="#175A4D"/>
+  <g transform="translate(88 82)"><rect width="76" height="76" rx="22" fill="#E8FFF3"/><path d="M19 22l19 36 19-36" fill="none" stroke="#123C36" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="19" cy="22" r="5" fill="#42D6A4"/><circle cx="57" cy="22" r="5" fill="#42D6A4"/></g>
+  <text x="184" y="140" fill="#fff" font-family="Inter,system-ui,sans-serif" font-size="52" font-weight="750" letter-spacing="-2">Fleetvera</text>
+  <text x="88" y="330" fill="#fff" font-family="Inter,system-ui,sans-serif" font-size="72" font-weight="750" letter-spacing="-3">Fleet operations,</text>
+  <text x="88" y="410" fill="#B8F36B" font-family="Inter,system-ui,sans-serif" font-size="72" font-weight="750" letter-spacing="-3">organized.</text>
+  <text x="88" y="500" fill="#B8D0CA" font-family="Inter,system-ui,sans-serif" font-size="28">Vehicles · Deliveries · Maintenance · Reporting</text>
+</svg>

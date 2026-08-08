@@ -38,8 +38,8 @@ export default async function handler(
     }
 
     const secret = speakeasy.generateSecret({
-      name: `FleetFlow:${user.email}`,
-      issuer: process.env.TWO_FACTOR_ISSUER || 'Fleet Manager',
+      name: `Fleetvera:${user.email}`,
+      issuer: process.env.TWO_FACTOR_ISSUER || 'Fleetvera',
       length: 32,
     });
 

@@ -17,8 +17,8 @@ export default function PricingPage() {
   return (
     <>
       <Head>
-        <title>FleetFlow pricing</title>
-        <meta name="description" content="FleetFlow Pro is $49 monthly or $490 yearly. Workspace access is currently invitation-only." />
+        <title>Fleetvera pricing</title>
+        <meta name="description" content="Fleetvera Pro is $49 monthly or $490 yearly. Workspace access is currently invitation-only." />
       </Head>
       <div className="min-h-screen bg-slate-50">
         <Navbar />
@@ -31,8 +31,8 @@ export default function PricingPage() {
           <section className="mx-auto mt-12 max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
             <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
               <div>
-                <h2 className="text-2xl font-bold text-slate-950">FleetFlow Pro</h2>
-                <p className="mt-2 text-slate-600">The complete currently available FleetFlow workspace.</p>
+                <h2 className="text-2xl font-bold text-slate-950">Fleetvera Pro</h2>
+                <p className="mt-2 text-slate-600">The complete currently available Fleetvera workspace.</p>
               </div>
               <div className="text-left sm:text-right">
                 <p className="text-3xl font-bold text-slate-950">$49 <span className="text-base font-normal text-slate-500">USD/month</span></p>
@@ -48,10 +48,10 @@ export default function PricingPage() {
               ))}
             </ul>
             <div className="mt-10 rounded-2xl bg-blue-50 p-5 text-sm text-blue-950">
-              Workspace creation is currently invitation-only. Invited administrators can choose a billing option from inside FleetFlow.
+              Workspace creation is currently invitation-only. Invited administrators can choose a billing option from inside Fleetvera.
             </div>
             <Link href="/auth/login" className="mt-6 inline-flex rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white hover:bg-blue-800">
-              Sign in to FleetFlow
+              Sign in to Fleetvera
             </Link>
           </section>
         </main>

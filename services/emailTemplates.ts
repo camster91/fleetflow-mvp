@@ -1,4 +1,4 @@
-// Email Templates for FleetFlow
+// Email templates for Fleetvera
 // All templates return HTML and plain text versions
 
 import { APP_URL } from './emailService'
@@ -76,13 +76,13 @@ function wrapEmail(content: string, title: string): { html: string; text: string
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚛 FleetFlow</h1>
+      <h1>Fleetvera</h1>
     </div>
     <div class="content">
       ${content}
     </div>
     <div class="footer">
-      <p>FleetFlow Fleet Management System</p>
+      <p>Fleetvera Fleet Operations</p>
       <p><a href="${APP_URL}">${APP_URL}</a></p>
       <p>This is an automated message. Please do not reply to this email.</p>
     </div>
@@ -104,8 +104,8 @@ function wrapEmail(content: string, title: string): { html: string; text: string
 
 export function welcomeEmail(userName: string, loginUrl: string) {
   const content = `
-    <h2>Welcome to FleetFlow, ${userName}!</h2>
-    <p>Your account has been successfully created. FleetFlow helps you manage your fleet operations efficiently.</p>
+    <h2>Welcome to Fleetvera, ${userName}!</h2>
+    <p>Your account has been successfully created. Fleetvera keeps your fleet operations organized.</p>
     
     <div class="alert alert-success">
       <strong>✓ Account Created Successfully</strong>
@@ -113,7 +113,7 @@ export function welcomeEmail(userName: string, loginUrl: string) {
     
     <p>You can now log in to access your dashboard:</p>
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${loginUrl}" class="button">Log In to FleetFlow</a>
+      <a href="${loginUrl}" class="button">Log In to Fleetvera</a>
     </p>
     
     <div class="card">
@@ -128,13 +128,13 @@ export function welcomeEmail(userName: string, loginUrl: string) {
     
     <p>If you have any questions, contact your fleet administrator.</p>
   `
-  return wrapEmail(content, 'Welcome to FleetFlow')
+  return wrapEmail(content, 'Welcome to Fleetvera')
 }
 
 export function passwordResetEmail(resetUrl: string, expiresIn: string = '1 hour') {
   const content = `
     <h2>Password Reset Request</h2>
-    <p>We received a request to reset your FleetFlow password.</p>
+    <p>We received a request to reset your Fleetvera password.</p>
     
     <div class="alert alert-warning">
       <strong>⚠ This link expires in ${expiresIn}</strong>
@@ -373,7 +373,7 @@ export function deliveryCompletedEmail(delivery: {
     <img src="${proofPhoto}" alt="Delivery Photo" style="max-width: 100%; border-radius: 8px; margin: 16px 0;">
     ` : ''}
     
-    <p>Thank you for using FleetFlow!</p>
+    <p>Thank you for using Fleetvera!</p>
   `
   return wrapEmail(content, 'Delivery Completed')
 }
@@ -467,9 +467,9 @@ export function clientWelcomeEmail(clientName: string, businessName?: string) {
   const displayName = businessName || clientName
   
   const content = `
-    <h2>Welcome to FleetFlow Delivery Services</h2>
+    <h2>Welcome to Fleetvera Delivery Services</h2>
     <p>Dear ${clientName},</p>
-    <p>Thank you for choosing FleetFlow for your delivery needs. ${businessName ? `${businessName} is` : 'You are'} now registered in our system.</p>
+    <p>Thank you for choosing Fleetvera for your delivery needs. ${businessName ? `${businessName} is` : 'You are'} now registered in our system.</p>
     
     <div class="card">
       <h3>What to Expect</h3>
@@ -486,7 +486,7 @@ export function clientWelcomeEmail(clientName: string, businessName?: string) {
     
     <p>If you have any questions, please don't hesitate to contact us.</p>
   `
-  return wrapEmail(content, 'Welcome to FleetFlow')
+  return wrapEmail(content, 'Welcome to Fleetvera')
 }
 
 // ==================== ANNOUNCEMENT EMAILS ====================
@@ -526,7 +526,7 @@ export function announcementEmail(announcement: {
     ${announcement.sentBy ? `<p style="color: ${BRAND.gray}; font-size: 14px;">Sent by: ${announcement.sentBy}</p>` : ''}
     
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${APP_URL}" class="button">Open FleetFlow</a>
+      <a href="${APP_URL}" class="button">Open Fleetvera</a>
     </p>
   `
   return wrapEmail(content, `Fleet Announcement - ${announcement.priority.toUpperCase()}`)

@@ -32,19 +32,19 @@ export default function App({ Component, pageProps }: AppProps) {
         <OnboardingGuard>
         <OfflineBanner />
         <Head>
-          <title>Fleet Manager - Fleet Management Dashboard</title>
+          <title>Fleetvera - Fleet Operations, Organized</title>
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="description" content="Fleet management dashboard — vehicles, maintenance, deliveries and analytics." />
           <meta name="keywords" content="fleet management, delivery, logistics, vehicles, dashboard" />
 
           {/* Open Graph */}
-          <meta property="og:title" content="Fleet Manager" />
-          <meta property="og:description" content="Streamline your fleet operations with Fleet Manager" />
+          <meta property="og:title" content="Fleetvera" />
+          <meta property="og:description" content="Fleet operations, organized." />
           <meta property="og:type" content="website" />
           
           {/* PWA */}
           <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#1e3a8a" />
+          <meta name="theme-color" content="#123C36" />
         </Head>
         
         <Component {...pageProps} />

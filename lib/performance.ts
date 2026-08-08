@@ -11,12 +11,13 @@ interface NavigatorWithConnection extends Navigator {
 /** Report browser connectivity and whether the current connection is very slow. */
 export function useNetworkStatus(): { isSlow: boolean; isOnline: boolean } {
   const [isSlow, setIsSlow] = useState(false)
-  const [isOnline, setIsOnline] = useState(
-    typeof navigator === 'undefined' ? true : navigator.onLine
-  )
+  // Keep the initial server and browser render identical, then read the
+  // browser's actual state after hydration.
+  const [isOnline, setIsOnline] = useState(true)
 
   useEffect(() => {
     const connection = (navigator as NavigatorWithConnection).connection
+    setIsOnline(navigator.onLine)
     const checkSpeed = () => {
       setIsSlow(
         connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g'

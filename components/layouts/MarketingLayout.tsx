@@ -11,8 +11,8 @@ interface MarketingLayoutProps {
 
 export function MarketingLayout({
   children,
-  title = 'FleetFlow - Fleet Management, Simplified',
-  description = 'Track vehicles, schedule maintenance, and optimize your fleet operations with FleetFlow.',
+  title = 'Fleetvera - Fleet Operations, Organized',
+  description = 'Keep vehicles, maintenance, deliveries, clients, and reporting organized with Fleetvera.',
   ogImage = '/og-image.jpg',
 }: MarketingLayoutProps) {
   return (

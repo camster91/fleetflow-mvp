@@ -196,7 +196,7 @@ export default function InvitePage() {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Hey! I'd like you to join our team on FleetFlow to help manage our fleet..."
+                placeholder="Hey! I'd like you to join our team on Fleetvera to help manage our fleet..."
                 rows={3}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
               />
