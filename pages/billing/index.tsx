@@ -2,7 +2,7 @@ import { toast } from "react-hot-toast";
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
-import { CreditCard, Zap, Star, Check, AlertTriangle, Loader2 } from 'lucide-react';
+import { CreditCard, Zap, Check, AlertTriangle, Loader2, ReceiptText } from 'lucide-react';
 
 interface SubscriptionData {
   plan: string;
@@ -12,6 +12,11 @@ interface SubscriptionData {
   cancelAtPeriodEnd: boolean;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
+}
+
+interface BillingPricing {
+  monthly: { amount: number; currency: string }
+  yearly: { amount: number; currency: string }
 }
 
 function StatusBadge({ status, cancelAtPeriodEnd }: { status: string; cancelAtPeriodEnd?: boolean }) {
@@ -35,12 +40,27 @@ export default function BillingPage() {
   const [sub, setSub] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [billingAvailable, setBillingAvailable] = useState(false);
+  const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(null);
+  const [pricing, setPricing] = useState<BillingPricing | null>(null);
 
   useEffect(() => {
-    fetch('/api/subscription/status')
-      .then(r => r.json())
-      .then(data => setSub(data.subscription || null))
-      .catch(() => setSub(null))
+    Promise.all([
+      fetch('/api/subscription/status').then(r => r.ok ? r.json() : Promise.reject()),
+      fetch('/api/stripe/availability').then(r => r.ok ? r.json() : Promise.reject()),
+    ])
+      .then(([status, availability]) => {
+        setSub(status.subscription || null)
+        setBillingAvailable(Boolean(availability.available))
+        setAvailabilityMessage(availability.message || null)
+        setPricing(availability.pricing || null)
+      })
+      .catch(() => {
+        setSub(null)
+        setBillingAvailable(false)
+        setAvailabilityMessage('Billing status could not be verified. Please try again later.')
+        setPricing(null)
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -91,6 +111,10 @@ export default function BillingPage() {
 
   const isActive = sub?.status === 'ACTIVE';
   const showPricing = !isActive;
+  const formatPrice = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value / 100)
+  const savings = pricing && pricing.monthly.amount > 0
+    ? Math.max(0, Math.round((1 - pricing.yearly.amount / (pricing.monthly.amount * 12)) * 100))
+    : 0
 
   if (loading) {
     return (
@@ -106,6 +130,13 @@ export default function BillingPage() {
     <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Billing' }]}>
       <PageHeader title="Billing & Subscription" subtitle="Manage your Fleetvera subscription" />
       <div className="max-w-2xl mx-auto space-y-6">
+
+        {!billingAvailable && (
+          <div role="status" className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div><p className="font-semibold">Online billing is unavailable</p><p>{availabilityMessage}</p></div>
+          </div>
+        )}
 
         {/* Current subscription info */}
         {sub && (
@@ -126,24 +157,27 @@ export default function BillingPage() {
                 </p>
               )}
               {sub.currentPeriodEnd && (
-                <p><span className="font-medium text-slate-800">Renews:</span> {new Date(sub.currentPeriodEnd).toLocaleDateString()}</p>
+                <p><span className="font-medium text-slate-800">{sub.cancelAtPeriodEnd ? 'Access through:' : 'Renews:'}</span> {new Date(sub.currentPeriodEnd).toLocaleDateString()}</p>
               )}
-              {sub.cancelAtPeriodEnd && sub.currentPeriodEnd && (
+              {sub.cancelAtPeriodEnd && (
                 <p className="text-amber-600">
                   <AlertTriangle className="inline h-4 w-4 mr-1" />
-                  Access ends {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+                  Your subscription is scheduled to cancel{sub.currentPeriodEnd ? ` on ${new Date(sub.currentPeriodEnd).toLocaleDateString()}` : ''}.
                 </p>
               )}
             </div>
             {isActive && !sub.cancelAtPeriodEnd && (
               <button
                 onClick={handleCancel}
-                disabled={actionLoading}
+                disabled={actionLoading || !billingAvailable}
                 className="mt-4 px-4 py-2 text-sm border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"
               >
                 Cancel Subscription
               </button>
             )}
+            <a href="/billing/invoices" className="mt-4 ml-3 inline-flex items-center gap-2 px-4 py-2 text-sm text-blue-800 hover:underline">
+              <ReceiptText className="h-4 w-4" /> View invoices
+            </a>
           </div>
         )}
 
@@ -169,22 +203,22 @@ export default function BillingPage() {
             </div>
             <div className="grid sm:grid-cols-2 gap-4 mb-6">
               <div className="bg-slate-50 rounded-xl p-5">
-                <p className="text-2xl font-bold text-slate-900">$49<span className="text-base text-slate-500 font-normal">/mo</span></p>
+                <p className="text-2xl font-bold text-slate-900">{pricing ? formatPrice(pricing.monthly.amount, pricing.monthly.currency) : 'Unavailable'}<span className="text-base text-slate-500 font-normal">/mo</span></p>
                 <p className="text-slate-500 text-xs mb-3">Billed monthly</p>
                 <button
                   onClick={() => handleSubscribe('monthly')}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !billingAvailable}
                   className="w-full px-4 py-2.5 bg-blue-900 text-white rounded-xl font-medium hover:bg-blue-800 transition disabled:opacity-50"
                 >
                   {actionLoading ? 'Loading...' : 'Subscribe Monthly'}
                 </button>
               </div>
               <div className="bg-blue-50 rounded-xl p-5 ring-2 ring-blue-200">
-                <p className="text-2xl font-bold text-slate-900">$490<span className="text-base text-slate-500 font-normal">/yr</span></p>
-                <p className="text-blue-600 text-xs font-medium mb-3">Save 17%</p>
+                <p className="text-2xl font-bold text-slate-900">{pricing ? formatPrice(pricing.yearly.amount, pricing.yearly.currency) : 'Unavailable'}<span className="text-base text-slate-500 font-normal">/yr</span></p>
+                <p className="text-blue-600 text-xs font-medium mb-3">{savings > 0 ? `Save ${savings}%` : 'Billed yearly'}</p>
                 <button
                   onClick={() => handleSubscribe('yearly')}
-                  disabled={actionLoading}
+                  disabled={actionLoading || !billingAvailable}
                   className="w-full px-4 py-2.5 bg-blue-900 text-white rounded-xl font-medium hover:bg-blue-800 transition disabled:opacity-50"
                 >
                   {actionLoading ? 'Loading...' : 'Subscribe Yearly'}

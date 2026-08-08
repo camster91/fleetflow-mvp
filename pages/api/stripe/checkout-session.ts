@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
-import { createCheckoutSession, createStripeCustomer } from '../../../lib/stripe';
+import { createCheckoutSession, createStripeCustomer, getBillingAvailability, getCanonicalAppUrl, getConfiguredPrice } from '../../../lib/stripe';
 import { assertSameOrigin, requireTenantContext } from '../../../lib/apiAuth';
 import { canManageBilling } from '../../../lib/permissions';
 
@@ -14,15 +14,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!canManageBilling(context.tenant.role)) return res.status(403).json({ error: 'Forbidden' });
   if (!assertSameOrigin(req, res)) return;
 
-  const { interval = 'monthly' } = req.body;
-
-  const priceId = interval === 'yearly'
-    ? process.env.STRIPE_PRICE_YEARLY
-    : process.env.STRIPE_PRICE_MONTHLY;
-
-  if (!priceId) {
-    return res.status(500).json({ error: 'Stripe price ID not configured' });
+  const { interval = 'monthly' } = req.body || {};
+  if (interval !== 'monthly' && interval !== 'yearly') {
+    return res.status(400).json({ error: 'Choose monthly or yearly billing' });
   }
+
+  if (!getBillingAvailability().available) {
+    return res.status(503).json({ error: 'Billing is temporarily unavailable' });
+  }
+  const priceId = getConfiguredPrice(interval)!;
 
   try {
     const user = await prisma.user.findUnique({
@@ -58,7 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL || `https://${req.headers.host}`;
+    const baseUrl = getCanonicalAppUrl();
+    if (!baseUrl) return res.status(503).json({ error: 'Billing is temporarily unavailable' });
     const checkoutSession = await createCheckoutSession({
       priceId,
       customerId: stripeCustomerId,

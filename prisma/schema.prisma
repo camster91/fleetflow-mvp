@@ -260,6 +260,8 @@ model Subscription {
   currentPeriodStart    DateTime?
   currentPeriodEnd      DateTime?
   cancelAtPeriodEnd     Boolean   @default(false)
+  stripeLastEventId     String?
+  stripeLastEventCreated Int?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -274,7 +276,7 @@ model Invoice {
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   stripeInvoiceId String   @unique
-  amount          Float
+  amount          Int      // Stripe minor units (for example cents)
   currency        String   @default("USD")
   status          String
   invoicePdf      String?
@@ -285,6 +287,14 @@ model Invoice {
   @@index([userId])
   @@index([stripeInvoiceId])
   @@index([createdAt])
+}
+
+model StripeWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
 }
 
 // Core Business Models

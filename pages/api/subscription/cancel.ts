@@ -25,14 +25,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await cancelSubscription(subscription.stripeSubscriptionId, true);
 
-    await prisma.subscription.update({
-      where: { userId: context.tenant.ownerId },
-      data: { cancelAtPeriodEnd: true },
+    await prisma.$transaction(async tx => {
+      await tx.subscription.update({
+        where: { userId: context.tenant.ownerId },
+        data: { cancelAtPeriodEnd: true },
+      });
+      await tx.auditLog.create({ data: {
+        userId: context.session.user.id,
+        teamId: context.tenant.teamId,
+        userName: context.session.user.name || null,
+        userRole: context.tenant.role,
+        action: 'updated',
+        entityType: 'subscription',
+        entityId: subscription.id,
+        description: 'Subscription cancellation scheduled for period end',
+        metadata: JSON.stringify({ cancelAtPeriodEnd: true }),
+      } });
     });
 
     return res.status(200).json({ message: 'Subscription will cancel at period end' });
-  } catch (error) {
-    console.error('Cancel subscription error:', error);
+  } catch {
+    console.error('Stripe subscription cancellation failed');
     return res.status(500).json({ error: 'Failed to cancel subscription' });
   }
 }
