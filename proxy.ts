@@ -41,6 +41,8 @@ const PROTECTED_PREFIXES = [
   '/driver',
   '/routes',
   '/intelligence',
+  '/assistant',
+  '/ask',
 ]
 
 const PUBLIC_API_PREFIXES = ['/api/auth', '/api/task']
