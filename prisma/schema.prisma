@@ -94,6 +94,7 @@ model User {
   uploadedDocuments DocumentUpload[] @relation("DocumentUploader")
   confirmedDocumentExecutions DocumentExecution[] @relation("DocumentConfirmer")
   expenses ExpenseRecord[]
+  integrationConnections IntegrationConnection[]
 
   @@index([email])
   @@index([googleId])
@@ -190,6 +191,7 @@ model Team {
   intelligenceRuns IntelligenceRun[]
   documents DocumentUpload[]
   expenses ExpenseRecord[]
+  integrationConnections IntegrationConnection[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -823,4 +825,131 @@ model TaskShareLink {
 
   @@index([token])
   @@index([taskId])
+}
+
+model IntegrationConnection {
+  id                 String   @id @default(cuid())
+  ownerId            String
+  owner              User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId             String?
+  team               Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  scopeKey           String
+  provider           String
+  generation         Int      @default(1)
+  status             String   @default("DISCONNECTED")
+  credentialEnvelope String?
+  scopes             String   @default("[]")
+  externalAccountRef String?
+  tokenExpiresAt     DateTime?
+  refreshTokenExpiresAt DateTime?
+  revokedAt          DateTime?
+  lastSyncAt         DateTime?
+  nextSyncAt         DateTime?
+  lastErrorCode      String?
+  syncCursor         String?
+  lockToken          String?
+  lockExpiresAt      DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  oauthStates        IntegrationOAuthState[]
+  syncJobs           IntegrationSyncJob[]
+  records            IntegrationRecord[]
+
+  @@unique([scopeKey, provider])
+  @@index([ownerId, teamId])
+  @@index([status, nextSyncAt])
+}
+
+model IntegrationOAuthState {
+  id                    String   @id @default(cuid())
+  connectionId          String
+  connection            IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  stateDigest           String   @unique
+  generation            Int
+  redirectPath          String
+  expiresAt             DateTime
+  consumedAt            DateTime?
+  createdAt             DateTime @default(now())
+
+  @@index([connectionId, expiresAt])
+}
+
+model IntegrationSyncJob {
+  id             String   @id @default(cuid())
+  connectionId   String
+  connection     IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  idempotencyKey String
+  generation     Int
+  lockToken      String
+  lockExpiresAt  DateTime
+  status         String   @default("PENDING")
+  cursorBefore   String?
+  cursorAfter    String?
+  processedCount Int      @default(0)
+  errorCode      String?
+  attemptCount   Int      @default(0)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@unique([connectionId, idempotencyKey])
+  @@index([status, createdAt])
+}
+
+model IntegrationRecord {
+  id             String   @id @default(cuid())
+  connectionId   String
+  connection     IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  remoteType     String
+  remoteId       String
+  remoteUpdatedAt DateTime?
+  payloadHash    String
+  reviewPayload  String?
+  provenance     String
+  localEntityType String?
+  localEntityId  String?
+  reviewStatus   String   @default("PENDING_REVIEW")
+  conflictReason String?
+  revision       Int      @default(1)
+  outcome        String?
+  attemptCount   Int      @default(0)
+  nextRetryAt    DateTime?
+  lastErrorCode  String?
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+  reviews        IntegrationRecordReview[]
+
+  @@unique([connectionId, remoteType, remoteId])
+  @@index([connectionId, reviewStatus])
+  @@index([localEntityType, localEntityId])
+}
+
+model IntegrationRateLimit {
+  actorId     String
+  scopeKey    String
+  provider    String
+  action      String
+  bucketStart DateTime
+  count       Int      @default(0)
+
+  @@id([actorId, scopeKey, provider, action, bucketStart])
+  @@index([bucketStart])
+}
+
+model IntegrationRecordReview {
+  id               String   @id @default(cuid())
+  recordId         String
+  record           IntegrationRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  revision         Int
+  decision         String
+  payloadHash      String
+  payloadSnapshot  String
+  reviewerId       String
+  reviewerSnapshot String
+  mappedVehicleId  String?
+  createdAt        DateTime @default(now())
+
+  @@unique([recordId, revision, decision])
+  @@index([reviewerId, createdAt])
+  @@index([recordId, createdAt])
 }

@@ -11,6 +11,7 @@
     "admin:bootstrap": "node create-admin.js",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:studio": "prisma studio",
+    "verify:integration-migrations": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-integration-migrations.ps1",
     "test": "jest",
     "test:ci": "jest --runInBand --detectOpenHandles",
     "test:watch": "jest --watch",
