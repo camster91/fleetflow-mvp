@@ -65,7 +65,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           {subtitle && <p className="mt-1 text-slate-500">{subtitle}</p>}
         </div>
         {actions && (
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {actions}
           </div>
         )}

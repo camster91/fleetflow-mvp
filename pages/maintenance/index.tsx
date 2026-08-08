@@ -103,7 +103,7 @@ export default function MaintenancePage() {
         title="Maintenance Calendar"
         subtitle="Schedule and track vehicle maintenance tasks"
         actions={
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="flex border border-slate-200 rounded-lg overflow-hidden">
               <button onClick={() => setViewMode('calendar')} className={`px-3 py-1.5 text-sm flex items-center gap-1.5 ${ viewMode === 'calendar' ? 'bg-blue-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50' }`}><Grid className="h-4 w-4" />Calendar</button>
               <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 text-sm flex items-center gap-1.5 border-l border-slate-200 ${ viewMode === 'list' ? 'bg-blue-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50' }`}><List className="h-4 w-4" />List</button>

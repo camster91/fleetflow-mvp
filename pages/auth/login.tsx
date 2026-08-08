@@ -124,7 +124,9 @@ export default function LoginPage() {
 
     toast.success('Welcome back!');
     const callbackUrl = (router.query.callbackUrl as string) || '/dashboard';
-    router.push(callbackUrl);
+    // A full navigation lets the session provider initialize with the new
+    // authentication cookie instead of briefly rendering placeholder identity.
+    window.location.assign(callbackUrl);
   };
 
   const handleResend = async () => {
