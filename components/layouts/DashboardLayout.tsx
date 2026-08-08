@@ -13,6 +13,7 @@ interface NavItem { id: string; label: string; icon: React.ElementType; href?: s
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
   { id: 'assistant', label: 'Ask Fleetvera', icon: Sparkles, href: '/assistant' },
+  { id: 'documents', label: 'Documents', icon: FileText, href: '/documents' },
   { id: 'vehicles', label: 'Vehicles', icon: Car, children: [{ id: 'vehicle-list', label: 'Vehicle List', href: '/vehicles' }, { id: 'add-vehicle', label: 'Add New', href: '/vehicles?action=add' }] },
   { id: 'deliveries', label: 'Deliveries', icon: Package, href: '/deliveries' },
   { id: 'maintenance', label: 'Maintenance', icon: Wrench, href: '/maintenance' },

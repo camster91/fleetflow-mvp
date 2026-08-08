@@ -90,6 +90,10 @@ model User {
   taskShareLinks TaskShareLink[]
   intelligenceFindings IntelligenceFinding[]
   intelligenceRuns IntelligenceRun[]
+  documents DocumentUpload[] @relation("DocumentOwner")
+  uploadedDocuments DocumentUpload[] @relation("DocumentUploader")
+  confirmedDocumentExecutions DocumentExecution[] @relation("DocumentConfirmer")
+  expenses ExpenseRecord[]
 
   @@index([email])
   @@index([googleId])
@@ -184,6 +188,8 @@ model Team {
   announcements   Announcement[]
   intelligenceFindings IntelligenceFinding[]
   intelligenceRuns IntelligenceRun[]
+  documents DocumentUpload[]
+  expenses ExpenseRecord[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -384,6 +390,7 @@ model Vehicle {
   // Related data
   deliveries      Delivery[]
   maintenanceTasks MaintenanceTask[]
+  expenses ExpenseRecord[]
   
   // Timestamps
   createdAt       DateTime @default(now())
@@ -697,6 +704,87 @@ model ActionExecution {
   @@index([confirmerId, createdAt])
   @@index([sourceFindingId])
   @@index([teamId, createdAt])
+}
+
+model DocumentUpload {
+  id            String   @id @default(cuid())
+  ownerId       String
+  owner         User     @relation("DocumentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId        String?
+  team          Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  scopeKey      String
+  uploadedById  String?
+  uploadedBy    User?    @relation("DocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedBySnapshot String
+  originalName  String
+  mimeType      String
+  byteSize      Int
+  contentSha256 String
+  storageKey    String   @unique
+  status        String   @default("UPLOADED")
+  scanStatus    String
+  extraction    String?
+  reviewDraft   String?
+  revision      Int      @default(1)
+  extractedAt   DateTime?
+  expiresAt     DateTime
+  deletedAt     DateTime?
+  cleanupToken  String?
+  cleanupClaimedAt DateTime?
+  processingToken String?
+  processingLeaseUntil DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  executions    DocumentExecution[]
+  expenses      ExpenseRecord[]
+
+  @@unique([scopeKey, contentSha256])
+  @@index([ownerId, teamId, createdAt])
+  @@index([expiresAt, deletedAt])
+  @@index([status, cleanupClaimedAt])
+  @@index([status, processingLeaseUntil])
+  @@index([uploadedById, createdAt])
+}
+
+model DocumentExecution {
+  id          String   @id @default(cuid())
+  documentId  String
+  document    DocumentUpload @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  nonce       String   @unique
+  confirmerId String?
+  confirmer   User?    @relation("DocumentConfirmer", fields: [confirmerId], references: [id], onDelete: SetNull)
+  confirmerSnapshot String
+  entityId    String
+  result      String
+  createdAt   DateTime @default(now())
+
+  @@index([documentId, createdAt])
+  @@index([confirmerId, createdAt])
+}
+
+model ExpenseRecord {
+  id               String   @id @default(cuid())
+  ownerId          String
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  teamId           String?
+  team             Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  vehicleId        String
+  vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  vendor           String
+  date             DateTime
+  category         String
+  subtotal         Float?
+  tax              Float?
+  total            Float
+  description      String
+  sourceDocumentId String?
+  sourceDocument   DocumentUpload? @relation(fields: [sourceDocumentId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([ownerId, teamId, date])
+  @@index([vehicleId])
+  @@index([sourceDocumentId])
 }
 
 model Announcement {

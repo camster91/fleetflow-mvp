@@ -82,6 +82,18 @@ export const maintenanceCreateValuesSchema = z.object({
   costEstimate: z.number().nonnegative().max(10_000_000).optional(),
 }).strict()
 
+/** Exact document-reviewed operating expense contract. Amounts are in workspace currency units. */
+export const expenseCreateValuesSchema = z.object({
+  vehicleId: cuidLike,
+  vendor: z.string().trim().min(1).max(200),
+  date: dateOnlySchema,
+  category: z.enum(['maintenance', 'inspection', 'parts', 'other']),
+  subtotal: z.number().nonnegative().max(100_000_000).optional(),
+  tax: z.number().nonnegative().max(100_000_000).optional(),
+  total: z.number().nonnegative().max(100_000_000),
+  description: z.string().trim().min(1).max(2000),
+}).strict()
+
 /** Exact status-update contract shared by the delivery status API and actions. */
 export const deliveryStatusUpdateSchema = deliveryStatusTransitionSchema.extend({ status: z.enum(['pending', 'in-transit', 'delivered', 'cancelled']) })
 
