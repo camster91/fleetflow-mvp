@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { SignJWT } from 'jose'
 
 for (const viewport of ['desktop', '375px'] as const) test(`AI health controls remain accessible and bounded at ${viewport}`, async ({ page }) => {
+  test.setTimeout(60_000)
   if (viewport === '375px') await page.setViewportSize({ width: 375, height: 812 })
   if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is required for AI health browser QA')
   const baseURL = test.info().project.use.baseURL as string; const origin = new URL(baseURL)

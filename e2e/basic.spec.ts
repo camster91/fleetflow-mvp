@@ -1,11 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('FleetFlow Pro Basic UI Tests', () => {
+test.describe('Fleetvera Basic UI Tests', () => {
   test('homepage loads', async ({ page }) => {
     await page.goto('/');
     
     // Check page title
-    await expect(page).toHaveTitle(/FleetFlow/);
+    await expect(page).toHaveTitle(/Fleetvera/);
     
     // Check for loading state or content
     const loadingOrContent = await page.locator('body').textContent();

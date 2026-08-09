@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('FleetFlow Pro Dashboard', () => {
+test.describe('Fleetvera Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the application
     await page.goto('/');
@@ -11,7 +11,7 @@ test.describe('FleetFlow Pro Dashboard', () => {
 
   test('should load the homepage with correct title', async ({ page }) => {
     // Check page title
-    await expect(page).toHaveTitle(/FleetFlow Pro|Fleet Management Dashboard/);
+    await expect(page).toHaveTitle(/Fleetvera/);
     
     // Check for main heading
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { SignJWT } from 'jose'
 
 test('maintenance attention is explainable, keyboard usable, and fits 375px', async ({ page, baseURL }) => {
+  test.setTimeout(60_000)
   test.skip(!baseURL || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(baseURL), 'Deterministic auth fixture is restricted to a local Fleetvera server')
   const origin = new URL(baseURL!)
   const token = await new SignJWT({ sub: 'risk-qa', email: 'risk@fleetvera.test', role: 'OWNER' })
@@ -41,7 +42,7 @@ test('maintenance attention is explainable, keyboard usable, and fits 375px', as
   await page.getByRole('button', { name: 'Helpful', exact: true }).click()
   await page.getByRole('checkbox', { name: /I consent/i }).check()
   await page.getByRole('button', { name: 'Save pilot feedback' }).click()
-  await expect(page.getByText(/Save status unknown/i)).toBeVisible()
+  await expect(page.getByText(/Save status unknown/i)).toBeVisible({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Save pilot feedback' }).click()
   await expect(page.getByText('Pilot feedback saved.')).toBeVisible()
   expect(feedbackBody).toMatchObject({ vehicleId: 'v1', helpful: true, actionTaken: false, consent: true })

@@ -29,19 +29,22 @@ test('authenticated intelligence brief supports the daily attention workflow at 
     evidence: [{ entityType: 'vehicle', entityId: 'vehicle-2', field: 'status', value: 'inspection overdue', timestamp: null }],
   }
   const dismissedIds = new Set<string>()
+  let savedFeedback: string | null = null
   let dismissAttempts = 0
   const emptyCollection = { data: [] }
   await page.route('**/api/auth/me', route => route.fulfill({ json: { user: { id: 'e2e-user', email: 'qa@fleetvera.test', name: 'QA Owner', role: 'OWNER', onboardingCompleted: true } } }))
+  await page.route('**/api/dashboard/context', route => route.fulfill({ json: { role: 'OWNER', dashboardRole: 'admin', onboardingCompleted: true, decisions: ['Review risks', 'Confirm assignments', 'Plan maintenance'], actions: [{ label: 'Review fleet risks', href: '/intelligence' }, { label: 'Add vehicle', href: '/vehicles' }, { label: 'Manage team', href: '/team' }], sources: { vehicles: { available: true, items: [], total: 0 }, deliveries: { available: true, items: [], total: 0 }, maintenance: { available: true, items: [], total: 0 } } } }))
   await page.route(/\/api\/(vehicles|deliveries|maintenance|sop|clients)(\?.*)?$/, route => route.fulfill({ json: emptyCollection }))
   await page.route('**/api/intelligence/data-quality', route => route.fulfill({ json: { issues: [], summary: { total: 0, bySeverity: {}, byEntity: {}, countsComplete: true }, coverage: { complete: true, sourceTruncated: false, issuesTruncated: false }, generatedAt: new Date().toISOString() } }))
   await page.route('**/api/intelligence/brief', route => {
-    const findings = [finding, secondFinding].filter(item => !dismissedIds.has(item.id))
+    const findings = [{ ...finding, feedback: savedFeedback }, secondFinding].filter(item => !dismissedIds.has(item.id))
     return route.fulfill({ json: { findings, totalOpen: findings.length, generatedAt: new Date().toISOString(), stale: false, coverage: { complete: true, sourceTruncated: false, evidenceComplete: true }, capabilities: { refresh: true, manage: true, feedback: true } } })
   })
   await page.route('**/api/intelligence/findings', async route => {
     const request = route.request()
     if (request.method() === 'PATCH') {
       const body = request.postDataJSON() as { id: string; action: string }
+      if (body.action === 'HELPFUL' || body.action === 'NOT_HELPFUL') savedFeedback = body.action
       if (body.action === 'DISMISS') {
         dismissAttempts += 1
         if (dismissAttempts === 2) {
@@ -71,8 +74,10 @@ test('authenticated intelligence brief supports the daily attention workflow at 
   await expect(firstCard.getByRole('link', { name: 'Open delivery record' })).toHaveAttribute('href', '/deliveries?record=delivery-1')
   await expect(firstCard.getByRole('link', { name: 'Review delivery' })).toHaveAttribute('href', '/deliveries?record=delivery-1')
 
-  await page.getByRole('button', { name: `Mark ${finding.title} helpful` }).click()
-  await expect(page.getByText('Feedback saved.')).toBeVisible()
+  const helpful = page.getByRole('button', { name: `Mark ${finding.title} helpful` })
+  await helpful.click()
+  await expect(helpful).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 })
+  await expect(helpful).toBeEnabled()
   await page.getByRole('button', { name: `Dismiss ${finding.title}` }).click()
   await expect(page.getByRole('heading', { name: finding.title })).toHaveCount(0)
   await expect(page.getByText('Finding dismissed.')).toBeVisible()

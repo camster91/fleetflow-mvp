@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { RefreshCw, Sparkles } from 'lucide-react'
 import { FindingCard, type BriefFinding } from './FindingCard'
@@ -28,6 +28,13 @@ export function IntelligenceBrief() {
   const mutationsInFlight = useRef(new Set<string>())
   const operationVersions = useRef(new Map<string, number>())
   const refetchAfterMutations = useRef(false)
+  const focusAfterRender = useRef<string | null>(null)
+
+  useLayoutEffect(() => {
+    if (!focusAfterRender.current) return
+    const target = cardRefs.current.get(focusAfterRender.current)
+    if (target) { focusAfterRender.current = null; target.focus() }
+  }, [data?.findings])
 
   const load = useCallback(async () => {
     activeRequest.current?.abort()
@@ -78,6 +85,7 @@ export function IntelligenceBrief() {
         target?.focus()
       })
     } catch {
+      focusAfterRender.current = finding.id
       if (operationVersions.current.get(finding.id) === version) setData(current => {
         if (!current) return current
         const exists = current.findings.some(item => item.id === finding.id)
@@ -85,7 +93,6 @@ export function IntelligenceBrief() {
         return { ...current, findings: nextFindings, totalOpen: removes && !exists ? current.totalOpen + 1 : current.totalOpen }
       })
       setMessage(`Could not ${action.toLowerCase().replace('_', ' ')}. The finding was restored; try again.`)
-      requestAnimationFrame(() => cardRefs.current.get(finding.id)?.focus())
     } finally {
       mutationsInFlight.current.delete(finding.id)
       setBusyIds(current => { const next = new Set(current); next.delete(finding.id); return next })

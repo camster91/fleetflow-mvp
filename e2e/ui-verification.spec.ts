@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('FleetFlow Pro UI Verification', () => {
+test.describe('Fleetvera UI Verification', () => {
   test('verify homepage and navigation', async ({ page }) => {
     // Go to homepage
     await page.goto('/');
     
     // Check page title
-    await expect(page).toHaveTitle(/FleetFlow/);
+    await expect(page).toHaveTitle(/Fleetvera/);
     
     // Take screenshot
     await page.screenshot({ path: 'test-homepage.png' });
