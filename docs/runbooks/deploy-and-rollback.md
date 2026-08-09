@@ -3,10 +3,11 @@
 ## Prepare
 
 1. Record the candidate commit SHA and successful GitHub CI run.
-2. Confirm the production environment approval and all release-readiness checks.
-3. Create and verify a database backup. Record its identifier, timestamp, and restore test.
-4. Build or identify the immutable application image for the candidate SHA.
-5. Confirm whether the database is new or already contains FleetFlow tables.
+2. In the exact production environment, run `FLEETVERA_RELEASE_MODE=pilot npm run verify:production-config` (or `public` for public launch). It prints only missing configuration names and must pass before deployment.
+3. Confirm the production environment approval and all release-readiness checks.
+4. Create and verify a database backup. Record its identifier, timestamp, and restore test.
+5. Build or identify the immutable application image for the candidate SHA.
+6. Confirm whether the database is new or already contains FleetFlow tables.
 
 For a new database, `prisma migrate deploy` applies the committed PostgreSQL baseline. For an existing database, first compare it with `prisma migrate diff`, back it up, and rehearse on a restored copy. Mark the baseline as applied with `prisma migrate resolve --applied 20260807000000_postgresql_baseline` only when the restored schema is confirmed equivalent. This command changes migration state and requires explicit production approval.
 

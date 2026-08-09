@@ -8,7 +8,7 @@
 
 | Boundary | Decision | Evidence |
 |---|---|---|
-| Local code quality | Pass | `npm run ci`: dependency audit, ESLint, TypeScript, deterministic AI evaluation, 135 Jest suites / 977 tests, Prisma generation, and 45-page production build all passed. |
+| Local code quality | Pass | `npm run ci`: dependency audit, ESLint, TypeScript, deterministic AI evaluation, 136 Jest suites / 981 tests, Prisma generation, and 45-page production build all passed. |
 | Local database evolution | Pass | PostgreSQL 16 disposable fresh install, in-place upgrade with preserved fixtures, and both no-diff comparisons passed for all 15 migrations. |
 | Local browser release gate | Pass | One exact `npm run test:e2e:release` invocation rebuilt the candidate, applied all migrations to disposable PostgreSQL, passed 76 mocked cases across Chromium/Firefox/WebKit with 2 intentional cross-project skips, then passed 5/5 serial disposable-database Chromium workflows. |
 | Current live production | Healthy old release; candidate not deployed | Read-only inspection confirmed trusted HTTPS and a healthy `fleetflow:82585ed` container behind Traefik. The Task 16 candidate and its 15-migration schema are not deployed; new routes/configuration are absent. |
@@ -24,7 +24,7 @@
 - ESLint — **PASS**.
 - TypeScript `tsc --noEmit` — **PASS**.
 - AI evaluation — **PASS**, 10 deterministic cases; citation accuracy 1.0, citation coverage 1.0, refusal quality 1.0, unsupported claims 0, cross-tenant failures 0, provider disabled, no live model call.
-- Jest — **PASS**, 135 suites / 977 tests / 0 snapshots.
+- Jest — **PASS**, 136 suites / 981 tests / 0 snapshots.
 - Next production build — **PASS**, 45 pages; Prisma Client generation passed.
 
 ### Database gate
@@ -103,12 +103,13 @@ Task 16 adds `npm run test:e2e:release`, which separates mocked Chromium/Firefox
 Before deploying to the five-to-ten-fleet controlled pilot:
 
 1. Make the split release E2E command green on the exact candidate and attach its report.
-2. Verify production PostgreSQL capacity/connectivity plus an encrypted backup and timed isolated restore drill.
-3. Configure durable encrypted private document storage. Register and validate a malware scanner, or explicitly disable document uploads for the pilot; the current disabled scanner is not sufficient for untrusted customer uploads.
-4. Either configure and evaluate the approved AI/document extraction providers with kill switches and budgets, or run the pilot in explicitly labeled deterministic/manual mode.
-5. Configure monitoring, Sentry, alert destinations, logs, health checks, cron secrets, and an incident owner.
-6. Verify provider integrations only in approved sandboxes; no production OAuth connection was made here.
-7. Record written permission from five to ten fleets to use real operational records and complete onboarding/privacy/retention agreements.
+2. Run `FLEETVERA_RELEASE_MODE=pilot npm run verify:production-config` in the exact production environment. This read-only preflight fails closed on missing core signing, email, URL, cron, and optional integration-key configuration without printing values.
+3. Verify production PostgreSQL capacity/connectivity plus an encrypted backup and timed isolated restore drill.
+4. Configure durable encrypted private document storage. Register and validate a malware scanner, or explicitly disable document uploads for the pilot; the current disabled scanner is not sufficient for untrusted customer uploads.
+5. Either configure and evaluate the approved AI/document extraction providers with kill switches and budgets, or run the pilot in explicitly labeled deterministic/manual mode.
+6. Configure monitoring, Sentry, alert destinations, logs, health checks, cron secrets, and an incident owner.
+7. Verify provider integrations only in approved sandboxes; no production OAuth connection was made here.
+8. Record written permission from five to ten fleets to use real operational records and complete onboarding/privacy/retention agreements.
 
 ## Public-launch blockers
 
