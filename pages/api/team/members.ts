@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { TeamRole } from '../../../types';
+import { clearDriverAssignments } from '../../../lib/teamDriverCleanup';
 
 export default async function handler(
   req: NextApiRequest,
@@ -98,7 +99,7 @@ export default async function handler(
           return res.status(404).json({ error: 'Member not found' });
         }
 
-        const validRoles = ['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'];
+        const validRoles = ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
         if (!validRoles.includes(role) && role !== 'OWNER') {
           return res.status(400).json({ error: 'Invalid role' });
         }
@@ -129,20 +130,7 @@ export default async function handler(
           return res.status(403).json({ error: 'Only owner can assign admin role' });
         }
 
-        const updatedMember = await prisma.teamMember.update({
-          where: { id: memberId },
-          data: { role: role as string },
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true,
-              },
-            },
-          },
-        });
+        const updatedMember = await prisma.$transaction(async tx=>{const updated=await tx.teamMember.update({where:{id:memberId},data:{role:role as string},include:{user:{select:{id:true,name:true,email:true,image:true}}}});if(member.role==='DRIVER'&&role!=='DRIVER')await clearDriverAssignments(tx,member.teamId,member.userId,{actorId:userId,actorName:session.user.name,actorRole:isOwner?'OWNER':userMembership?.role});return updated});
 
         return res.status(200).json({ member: updatedMember });
       } catch (error) {
@@ -195,9 +183,7 @@ export default async function handler(
           return res.status(403).json({ error: 'Cannot remove owner' });
         }
 
-        await prisma.teamMember.delete({
-          where: { id: memberId },
-        });
+        await prisma.$transaction(async tx=>{await clearDriverAssignments(tx,member.teamId,member.userId,{actorId:userId,actorName:session.user.name,actorRole:isOwner?'OWNER':'ADMIN'});await tx.teamMember.delete({where:{id:memberId}})});
 
         return res.status(200).json({ success: true });
       } catch (error) {

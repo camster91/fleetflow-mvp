@@ -7,8 +7,9 @@ import {
 } from '../../../lib/apiAuth';
 import { canAssignRole } from '../../../lib/permissions';
 import type { TeamRole } from '../../../types';
+import { clearDriverAssignments } from '../../../lib/teamDriverCleanup';
 
-const ASSIGNABLE_ROLES: TeamRole[] = ['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'];
+const ASSIGNABLE_ROLES: TeamRole[] = ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await requireSession(req, res);
@@ -94,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      await prisma.teamMember.update({ where: { id: memberId }, data: { role } });
+      await prisma.$transaction(async tx=>{await tx.teamMember.update({ where: { id: memberId }, data: { role } });if(ctx.member.role==='DRIVER'&&role!=='DRIVER')await clearDriverAssignments(tx,ctx.member.teamId,ctx.member.userId,{actorId:userId,actorName:session.user.name,actorRole:assignerRole})});
       return res.json({ success: true });
     } catch {
       return res.status(400).json({ error: 'Failed to update role' });
@@ -121,7 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      await prisma.teamMember.delete({ where: { id: memberId } });
+      await prisma.$transaction(async tx=>{await clearDriverAssignments(tx,ctx.member.teamId,ctx.member.userId,{actorId:userId,actorName:session.user.name,actorRole:ctx.isOwner?'OWNER':ctx.userMembership?.role});await tx.teamMember.delete({ where: { id: memberId } })});
       return res.json({ success: true });
     } catch {
       return res.status(400).json({ error: 'Failed to remove member' });

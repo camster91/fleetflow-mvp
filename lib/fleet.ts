@@ -19,6 +19,7 @@ export interface Vehicle {
   name: string
   status: 'active' | 'inactive' | 'delayed'
   driver: string
+  assignedDriverId?: string | null
   location: string
   eta: string
   mileage: number
@@ -66,6 +67,7 @@ export interface Delivery {
   customer: string
   status: 'pending' | 'in-transit' | 'delivered' | 'cancelled'
   driver: string
+  assignedDriverId?: string | null
   items: number
   progress: number
   notes?: string
@@ -277,6 +279,7 @@ export function dbToVehicle(v: DbVehicle): Vehicle {
     name: v.name,
     status: (v.status ?? 'inactive') as Vehicle['status'],
     driver: v.driver ?? '',
+    assignedDriverId: v.assignedDriverId ?? null,
     location: v.location ?? '',
     eta: v.eta ?? '',
     mileage: v.mileage ?? 0,
@@ -296,6 +299,7 @@ export function vehicleToDb(v: Omit<Vehicle, 'id'>, ownerId: string) {
     name: v.name,
     status: v.status,
     driver: v.driver || null,
+    assignedDriverId: v.assignedDriverId ?? null,
     location: v.location || null,
     eta: v.eta || null,
     mileage: v.mileage ?? 0,
@@ -320,6 +324,7 @@ export function dbToDelivery(d: import('@prisma/client').Delivery): Delivery {
     customer: d.customer,
     status: d.status as Delivery['status'],
     driver: d.driver ?? '',
+    assignedDriverId: d.assignedDriverId ?? null,
     items: d.items ?? 1,
     progress: d.progress ?? 0,
     notes: d.notes ?? undefined,
@@ -345,6 +350,7 @@ export function deliveryToDb(d: Omit<Delivery, 'id'>, ownerId: string) {
     customer: d.customer,
     status: d.status,
     driver: d.driver || null,
+    assignedDriverId: d.assignedDriverId ?? null,
     items: d.items ?? 1,
     progress: d.progress ?? 0,
     notes: d.notes || null,

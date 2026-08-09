@@ -23,12 +23,15 @@ export const UserRole = {
 };
 
 // Team roles
-export type TeamRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'MEMBER' | 'VIEWER';
+export type TeamRole = 'OWNER' | 'ADMIN' | 'MANAGER' | 'DISPATCHER' | 'TECHNICIAN' | 'DRIVER' | 'MEMBER' | 'VIEWER';
 
 export const TeamRole = {
   OWNER: 'OWNER' as const,
   ADMIN: 'ADMIN' as const,
   MANAGER: 'MANAGER' as const,
+  DISPATCHER: 'DISPATCHER' as const,
+  TECHNICIAN: 'TECHNICIAN' as const,
+  DRIVER: 'DRIVER' as const,
   MEMBER: 'MEMBER' as const,
   VIEWER: 'VIEWER' as const,
 };

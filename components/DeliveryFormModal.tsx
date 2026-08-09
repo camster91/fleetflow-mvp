@@ -34,6 +34,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
     address: string
     status: 'pending' | 'in-transit' | 'delivered' | 'cancelled'
     driver: string
+    assignedDriverId: string
     items: number
     progress: number
     notes: string
@@ -52,6 +53,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
     address: '',
     status: 'pending',
     driver: '',
+    assignedDriverId: '',
     items: 1,
     progress: 0,
     notes: '',
@@ -70,6 +72,9 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedClient, setSelectedClient] = useState<dataService.Client | null>(null)
+  const [drivers,setDrivers]=useState<dataService.DriverOption[]>([])
+  const [driversUnavailable,setDriversUnavailable]=useState(false)
+  useEffect(()=>{if(!isOpen)return;let active=true;setDriversUnavailable(false);dataService.getDrivers().then(items=>{if(active)setDrivers(items)}).catch(()=>{if(active){setDrivers([]);setDriversUnavailable(true)}});return()=>{active=false}},[isOpen])
 
   // Reset form when modal opens/closes or delivery changes
   useEffect(() => {
@@ -80,6 +85,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
           address: delivery.address || '',
           status: delivery.status || 'pending',
           driver: delivery.driver || '',
+          assignedDriverId: delivery.assignedDriverId || '',
           items: delivery.items || 1,
           progress: delivery.progress || 0,
           notes: delivery.notes || '',
@@ -100,6 +106,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
           address: '',
           status: 'pending',
           driver: '',
+          assignedDriverId: '',
           items: 1,
           progress: 0,
           notes: '',
@@ -185,7 +192,8 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
         customer: formData.customer,
         address: formData.address,
         status: formData.status,
-        driver: formData.driver,
+        driver: '',
+        assignedDriverId: formData.assignedDriverId || null,
         items: formData.items,
         progress: formData.progress,
         notes: formData.notes,
@@ -364,18 +372,17 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <select
-                  value={formData.driver}
-                  onChange={(e) => handleChange('driver', e.target.value)}
+                  value={formData.assignedDriverId}
+                  onChange={(e) => handleChange('assignedDriverId', e.target.value)}
+                  disabled={driversUnavailable}
+                  aria-label="Assigned Driver"
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition appearance-none bg-white"
                 >
                   <option value="">Unassigned</option>
-                  {vehicles.filter(v => v.driver && v.driver !== 'Unassigned').map(vehicle => (
-                    <option key={vehicle.id} value={vehicle.driver}>
-                      {vehicle.driver} ({vehicle.name})
-                    </option>
-                  ))}
+                  {drivers.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
                 </select>
               </div>
+              {driversUnavailable&&<p role="alert" className="mt-1 text-sm text-red-600">Driver list unavailable. Try reopening this form.</p>}
             </div>
 
             {/* Status */}

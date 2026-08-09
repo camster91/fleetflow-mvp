@@ -4,7 +4,9 @@ import { dbToDelivery, deliveryToDb, logActivity, mergeDeliveryUpdate } from '..
 import { createNotification } from '../../../../lib/notifications'
 import { notifyDeliveryAssigned, notifyDeliveryStatus } from '../../../../lib/email.server'
 import { requireTenantContext } from '../../../../lib/apiAuth'
-import { canManageDeliveries, canViewDeliveries } from '../../../../lib/permissions'
+import { canAssignDrivers, canManageDeliveries, canViewDeliveries } from '../../../../lib/permissions'
+import { resolveDriverAssignment } from '../../../../lib/driverAssignment'
+import { driverDeliveryDto, isDriverRole } from '../../../../lib/driverScope'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -13,13 +15,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
-  const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
+  const scopedWhere = { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{assignedDriverId:userId}]:[])] }
 
   if (req.method === 'GET') {
     if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const delivery = await prisma.delivery.findFirst({ where: scopedWhere })
     if (!delivery) return res.status(404).json({ error: 'Not found' })
-    return res.json(dbToDelivery(delivery))
+    return res.json(isDriverRole(tenant.role)?driverDeliveryDto(delivery):dbToDelivery(delivery))
   }
 
   if (req.method === 'PUT') {
@@ -28,12 +30,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!existing) return res.status(404).json({ error: 'Not found' })
     // Status controls submit partial records. Preserve all existing delivery data
     // instead of resetting omitted fields such as item count to defaults.
-    const merged = mergeDeliveryUpdate(existing, req.body)
+    if (Object.prototype.hasOwnProperty.call(req.body, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    let assignment = { assignedDriverId: existing.assignedDriverId, driver: existing.driver }
+    if (Object.prototype.hasOwnProperty.call(req.body, 'assignedDriverId')) {
+      try { assignment = await resolveDriverAssignment(prisma, tenant, req.body.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
+    }
+    const merged = mergeDeliveryUpdate(existing, { ...req.body, driver: assignment.driver })
     const { ownerId: _ownerId, ...fields } = deliveryToDb(merged, tenant.ownerId)
     const wasCompleted = req.body.status === 'delivered' && existing.status !== 'delivered'
 
     const delivery = await prisma.$transaction(async (tx) => {
-      const updated = await tx.delivery.update({ where: { id }, data: fields })
+      const updated = await tx.delivery.update({ where: { id }, data: { ...fields, ...assignment } })
       if (req.body.status && req.body.status !== existing.status) {
         await tx.deliveryEvent.create({
           data: {
@@ -55,17 +62,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return updated
     })
     // Notify driver if newly assigned
-    const driverChanged = delivery.driver && delivery.driver !== existing.driver
-    if (driverChanged) {
+    if (typeof delivery.assignedDriverId === 'string' && delivery.assignedDriverId !== existing.assignedDriverId) {
+      const assignedDriverId = delivery.assignedDriverId
       const driverUser = await prisma.user.findFirst({
         where: {
-          name: delivery.driver,
-          ...(tenant.teamId
-            ? { OR: [
-                { id: tenant.ownerId },
-                { teamMemberships: { some: { teamId: tenant.teamId, status: 'ACCEPTED' } } },
-              ] }
-            : { id: tenant.ownerId }),
+          id: assignedDriverId,
         },
       })
       if (driverUser) {

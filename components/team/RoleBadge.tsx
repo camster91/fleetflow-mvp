@@ -14,6 +14,9 @@ const roleIcons: Record<TeamRole, React.ReactNode> = {
   OWNER: <Crown className="h-3.5 w-3.5" />,
   ADMIN: <Shield className="h-3.5 w-3.5" />,
   MANAGER: <Users className="h-3.5 w-3.5" />,
+  DISPATCHER: <Users className="h-3.5 w-3.5" />,
+  TECHNICIAN: <User className="h-3.5 w-3.5" />,
+  DRIVER: <User className="h-3.5 w-3.5" />,
   MEMBER: <User className="h-3.5 w-3.5" />,
   VIEWER: <Eye className="h-3.5 w-3.5" />,
 };

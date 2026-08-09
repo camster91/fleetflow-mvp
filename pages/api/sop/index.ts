@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToSOPCategory, sopCategoryToDb, logActivity } from '../../../lib/fleet'
 import { requireTenantContext } from '../../../lib/apiAuth'
-import { canManageSOP, canViewBusinessData } from '../../../lib/permissions'
+import { canManageSOP, canViewSOP } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userId = session.user.id
 
   if (req.method === 'GET') {
-    if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    if (!canViewSOP(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
     const skip = (page - 1) * limit

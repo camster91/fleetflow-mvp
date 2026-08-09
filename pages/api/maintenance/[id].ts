@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity, mergeMaintenanceUpdate } from '../../../lib/fleet'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
+import { driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -11,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
-  const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
+  const scopedWhere = { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{vehicle:{assignedDriverId:userId}}]:[])] }
 
   if (req.method === 'GET') {
     if (!canViewMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -20,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       include: { vehicle: { select: { name: true } } },
     })
     if (!task) return res.status(404).json({ error: 'Not found' })
-    return res.json(dbToMaintenanceTask(task))
+    return res.json(isDriverRole(tenant.role)?driverMaintenanceDto(task):dbToMaintenanceTask(task))
   }
 
   if (req.method === 'PUT') {

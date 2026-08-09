@@ -20,6 +20,7 @@ export const vehicleBodySchema = z
     name: z.string().min(1).max(120).optional(),
     status: vehicleStatusSchema.optional(),
     driver: z.string().max(120).nullable().optional(),
+    assignedDriverId: z.string().trim().min(1).max(64).nullable().optional(),
     location: z.string().max(240).nullable().optional(),
     mileage: z.number().nonnegative().nullable().optional(),
     vehicleType: z.string().max(80).nullable().optional(),
@@ -35,6 +36,7 @@ export const deliveryBodySchema = z
       .enum(['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'cancelled', 'delayed'])
       .optional(),
     driver: z.string().max(120).nullable().optional(),
+    assignedDriverId: z.string().trim().min(1).max(64).nullable().optional(),
     items: z.union([z.string(), z.number()]).optional(),
     notes: z.string().max(2000).nullable().optional(),
   })
@@ -103,7 +105,7 @@ export const deliveryEditPrefillSchema = deliveryStatusUpdateSchema.partial().st
 export const teamInviteSchema = z.object({
   teamId: cuidLike,
   emails: z.array(emailSchema).min(1).max(20),
-  role: z.enum(['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER']).optional(),
+  role: z.enum(['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER']).optional(),
   message: z.string().max(1000).optional(),
 })
 

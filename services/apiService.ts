@@ -58,6 +58,8 @@ export const getVehicles = () => getCollection<Vehicle>('/api/vehicles')
 export const addVehicle = (v: Omit<Vehicle, 'id'>) => post<Vehicle>('/api/vehicles', v)
 export const updateVehicle = (id: string, v: Partial<Vehicle>) => put<Vehicle>(`/api/vehicles/${id}`, v)
 export const deleteVehicle = (id: string) => del<{ success: boolean }>(`/api/vehicles/${id}`)
+export interface DriverOption { id:string; name:string; label:string }
+export const getDrivers = async () => (await get<{drivers:DriverOption[]}>('/api/drivers')).drivers
 
 // ─── Deliveries ───────────────────────────────────────────────────────────────
 

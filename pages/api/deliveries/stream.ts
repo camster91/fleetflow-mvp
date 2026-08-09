@@ -2,13 +2,14 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canViewDeliveries } from '../../../lib/permissions'
+import { isDriverRole } from '../../../lib/driverScope'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   const context = await requireTenantContext(req, res)
   if (!context) return
-  const { tenant } = context
+  const { tenant,session } = context
   if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
   res.setHeader('Content-Type', 'text/event-stream')
@@ -22,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const interval = setInterval(async () => {
     try {
       const deliveries = await prisma.delivery.findMany({
-        where: { AND: [tenant.resourceWhere, { status: { in: ['pending', 'picked-up', 'in-transit'] } }] },
+        where: { AND: [tenant.resourceWhere, { status: { in: ['pending', 'picked-up', 'in-transit'] } }, ...(isDriverRole(tenant.role)?[{assignedDriverId:session.user.id}]:[])] },
         include: {
           events: {
             orderBy: { timestamp: 'desc' },
@@ -38,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         customer: d.customer,
         status: d.status,
         progress: d.progress,
-        lastEvent: d.events[0] || null,
+        lastEvent: d.events[0]?{id:d.events[0].id,status:d.events[0].status,timestamp:d.events[0].timestamp}:null,
         updatedAt: d.updatedAt.toISOString(),
       }))
 

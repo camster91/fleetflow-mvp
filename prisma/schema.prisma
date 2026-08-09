@@ -82,6 +82,8 @@ model User {
   // Owned business data
   vehicles Vehicle[]
   deliveries Delivery[]
+  assignedVehicles Vehicle[] @relation("VehicleAssignedDriver")
+  assignedDeliveries Delivery[] @relation("DeliveryAssignedDriver")
   maintenanceTasks MaintenanceTask[]
   clients Client[]
   sopCategories SOPCategory[]
@@ -406,6 +408,8 @@ model Vehicle {
   name            String
   status          String   @default("active") // active, inactive, delayed
   driver          String?
+  assignedDriverId String?
+  assignedDriver User? @relation("VehicleAssignedDriver", fields: [assignedDriverId], references: [id], onDelete: SetNull)
   location        String?
   eta             String?
   mileage         Int?     @default(0)
@@ -442,6 +446,7 @@ model Vehicle {
   @@index([status])
   @@index([status, createdAt])
   @@index([maintenanceDue])
+  @@index([assignedDriverId])
 }
 
 model Delivery {
@@ -450,6 +455,8 @@ model Delivery {
   customer          String
   status            String   @default("pending") // pending, in-transit, delivered, cancelled
   driver            String?
+  assignedDriverId  String?
+  assignedDriver    User? @relation("DeliveryAssignedDriver", fields: [assignedDriverId], references: [id], onDelete: SetNull)
   items             Int      @default(1)
   progress          Int      @default(0) // percentage
   
@@ -504,6 +511,7 @@ model Delivery {
   @@index([status, createdAt])
   @@index([customer])
   @@index([createdAt])
+  @@index([assignedDriverId])
 }
 
 model DeliveryEvent {

@@ -4,6 +4,7 @@ import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../
 import { parseBody, maintenanceCreateValuesSchema } from '../../../lib/validation'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
+import { assignedMaintenanceWhere, driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -17,17 +18,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
     const skip = (page - 1) * limit
 
+    const where=assignedMaintenanceWhere(tenant.resourceWhere,tenant.role,userId)
     const [tasks, total] = await Promise.all([
       prisma.maintenanceTask.findMany({
-        where: tenant.resourceWhere,
+        where,
         orderBy: { dueDate: 'asc' },
         include: { vehicle: { select: { name: true } } },
         skip,
         take: limit,
       }),
-      prisma.maintenanceTask.count({ where: tenant.resourceWhere }),
+      prisma.maintenanceTask.count({ where }),
     ])
-    return res.json({ data: tasks.map(dbToMaintenanceTask), total, page, limit, hasMore: skip + limit < total })
+    return res.json({ data: tasks.map(task=>isDriverRole(tenant.role)?driverMaintenanceDto(task):dbToMaintenanceTask(task)), total, page, limit, hasMore: skip + limit < total })
   }
 
   if (req.method === 'POST') {

@@ -42,6 +42,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
     licensePlate: string
     year: number
     driver: string
+    assignedDriverId: string
     location: string
     mileage: number
     fuelLevel: number
@@ -56,6 +57,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
     licensePlate: '',
     year: new Date().getFullYear(),
     driver: '',
+    assignedDriverId: '',
     location: '',
     mileage: 0,
     fuelLevel: 100,
@@ -68,6 +70,10 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
   
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [drivers,setDrivers]=useState<dataService.DriverOption[]>([])
+  const [driversUnavailable,setDriversUnavailable]=useState(false)
+
+  useEffect(()=>{ if(!isOpen)return; let active=true; setDriversUnavailable(false); dataService.getDrivers().then(items=>{if(active)setDrivers(items)}).catch(()=>{if(active){setDrivers([]);setDriversUnavailable(true)}}); return()=>{active=false} },[isOpen])
 
   // Reset form when modal opens/closes or vehicle changes
   useEffect(() => {
@@ -79,6 +85,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
           licensePlate: vehicle.licensePlate || '',
           year: vehicle.year || new Date().getFullYear(),
           driver: vehicle.driver || '',
+          assignedDriverId: vehicle.assignedDriverId || '',
           location: vehicle.location || '',
           mileage: vehicle.mileage || 0,
           fuelLevel: vehicle.fuelLevel || 100,
@@ -95,6 +102,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
           licensePlate: '',
           year: new Date().getFullYear(),
           driver: '',
+          assignedDriverId: '',
           location: '',
           mileage: 0,
           fuelLevel: 100,
@@ -146,6 +154,8 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
       if (isEditing && vehicle) {
         const updated = await dataService.updateVehicle(vehicle.id, {
           ...formData,
+          assignedDriverId: formData.assignedDriverId || null,
+          driver: '',
           eta: vehicle.eta || 'N/A'
         })
         if (!updated) throw new Error('Failed to update vehicle')
@@ -153,6 +163,8 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
       } else {
         result = await dataService.addVehicle({
           ...formData,
+          assignedDriverId: formData.assignedDriverId || null,
+          driver: '',
           eta: 'N/A'
         })
       }
@@ -278,13 +290,10 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Assigned Driver
               </label>
-              <AutocompleteInput
-                value={formData.driver}
-                onChange={(value) => handleChange('driver', value)}
-                recentItems={recents.drivers}
-                placeholder="e.g., John Smith"
-                icon={<User className="h-4 w-4" />}
-              />
+              <select aria-label="Assigned Driver" value={formData.assignedDriverId} onChange={(e)=>handleChange('assignedDriverId',e.target.value)} disabled={driversUnavailable} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
+                <option value="">Unassigned</option>{drivers.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
+              </select>
+              {driversUnavailable&&<p role="alert" className="mt-1 text-sm text-red-600">Driver list unavailable. Try reopening this form.</p>}
             </div>
 
             {/* Location */}

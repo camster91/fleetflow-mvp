@@ -2,8 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToVehicle, vehicleToDb, logActivity } from '../../../lib/fleet'
 import { requireTenantContext } from '../../../lib/apiAuth'
-import { canManageVehicles, canViewVehicles } from '../../../lib/permissions'
+import { canAssignDrivers, canManageVehicles, canViewVehicles } from '../../../lib/permissions'
 import { parseBody, vehicleBodySchema } from '../../../lib/validation'
+import { resolveDriverAssignment } from '../../../lib/driverAssignment'
+import { driverVehicleDto, isDriverRole } from '../../../lib/driverScope'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -12,23 +14,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
-  const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
+  const scopedWhere = { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{assignedDriverId:userId}]:[])] }
 
   if (req.method === 'GET') {
     if (!canViewVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const vehicle = await prisma.vehicle.findFirst({ where: scopedWhere })
     if (!vehicle) return res.status(404).json({ error: 'Not found' })
-    return res.json(dbToVehicle(vehicle))
+    return res.json(isDriverRole(tenant.role)?driverVehicleDto(vehicle):dbToVehicle(vehicle))
   }
 
   if (req.method === 'PUT') {
     if (!canManageVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const current = await prisma.vehicle.findFirst({ where: scopedWhere })
+    if (!current) return res.status(404).json({ error: 'Not found' })
     const parsed = parseBody(vehicleBodySchema, req.body)
     if ('error' in parsed) return res.status(400).json({ error: parsed.error })
-    const { ownerId: _ownerId, ...updateFields } = vehicleToDb({ ...req.body, ...parsed.data }, tenant.ownerId)
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    let assignment = { assignedDriverId: current.assignedDriverId, driver: current.driver }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, 'assignedDriverId')) {
+      try { assignment = await resolveDriverAssignment(prisma, tenant, parsed.data.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
+    }
+    const { ownerId: _ownerId, ...updateFields } = vehicleToDb({ ...req.body, ...parsed.data, driver: assignment.driver }, tenant.ownerId)
     const result = await prisma.vehicle.updateMany({
       where: scopedWhere,
-      data: { ...updateFields, lastUpdated: new Date() },
+      data: { ...updateFields, ...assignment, lastUpdated: new Date() },
     })
     // Must re-read with owner scope — findUnique after updateMany leaked other tenants' rows
     if (result.count === 0) return res.status(404).json({ error: 'Not found' })

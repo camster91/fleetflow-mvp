@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToClient, clientToDb, logActivity } from '../../../lib/fleet'
 import { requireTenantContext } from '../../../lib/apiAuth'
-import { canManageClients, canViewBusinessData } from '../../../lib/permissions'
+import { canManageClients, canViewClients } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
 
   if (req.method === 'GET') {
-    if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    if (!canViewClients(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const client = await prisma.client.findFirst({ where: scopedWhere })
     if (!client) return res.status(404).json({ error: 'Not found' })
     return res.json(dbToClient(client))

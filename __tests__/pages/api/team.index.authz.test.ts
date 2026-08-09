@@ -7,6 +7,7 @@ jest.mock('../../../lib/auth', () => ({
 
 jest.mock('../../../lib/prisma', () => ({
   prisma: {
+    $transaction: jest.fn(async (callback: any) => callback((await import('../../../lib/prisma')).prisma)),
     teamMember: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
@@ -15,6 +16,8 @@ jest.mock('../../../lib/prisma', () => ({
     },
     team: { findFirst: jest.fn() },
     user: { findUnique: jest.fn() },
+    vehicle: { updateMany: jest.fn().mockResolvedValue({count:0}) },
+    delivery: { updateMany: jest.fn().mockResolvedValue({count:0}) },
   },
 }));
 
