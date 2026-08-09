@@ -1,0 +1,9 @@
+{
+ "currency":"USD",
+ "asOf":"2026-08-08",
+ "source":"https://openai.com/api/pricing/",
+ "models":{
+  "disabled:none@v1":{"inputUsdPerMillion":0,"outputUsdPerMillion":0},
+  "openai:gpt-5-mini@2026-08":{"inputUsdPerMillion":0.25,"outputUsdPerMillion":2.0}
+ }
+}

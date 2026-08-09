@@ -1,0 +1,2 @@
+import{readFileSync}from'fs';import{join}from'path'
+test('AI operator surfaces contain no UTF-8 mojibake or replacement characters',()=>{for(const file of['pages/admin/ai-health.tsx','docs/runbooks/ai-incident-response.md','lib/ai/evaluation.ts']){const text=readFileSync(join(process.cwd(),file),'utf8');expect(text).not.toMatch(/(?:\u00c3[\u0080-\u00bf]|\u00c2[\u0080-\u00bf]|\u00e2[\u0080-\u00bf]{2}|\ufffd)/u)}})

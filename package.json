@@ -12,6 +12,7 @@
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:studio": "prisma studio",
     "verify:integration-migrations": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-integration-migrations.ps1",
+    "ai:evaluate": "node scripts/evaluate-ai.cjs",
     "test": "jest",
     "test:ci": "jest --runInBand --detectOpenHandles",
     "test:watch": "jest --watch",
@@ -19,7 +20,7 @@
     "test:ui": "jest --coverage --coverageReporters=html",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run audit && npm run lint && npm run typecheck && npm run test:ci && npm run build"
+    "ci": "npm run audit && npm run lint && npm run typecheck && npm run ai:evaluate && npm run test:ci && npm run build"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"

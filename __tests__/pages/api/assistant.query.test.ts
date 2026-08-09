@@ -4,6 +4,7 @@ jest.mock('@/lib/apiAuth', () => ({ requireTenantContext: jest.fn(), assertSameO
 jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(() => Promise.resolve(true)) }))
 jest.mock('@/lib/ai/fleetTools', () => ({ runFleetTool: jest.fn() }))
 jest.mock('@/lib/ai/provider', () => ({ generateFleetSummary: jest.fn() }))
+jest.mock('@/lib/ai/runtime', () => ({ getWorkspaceAiRuntime: jest.fn(async () => ({ enabled: true, config: { provider: 'custom', modelVersion: 'm1', retentionDays: 30 } })), recordWorkspaceAiTelemetry: jest.fn(async () => undefined) }))
 
 import handler from '@/pages/api/assistant/query'
 import { requireTenantContext, assertSameOrigin } from '@/lib/apiAuth'
@@ -11,6 +12,7 @@ import { rateLimitMiddleware } from '@/lib/rateLimit'
 import { runFleetTool } from '@/lib/ai/fleetTools'
 import { generateFleetSummary } from '@/lib/ai/provider'
 import aliasHandler from '@/pages/api/ai/query'
+import { getWorkspaceAiRuntime, recordWorkspaceAiTelemetry } from '@/lib/ai/runtime'
 
 const resourceWhere = { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] }
 const context = { session: { user: { id: 'viewer-1' } }, tenant: { ownerId: 'owner-1', teamId: 'team-1', role: 'VIEWER', resourceWhere } }
@@ -70,6 +72,13 @@ describe('/api/assistant/query', () => {
     const { req, res } = createMocks({ method: 'POST', body: { question: 'What needs attention today?' } }); await handler(req as never, res as never)
     expect(generateFleetSummary).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect((generateFleetSummary as jest.Mock).mock.calls[0][1].signal.aborted).toBe(false)
+  })
+
+  it('returns deterministic evidence without calling a provider when workspace AI is disabled or killed', async () => {
+    ;(getWorkspaceAiRuntime as jest.Mock).mockResolvedValueOnce({ enabled: false, reason: 'workspace_disabled', config: { provider: 'disabled', modelVersion: 'none@v1', retentionDays: 30 } })
+    const { req, res } = createMocks({ method: 'POST', body: { question: 'Which deliveries are late, incomplete, or unassigned?' } }); await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(200); expect(generateFleetSummary).not.toHaveBeenCalled(); expect(res._getJSONData()).toEqual(expect.objectContaining({ mode: 'deterministic', degradationReason: 'workspace_disabled' }))
+    expect(recordWorkspaceAiTelemetry).toHaveBeenCalledWith(expect.objectContaining({ status: 'fallback', errorCode: 'provider_disabled' }), expect.anything())
   })
 
   it('aborts an overlapping provider at the request deadline and returns its deterministic fallback', async () => {

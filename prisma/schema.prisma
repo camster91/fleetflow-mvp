@@ -998,3 +998,72 @@ model IntegrationRecordReview {
   @@index([reviewerId, createdAt])
   @@index([recordId, createdAt])
 }
+
+model AiWorkspaceConfig {
+  id             String   @id @default(cuid())
+  scopeKey       String   @unique
+  ownerId        String
+  teamId         String?
+  enabled        Boolean  @default(false)
+  killSwitch     Boolean  @default(false)
+  retentionDays  Int      @default(30)
+  provider       String   @default("disabled")
+  modelVersion   String   @default("none@v1")
+  configVersion  Int      @default(1)
+  updatedById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([ownerId, teamId])
+}
+
+model AiControlAudit {
+  id            String   @id @default(cuid())
+  scopeKey      String
+  actorId       String
+  action        String
+  configVersion Int
+  metadata      String
+  createdAt     DateTime @default(now())
+
+  @@index([scopeKey, createdAt])
+  @@index([actorId, createdAt])
+  @@unique([scopeKey, configVersion])
+}
+
+model AiTelemetryBucket {
+  id             String   @id @default(cuid())
+  scopeKey       String
+  bucketStart    DateTime
+  provider       String
+  modelVersion   String
+  status         String
+  errorCode      String   @default("")
+  requestCount   Int      @default(0)
+  latencyTotalMs BigInt   @default(0)
+  inputTokens    BigInt   @default(0)
+  outputTokens   BigInt   @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([scopeKey, bucketStart, provider, modelVersion, status, errorCode], map: "AiTelemetryBucket_scopeKey_bucketStart_provider_modelVersion_st")
+  @@index([scopeKey, bucketStart])
+}
+
+model AiEvaluationRun {
+  id                  String   @id @default(cuid())
+  evaluationVersion   String
+  mode                String
+  configFingerprint   String
+  capturedAt          DateTime
+  provider            String
+  modelVersion        String
+  citationAccuracyBps Int
+  crossTenantFailures Int
+  passed               Boolean
+  score                String
+  createdAt            DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([evaluationVersion, provider, modelVersion])
+}
