@@ -48,6 +48,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/create-admin.js ./create-admin.js
+# Keep the read-only production preflight available in the final image so the
+# exact runtime environment can be checked before a cutover.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/verify-production-readiness.cjs ./verify-production-readiness.cjs
 
 # Copy entrypoint script that enforces DATABASE_URL in production
 COPY --chown=nextjs:nodejs entrypoint.sh ./
