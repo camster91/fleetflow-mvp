@@ -55,6 +55,14 @@ export default function Dashboard() {
     } catch(error) { if(controller.signal.aborted||generation!==requestGeneration.current)return; setRole(null); setError(true); setLoading(false) }
   }, [])
   useEffect(() => { if (status === 'authenticated') void load(); return cancelActiveRequest }, [cancelActiveRequest,load, status])
+  useEffect(() => {
+    if (!role || typeof window === 'undefined') return
+    if (process.env.NODE_ENV === 'test') return
+    const keyName = 'fleetvera_pilot_session'
+    let sessionKey = window.sessionStorage.getItem(keyName)
+    if (!sessionKey) { sessionKey = crypto.randomUUID().replace(/-/g, ''); window.sessionStorage.setItem(keyName, sessionKey) }
+    void fetch('/api/pilot/events', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'DASHBOARD_OPENED', sessionKey }) }).catch(() => undefined)
+  }, [role])
   if ((loading && !role) || status === 'loading') return <DashboardLayout><div role="status" aria-live="polite" className="p-6">Loading command centre…</div></DashboardLayout>
   if (status !== 'authenticated' || error || !role) return <DashboardLayout><div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5"><h1 className="font-semibold">Unable to open this workspace dashboard</h1><p className="mt-1 text-sm">Your workspace access could not be verified.</p>{status === 'authenticated' && <button onClick={load} className="mt-4 min-h-[44px] rounded-lg border px-4">Retry</button>}</div></DashboardLayout>
   const props = { ...data, partial, retry: load, decisions, actions, availability, totals, onboardingCompleted }

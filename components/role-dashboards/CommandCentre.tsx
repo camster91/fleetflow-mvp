@@ -9,4 +9,13 @@ export function Exceptions({deliveries,maintenance,availability}:Pick<CommandCen
 
 export function FleetTotals({totals}:Pick<CommandCentreProps,'totals'>) { return <section aria-labelledby="totals-heading"><h2 id="totals-heading" className="text-lg font-semibold">Fleet totals</h2><dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">{[['Vehicles',totals.vehicles],['Deliveries',totals.deliveries],['Maintenance',totals.maintenance]].map(([label,value])=><div className="rounded-xl border bg-white p-4" key={label}><dt className="text-sm text-slate-600">{label}</dt><dd className="text-2xl font-bold">{value===null?'Unavailable':value}</dd></div>)}</dl></section> }
 
-export function DecisionActions({decisions,actions}:Pick<CommandCentreProps,'decisions'|'actions'>) { return <section className="grid gap-4 lg:grid-cols-2"><div className="rounded-xl border bg-white p-4"><h2 className="text-lg font-semibold">Top three decisions</h2><ol className="mt-3 list-decimal space-y-2 pl-5">{decisions.map(item=><li key={item}>{item}</li>)}</ol></div>{actions.length>0&&<div className="rounded-xl border bg-white p-4"><h2 className="text-lg font-semibold">Top three actions</h2><div className="mt-3 grid gap-3">{actions.map(item=><a key={item.label} href={item.href} className="flex min-h-[44px] items-center rounded-lg border px-4 font-medium">{item.label}</a>)}</div></div>}</section> }
+function recordFirstUsefulAction() {
+  if (typeof window === 'undefined') return
+  if (process.env.NODE_ENV === 'test') return
+  const keyName = 'fleetvera_pilot_session'
+  let sessionKey = window.sessionStorage.getItem(keyName)
+  if (!sessionKey) { sessionKey = crypto.randomUUID().replace(/-/g, ''); window.sessionStorage.setItem(keyName, sessionKey) }
+  void fetch('/api/pilot/events', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventType: 'FIRST_USEFUL_ACTION', sessionKey }) }).catch(() => undefined)
+}
+
+export function DecisionActions({decisions,actions}:Pick<CommandCentreProps,'decisions'|'actions'>) { return <section className="grid gap-4 lg:grid-cols-2"><div className="rounded-xl border bg-white p-4"><h2 className="text-lg font-semibold">Top three decisions</h2><ol className="mt-3 list-decimal space-y-2 pl-5">{decisions.map(item=><li key={item}>{item}</li>)}</ol></div>{actions.length>0&&<div className="rounded-xl border bg-white p-4"><h2 className="text-lg font-semibold">Top three actions</h2><div className="mt-3 grid gap-3">{actions.map(item=><a key={item.label} href={item.href} onClick={recordFirstUsefulAction} className="flex min-h-[44px] items-center rounded-lg border px-4 font-medium">{item.label}</a>)}</div></div>}</section> }

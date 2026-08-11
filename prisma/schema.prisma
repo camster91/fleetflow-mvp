@@ -1067,3 +1067,63 @@ model AiEvaluationRun {
   @@index([createdAt])
   @@index([evaluationVersion, provider, modelVersion])
 }
+
+/// Consent and status for the limited, controlled Fleetvera pilot. This model
+/// intentionally stores no operational payloads or prompts.
+model PilotEnrollment {
+  id                 String   @id @default(cuid())
+  scopeKey           String   @unique
+  ownerId            String
+  teamId             String?
+  status             String   @default("INVITED")
+  pilotStartsAt      DateTime?
+  pilotEndsAt        DateTime?
+  consentedAt        DateTime?
+  supportOwnerId     String?
+  supportOwnerLabel  String?
+  createdById        String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([ownerId, teamId])
+  @@index([status, pilotEndsAt])
+}
+
+/// Privacy-safe adoption signals. sessionKey is an opaque client-generated
+/// identifier; no prompt, page payload, or free-form content is retained.
+model PilotEvent {
+  id          String   @id @default(cuid())
+  scopeKey    String
+  ownerId     String
+  teamId      String?
+  actorId     String
+  sessionKey  String
+  eventType   String
+  occurredAt  DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([scopeKey, occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([expiresAt])
+  @@unique([scopeKey, actorId, sessionKey, eventType])
+}
+
+/// Structured, content-free support incident register for pilot exit review.
+model PilotIncident {
+  id          String   @id @default(cuid())
+  scopeKey    String
+  ownerId     String
+  teamId      String?
+  severity    String
+  category    String
+  status      String   @default("OPEN")
+  occurredAt  DateTime @default(now())
+  resolvedAt  DateTime?
+  expiresAt   DateTime
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([scopeKey, occurredAt])
+  @@index([expiresAt])
+}

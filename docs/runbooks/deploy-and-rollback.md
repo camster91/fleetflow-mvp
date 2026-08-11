@@ -8,6 +8,7 @@
 4. Create and verify a database backup. Record its identifier, timestamp, and restore test.
 5. Build or identify the immutable application image for the candidate SHA.
 6. Confirm whether the database is new or already contains FleetFlow tables.
+7. For a controlled pilot, configure authenticated schedules for the existing retention endpoints, including `POST /api/cron/pilot-retention` with `X-Cron-Secret`. Confirm schedules call the candidate's HTTPS origin and retain only status/aggregate evidence.
 
 For a new database, `prisma migrate deploy` applies the committed PostgreSQL baseline. For an existing database, first compare it with `prisma migrate diff`, back it up, and rehearse on a restored copy. Mark the baseline as applied with `prisma migrate resolve --applied 20260807000000_postgresql_baseline` only when the restored schema is confirmed equivalent. This command changes migration state and requires explicit production approval.
 
