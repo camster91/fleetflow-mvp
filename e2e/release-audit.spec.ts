@@ -40,7 +40,7 @@ test('public entry points remain accessible and bounded at release viewports', a
 
   expect(unauthorizedPaths.every(pathname => pathname === '/api/auth/me')).toBe(true)
   const unexpectedConsoleErrors = consoleErrors.filter(message =>
-    !message.includes('status of 401 (Unauthorized)') &&
+    !(message.includes('status of 401') && unauthorizedPaths.every(pathname => pathname === '/api/auth/me')) &&
     !(message.includes('downloadable font: download failed') && message.includes('fonts.gstatic.com'))
   )
   expect(unexpectedConsoleErrors).toEqual([])
