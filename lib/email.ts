@@ -1,6 +1,7 @@
 // Email service using Mailgun
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
+import { configuredMailgun } from '@/lib/emailConfig';
 
 const mailgun = new Mailgun(formData);
 
@@ -9,14 +10,6 @@ const apiKey = process.env.MAILGUN_API_KEY;
 const domain = process.env.MAILGUN_DOMAIN;
 const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3';
 
-let mg: ReturnType<Mailgun['client']> | undefined;
-if (apiKey && domain) {
-  mg = mailgun.client({
-    username: 'api',
-    key: apiKey,
-    url: baseUrl.replace('/v3', ''), // mailgun.js adds /v3 automatically
-  });
-}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>';
 const APP_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -212,12 +205,7 @@ export async function sendEmail({
   to, subject, html, text = '', from = FROM_EMAIL, attachments, cc, bcc, replyTo, metadata,
 }: SendEmailOptions): Promise<EmailResult> {
   try {
-    if (process.env.NODE_ENV === 'production') {
-      const readiness = validateEmailReadiness();
-      if (!readiness.ready) {
-        throw new Error(`Transactional email is not ready: ${readiness.errors.join('; ')}`);
-      }
-    }
+    const stored = await configuredMailgun()
     // If Mailgun is not configured, behavior depends on environment:
     //   - dev (NODE_ENV !== 'production'): log the email, return success
     //     so local testing works without real Mailgun credentials.
@@ -225,7 +213,7 @@ export async function sendEmail({
     //     error, alerting the operator). Silently returning success in
     //     prod means transactional emails (notifications, invites, etc.)
     //     disappear without anyone noticing.
-    if (!mg || !domain) {
+    if (!stored) {
       if (process.env.NODE_ENV !== 'production') {
         console.info({
           event: 'email.delivery.skipped',
@@ -243,8 +231,9 @@ export async function sendEmail({
       );
     }
 
-    const result = await mg.messages.create(domain, {
-      from,
+    const client = mailgun.client({ username: 'api', key: stored.apiKey, url: baseUrl.replace('/v3', '') })
+    const result = await client.messages.create(stored.domain, {
+      from: from === FROM_EMAIL ? stored.fromEmail : from,
       to,
       cc,
       bcc,
@@ -254,7 +243,7 @@ export async function sendEmail({
       'h:Reply-To': replyTo,
       attachment: attachments,
       'v:correlation-id': metadata?.correlationId,
-    } as Parameters<typeof mg.messages.create>[1]);
+    } as Parameters<typeof client.messages.create>[1]);
 
     return { success: true, messageId: result.id };
   } catch (error: unknown) {
@@ -264,7 +253,7 @@ export async function sendEmail({
       status === 429 ? 'provider_rate_limited'
       : status && status >= 500 ? 'provider_unavailable'
       : status ? 'provider_rejected'
-      : process.env.NODE_ENV === 'production' && !validateEmailReadiness().ready
+      : process.env.NODE_ENV === 'production'
         ? 'configuration_error' : 'delivery_exception';
     return { success: false, errorCode, error: errorCode };
   }

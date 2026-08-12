@@ -1068,6 +1068,21 @@ model AiEvaluationRun {
   @@index([evaluationVersion, provider, modelVersion])
 }
 
+/// Singleton encrypted transactional-email configuration. The provider secret
+/// is encrypted with the deployment-only EMAIL_CONFIG_ENCRYPTION_KEY and is
+/// never returned from an API.
+model EmailDeliveryConfig {
+  id                String   @id @default("global")
+  provider          String   @default("mailgun")
+  apiKeyEnvelope    String
+  domain            String
+  verifiedDomain    String
+  fromEmail         String
+  configuredById    String
+  configuredAt      DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 /// Consent and status for the limited, controlled Fleetvera pilot. This model
 /// intentionally stores no operational payloads or prompts.
 model PilotEnrollment {

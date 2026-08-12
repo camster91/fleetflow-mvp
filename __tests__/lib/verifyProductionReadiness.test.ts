@@ -11,6 +11,7 @@ const core = {
   MAILGUN_API_KEY: 'mailgun-key',
   MAILGUN_DOMAIN: 'mg.example.com',
   EMAIL_FROM: 'Fleetvera <noreply@mg.example.com>',
+  EMAIL_CONFIG_ENCRYPTION_KEY: 'e'.repeat(32),
 }
 
 describe('verify-production-readiness', () => {
