@@ -28,6 +28,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Reject committed NextAuth secrets
+        shell: bash
+        run: |
+          if git grep --quiet -E "NEXTAUTH_SECRET[[:space:]]*=[[:space:]]*['\"]?[A-Za-z0-9+/]{32,}={0,2}" -- '*.sh' '*.md' '*.yml' '*.yaml' '*.env*'; then
+            echo "::error::A concrete NEXTAUTH_SECRET is committed. Store it only in the deployment secret store."
+            exit 1
+          fi
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -51,3 +58,4 @@ jobs:
         uses: actions/checkout@v4
       - name: Build without publishing
         run: docker build --tag fleetflow:${{ github.sha }} .
+
