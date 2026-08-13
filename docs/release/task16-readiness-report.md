@@ -14,9 +14,9 @@ The deployment includes a platform-administrator-only `/admin/email-delivery` pa
 
 This update changes the live-deployment assessment below. It does **not** satisfy the external launch evidence: controlled mailbox delivery and DNS alignment, Stripe sandbox/live evidence, backup restore drill, durable production document adapter/scanner validation, monitoring/alerting, written pilot permissions, or the four-week pilot are still required.
 
-**Candidate:** Task 16 candidate commit containing this report
-**Audit date:** 2026-08-09 (America/Toronto)
-**Scope:** local release candidate plus a read-only inspection of the current VPS deployment. No GitHub push, deployment, production database change, live AI call, payment, or email was performed.
+**Original audit date:** 2026-08-09 (America/Toronto)
+**Current deployed application revision:** `a85946f` (2026-08-13)
+**Original scope:** local release candidate plus a read-only inspection of the then-current VPS deployment. The post-audit deployment update above records the later deployment and public checks. No live AI call, payment, email, OAuth connection, or customer-data mutation was performed.
 
 ## Decision
 
@@ -25,8 +25,8 @@ This update changes the live-deployment assessment below. It does **not** satisf
 | Local code quality | Pass | `npm run ci`: dependency audit, ESLint, TypeScript, deterministic AI evaluation, 136 Jest suites / 981 tests, Prisma generation, and 45-page production build all passed. |
 | Local database evolution | Pass | PostgreSQL 16 disposable fresh install, in-place upgrade with preserved fixtures, and both no-diff comparisons passed for all 15 migrations. |
 | Local browser release gate | Pass | One exact `npm run test:e2e:release` invocation rebuilt the candidate, applied all migrations to disposable PostgreSQL, passed 76 mocked cases across Chromium/Firefox/WebKit with 2 intentional cross-project skips, then passed 5/5 serial disposable-database Chromium workflows. |
-| Current live production | Healthy old release; candidate not deployed | Read-only inspection confirmed trusted HTTPS and a healthy `fleetflow:82585ed` container behind Traefik. The Task 16 candidate and its 15-migration schema are not deployed; new routes/configuration are absent. |
-| Controlled pilot deployment | Not cleared | Requires green split browser gate, production configuration, encrypted durable document storage and scanner decision, backup/restore evidence, monitoring, and explicit deployment approval. |
+| Current live production | Healthy deployed pilot-capable release | `fleetflow:a85946f` is running with all 17 migrations applied. Public unauthenticated, HTTPS, certificate, and cross-browser checks passed; authenticated customer workflow evidence remains pending. |
+| Controlled pilot deployment | Not cleared | The exact code/config preflight and local split browser gate are green. Encrypted durable document storage and scanner decision, backup/restore evidence, monitoring, written pilot permission, and authenticated pilot workflow evidence remain required. |
 | Public launch | Blocked | Live Stripe and transactional-email proofs, provider/storage/scanner gates, exact-commit CI/deploy evidence, restore drill, production QA, and the four-week pilot outcome are absent. |
 
 ## Exact automated results
