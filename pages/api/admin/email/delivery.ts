@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { assertSameOrigin, requireTenantContext } from '@/lib/apiAuth'
-import { canManageSettings } from '@/lib/permissions'
 import { prisma } from '@/lib/prisma'
 import { rateLimitMiddleware } from '@/lib/rateLimit'
 import { encryptMailgunApiKey, publicEmailConfig } from '@/lib/emailConfig'
@@ -17,7 +16,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!['GET', 'PUT'].includes(req.method ?? '')) { res.setHeader('Allow', 'GET, PUT'); return res.status(405).json({ error: 'Method not allowed' }) }
   if (req.method === 'PUT' && !assertSameOrigin(req, res)) return
   const context = await requireTenantContext(req, res); if (!context) return
-  if (!canManageSettings(context.tenant.role)) return res.status(403).json({ error: 'Owner or admin access is required' })
+  // This is a single deployment-wide provider credential, not workspace data.
+  // Team ownership must never grant the ability to replace it.
+  if (context.session.user.role !== 'admin') return res.status(403).json({ error: 'Platform administrator access is required' })
   if (!await rateLimitMiddleware(req, res, 'admin', `email-delivery:${context.session.user.id}`)) return
   if (req.method === 'GET') return res.status(200).json({ config: publicEmailConfig(await prisma.emailDeliveryConfig.findUnique({ where: { id: 'global' } })) })
   const parsed = schema.safeParse(req.body); if (!parsed.success) return res.status(400).json({ error: 'Invalid email delivery configuration' })

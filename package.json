@@ -83,7 +83,7 @@
     "node-mocks-http": "^1.18.1",
     "playwright": "^1.58.2",
     "prisma": "^5.22.0",
-    "puppeteer": "^24.43.1",
+    "puppeteer": "^25.6.0",
     "sharp": "^0.35.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.0.0"
