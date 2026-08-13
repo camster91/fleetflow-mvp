@@ -26,6 +26,7 @@
     "test:e2e:release:mock": "playwright test e2e/ai-health.spec.ts e2e/assistant.spec.ts e2e/assistant-actions.spec.ts e2e/documents.spec.ts e2e/intelligence-brief.spec.ts e2e/maintenance-risk.spec.ts e2e/release-audit.spec.ts e2e/role-dashboards.spec.ts --project=chromium --project=firefox --project=webkit --workers=1",
     "test:e2e:release:real": "playwright test e2e/assistant-actions-real.spec.ts e2e/documents-real.spec.ts e2e/driver-assignment-real.spec.ts e2e/integrations-real.spec.ts e2e/intelligence-integrated.spec.ts --project=chromium --workers=1",
     "verify:production-config": "node scripts/verify-production-readiness.cjs",
+    "verify:backup-restore": "node scripts/verify-backup-restore.cjs",
     "typecheck": "tsc --noEmit",
     "ci": "npm run audit && npm run lint && npm run typecheck && npm run ai:evaluate && npm run test:ci && npm run build"
   },
