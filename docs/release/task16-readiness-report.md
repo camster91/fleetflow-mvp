@@ -2,7 +2,7 @@
 
 ## Post-audit deployment update (2026-08-13)
 
-The audit candidate was subsequently deployed and then updated to immutable image `fleetflow:ca3e1bc` after the following verified gates:
+The audit candidate was subsequently deployed and then updated to immutable image `fleetflow:1aaa945` after the following verified gates:
 
 - `npm run ci` passed with 139 Jest suites / 987 tests, production build, TypeScript, ESLint, deterministic AI evaluation, and `npm audit --audit-level=high` reporting zero vulnerabilities.
 - The production container completed its migration check with all 17 migrations already applied and started healthy behind the existing proxy on `127.0.0.1:3096`. The deployed runtime is Node `v22.23.2`, matching the locked browser-test dependency's supported Node range.
@@ -10,13 +10,14 @@ The audit candidate was subsequently deployed and then updated to immutable imag
 - Public checks passed for HTTP-to-HTTPS redirect, HTTPS headers, unauthenticated settings redirect/API denial, `.git` returning 404 after redirect normalization, and the certificate validity period ending 2026-11-05.
 - Public Chromium, Firefox, and WebKit checks passed for the release audit: 4 applicable checks passed and 2 HTTP-only checks were intentionally skipped outside Chromium.
 - An encrypted ephemeral production PostgreSQL snapshot restored successfully into an isolated, unported PostgreSQL 16 container. The aggregate restore check found 47 public tables; the temporary encrypted artifact and restore container were deleted after verification.
+- Public `GET /api/health` returns only `{ "status": "ok" }` after a database-readiness probe. Docker uses the same endpoint for its health check; the response is `Cache-Control: no-store` and contains no tenant or database content.
 
 The deployment includes a platform-administrator-only `/admin/email-delivery` page. Its Mailgun key is encrypted at rest and never returned after saving. No real Mailgun credential, email delivery, payment, OAuth connection, customer document, or live AI request was made during deployment.
 
 This update changes the live-deployment assessment below. It does **not** satisfy the external launch evidence: controlled mailbox delivery and DNS alignment, Stripe sandbox/live evidence, durable encrypted backup retention outside the VPS, production document adapter/scanner validation, monitoring/alerting, written pilot permissions, or the four-week pilot are still required.
 
 **Original audit date:** 2026-08-09 (America/Toronto)
-**Current deployed application revision:** `ca3e1bc` (2026-08-13)
+**Current deployed application revision:** `1aaa945` (2026-08-13)
 **Original scope:** local release candidate plus a read-only inspection of the then-current VPS deployment. The post-audit deployment update above records the later deployment and public checks. No live AI call, payment, email, OAuth connection, or customer-data mutation was performed.
 
 ## Decision
@@ -26,7 +27,7 @@ This update changes the live-deployment assessment below. It does **not** satisf
 | Local code quality | Pass | `npm run ci`: dependency audit, ESLint, TypeScript, deterministic AI evaluation, 136 Jest suites / 981 tests, Prisma generation, and 45-page production build all passed. |
 | Local database evolution | Pass | PostgreSQL 16 disposable fresh install, in-place upgrade with preserved fixtures, and both no-diff comparisons passed for all 15 migrations. |
 | Local browser release gate | Pass | One exact `npm run test:e2e:release` invocation rebuilt the candidate, applied all migrations to disposable PostgreSQL, passed 76 mocked cases across Chromium/Firefox/WebKit with 2 intentional cross-project skips, then passed 5/5 serial disposable-database Chromium workflows. |
-| Current live production | Healthy deployed pilot-capable release | `fleetflow:ca3e1bc` is running with Node `v22.23.2` and all 17 migrations applied. Public unauthenticated, HTTPS, certificate, cross-browser, and ephemeral isolated-restore checks passed; authenticated customer workflow evidence remains pending. |
+| Current live production | Healthy deployed pilot-capable release | `fleetflow:1aaa945` is running with Node `v22.23.2` and all 17 migrations applied. Public unauthenticated, HTTPS, certificate, cross-browser, ephemeral isolated-restore, and database-readiness checks passed; authenticated customer workflow evidence remains pending. |
 | Controlled pilot deployment | Not cleared | The exact code/config preflight, local split browser gate, and an ephemeral isolated-restore drill are green. Durable encrypted backup retention, document storage/scanner decision, monitoring, written pilot permission, and authenticated pilot workflow evidence remain required. |
 | Public launch | Blocked | Live Stripe and transactional-email proofs, provider/storage/scanner gates, exact-commit CI/deploy evidence, restore drill, production QA, and the four-week pilot outcome are absent. |
 
