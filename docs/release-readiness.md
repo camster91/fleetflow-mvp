@@ -26,7 +26,7 @@ These checks establish a release candidate, not a live release.
 - [ ] Production URL, DNS, and TLS are verified
 - [ ] Stripe products, prices, webhook endpoint, signature secret, and test transaction are verified
 - [ ] Email domain authentication and delivery are verified
-- [ ] Sentry/monitoring, alert destination, logs, and health checks are verified
+- [ ] Sentry/monitoring and alert destination are verified; use unauthenticated `GET /api/health` as the no-store database-readiness target and record the monitor owner
 - [ ] Privacy policy, terms, support contact, retention, deletion, and export policies are approved
 - [x] Desktop and mobile critical-path browser QA passes against the local release candidate
 - [ ] Desktop and mobile smoke QA passes against the deployed production URL
