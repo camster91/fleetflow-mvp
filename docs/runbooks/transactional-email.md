@@ -4,7 +4,13 @@ Fleetvera uses one Mailgun adapter in `lib/email.ts` for login codes, team invit
 
 ## Production configuration
 
-Configure these server-side environment variables in the deployment platform:
+Configure the application encryption key in the deployment platform, then save the Mailgun sending configuration in the authenticated application settings screen.
+
+1. Set `EMAIL_CONFIG_ENCRYPTION_KEY` to a unique high-entropy secret of at least 32 characters. It encrypts the Mailgun API key at rest and must be preserved through application-image rollbacks.
+2. Sign in as a **platform administrator** and open `/admin/email-delivery`.
+3. Enter the restricted Mailgun sending key, exact sending domain, verified domain, and From address. The key is never returned by the API or displayed after saving.
+
+The legacy server-side variables below remain a break-glass compatibility path for an existing deployment, but should not be added to browser-visible configuration or used for routine changes:
 
 - `MAILGUN_API_KEY`: restricted Mailgun sending key.
 - `MAILGUN_DOMAIN`: the exact sending domain used by the Mailgun API.
@@ -15,7 +21,7 @@ Configure these server-side environment variables in the deployment platform:
 - `EMAIL_DELIVERY_TIMEOUT_MS`: optional bounded provider wait; defaults to 4000 ms.
 - `LOGIN_RESPONSE_TARGET_MS`: optional common response target; defaults to 4500 ms and is forced to remain at least 100 ms longer than the delivery timeout.
 
-Do not expose the API key through a `NEXT_PUBLIC_` variable. Restart the application after changing configuration. Production sends fail visibly when readiness validation reports missing or inconsistent settings; test and development builds continue to use the local no-send behavior.
+Do not expose the API key through a `NEXT_PUBLIC_` variable. Production sends fail visibly when readiness validation reports missing or inconsistent settings; test and development builds continue to use the local no-send behavior. A workspace owner or workspace administrator cannot alter the deployment-wide transport credential.
 
 ## DNS and provider setup
 
@@ -23,7 +29,7 @@ Do not expose the API key through a `NEXT_PUBLIC_` variable. Restart the applica
 2. Add the provider-supplied SPF TXT, DKIM TXT/CNAME, tracking CNAME, and receiving MX records if inbound handling is required.
 3. Ensure the domain has only one effective SPF policy; merge includes instead of publishing competing SPF records.
 4. Wait for Mailgun to mark every required sending record verified.
-5. Set `MAILGUN_DOMAIN` and `MAILGUN_VERIFIED_DOMAIN` to that exact verified domain.
+5. Save that exact verified domain in `/admin/email-delivery` (or, only for the legacy compatibility path, set `MAILGUN_DOMAIN` and `MAILGUN_VERIFIED_DOMAIN`).
 6. Configure DMARC with reporting, then tighten its policy only after legitimate delivery is confirmed.
 
 ## Controlled smoke test

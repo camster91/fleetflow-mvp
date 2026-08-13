@@ -1,5 +1,19 @@
 # Task 16 release-readiness audit
 
+## Post-audit deployment update (2026-08-13)
+
+The audit candidate was subsequently deployed as immutable image `fleetflow:a85946f` after the following verified gates:
+
+- `npm run ci` passed with 139 Jest suites / 987 tests, production build, TypeScript, ESLint, deterministic AI evaluation, and `npm audit --audit-level=high` reporting zero vulnerabilities.
+- The production container completed its migration check with all 17 migrations already applied and started healthy behind the existing proxy on `127.0.0.1:3096`.
+- The exact production configuration preflight passed without printing configuration values.
+- Public checks passed for HTTP-to-HTTPS redirect, HTTPS headers, unauthenticated settings redirect/API denial, `.git` returning 404 after redirect normalization, and the certificate validity period ending 2026-11-05.
+- Public Chromium, Firefox, and WebKit checks passed for the release audit: 4 applicable checks passed and 2 HTTP-only checks were intentionally skipped outside Chromium.
+
+The deployment includes a platform-administrator-only `/admin/email-delivery` page. Its Mailgun key is encrypted at rest and never returned after saving. No real Mailgun credential, email delivery, payment, OAuth connection, customer document, or live AI request was made during deployment.
+
+This update changes the live-deployment assessment below. It does **not** satisfy the external launch evidence: controlled mailbox delivery and DNS alignment, Stripe sandbox/live evidence, backup restore drill, durable production document adapter/scanner validation, monitoring/alerting, written pilot permissions, or the four-week pilot are still required.
+
 **Candidate:** Task 16 candidate commit containing this report
 **Audit date:** 2026-08-09 (America/Toronto)
 **Scope:** local release candidate plus a read-only inspection of the current VPS deployment. No GitHub push, deployment, production database change, live AI call, payment, or email was performed.
