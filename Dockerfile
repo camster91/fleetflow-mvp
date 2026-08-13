@@ -1,5 +1,5 @@
 # Use Node.js LTS Alpine as base
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install dependencies for building
 RUN apk add --no-cache libc6-compat openssl
@@ -26,7 +26,7 @@ ENV DATABASE_URL=postgresql://fleetflow:build-only@localhost:5432/fleetflow
 RUN npm run build
 
 # Production image
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 # Install curl for health checks and openssl for Prisma
 RUN apk add --no-cache curl openssl
