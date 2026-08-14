@@ -56,4 +56,22 @@ describe('Mailgun adapter', () => {
     expect(consoleSpy).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
   })
+
+  it('renders invitation names as text and strips subject line breaks', async () => {
+    const { sendTeamInvitationEmail } = await import('@/lib/email')
+    await sendTeamInvitationEmail(
+      'recipient@example.com',
+      '<a href="https://evil.example">Attacker</a>\r\nBcc: victim@example.com',
+      'MEMBER',
+      '<img src=x onerror=alert(1)>',
+      'invite-1'
+    )
+
+    const sent = (mockMessagesCreate.mock.calls as unknown as Array<[string, { html: string; subject: string }]>).at(-1)?.[1]
+    if (!sent) throw new Error('Mailgun was not called')
+    expect(sent.html).toContain('&lt;a href=&quot;https://evil.example&quot;&gt;Attacker&lt;/a&gt;')
+    expect(sent.html).toContain('&lt;img src=x onerror=alert(1)&gt;')
+    expect(sent.html).not.toContain('<img src=x onerror=alert(1)>')
+    expect(sent.subject).not.toMatch(/[\r\n]/)
+  })
 })

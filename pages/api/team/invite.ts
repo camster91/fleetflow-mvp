@@ -4,6 +4,8 @@ import { prisma } from '../../../lib/prisma';
 import { sendTeamInvitationEmail } from '../../../lib/email';
 import { assertSameOrigin } from '../../../lib/apiAuth';
 import { parseBody, teamInviteSchema } from '../../../lib/validation';
+import { canAssignRole } from '../../../lib/permissions';
+import type { TeamRole } from '../../../types';
 
 export default async function handler(
   req: NextApiRequest,
@@ -54,6 +56,13 @@ export default async function handler(
 
     if (!team) {
       return res.status(403).json({ error: 'You do not have permission to invite to this team' });
+    }
+
+    const assignerRole: TeamRole | undefined = team.ownerId === session.user.id
+      ? 'OWNER'
+      : team.members.find((member) => member.userId === session.user.id && member.status === 'ACCEPTED')?.role as TeamRole | undefined;
+    if (!assignerRole || !canAssignRole(assignerRole, assignedRole)) {
+      return res.status(403).json({ error: 'You do not have permission to assign this role' });
     }
 
     // Batch-load existing users for all emails

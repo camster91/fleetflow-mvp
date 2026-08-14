@@ -16,6 +16,20 @@ const APP_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera';
 const MAILGUN_DOMAIN = domain || '';
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[character] || character));
+}
+
+function safeEmailSubject(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').trim();
+}
+
 export interface EmailAttachment {
   filename: string;
   data: Buffer | string;
@@ -266,10 +280,11 @@ export async function sendVerificationEmail(
   token: string
 ): Promise<{ success: boolean; error?: string }> {
   const verificationUrl = `${APP_URL}/auth/verify-email/${token}`;
+  const safeName = escapeHtml(name || 'there');
   
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Verify Your Email Address</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>Welcome to ${APP_NAME}! Please verify your email address to complete your registration and start managing your fleet.</p>
     
     <div style="text-align: center; margin: 32px 0;">
@@ -326,10 +341,11 @@ export async function sendPasswordResetEmail(
   token: string
 ): Promise<{ success: boolean; error?: string }> {
   const resetUrl = `${APP_URL}/auth/reset-password/${token}`;
+  const safeName = escapeHtml(name || 'there');
   
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Password Reset Request</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>We received a request to reset your password for your ${APP_NAME} account. Click the button below to set a new password:</p>
     
     <div style="text-align: center; margin: 32px 0;">
@@ -386,10 +402,11 @@ export async function sendWelcomeEmail(
   loginUrl: string = `${APP_URL}/auth/login`
 ): Promise<{ success: boolean; error?: string }> {
   const dashboardUrl = `${APP_URL}/dashboard`;
+  const safeName = escapeHtml(name || 'there');
   
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Welcome to ${APP_NAME}!</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>Your email has been verified and your account is now active. We're excited to help you streamline your fleet operations!</p>
     
     <div style="text-align: center; margin: 32px 0;">
@@ -451,15 +468,16 @@ export async function sendBackupCodesEmail(
   name: string,
   backupCodes: string[]
 ): Promise<{ success: boolean; error?: string }> {
+  const safeName = escapeHtml(name || 'there');
   const codesHtml = backupCodes.map(code => 
-    `<code class="code" style="display: inline-block; margin: 4px; padding: 8px 12px; font-size: 16px;">${code}</code>`
+    `<code class="code" style="display: inline-block; margin: 4px; padding: 8px 12px; font-size: 16px;">${escapeHtml(code)}</code>`
   ).join('');
   
   const codesText = backupCodes.join('\n');
   
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Two-Factor Authentication Backup Codes</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>You've enabled two-factor authentication on your ${APP_NAME} account. Here are your backup codes:</p>
     
     <div class="info-box" style="text-align: center;">
@@ -533,19 +551,26 @@ export async function sendSecurityAlertEmail(
     return { success: false, error: 'Invalid alert type' };
   }
   const settingsUrl = `${APP_URL}/settings/security`;
+  const safeName = escapeHtml(name || 'there');
+  const safeDetails = {
+    ip: details.ip && escapeHtml(details.ip),
+    location: details.location && escapeHtml(details.location),
+    device: details.device && escapeHtml(details.device),
+    time: details.time && escapeHtml(details.time),
+  };
   
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">${alert.title}</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>${alert.message}</p>
     
-    ${details.ip ? `
+    ${safeDetails.ip ? `
     <div class="info-box">
       <h4 style="margin-top: 0; color: #1e40af;">Details</h4>
-      <p style="margin: 4px 0;"><strong>IP Address:</strong> ${details.ip}</p>
-      ${details.location ? `<p style="margin: 4px 0;"><strong>Location:</strong> ${details.location}</p>` : ''}
-      ${details.device ? `<p style="margin: 4px 0;"><strong>Device:</strong> ${details.device}</p>` : ''}
-      ${details.time ? `<p style="margin: 4px 0;"><strong>Time:</strong> ${details.time}</p>` : ''}
+      <p style="margin: 4px 0;"><strong>IP Address:</strong> ${safeDetails.ip}</p>
+      ${safeDetails.location ? `<p style="margin: 4px 0;"><strong>Location:</strong> ${safeDetails.location}</p>` : ''}
+      ${safeDetails.device ? `<p style="margin: 4px 0;"><strong>Device:</strong> ${safeDetails.device}</p>` : ''}
+      ${safeDetails.time ? `<p style="margin: 4px 0;"><strong>Time:</strong> ${safeDetails.time}</p>` : ''}
     </div>
     ` : ''}
     
@@ -595,14 +620,16 @@ export async function sendAccountLockedEmail(
   lockDuration: string
 ): Promise<{ success: boolean; error?: string }> {
   const supportUrl = `${APP_URL}/support`;
+  const safeName = escapeHtml(name || 'there');
+  const safeLockDuration = escapeHtml(lockDuration);
   
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Account Temporarily Locked</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>Your ${APP_NAME} account has been temporarily locked due to multiple failed sign-in attempts.</p>
     
     <div class="info-box">
-      <p style="margin: 0;"><strong>Lock Duration:</strong> ${lockDuration}</p>
+      <p style="margin: 0;"><strong>Lock Duration:</strong> ${safeLockDuration}</p>
       <p style="margin: 8px 0 0 0;">You can try signing in again after this period.</p>
     </div>
     
@@ -652,14 +679,16 @@ export async function sendLoginCodeEmail(
   code: string,
   metadata?: DeliveryMetadata
 ): Promise<EmailResult> {
+  const safeName = escapeHtml(name || 'there');
+  const safeCode = escapeHtml(code);
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Your Login Code</h2>
-    <p>Hi ${name || 'there'},</p>
+    <p>Hi ${safeName},</p>
     <p>Use the code below to sign in to your ${APP_NAME} account:</p>
 
     <div style="text-align: center; margin: 32px 0;">
       <div style="display: inline-block; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px 40px;">
-        <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1e3a8a;">${code}</span>
+        <span style="font-family: 'Courier New', monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #1e3a8a;">${safeCode}</span>
       </div>
     </div>
 
@@ -707,11 +736,15 @@ export async function sendTeamInvitationEmail(
 ): Promise<{ success: boolean; error?: string }> {
   const inviteUrl = `${APP_URL}/accept-invite/${encodeURIComponent(invitationId)}`;
   const displayRole = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const safeInviterName = escapeHtml(invitedByName);
+  const safeTeamName = escapeHtml(teamName);
+  const safeAppName = escapeHtml(APP_NAME);
+  const safeDisplayRole = escapeHtml(displayRole);
 
   const html = getBaseEmailTemplate(`
-    <h2 style="margin-top: 0; color: #1e293b;">You've been invited to ${APP_NAME}</h2>
+    <h2 style="margin-top: 0; color: #1e293b;">You've been invited to ${safeAppName}</h2>
     <p>Hi there,</p>
-    <p><strong>${invitedByName}</strong> has invited you to join <strong>${teamName}</strong> on ${APP_NAME} as a <strong>${displayRole}</strong>.</p>
+    <p><strong>${safeInviterName}</strong> has invited you to join <strong>${safeTeamName}</strong> on ${safeAppName} as a <strong>${safeDisplayRole}</strong>.</p>
 
     <div style="text-align: center; margin: 32px 0;">
       <a href="${inviteUrl}" class="button">Accept Invitation</a>
@@ -748,7 +781,7 @@ ${APP_URL}
 
   return sendEmail({
     to: email,
-    subject: `${invitedByName} invited you to ${teamName} on ${APP_NAME}`,
+    subject: safeEmailSubject(`${invitedByName} invited you to ${teamName} on ${APP_NAME}`),
     html,
     text,
   });

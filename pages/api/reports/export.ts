@@ -6,7 +6,12 @@ import { canExportData } from '../../../lib/permissions';
 function toCsv(rows: Record<string, unknown>[]): string {
   if (!rows.length) return '';
   const keys = Object.keys(rows[0]);
-  const escape = (value: unknown) => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+  const escape = (value: unknown) => {
+    const text = String(value ?? '');
+    // Spreadsheet programs may evaluate quoted CSV cells as formulas.
+    const literal = /^[\t\r\n ]*[=+\-@]/.test(text) ? `'${text}` : text;
+    return '"' + literal.replace(/"/g, '""') + '"';
+  };
   return [keys.map(escape).join(','), ...rows.map(r => keys.map(k => escape(r[k])).join(','))].join('\n');
 }
 

@@ -88,4 +88,23 @@ describe('team invitation provisioning', () => {
     expect(JSON.parse(res._getData())).toEqual({ error: 'Team member limit would be exceeded' })
     expect(mockTx.teamMember.create).not.toHaveBeenCalled()
   })
+
+  it('does not let an ADMIN invite another ADMIN', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'admin-1', email: 'admin@example.com', name: 'Admin' },
+    })
+    ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({
+      id: 'team-1', name: 'Acme', ownerId: 'owner-1',
+      members: [{ userId: 'admin-1', role: 'ADMIN', status: 'ACCEPTED' }],
+    })
+    const { req, res } = createMocks({
+      method: 'POST', body: { teamId: 'team-1', emails: ['new@example.com'], role: 'ADMIN' },
+    })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(403)
+    expect(mockTx.teamMember.create).not.toHaveBeenCalled()
+    expect(mockTx.teamMember.update).not.toHaveBeenCalled()
+  })
 })
