@@ -1,4 +1,4 @@
-const { parseArgs, validateSecret, artifactNames, restoreContainerName } = require('@/scripts/backup-restore-lib.cjs')
+const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, validateRestoreSummary } = require('@/scripts/backup-restore-lib.cjs')
 
 describe('backup and isolated restore verifier safety contract', () => {
   test('requires explicit safe source and absolute backup directory', () => {
@@ -16,5 +16,31 @@ describe('backup and isolated restore verifier safety contract', () => {
     expect(artifact.baseName).toMatch(/^fleetvera-postgres-20260813T120000000Z-[a-f0-9]{12}\.dump\.enc$/)
     expect(artifact.metadataName).toBe(`${artifact.baseName}.json`)
     expect(restoreContainerName()).toMatch(/^fleetvera-restore-[a-f0-9]{16}$/)
+  })
+  test('requires migration, core-record, and ownership integrity evidence', () => {
+    const valid = {
+      publicTableCount: 47,
+      criticalRowCounts: Object.fromEntries(REQUIRED_RESTORE_TABLES.map((table: string) => [table, table === 'User' ? 1 : 0])),
+      migrations: { applied: 17, failed: 0 },
+      integrity: {
+        orphanedTeamOwners: 0,
+        orphanedTeamMembers: 0,
+        orphanedMemberUsers: 0,
+        noncanonicalOwnerMemberships: 0,
+      },
+    }
+    valid.criticalRowCounts._prisma_migrations = 17
+    expect(validateRestoreSummary(valid)).toEqual([])
+
+    expect(validateRestoreSummary({
+      ...valid,
+      criticalRowCounts: { ...valid.criticalRowCounts, User: 0 },
+      migrations: { applied: 16, failed: 1 },
+      integrity: { ...valid.integrity, noncanonicalOwnerMemberships: 1 },
+    })).toEqual(expect.arrayContaining([
+      'Restore contains no application users',
+      'Restore contains failed or unfinished Prisma migrations',
+      'Restore integrity check failed: noncanonicalOwnerMemberships',
+    ]))
   })
 })
