@@ -4,7 +4,7 @@ import { dbToDelivery, deliveryToDb, logActivity } from '../../../lib/fleet'
 import { createNotification } from '../../../lib/notifications'
 import { notifyDeliveryAssigned } from '../../../lib/email.server'
 import { parseBody, deliveryBodySchema } from '../../../lib/validation'
-import { requireTenantContext } from '../../../lib/apiAuth'
+import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canAssignDrivers, canManageDeliveries, canViewDeliveries } from '../../../lib/permissions'
 import { resolveDriverAssignment } from '../../../lib/driverAssignment'
 import { assignedResourceWhere, driverDeliveryDto, isDriverRole } from '../../../lib/driverScope'
@@ -14,6 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { session, tenant } = context
   const userId = session.user.id
+  if (!assertSameOrigin(req, res)) return
 
   if (req.method === 'GET') {
     if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -38,14 +39,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try { assignment = await resolveDriverAssignment(prisma, tenant, parsed.data.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
     const mapped = deliveryToDb({ ...req.body, ...parsed.data, driver: assignment.driver }, tenant.ownerId)
     const data = { ...mapped, ...assignment, ownerId: tenant.ownerId, teamId: tenant.teamId }
-    const delivery = await prisma.delivery.create({ data })
-    await logActivity(prisma, {
-      userId,
-      teamId: tenant.teamId,
-      userName: session.user.name, userRole: tenant.role,
-      action: 'created', entityType: 'delivery',
-      entityId: delivery.id, entityName: delivery.customer,
-      description: `Delivery for "${delivery.customer}" was created`,
+    const delivery = await prisma.$transaction(async (tx) => {
+      const created = await tx.delivery.create({ data })
+      await logActivity(tx, {
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name, userRole: tenant.role,
+        action: 'created', entityType: 'delivery',
+        entityId: created.id, entityName: created.customer,
+        description: `Delivery for "${created.customer}" was created`,
+      })
+      return created
     })
     if (delivery.assignedDriverId) {
       const driverUser = await prisma.user.findFirst({
