@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #120 contain unmerged security, concurrency,
+- Draft PRs #78 through #121 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -87,8 +87,8 @@ test fixtures.
 
 ## Primary objective
 
-Restore executable CI and produce one exact, reviewable merge candidate from the
-draft hardening work.
+Restore executable CI and validate exact cumulative candidate #121 from the draft
+hardening work.
 
 Acceptance criteria:
 
@@ -121,7 +121,10 @@ Acceptance criteria:
 
 ## Draft merge train
 
-All entries are **implemented in drafts**, not verified or released.
+#121 is the exact cumulative candidate: 173 changed paths, matching the union of
+#118, #119, #120, #90, #115, #116, and #106 with no missing, unexpected, or
+per-file patch mismatches. It is **implemented in draft**, not verified or released.
+The entries below document its represented groups and supersession trail.
 
 1. Operational foundations and product control: #118 is the cumulative #105 +
    #113 candidate, reconciling authoritative roadmap/release guidance with #80,
@@ -295,6 +298,14 @@ must not be invented to satisfy a release checklist.
   duplicate internal-secret headers. CI run 33207460995 failed before exposing
   steps and skipped the container job. #89 remains open until #90 is independently
   reviewed and green.
+- 2026-08-28: opened exact cumulative release candidate #121 from #118, #119,
+  #120, #90, #115, #116, and #106. Cross-group audit found 173 unique paths and
+  zero overlaps. Candidate verification found exactly 173 changed paths, no
+  missing or unexpected files, zero per-file patch mismatches, and product control
+  equal to the latest #105 head. GitGuardian reports only inherited incident
+  36683862 on deletion of the original compose credential. CI run 33209063455
+  failed before exposing steps and skipped the container job. The candidate remains
+  draft and unverified; no predecessor was closed or merged.
 
 ## Release decision
 
