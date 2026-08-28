@@ -51,8 +51,18 @@ describe('verify-production-readiness', () => {
     const result = evaluateEnvironment({ ...core, JWT_SECRET: 'weak', NEXTAUTH_URL: 'http://localhost:3000', ACTION_PREVIEW_KEYS: '{oops' })
     expect(result.ready).toBe(false)
     expect(result.missing.join(' ')).toContain('JWT_SECRET must be at least 32 characters')
-    expect(result.missing.join(' ')).toContain('NEXTAUTH_URL must use https')
+    expect(result.missing.join(' ')).toContain('NEXTAUTH_URL must be a canonical https origin')
     expect(result.missing.join(' ')).not.toContain('weak')
+  })
+
+  it.each([
+    'https://user:pass@fleetvera.example',
+    'https://fleetvera.example?redirect=evil',
+    'https://fleetvera.example#fragment',
+  ])('rejects unsafe canonical application URL %s', value => {
+    const result = evaluateEnvironment({ ...core, NEXTAUTH_URL: value })
+    expect(result.ready).toBe(false)
+    expect(result.missing).toContain('NEXTAUTH_URL must be a canonical https origin')
   })
 
   it('requires an HTTPS monitoring DSN for pilot and public releases', () => {
