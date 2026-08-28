@@ -1,16 +1,36 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../lib/prisma';
-import { requireTenantContext } from '../../lib/apiAuth';
-import { canViewBusinessData } from '../../lib/permissions';
+import { NextApiRequest, NextApiResponse } from 'next'
+import { prisma } from '../../lib/prisma'
+import { requireTenantContext } from '../../lib/apiAuth'
+import { canViewBusinessData } from '../../lib/permissions'
+import { rateLimitMiddleware } from '../../lib/rateLimit'
+import { parseSearchTerm } from '../../lib/readQuery'
+
+const emptyResults = {
+  vehicles: [],
+  deliveries: [],
+  clients: [],
+  maintenance: [],
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const context = await requireTenantContext(req, res);
-  if (!context) return;
-  const { tenant } = context;
-  if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET')
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
-  const q = ((req.query.q as string) || '').trim();
-  if (q.length < 2) return res.json({ vehicles: [], deliveries: [], clients: [], maintenance: [] });
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { tenant, session } = context
+  if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+  if (!await rateLimitMiddleware(req, res, 'api', `search:${session.user.id}`)) return
+
+  const parsed = parseSearchTerm(req.query.q)
+  if (!parsed.ok) return res.status(400).json({ error: parsed.error })
+  if (!parsed.value) {
+    res.setHeader('Cache-Control', 'private, no-store')
+    return res.status(200).json(emptyResults)
+  }
+  const q = parsed.value
 
   try {
     const [vehicles, deliveries, clients, maintenance] = await Promise.all([
@@ -34,9 +54,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: { id: true, vehicleName: true, type: true, dueDate: true, completed: true },
         take: 5,
       }),
-    ]);
-    return res.json({ vehicles, deliveries, clients, maintenance });
+    ])
+    res.setHeader('Cache-Control', 'private, no-store')
+    return res.status(200).json({ vehicles, deliveries, clients, maintenance })
   } catch {
-    return res.status(500).json({ error: 'Search failed' });
+    return res.status(500).json({ error: 'Search failed' })
   }
 }
