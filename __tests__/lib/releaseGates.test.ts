@@ -126,6 +126,19 @@ describe('release quality gates', () => {
     expect(dockerfile).toContain('/app/create-admin.js ./create-admin.js')
   })
 
+  test('production startup verifies an explicit release mode before migrations', () => {
+    const entrypoint = fs.readFileSync(path.join(root, 'entrypoint.sh'), 'utf8')
+    const verifier = 'node ./verify-production-readiness.cjs'
+    const migration = 'npx prisma migrate deploy'
+
+    expect(entrypoint).toContain('FLEETVERA_RELEASE_MODE must be explicitly set to pilot or public')
+    expect(entrypoint).toContain('pilot|public)')
+    expect(entrypoint).toContain(verifier)
+    expect(entrypoint).toContain(migration)
+    expect(entrypoint.indexOf(verifier)).toBeLessThan(entrypoint.indexOf(migration))
+    expect(entrypoint).not.toMatch(/FLEETVERA_RELEASE_MODE[^\n]*:-pilot/)
+  })
+
   test('passwordless auth does not ship obsolete password and verification routes', () => {
     const obsoleteRoutes = [
       'pages/api/auth/change-password.ts',
