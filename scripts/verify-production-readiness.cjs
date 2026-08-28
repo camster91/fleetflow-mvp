@@ -17,6 +17,13 @@ function validHttpsUrl(env, name) {
   if (!present(env, name)) return false
   try { return new URL(env[name]).protocol === 'https:' } catch { return false }
 }
+function canonicalAppUrlIsValid(env) {
+  if (!present(env, 'NEXTAUTH_URL')) return false
+  try {
+    const url = new URL(env.NEXTAUTH_URL)
+    return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
+  } catch { return false }
+}
 
 function keyRingIsValid(env) {
   if (!present(env, 'ACTION_PREVIEW_KEYS') || !present(env, 'ACTION_PREVIEW_CURRENT_KID')) return false
@@ -50,7 +57,7 @@ function integrationRingIsValid(env) {
 function evaluateEnvironment(env, mode = 'pilot') {
   const missing = []
   for (const name of REQUIRED_CORE) if (!present(env, name)) missing.push(name)
-  if (!/^https:\/\//.test(env.NEXTAUTH_URL || '')) missing.push('NEXTAUTH_URL must use https')
+  if (!canonicalAppUrlIsValid(env)) missing.push('NEXTAUTH_URL must be a canonical https origin')
   for (const name of ['JWT_SECRET', 'API_CURSOR_SECRET', 'CRON_SECRET']) if (present(env, name) && !secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
   if (!keyRingIsValid(env)) missing.push('ACTION_PREVIEW_KEYS/ACTION_PREVIEW_CURRENT_KID must be a valid 1-3 key ring')
   for (const name of REQUIRED_EMAIL) if (!secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
