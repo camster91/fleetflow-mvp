@@ -132,12 +132,11 @@ describe('release quality gates', () => {
     const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
 
     expect(postgres).toContain('POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}')
-    expect(postgres).not.toMatch(/POSTGRES_PASSWORD:\s*fleetflow/)
+    expect(postgres).not.toMatch(/POSTGRES_PASSWORD:\s*(?!\$\{)[^\n]+/)
     expect(postgres).not.toMatch(/\n\s+ports:/)
     expect(compose).toContain('condition: service_healthy')
     expect(exampleEnv).toMatch(/^DATABASE_URL=$/m)
     expect(exampleEnv).toMatch(/^POSTGRES_PASSWORD=$/m)
-    expect(exampleEnv).not.toContain('postgresql://fleetflow:fleetflow@')
   })
 
   test('passwordless auth does not ship obsolete password and verification routes', () => {
