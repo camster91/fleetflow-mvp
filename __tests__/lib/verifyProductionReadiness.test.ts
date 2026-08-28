@@ -12,6 +12,7 @@ const core = {
   MAILGUN_DOMAIN: 'mg.example.com',
   EMAIL_FROM: 'Fleetvera <noreply@mg.example.com>',
   EMAIL_CONFIG_ENCRYPTION_KEY: 'e'.repeat(32),
+  NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.ingest.sentry.io/123',
 }
 
 describe('verify-production-readiness', () => {
@@ -31,6 +32,16 @@ describe('verify-production-readiness', () => {
     expect(result.missing.join(' ')).toContain('JWT_SECRET must be at least 32 characters')
     expect(result.missing.join(' ')).toContain('NEXTAUTH_URL must use https')
     expect(result.missing.join(' ')).not.toContain('weak')
+  })
+
+  it('requires an HTTPS monitoring DSN for pilot and public releases', () => {
+    const missing = evaluateEnvironment({ ...core, NEXT_PUBLIC_SENTRY_DSN: '' })
+    expect(missing.ready).toBe(false)
+    expect(missing.missing).toContain('NEXT_PUBLIC_SENTRY_DSN must be a valid https URL')
+
+    const insecure = evaluateEnvironment({ ...core, NEXT_PUBLIC_SENTRY_DSN: 'http://monitoring.example/123' })
+    expect(insecure.ready).toBe(false)
+    expect(insecure.missing).toContain('NEXT_PUBLIC_SENTRY_DSN must be a valid https URL')
   })
 
   it('requires an AES-256-GCM key ring if an integration is configured', () => {
