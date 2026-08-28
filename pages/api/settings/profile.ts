@@ -20,8 +20,15 @@ type ProfileRow = {
 
 function profileResponse(user: ProfileRow) {
   const prefs = parseStoredPreferences(user.notificationPreferences)
-  const { notificationPreferences: _privatePreferences, ...safeUser } = user
-  return { user: { ...safeUser, prefs }, prefs }
+  const safeUser = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    image: user.image,
+    company: user.company,
+    prefs,
+  }
+  return { user: safeUser, prefs }
 }
 
 function mergePreferences(
