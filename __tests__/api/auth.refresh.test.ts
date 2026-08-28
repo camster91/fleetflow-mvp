@@ -12,6 +12,15 @@ import { getUserFromRequest, signToken } from '@/lib/auth'
 describe('POST /api/auth/refresh', () => {
   beforeEach(() => jest.clearAllMocks())
 
+  it('rejects a cross-origin refresh before reading the session', async () => {
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      method: 'POST', headers: { host: 'fleetvera.example', origin: 'https://evil.example' },
+    })
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(403)
+    expect(getUserFromRequest).not.toHaveBeenCalled()
+  })
+
   it('rejects an unauthenticated refresh', async () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue(null)
     const { req, res } = createMocks<NextApiRequest, NextApiResponse>({ method: 'POST' })
