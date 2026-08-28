@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #114 contain unmerged security, concurrency,
+- Draft PRs #78 through #115 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -139,10 +139,11 @@ All entries are **implemented in drafts**, not verified or released.
    admin mutations.
 4. Cron ordering: #89 strict cron authentication, then stacked #90 reminder
    claims.
-5. Tenant business mutations: #93 deliveries, #94 vehicles, #95 maintenance,
-   #96 clients, cumulative #114 vending + announcements, #99 notifications, and
-   #100 SOP. #114 explicitly reconciles #97 and #98 in `lib/validation.ts`; after
-   #114 is reviewed and green, close #97 and #98 as superseded.
+5. Tenant business mutations: #115 is the cumulative #93-#100 candidate. It
+   includes #114's explicit #97/#98 `lib/validation.ts` reconciliation and every
+   handler/test from #93, #94, #95, #96, #99, and #100. Its 27-file manifest
+   exactly matches the source union. After #115 is reviewed and green, close
+   #93-#100 and #114 as superseded.
 6. Remaining integrity/resource controls: #101 document confirmation, #102
    reports, #103 search/activity, #104 user settings.
 7. Product and billing control: #105 authoritative product control, then #106
@@ -248,6 +249,12 @@ must not be invented to satisfy a release checklist.
   carries both focused mutation suites and both scoped handler pairs. CI run
   33205832571 failed before exposing steps and skipped the container job. #97 and
   #98 remain open until #114 is independently reviewed and green.
+- 2026-08-28: opened cumulative tenant business-mutation draft #115 targeting
+  master from #114 plus #93, #94, #95, #96, #99, and #100. The 27-file candidate
+  manifest exactly matches the union of its source drafts with no missing or
+  unexpected paths. CI run 33206081436 failed before exposing steps and skipped
+  the container job. All predecessors remain open until #115 is independently
+  reviewed and green.
 
 ## Release decision
 
