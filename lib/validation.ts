@@ -53,6 +53,31 @@ export const clientBodySchema = z
   })
   .passthrough()
 
+const safeAnnouncementUrl = z.string().trim().max(2048).refine(value => {
+  if (value.startsWith('/') && !value.startsWith('//')) return true
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
+}, 'Invalid action URL')
+
+const announcementExpirySchema = z.string().max(40).refine(
+  value => !Number.isNaN(new Date(value).getTime()),
+  'Invalid expiry date'
+)
+
+export const announcementBodySchema = z.object({
+  message: z.string().trim().min(1).max(2000),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  type: z.enum(['system', 'maintenance', 'delivery', 'general']).optional(),
+  category: z.string().trim().max(80).nullable().optional(),
+  expiresAt: announcementExpirySchema.nullable().optional(),
+  actionUrl: safeAnnouncementUrl.nullable().optional(),
+  actionLabel: z.string().trim().min(1).max(80).nullable().optional(),
+}).passthrough()
+
 export const maintenanceBodySchema = z
   .object({
     title: z.string().min(1).max(200).optional(),
