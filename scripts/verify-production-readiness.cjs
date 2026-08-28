@@ -4,7 +4,11 @@
  */
 const REQUIRED_CORE = ['DATABASE_URL', 'JWT_SECRET', 'NEXTAUTH_URL', 'API_CURSOR_SECRET', 'ACTION_PREVIEW_KEYS', 'ACTION_PREVIEW_CURRENT_KID', 'CRON_SECRET']
 const REQUIRED_EMAIL = ['EMAIL_CONFIG_ENCRYPTION_KEY']
-const REQUIRED_BILLING = ['STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET']
+const REQUIRED_BILLING = [
+  'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY',
+  'STRIPE_PRICE_MONTHLY_AMOUNT', 'STRIPE_PRICE_YEARLY_AMOUNT', 'STRIPE_PRICE_CURRENCY',
+]
 const REQUIRED_MONITORING = ['NEXT_PUBLIC_SENTRY_DSN']
 
 function present(env, name) { return typeof env[name] === 'string' && env[name].trim().length > 0 }
@@ -21,6 +25,18 @@ function keyRingIsValid(env) {
     const ids = Object.keys(keys)
     return ids.length >= 1 && ids.length <= 3 && ids.includes(env.ACTION_PREVIEW_CURRENT_KID) && ids.every(id => typeof keys[id] === 'string' && keys[id].length >= 32)
   } catch { return false }
+}
+
+function billingConfigIsValid(env) {
+  if (REQUIRED_BILLING.some(name => !present(env, name))) return false
+  const monthly = Number(env.STRIPE_PRICE_MONTHLY_AMOUNT)
+  const yearly = Number(env.STRIPE_PRICE_YEARLY_AMOUNT)
+  const currency = env.STRIPE_PRICE_CURRENCY.trim().toUpperCase()
+  const currencies = new Set(['USD', 'CAD', 'EUR', 'GBP', 'AUD', 'NZD'])
+  return env.STRIPE_PRICE_MONTHLY !== env.STRIPE_PRICE_YEARLY &&
+    Number.isSafeInteger(monthly) && monthly >= 0 &&
+    Number.isSafeInteger(yearly) && yearly >= 0 &&
+    currencies.has(currency)
 }
 
 function integrationRingIsValid(env) {
@@ -40,7 +56,12 @@ function evaluateEnvironment(env, mode = 'pilot') {
   for (const name of REQUIRED_EMAIL) if (!secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
   for (const name of REQUIRED_MONITORING) if (!validHttpsUrl(env, name)) missing.push(`${name} must be a valid https URL`)
 
-  if (mode === 'public') for (const name of REQUIRED_BILLING) if (!present(env, name)) missing.push(name)
+  if (mode === 'public') {
+    for (const name of REQUIRED_BILLING) if (!present(env, name)) missing.push(name)
+    if (REQUIRED_BILLING.every(name => present(env, name)) && !billingConfigIsValid(env)) {
+      missing.push('Stripe price IDs, integer minor-unit amounts, and currency must be valid')
+    }
+  }
   if (!['pilot', 'public'].includes(mode)) missing.push('FLEETVERA_RELEASE_MODE must be pilot or public')
 
   const warnings = []
