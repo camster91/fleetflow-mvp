@@ -1,6 +1,6 @@
-# FleetFlow
+# Fleetvera
 
-FleetFlow is a multi-tenant fleet operations SaaS built with the Next.js Pages Router, React, TypeScript, Prisma, and PostgreSQL. It includes vehicles, deliveries, maintenance, clients, team workspaces, reporting, subscription billing, and role-based access control.
+Fleetvera is a multi-tenant fleet operations SaaS built with the Next.js Pages Router, React, TypeScript, Prisma, and PostgreSQL. It includes vehicles, deliveries, maintenance, clients, team workspaces, reporting, subscription billing, and role-based access control.
 
 ## Local setup
 
@@ -69,7 +69,7 @@ See [product control](docs/product-control.md), [release readiness](docs/release
 
 ## Database baseline
 
-The repository contains a PostgreSQL baseline migration for a new database. If a database already contains FleetFlow tables from an older `db push` or SQLite-era process, do not run deployment migrations blindly. Back it up, compare it with the current Prisma schema, and follow the existing-database procedure in the deployment runbook.
+The repository contains a PostgreSQL baseline migration for a new database. If a database already contains Fleetvera tables from an older `db push` or SQLite-era process, do not run deployment migrations blindly. Back it up, compare it with the current Prisma schema, and follow the existing-database procedure in the deployment runbook.
 
 ## License
 
