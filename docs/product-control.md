@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #112 contain unmerged security, concurrency,
+- Draft PRs #78 through #113 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -123,11 +123,11 @@ Acceptance criteria:
 
 All entries are **implemented in drafts**, not verified or released.
 
-1. Operational foundations: #111 focused PostgreSQL-default remediation, #80
-   configuration/runtime, then stacked #108 fail-closed preflight-before-migration
-   startup; #81 historical guidance, #82 unsafe scripts, and #84 backup/restore
-   verifier are merge-independent. Reconcile #111 with #80 so the focused database
-   invariant is retained exactly once.
+1. Operational foundations: #113 is the cumulative #80 + #108 + #111 candidate,
+   reconciling configuration/runtime, fail-closed preflight-before-migration
+   startup, and the complete PostgreSQL-default remediation. After #113 is reviewed
+   and green, close #80, #108, and #111 as superseded. #81 historical guidance,
+   #82 unsafe scripts, and #84 backup/restore verifier remain merge-independent.
 2. Tenant and membership invariants: #78 tenant/login isolation, then #83
    ownership invariant. #83 incorporates #79; close #79 as superseded only
    after the combined diff and tests are verified.
@@ -158,8 +158,8 @@ because GitHub reports them mergeable.
 |---|---|---|---|
 | CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
-| Production revision/configuration unknown | High | Public checks treated as availability only; #80/#108 configuration and startup gates | No deployment approval |
-| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #111 is the focused three-file remediation; #80 also removes the default and port | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
+| Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #113 configuration, database, and startup gates | No deployment approval |
+| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #113 cumulatively retains #111's focused remediation with #80/#108 runtime controls | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
 | Auth session transition/origin invariants unverified | High | #112 cumulatively reconciles #107 guards/session lifecycle with #85 atomic backup-code consumption | No auth candidate approval until #112 and independent #86 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
@@ -234,6 +234,13 @@ must not be invented to satisfy a release checklist.
   CI run 33205454731 failed before exposing steps and skipped the container job.
   #85 and #107 remain open until the cumulative candidate is independently
   reviewed and green.
+- 2026-08-28: opened cumulative production-startup draft #113 targeting master
+  to reconcile #80/#108 runtime and fail-closed startup controls with #111's
+  complete database-example remediation. The combined patch is mergeable;
+  GitGuardian reports only inherited incident 36683862 on deletion of the original
+  compose credential and no release-test occurrence. CI run 33205615419 failed
+  before exposing steps and skipped the container job. #80, #108, and #111 remain
+  open until #113 is independently reviewed and green.
 
 ## Release decision
 
