@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:?Set NEXT_PUBLIC_SENTRY_DSN}
     ports:
       - "3000:3000"
     environment:
@@ -12,8 +14,15 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - API_CURSOR_SECRET=${API_CURSOR_SECRET}
+      - ACTION_PREVIEW_KEYS=${ACTION_PREVIEW_KEYS}
+      - ACTION_PREVIEW_CURRENT_KID=${ACTION_PREVIEW_CURRENT_KID}
+      - CRON_SECRET=${CRON_SECRET}
+      - EMAIL_CONFIG_ENCRYPTION_KEY=${EMAIL_CONFIG_ENCRYPTION_KEY}
+      - NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN}
     depends_on:
       postgres:
@@ -28,8 +37,7 @@ services:
       POSTGRES_DB: fleetflow
       POSTGRES_USER: fleetflow
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
+    # PostgreSQL is reachable only from the internal Compose network.
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
