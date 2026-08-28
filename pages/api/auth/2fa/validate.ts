@@ -66,36 +66,42 @@ export default async function handler(
     let isBackupCode = false;
     
     if (!verified) {
-      // Check if it's a backup code
-      const backupCodes = user.backupCodes ? JSON.parse(user.backupCodes) : [];
-      
-      let backupCodeValid = false;
+      const storedBackupCodes = user.backupCodes;
+      const backupCodes = storedBackupCodes ? JSON.parse(storedBackupCodes) : [];
+
       let usedBackupCodeIndex = -1;
-      
+
       for (let i = 0; i < backupCodes.length; i++) {
         if (bcrypt.compareSync(code, backupCodes[i])) {
-          backupCodeValid = true;
           usedBackupCodeIndex = i;
           isBackupCode = true;
           break;
         }
       }
 
-      if (!backupCodeValid) {
-        return res.status(400).json({ 
+      if (usedBackupCodeIndex < 0 || !storedBackupCodes) {
+        return res.status(400).json({
           error: 'Invalid verification code',
           code: 'INVALID_CODE'
         });
       }
 
-      // Remove used backup code
-      if (usedBackupCodeIndex >= 0) {
-        backupCodes.splice(usedBackupCodeIndex, 1);
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            backupCodes: JSON.stringify(backupCodes),
-          },
+      backupCodes.splice(usedBackupCodeIndex, 1);
+      const consumed = await prisma.user.updateMany({
+        where: {
+          id: userId,
+          backupCodes: storedBackupCodes,
+          twoFactorEnabled: true,
+        },
+        data: {
+          backupCodes: JSON.stringify(backupCodes),
+        },
+      });
+
+      if (consumed.count !== 1) {
+        return res.status(400).json({
+          error: 'Invalid verification code',
+          code: 'INVALID_CODE'
         });
       }
     }
