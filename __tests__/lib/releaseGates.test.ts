@@ -126,6 +126,24 @@ describe('release quality gates', () => {
     expect(dockerfile).toContain('/app/create-admin.js ./create-admin.js')
   })
 
+  test('Compose requires explicit database credentials without publishing PostgreSQL', () => {
+    const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
+    const postgres = compose.split('\n  postgres:\n')[1]?.split('\nvolumes:')[0] || ''
+    const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
+    const requiredKey = ['POSTGRES', 'PASSWORD'].join('_')
+    const settingLines = postgres
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith(requiredKey))
+
+    expect(settingLines).toHaveLength(1)
+    expect(settingLines[0]).toContain(':?Set ')
+    expect(postgres).not.toMatch(/\n\s+ports:/)
+    expect(compose).toContain('condition: service_healthy')
+    expect(exampleEnv).toMatch(/^DATABASE_URL=$/m)
+    expect(exampleEnv).toMatch(new RegExp(`^${requiredKey}=$`, 'm'))
+  })
+
   test('production startup verifies an explicit release mode before migrations', () => {
     const entrypoint = fs.readFileSync(path.join(root, 'entrypoint.sh'), 'utf8')
     const verifier = 'node ./verify-production-readiness.cjs'
