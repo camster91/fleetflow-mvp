@@ -33,7 +33,7 @@ function billingConfigIsValid(env) {
   const yearly = Number(env.STRIPE_PRICE_YEARLY_AMOUNT)
   const currency = env.STRIPE_PRICE_CURRENCY.trim().toUpperCase()
   const currencies = new Set(['USD', 'CAD', 'EUR', 'GBP', 'AUD', 'NZD'])
-  return env.STRIPE_PRICE_MONTHLY !== env.STRIPE_PRICE_YEARLY &&
+  return env.STRIPE_PRICE_MONTHLY.trim() !== env.STRIPE_PRICE_YEARLY.trim() &&
     Number.isSafeInteger(monthly) && monthly >= 0 &&
     Number.isSafeInteger(yearly) && yearly >= 0 &&
     currencies.has(currency)
