@@ -37,10 +37,13 @@ export function parseActivityFilters(
   return { ok: true, value: { limit, entityType: typeRaw } }
 }
 
-export function parseAuditMetadata(raw: string | null): unknown | undefined {
+export function parseAuditMetadata(raw: string | null): Record<string, unknown> | undefined {
   if (!raw) return undefined
   try {
-    return JSON.parse(raw)
+    const parsed: unknown = JSON.parse(raw)
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : undefined
   } catch {
     return undefined
   }
