@@ -1,12 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
-import { constantTimeCompare } from '../../../lib/tokens'
+import { isAuthorizedCronRequest } from '../../../lib/cronAuth'
 import { integrationRetentionCutoffs } from '../../../lib/integrations/retention'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  const supplied = req.headers['x-cron-secret'], configured = process.env.CRON_SECRET
-  if (typeof supplied !== 'string' || !configured || !constantTimeCompare(supplied, configured)) return res.status(401).json({ error: 'Unauthorized' })
+  if (!isAuthorizedCronRequest(req)) return res.status(401).json({ error: 'Unauthorized' })
   const now = new Date(), cutoffs = integrationRetentionCutoffs(now)
   const deleted = await prisma.$transaction(async (tx) => {
     const rateLimits = await tx.integrationRateLimit.deleteMany({ where: { bucketStart: { lt: cutoffs.rateLimits } } })
