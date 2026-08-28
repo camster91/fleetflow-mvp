@@ -3,6 +3,7 @@ import { createMocks } from 'node-mocks-http'
 jest.mock('@/lib/apiAuth', () => ({ requireTenantContext: jest.fn() }))
 jest.mock('@/lib/permissions', () => ({ canExportData: jest.fn(() => true) }))
 jest.mock('@/lib/prisma', () => ({ prisma: { delivery: { findMany: jest.fn() } } }))
+jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(async () => true) }))
 
 import handler from '@/pages/api/reports/export'
 import { requireTenantContext } from '@/lib/apiAuth'
@@ -13,6 +14,7 @@ describe('/api/reports/export CSV safety', () => {
     jest.clearAllMocks()
     ;(requireTenantContext as jest.Mock).mockResolvedValue({
       tenant: { role: 'OWNER', resourceWhere: { ownerId: 'owner-1', teamId: null } },
+      session: { user: { id: 'owner-1' } },
     })
   })
 

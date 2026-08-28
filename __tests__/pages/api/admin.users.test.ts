@@ -1,6 +1,6 @@
 import { createMocks } from 'node-mocks-http'
 
-const tx = {
+const mockTransaction = {
   user: { update: jest.fn(), delete: jest.fn() },
   auditLog: { create: jest.fn() },
 }
@@ -18,7 +18,7 @@ jest.mock('@/lib/security', () => ({
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findMany: jest.fn(), count: jest.fn() },
-    $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    $transaction: jest.fn((callback: (client: typeof mockTransaction) => unknown) => callback(mockTransaction)),
   },
 }))
 
@@ -53,10 +53,10 @@ describe('/api/admin/users mutations', () => {
   })
 
   it('updates a role and writes its audit record in one transaction', async () => {
-    tx.user.update.mockResolvedValue({
+    mockTransaction.user.update.mockResolvedValue({
       id: 'user-1', name: 'User', email: 'user@example.com', role: 'viewer',
     })
-    tx.auditLog.create.mockResolvedValue({ id: 'audit-1' })
+    mockTransaction.auditLog.create.mockResolvedValue({ id: 'audit-1' })
     const { req, res } = createMocks({
       method: 'PATCH',
       body: { userId: 'user-1', role: 'viewer' },
@@ -70,11 +70,11 @@ describe('/api/admin/users mutations', () => {
     await handler(req as never, res as never)
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1)
-    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(mockTransaction.user.update).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: 'user-1' },
       data: { role: 'viewer' },
     }))
-    expect(tx.auditLog.create).toHaveBeenCalledWith({
+    expect(mockTransaction.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'admin-1',
         action: 'USER_ROLE_CHANGED',
@@ -86,8 +86,8 @@ describe('/api/admin/users mutations', () => {
   })
 
   it('deletes a user and writes its audit record in one transaction', async () => {
-    tx.user.delete.mockResolvedValue({ id: 'user-1' })
-    tx.auditLog.create.mockResolvedValue({ id: 'audit-1' })
+    mockTransaction.user.delete.mockResolvedValue({ id: 'user-1' })
+    mockTransaction.auditLog.create.mockResolvedValue({ id: 'audit-1' })
     const { req, res } = createMocks({
       method: 'DELETE',
       body: { userId: 'user-1' },
@@ -97,8 +97,8 @@ describe('/api/admin/users mutations', () => {
     await handler(req as never, res as never)
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1)
-    expect(tx.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } })
-    expect(tx.auditLog.create).toHaveBeenCalledWith({
+    expect(mockTransaction.user.delete).toHaveBeenCalledWith({ where: { id: 'user-1' } })
+    expect(mockTransaction.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'admin-1',
         action: 'USER_DELETED',

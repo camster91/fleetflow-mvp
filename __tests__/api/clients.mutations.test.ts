@@ -58,7 +58,7 @@ describe('client mutation security and integrity', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 
-  it.each(['PUT', 'DELETE'])('stops cross-origin client %s before writing', async (method) => {
+  it.each(['PUT', 'DELETE'] as const)('stops cross-origin client %s before writing', async (method) => {
     const { req, res } = createMocks({ method, query: { id: 'client-1' }, body: { name: 'Acme' } })
 
     await itemHandler(req as never, res as never)

@@ -5,6 +5,7 @@ jest.mock('@/lib/prisma', () => ({
 }))
 jest.mock('@/lib/cryptoSecrets', () => ({ decryptSecret: jest.fn(() => 'secret') }))
 jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(() => true) }))
+jest.mock('@/lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }))
 jest.mock('speakeasy', () => ({ __esModule: true, default: { totp: { verify: jest.fn(() => true) } } }))
 jest.mock('bcryptjs', () => ({ compareSync: jest.fn(() => false) }))
 jest.mock('@/lib/auth', () => ({
@@ -17,11 +18,19 @@ import { prisma } from '@/lib/prisma'
 import { signToken } from '@/lib/auth'
 import speakeasy from 'speakeasy'
 import bcrypt from 'bcryptjs'
+import { assertSameOrigin } from '@/lib/apiAuth'
 
 describe('POST /api/auth/2fa/validate', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(assertSameOrigin as jest.Mock).mockReturnValue(true)
+  })
 
   it('rejects a cross-origin exchange before validating the challenge', async () => {
+    ;(assertSameOrigin as jest.Mock).mockImplementation((_req, res) => {
+      res.status(403).json({ error: 'Forbidden origin' })
+      return false
+    })
     const { req, res } = createMocks({
       method: 'POST',
       headers: {

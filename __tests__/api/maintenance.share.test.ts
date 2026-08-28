@@ -38,10 +38,15 @@ const originalNodeEnv = process.env.NODE_ENV
 const originalNextAuthUrl = process.env.NEXTAUTH_URL
 const originalPublicAppUrl = process.env.NEXT_PUBLIC_APP_URL
 
+function setNodeEnv(value: string | undefined) {
+  if (value === undefined) Reflect.deleteProperty(process.env, 'NODE_ENV')
+  else Reflect.set(process.env, 'NODE_ENV', value)
+}
+
 describe('POST /api/maintenance/[id]/share', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env.NODE_ENV = 'test'
+    setNodeEnv('test')
     process.env.NEXTAUTH_URL = 'https://fleet.example.com/path/'
     delete process.env.NEXT_PUBLIC_APP_URL
     ;(assertSameOrigin as jest.Mock).mockReturnValue(true)
@@ -50,7 +55,7 @@ describe('POST /api/maintenance/[id]/share', () => {
   })
 
   afterAll(() => {
-    process.env.NODE_ENV = originalNodeEnv
+    setNodeEnv(originalNodeEnv)
     if (originalNextAuthUrl === undefined) delete process.env.NEXTAUTH_URL
     else process.env.NEXTAUTH_URL = originalNextAuthUrl
     if (originalPublicAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL
@@ -124,7 +129,7 @@ describe('POST /api/maintenance/[id]/share', () => {
   })
 
   it('fails closed before creating a token when the production URL is unsafe', async () => {
-    process.env.NODE_ENV = 'production'
+    setNodeEnv('production')
     process.env.NEXTAUTH_URL = 'http://fleet.example.com'
     const { req, res } = createMocks({ method: 'POST', query: { id: 'task-1' } })
 

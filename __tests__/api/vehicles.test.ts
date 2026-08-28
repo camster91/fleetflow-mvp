@@ -101,7 +101,7 @@ describe('tenant vehicle access', () => {
 
     expect(res._getStatusCode()).toBe(200);
     expect(prisma.vehicle.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] },
+      where: { teamId: 'team-1' },
     }));
   });
 });

@@ -34,7 +34,7 @@ describe('maintenance tenant authorization', () => {
 
     expect(res._getStatusCode()).toBe(200)
     expect(prisma.maintenanceTask.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] },
+      where: { teamId: 'team-1' },
     }))
   })
 
