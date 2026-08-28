@@ -11,6 +11,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - FLEETVERA_RELEASE_MODE=${FLEETVERA_RELEASE_MODE:?Set FLEETVERA_RELEASE_MODE to pilot or public}
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
