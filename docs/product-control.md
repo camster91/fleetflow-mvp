@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #115 contain unmerged security, concurrency,
+- Draft PRs #78 through #116 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -144,8 +144,10 @@ All entries are **implemented in drafts**, not verified or released.
    handler/test from #93, #94, #95, #96, #99, and #100. Its 27-file manifest
    exactly matches the source union. After #115 is reviewed and green, close
    #93-#100 and #114 as superseded.
-6. Remaining integrity/resource controls: #101 document confirmation, #102
-   reports, #103 search/activity, #104 user settings.
+6. Remaining integrity/resource controls: #116 is the cumulative #101-#104
+   candidate for document confirmation, bounded reports, secure search/activity,
+   and user settings. Its 20-file manifest exactly matches the source union. After
+   #116 is reviewed and green, close #101-#104 as superseded.
 7. Product and billing control: #105 authoritative product control, then #106
    serialized/idempotent Stripe lifecycle hardening. Verify the supported Stripe
    SDK/API upgrade separately after lockfile regeneration and executable CI.
@@ -255,6 +257,12 @@ must not be invented to satisfy a release checklist.
   unexpected paths. CI run 33206081436 failed before exposing steps and skipped
   the container job. All predecessors remain open until #115 is independently
   reviewed and green.
+- 2026-08-28: opened cumulative resource/read-integrity draft #116 targeting
+  master from #101-#104. Its 20-file manifest exactly matches the source union,
+  covering document review state, bounded reporting, secure read queries, and
+  settings integrity. CI run 33206279435 failed before exposing steps and skipped
+  the container job. #101-#104 remain open until #116 is independently reviewed
+  and green.
 
 ## Release decision
 
