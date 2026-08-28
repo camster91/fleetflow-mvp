@@ -126,6 +126,19 @@ describe('release quality gates', () => {
     expect(dockerfile).toContain('/app/create-admin.js ./create-admin.js')
   })
 
+  test('Compose requires explicit database credentials without publishing PostgreSQL', () => {
+    const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
+    const postgres = compose.split('\n  postgres:\n')[1]?.split('\nvolumes:')[0] || ''
+    const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
+
+    expect(postgres).toContain('POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}')
+    expect(postgres.match(/POSTGRES_PASSWORD:/g)).toHaveLength(1)
+    expect(postgres).not.toMatch(/\n\s+ports:/)
+    expect(compose).toContain('condition: service_healthy')
+    expect(exampleEnv).toMatch(/^DATABASE_URL=$/m)
+    expect(exampleEnv).toMatch(/^POSTGRES_PASSWORD=$/m)
+  })
+
   test('passwordless auth does not ship obsolete password and verification routes', () => {
     const obsoleteRoutes = [
       'pages/api/auth/change-password.ts',
