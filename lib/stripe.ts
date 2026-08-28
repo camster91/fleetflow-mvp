@@ -137,11 +137,9 @@ export async function createCheckoutSession({
     sessionConfig.customer_creation = 'always';
   }
 
-  const session = await stripe.checkout.sessions.create(
-    sessionConfig,
-    idempotencyKey ? { idempotencyKey } : undefined,
-  );
-  return session;
+  return idempotencyKey
+    ? stripe.checkout.sessions.create(sessionConfig, { idempotencyKey })
+    : stripe.checkout.sessions.create(sessionConfig);
 }
 
 // Helper function to create a customer portal session
@@ -173,15 +171,14 @@ export async function createStripeCustomer({
   idempotencyKey?: string;
 }) {
   requireStripeSecret('STRIPE_SECRET_KEY')
-  const customer = await stripe.customers.create(
-    {
-      email,
-      name,
-      metadata: { userId },
-    },
-    idempotencyKey ? { idempotencyKey } : undefined,
-  );
-  return customer;
+  const params: Stripe.CustomerCreateParams = {
+    email,
+    name,
+    metadata: { userId },
+  }
+  return idempotencyKey
+    ? stripe.customers.create(params, { idempotencyKey })
+    : stripe.customers.create(params);
 }
 
 export async function findOpenCheckoutSessions(customerId: string, userId: string) {
