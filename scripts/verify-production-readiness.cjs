@@ -5,9 +5,14 @@
 const REQUIRED_CORE = ['DATABASE_URL', 'JWT_SECRET', 'NEXTAUTH_URL', 'API_CURSOR_SECRET', 'ACTION_PREVIEW_KEYS', 'ACTION_PREVIEW_CURRENT_KID', 'CRON_SECRET']
 const REQUIRED_EMAIL = ['EMAIL_CONFIG_ENCRYPTION_KEY']
 const REQUIRED_BILLING = ['STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET']
+const REQUIRED_MONITORING = ['NEXT_PUBLIC_SENTRY_DSN']
 
 function present(env, name) { return typeof env[name] === 'string' && env[name].trim().length > 0 }
 function secretAtLeast(env, name, size = 32) { return present(env, name) && env[name].trim().length >= size }
+function validHttpsUrl(env, name) {
+  if (!present(env, name)) return false
+  try { return new URL(env[name]).protocol === 'https:' } catch { return false }
+}
 
 function keyRingIsValid(env) {
   if (!present(env, 'ACTION_PREVIEW_KEYS') || !present(env, 'ACTION_PREVIEW_CURRENT_KID')) return false
@@ -33,6 +38,7 @@ function evaluateEnvironment(env, mode = 'pilot') {
   for (const name of ['JWT_SECRET', 'API_CURSOR_SECRET', 'CRON_SECRET']) if (present(env, name) && !secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
   if (!keyRingIsValid(env)) missing.push('ACTION_PREVIEW_KEYS/ACTION_PREVIEW_CURRENT_KID must be a valid 1-3 key ring')
   for (const name of REQUIRED_EMAIL) if (!secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
+  for (const name of REQUIRED_MONITORING) if (!validHttpsUrl(env, name)) missing.push(`${name} must be a valid https URL`)
 
   if (mode === 'public') for (const name of REQUIRED_BILLING) if (!present(env, name)) missing.push(name)
   if (!['pilot', 'public'].includes(mode)) missing.push('FLEETVERA_RELEASE_MODE must be pilot or public')
