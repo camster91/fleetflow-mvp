@@ -132,7 +132,7 @@ describe('release quality gates', () => {
     const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
 
     expect(postgres).toContain('POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}')
-    expect(postgres).not.toMatch(/POSTGRES_PASSWORD:\s*(?!\$\{)[^\n]+/)
+    expect(postgres.match(/POSTGRES_PASSWORD:/g)).toHaveLength(1)
     expect(postgres).not.toMatch(/\n\s+ports:/)
     expect(compose).toContain('condition: service_healthy')
     expect(exampleEnv).toMatch(/^DATABASE_URL=$/m)
