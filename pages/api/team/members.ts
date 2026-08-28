@@ -3,6 +3,7 @@ import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { TeamRole } from '../../../types';
 import { clearDriverAssignments } from '../../../lib/teamDriverCleanup';
+import { assertSameOrigin } from '../../../lib/apiAuth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -82,6 +83,7 @@ export default async function handler(
       }
 
     case 'PUT':
+      if (!assertSameOrigin(req, res)) return;
       try {
         const { memberId, role } = req.body;
 
@@ -100,7 +102,7 @@ export default async function handler(
         }
 
         const validRoles = ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
-        if (!validRoles.includes(role) && role !== 'OWNER') {
+        if (!validRoles.includes(role)) {
           return res.status(400).json({ error: 'Invalid role' });
         }
 
@@ -120,13 +122,14 @@ export default async function handler(
           return res.status(403).json({ error: 'Permission denied' });
         }
 
-        // Admin cannot change owner role
-        if (member.role === 'OWNER' && !isOwner) {
+        // Ownership is canonical in Team.ownerId and requires a dedicated
+        // transfer operation; it cannot be changed through membership roles.
+        if (member.team.ownerId === member.userId || member.role === 'OWNER') {
           return res.status(403).json({ error: 'Cannot change owner role' });
         }
 
-        // Only owner can assign admin/owner role
-        if ((role === 'ADMIN' || role === 'OWNER') && !isOwner) {
+        // Only owner can assign admin role
+        if (role === 'ADMIN' && !isOwner) {
           return res.status(403).json({ error: 'Only owner can assign admin role' });
         }
 
@@ -139,6 +142,7 @@ export default async function handler(
       }
 
     case 'DELETE':
+      if (!assertSameOrigin(req, res)) return;
       try {
         const { memberId } = req.query;
 
@@ -178,8 +182,8 @@ export default async function handler(
           }
         }
 
-        // Cannot remove owner
-        if (member.role === 'OWNER' && !isSelf) {
+        // Cannot remove the canonical owner or a legacy OWNER-labelled member.
+        if (member.team.ownerId === member.userId || member.role === 'OWNER') {
           return res.status(403).json({ error: 'Cannot remove owner' });
         }
 
