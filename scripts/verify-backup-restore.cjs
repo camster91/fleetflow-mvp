@@ -9,7 +9,7 @@ const { spawn, spawnSync } = require('child_process')
 const { createReadStream, createWriteStream, mkdirSync, renameSync, statSync, unlinkSync, writeFileSync } = require('fs')
 const { createHash, randomBytes } = require('crypto')
 const path = require('path')
-const { parseArgs, validateSecret, artifactNames, restoreContainerName } = require('./backup-restore-lib.cjs')
+const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, validateRestoreSummary } = require('./backup-restore-lib.cjs')
 
 function fail(message) { throw new Error(message) }
 function run(command, args, options = {}) {
@@ -57,10 +57,42 @@ function restoreEncryptedBackup(container, backupPath) {
     restore.on('close', code => { if (code) errors ||= 'pg_restore failed'; done() })
   })
 }
+function queryRestore(container, sql) {
+  return run('docker', [
+    'exec',
+    '-e', `FLEETVERA_VERIFY_SQL=${sql}`,
+    container,
+    'sh', '-ec',
+    'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB" -At -c "$FLEETVERA_VERIFY_SQL"',
+  ])
+}
+function countRestore(container, sql) {
+  const value = Number(queryRestore(container, sql))
+  if (!Number.isInteger(value) || value < 0) fail('Restore check returned an invalid count')
+  return value
+}
 function publicRestoreSummary(container) {
-  const tables = Number(run('docker', ['exec', container, 'psql', '-U', 'restore', '-d', 'restore', '-At', '-c', "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'"]))
-  if (!Number.isInteger(tables) || tables < 1) fail('Restore contains no public tables')
-  return { publicTableCount: tables, schemaPresent: true }
+  const criticalRowCounts = {}
+  for (const table of REQUIRED_RESTORE_TABLES) {
+    criticalRowCounts[table] = countRestore(container, `SELECT count(*) FROM "${table}"`)
+  }
+  const summary = {
+    publicTableCount: countRestore(container, "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public'"),
+    criticalRowCounts,
+    migrations: {
+      applied: countRestore(container, 'SELECT count(*) FROM "_prisma_migrations" WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL'),
+      failed: countRestore(container, 'SELECT count(*) FROM "_prisma_migrations" WHERE finished_at IS NULL AND rolled_back_at IS NULL'),
+    },
+    integrity: {
+      orphanedTeamOwners: countRestore(container, 'SELECT count(*) FROM "Team" t LEFT JOIN "User" u ON u.id = t."ownerId" WHERE u.id IS NULL'),
+      orphanedTeamMembers: countRestore(container, 'SELECT count(*) FROM "TeamMember" m LEFT JOIN "Team" t ON t.id = m."teamId" WHERE t.id IS NULL'),
+      orphanedMemberUsers: countRestore(container, 'SELECT count(*) FROM "TeamMember" m LEFT JOIN "User" u ON u.id = m."userId" WHERE m."userId" IS NOT NULL AND u.id IS NULL'),
+      noncanonicalOwnerMemberships: countRestore(container, `SELECT count(*) FROM "TeamMember" m JOIN "Team" t ON t.id = m."teamId" WHERE m.role = 'OWNER' AND (m."userId" IS NULL OR m."userId" <> t."ownerId")`),
+    },
+  }
+  const errors = validateRestoreSummary(summary)
+  if (errors.length) fail(errors.join('; '))
+  return summary
 }
 async function main() {
   const { sourceContainer, backupDir } = parseArgs(process.argv.slice(2)); validateSecret(process.env.FLEETVERA_BACKUP_ENCRYPTION_KEY)
@@ -70,11 +102,12 @@ async function main() {
   const restore = restoreContainerName(); const restorePassword = randomBytes(32).toString('base64url'); const startedAt = new Date().toISOString()
   try {
     await pipeDumpToEncryptedBackup(sourceContainer, partialPath)
-    renameSync(partialPath, finalPath)
     const container = run('docker', ['run', '-d', '--rm', '--name', restore, '-e', 'POSTGRES_USER=restore', '-e', `POSTGRES_PASSWORD=${restorePassword}`, '-e', 'POSTGRES_DB=restore', 'postgres:16-alpine'])
     if (!container) fail('Could not create disposable restore database')
-    waitForPostgres(restore); await restoreEncryptedBackup(restore, finalPath)
-    const summary = publicRestoreSummary(restore); const digest = createHash('sha256').update(require('fs').readFileSync(finalPath)).digest('hex')
+    waitForPostgres(restore); await restoreEncryptedBackup(restore, partialPath)
+    const summary = publicRestoreSummary(restore)
+    renameSync(partialPath, finalPath)
+    const digest = createHash('sha256').update(require('fs').readFileSync(finalPath)).digest('hex')
     const metadata = { createdAt: startedAt, sourceContainer, artifact: baseName, encryption: 'AES-256-CBC PBKDF2-SHA256 210000 iterations', sha256: digest, bytes: statSync(finalPath).size, restore: summary }
     writeFileSync(path.join(backupDir, metadataName), `${JSON.stringify(metadata, null, 2)}\n`, { mode: 0o600 })
     process.stdout.write(`${JSON.stringify({ verified: true, artifact: baseName, sha256: digest, restore: summary })}\n`)
