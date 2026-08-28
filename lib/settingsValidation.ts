@@ -10,6 +10,10 @@ export const notificationSettingsSchema = z.object({
   message: 'At least one notification setting is required',
 })
 
+export const notificationUpdateSchema = z.object({
+  notificationSettings: notificationSettingsSchema,
+}).strict()
+
 export const appPreferencesSchema = z.object({
   language: z.enum(['en', 'fr', 'es', 'de']).optional(),
   timezone: z.enum([
