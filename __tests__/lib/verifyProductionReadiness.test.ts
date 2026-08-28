@@ -59,6 +59,7 @@ describe('verify-production-readiness', () => {
     'https://user:pass@fleetvera.example',
     'https://fleetvera.example?redirect=evil',
     'https://fleetvera.example#fragment',
+    'https://fleetvera.example/path',
   ])('rejects unsafe canonical application URL %s', value => {
     const result = evaluateEnvironment({ ...core, NEXTAUTH_URL: value })
     expect(result.ready).toBe(false)
