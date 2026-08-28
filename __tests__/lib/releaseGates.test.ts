@@ -137,6 +137,9 @@ describe('release quality gates', () => {
     expect(entrypoint).toContain(migration)
     expect(entrypoint.indexOf(verifier)).toBeLessThan(entrypoint.indexOf(migration))
     expect(entrypoint).not.toMatch(/FLEETVERA_RELEASE_MODE[^\n]*:-pilot/)
+
+    const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
+    expect(compose).toContain('FLEETVERA_RELEASE_MODE=${FLEETVERA_RELEASE_MODE:?Set FLEETVERA_RELEASE_MODE to pilot or public}')
   })
 
   test('passwordless auth does not ship obsolete password and verification routes', () => {
