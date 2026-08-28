@@ -2,21 +2,26 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { requireTenantContext } from '../../../lib/apiAuth';
 import { canViewReports } from '../../../lib/permissions';
+import { rateLimitMiddleware } from '../../../lib/rateLimit';
+import { parseReportDateRange, REPORT_ROW_LIMIT } from '../../../lib/reporting';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
   const context = await requireTenantContext(req, res);
   if (!context) return;
-  const { tenant } = context;
+  const { tenant, session } = context;
   if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
-  const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 30 * 86400000);
-  const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+  if (!await rateLimitMiddleware(req, res, 'api', `reports:${session.user.id}`)) return;
+  const range = parseReportDateRange(req.query.startDate, req.query.endDate);
+  if (!range.ok) return res.status(400).json({ error: range.error });
+  const { startDate, endDate } = range;
 
   try {
     const tasks = await prisma.maintenanceTask.findMany({
       where: { AND: [tenant.resourceWhere, { createdAt: { gte: startDate, lte: endDate } }] },
       include: { vehicle: { select: { name: true } } },
       orderBy: { createdAt: 'asc' },
+      take: REPORT_ROW_LIMIT,
     });
 
     // Cost by vehicle (bar chart)
@@ -49,6 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const totalCost = tasks.reduce((sum, t) => sum + (t.costEstimate || 0), 0);
 
+    res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
       costByVehicle,
       costOverTime,
@@ -63,6 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })),
       totalCost: Math.round(totalCost * 100) / 100,
       totalTasks: tasks.length,
+      truncated: tasks.length === REPORT_ROW_LIMIT,
     });
   } catch (error) {
     console.error('Maintenance report error:', error);
