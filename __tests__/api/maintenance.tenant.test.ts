@@ -43,11 +43,29 @@ describe('maintenance tenant authorization', () => {
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
       { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'VIEWER' }] },
     ])
-    const { req, res } = createMocks({ method: 'POST', body: {} })
+    const { req, res } = createMocks({ method: 'POST', headers: { host: 'fleetflow.test' }, body: {} })
 
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(403)
+    expect(prisma.maintenanceTask.create).not.toHaveBeenCalled()
+  })
+
+  it('rejects cross-origin maintenance creation', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'owner-1' } })
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { id: 'team-1', ownerId: 'owner-1', members: [] },
+    ])
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'fleetflow.test', origin: 'https://attacker.example' },
+      body: {},
+    })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(403)
+    expect(res._getJSONData()).toEqual({ error: 'Forbidden origin' })
     expect(prisma.maintenanceTask.create).not.toHaveBeenCalled()
   })
 })
