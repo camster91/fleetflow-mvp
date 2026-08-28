@@ -33,8 +33,8 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #104 contain unmerged security, concurrency,
-  configuration, operations, and reliability changes. PR #88 is closed and
+- Draft PRs #78 through #106 contain unmerged security, concurrency,
+  configuration, operations, billing, product-control, and reliability changes. PR #88 is closed and
   superseded.
 - Recent GitHub Actions runs, including runs 33197494128 through 33198494536,
   complete the quality job as failed before repository steps are exposed; the
@@ -60,7 +60,8 @@ evidence.
 - Current production backup retention and a timed isolated restore using the
   retained backup.
 - Authenticated desktop/mobile smoke results against the deployed candidate.
-- Stripe, Mailgun, OAuth, document scanner/extractor, monitoring, and alert
+- Stripe webhook/Portal/price/restricted-key evidence, Stripe Tax registration
+  status, Mailgun, OAuth, document scanner/extractor, monitoring, and alert
   delivery evidence.
 - Active fleets, weekly active operators, activation, retention, support load,
   churn, gross margin, and customer outcome evidence.
@@ -136,6 +137,9 @@ All entries are **implemented in drafts**, not verified or released.
    #97 and #98 both edit `lib/validation.ts`; reconcile explicitly.
 6. Remaining integrity/resource controls: #101 document confirmation, #102
    reports, #103 search/activity, #104 user settings.
+7. Product and billing control: #105 authoritative product control, then #106
+   serialized/idempotent Stripe lifecycle hardening. Verify the supported Stripe
+   SDK/API upgrade separately after lockfile regeneration and executable CI.
 
 Before merging, rebase each logical group onto the candidate, resolve conflicts,
 run focused tests, then run the full release gate. Do not merge drafts merely
@@ -149,7 +153,8 @@ because GitHub reports them mergeable.
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
 | Production revision/configuration unknown | High | Public checks treated as availability only | No deployment approval |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
-| External provider delivery unproved | High | Fail-closed configuration proposals | Affected capability disabled |
+| External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
+| Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
 | Repository rules allow broad bypass and omit review protections | High | Documented for owner decision | No unattended release |
 | Stale operational/product documents remain | Medium | #81 and historical banner work | Operators use only current index/runbooks |
 | Customer value, retention, and unit economics unknown | High commercial | Invitation-only positioning | No market-leading or PMF claim |
@@ -189,6 +194,9 @@ must not be invented to satisfy a release checklist.
   read-only; no authenticated production action or external provider call.
 - 2026-08-28: established this control index and marked the obsolete root
   `TODO.md` as historical.
+- 2026-08-28: opened #106 to serialize and make Stripe checkout/cancellation
+  idempotent, bound webhook bodies, and protect billing reads. CI run 33199548149
+  failed before steps; Stripe SDK/API upgrade and live Tax/provider evidence remain unresolved.
 
 ## Release decision
 
