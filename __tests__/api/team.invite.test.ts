@@ -95,6 +95,23 @@ describe('team invitation provisioning', () => {
     expect(mockTx.teamMember.create).not.toHaveBeenCalled()
   })
 
+  it('does not treat a non-owner OWNER label as canonical ownership', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'legacy-owner-label', email: 'legacy@example.com', name: 'Legacy' },
+    })
+    ;(prisma.team.findFirst as jest.Mock).mockResolvedValue(null)
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { teamId: 'team-1', emails: ['new@example.com'], role: 'MEMBER' },
+    })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(403)
+    expect(mockTx.teamMember.create).not.toHaveBeenCalled()
+    expect(mockTx.teamMember.update).not.toHaveBeenCalled()
+  })
+
   it('does not let an ADMIN invite another ADMIN', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({
       user: { id: 'admin-1', email: 'admin@example.com', name: 'Admin' },
