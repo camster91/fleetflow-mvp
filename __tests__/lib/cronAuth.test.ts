@@ -32,6 +32,18 @@ describe('isAuthorizedCronRequest', () => {
     expect(isAuthorizedCronRequest(req as never)).toBe(false)
   })
 
+  it('fails closed when the server secret is not configured', () => {
+    delete process.env.CRON_SECRET
+    const { req } = createMocks({ headers: { authorization: `Bearer ${secret}` } })
+    expect(isAuthorizedCronRequest(req as never)).toBe(false)
+  })
+
+  it('rejects a duplicated internal scheduler header', () => {
+    const { req } = createMocks()
+    req.headers['x-cron-secret'] = [secret, secret]
+    expect(isAuthorizedCronRequest(req as never)).toBe(false)
+  })
+
   it('fails closed when the configured secret is shorter than 32 characters', () => {
     process.env.CRON_SECRET = 'short'
     const { req } = createMocks({ headers: { 'x-cron-secret': 'short' } })
