@@ -140,6 +140,9 @@ describe('release quality gates', () => {
 
     const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
     expect(compose).toContain('FLEETVERA_RELEASE_MODE=${FLEETVERA_RELEASE_MODE:?Set FLEETVERA_RELEASE_MODE to pilot or public}')
+
+    const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
+    expect(exampleEnv).toMatch(/^FLEETVERA_RELEASE_MODE=pilot$/m)
   })
 
   test('passwordless auth does not ship obsolete password and verification routes', () => {
