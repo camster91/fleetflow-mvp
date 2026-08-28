@@ -1,19 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { serialize } from 'cookie'
+import { assertSameOrigin } from '../../../lib/apiAuth'
+import { clearAuthenticationCookies } from '../../../lib/authCookies'
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  if (!assertSameOrigin(req, res)) return
 
-  const expiredCookie = (name: string) => serialize(name, '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0,
-    })
-  res.setHeader('Set-Cookie', [expiredCookie('token'), expiredCookie('fleetflow_team')])
-
+  res.setHeader('Set-Cookie', clearAuthenticationCookies())
+  res.setHeader('Cache-Control', 'private, no-store')
   return res.json({ ok: true })
 }
