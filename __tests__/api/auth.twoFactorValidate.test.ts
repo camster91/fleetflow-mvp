@@ -64,6 +64,7 @@ describe('POST /api/auth/2fa/validate', () => {
     expect(res._getStatusCode()).toBe(401)
     expect(prisma.user.findUnique).not.toHaveBeenCalled()
   })
+
   it('rejects a backup code when another request consumed the same snapshot', async () => {
     ;(speakeasy.totp.verify as jest.Mock).mockReturnValue(false)
     ;(bcrypt.compareSync as jest.Mock).mockReturnValue(true)
@@ -93,5 +94,4 @@ describe('POST /api/auth/2fa/validate', () => {
     expect(res._getStatusCode()).toBe(400)
     expect(signToken).not.toHaveBeenCalled()
   })
-
 })
