@@ -4,16 +4,20 @@ import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { rateLimitMiddleware } from '../../../../lib/rateLimit';
-import { parse, serialize } from 'cookie';
+import { parse } from 'cookie';
 import { signToken, verifyToken } from '../../../../lib/auth';
+import { assertSameOrigin } from '../../../../lib/apiAuth';
+import { establishSessionCookies } from '../../../../lib/authCookies';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  if (!assertSameOrigin(req, res)) return;
 
   // Apply rate limiting
   const allowed = await rateLimitMiddleware(req, res, 'twoFactor');
@@ -112,17 +116,7 @@ export default async function handler(
       role: user.role,
       purpose: 'session',
     });
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
-    res.setHeader('Set-Cookie', [
-      serialize('token', sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 }),
-      serialize('two_factor_challenge', '', { ...cookieOptions, maxAge: 0 }),
-      serialize('fleetflow_team', '', { ...cookieOptions, maxAge: 0 }),
-    ]);
+    res.setHeader('Set-Cookie', establishSessionCookies(sessionToken));
 
     return res.status(200).json({
       message: '2FA verification successful',
