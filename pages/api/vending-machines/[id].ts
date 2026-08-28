@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToVendingMachine, vendingMachineToDb, logActivity } from '../../../lib/fleet'
 import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
-import { parseBody, vendingMachineBodySchema } from '../../../lib/validation'
+import { parseBody, vendingMachineCreateSchema } from '../../../lib/validation'
 import { canManageVendingMachines } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
