@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #119 contain unmerged security, concurrency,
+- Draft PRs #78 through #120 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -127,8 +127,8 @@ All entries are **implemented in drafts**, not verified or released.
    #113 candidate, reconciling authoritative roadmap/release guidance with #80,
    #108, and #111 runtime, fail-closed startup, and PostgreSQL remediation. After
    #118 is reviewed and green, close #80, #105, #108, #111, and #113 as
-   superseded. #81 historical guidance, #82 unsafe scripts, and #84 backup/restore
-   verifier remain merge-independent.
+   superseded. #120 cumulatively reconciles #81 historical guidance, #82 unsafe
+   script removal, and #84 backup/restore verification.
 2. Tenant, authentication, and privileged operations: #119 is the cumulative
    #117 + #86 + #87 + #91 + #92 candidate. It retains #117's deliberate login,
    session, tenant, owner, and backup-code reconciliation, then adds serialized
@@ -136,8 +136,10 @@ All entries are **implemented in drafts**, not verified or released.
    mutations. Its 38-file manifest exactly matches the source union. After #119
    is reviewed and green, close all represented predecessors as superseded; #79
    is already represented through #83.
-4. Cron ordering: #89 strict cron authentication, then stacked #90 reminder
-   claims.
+4. Cron ordering: #90 now targets master as the cumulative #89 + #90 candidate,
+   preserving strict cron authentication and atomic reminder claims. Its auth tests
+   also cover missing configuration and duplicated internal headers. After #90 is
+   reviewed and green, close #89 as superseded.
 5. Tenant business mutations: #115 is the cumulative #93-#100 candidate. It
    includes #114's explicit #97/#98 `lib/validation.ts` reconciliation and every
    handler/test from #93, #94, #95, #96, #99, and #100. Its 27-file manifest
@@ -283,6 +285,16 @@ must not be invented to satisfy a release checklist.
   the source union with no missing or unexpected paths. CI run 33207032244 failed
   before exposing steps and skipped the container job. All represented predecessors
   remain open until #119 is independently reviewed and green.
+- 2026-08-28: opened cumulative operations/recovery draft #120 targeting master
+  from #81, #82, and #84. Its 49-path manifest exactly matches the source union,
+  including all 21 intended unsafe-script deletions. CI run 33207335601 failed
+  before exposing steps and skipped the container job. The represented predecessors
+  remain open until #120 is independently reviewed and green.
+- 2026-08-28: retargeted stacked #90 to master as the cumulative #89 + #90 cron
+  candidate and added fail-closed tests for missing server configuration and
+  duplicate internal-secret headers. CI run 33207460995 failed before exposing
+  steps and skipped the container job. #89 remains open until #90 is independently
+  reviewed and green.
 
 ## Release decision
 
