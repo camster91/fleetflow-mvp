@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #117 contain unmerged security, concurrency,
+- Draft PRs #78 through #118 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -123,11 +123,12 @@ Acceptance criteria:
 
 All entries are **implemented in drafts**, not verified or released.
 
-1. Operational foundations: #113 is the cumulative #80 + #108 + #111 candidate,
-   reconciling configuration/runtime, fail-closed preflight-before-migration
-   startup, and the complete PostgreSQL-default remediation. After #113 is reviewed
-   and green, close #80, #108, and #111 as superseded. #81 historical guidance,
-   #82 unsafe scripts, and #84 backup/restore verifier remain merge-independent.
+1. Operational foundations and product control: #118 is the cumulative #105 +
+   #113 candidate, reconciling authoritative roadmap/release guidance with #80,
+   #108, and #111 runtime, fail-closed startup, and PostgreSQL remediation. After
+   #118 is reviewed and green, close #80, #105, #108, #111, and #113 as
+   superseded. #81 historical guidance, #82 unsafe scripts, and #84 backup/restore
+   verifier remain merge-independent.
 2. Tenant, membership, login, and session boundaries: #117 is the cumulative
    #78 + #83 + #112 candidate. It deliberately merges atomic one-time login-code
    consumption with same-origin/session-cookie behavior and retains strict team
@@ -162,8 +163,8 @@ because GitHub reports them mergeable.
 |---|---|---|---|
 | CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
-| Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #113 configuration, database, and startup gates | No deployment approval |
-| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #113 cumulatively retains #111's focused remediation with #80/#108 runtime controls | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
+| Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #118 product-control, configuration, database, and startup gates | No deployment approval |
+| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #118 cumulatively retains #111's remediation with #80/#108 runtime controls and #105 release governance | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
 | Auth session transition/origin invariants unverified | High | #117 cumulatively reconciles tenant/login atomicity, team ownership, session lifecycle, and backup-code consumption | No auth candidate approval until #117 and independent #86 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
@@ -271,6 +272,14 @@ must not be invented to satisfy a release checklist.
   concurrent zero-row consume without signing a session. CI run 33206589683 failed
   before exposing steps and skipped the container job. All represented predecessors
   remain open until #117 is independently reviewed and green.
+- 2026-08-28: opened cumulative production/product-control draft #118 targeting
+  master from #105 and #113. Its 19-file path manifest exactly matches the source
+  union; the shared README deliberately preserves Fleetvera identity, the
+  authoritative control link, Node 22.12+, and explicit HS256 JWT architecture.
+  GitGuardian reports only inherited incident 36683862 on deletion of the original
+  compose credential. CI run 33206796172 failed before exposing steps and skipped
+  the container job. All represented predecessors remain open until #118 is
+  independently reviewed and green.
 
 ## Release decision
 
