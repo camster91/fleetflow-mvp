@@ -1,14 +1,17 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { signToken } from '../../../lib/auth'
-import { serialize } from 'cookie'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 import { hashToken } from '../../../lib/tokens'
+import { assertSameOrigin } from '../../../lib/apiAuth'
+import { beginTwoFactorCookies, establishSessionCookies } from '../../../lib/authCookies'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  if (!assertSameOrigin(req, res)) return
 
   // IP-based rate limiting
   const ip = getClientIP(req)
@@ -88,13 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       role: user.role,
       purpose: 'two-factor',
     }, '5m')
-    res.setHeader('Set-Cookie', serialize('two_factor_challenge', challenge, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 5 * 60,
-    }))
+    res.setHeader('Set-Cookie', beginTwoFactorCookies(challenge))
     return res.json({
       requiresTwoFactor: true,
     })
@@ -102,13 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const token = signToken({ sub: user.id, email: user.email, name: user.name, role: user.role })
 
-  res.setHeader('Set-Cookie', serialize('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60,
-  }))
+  res.setHeader('Set-Cookie', establishSessionCookies(token))
 
   return res.json({
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
