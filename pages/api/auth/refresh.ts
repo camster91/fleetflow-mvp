@@ -1,12 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { serialize } from 'cookie'
 import { getUserFromRequest, signToken } from '../../../lib/auth'
+import { assertSameOrigin } from '../../../lib/apiAuth'
+import { sessionCookie } from '../../../lib/authCookies'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  if (!assertSameOrigin(req, res)) return
 
   const session = await getUserFromRequest(req)
   if (!session) {
@@ -21,13 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     role: user.role,
   })
 
-  res.setHeader('Set-Cookie', serialize('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 7 * 24 * 60 * 60,
-  }))
+  res.setHeader('Set-Cookie', sessionCookie(token))
 
   return res.status(200).json({ ok: true })
 }
