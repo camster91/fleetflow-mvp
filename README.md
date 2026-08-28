@@ -4,7 +4,7 @@ FleetFlow is a multi-tenant fleet operations SaaS built with the Next.js Pages R
 
 ## Local setup
 
-Requirements: Node.js 20+, npm, and PostgreSQL 16 (or Docker).
+Requirements: Node.js 22.12.0 or newer, npm, and PostgreSQL 16 (or Docker).
 
 ```bash
 npm ci
@@ -52,7 +52,7 @@ The production-container visual harness is `scripts/visual-qa-release.cjs`. It a
 
 - Next.js 16 Pages Router (`pages/` and `pages/api/`)
 - React 19 and Tailwind CSS
-- Custom signed HTTP-only cookie sessions with optional TOTP 2FA
+- Custom HS256 JWT sessions in a signed HTTP-only `token` cookie, with optional TOTP 2FA
 - Prisma 5 with PostgreSQL
 - Tenant selection through an HTTP-only workspace cookie
 - Stripe subscriptions and signed webhooks
