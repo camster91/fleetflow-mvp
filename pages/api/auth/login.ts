@@ -11,6 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  res.setHeader('Cache-Control', 'private, no-store')
   if (!assertSameOrigin(req, res)) return
 
   // IP-based rate limiting
