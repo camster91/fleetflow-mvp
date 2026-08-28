@@ -53,6 +53,38 @@ export const clientBodySchema = z
   })
   .passthrough()
 
+const vendingDateSchema = z.string().max(40).refine(
+  value => !Number.isNaN(new Date(value).getTime()),
+  'Invalid date'
+)
+
+const vendingMachineFields = {
+  name: z.string().trim().min(1).max(120).optional(),
+  location: z.string().trim().min(1).max(240).optional(),
+  status: z.enum(['active', 'maintenance', 'out-of-service']).optional(),
+  type: z.enum(['snacks', 'beverages', 'combo', 'coffee', 'fresh-food', 'other']).optional(),
+  machineType: z.string().trim().max(80).nullable().optional(),
+  serialNumber: z.string().trim().max(120).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  lastService: vendingDateSchema.nullable().optional(),
+  nextService: vendingDateSchema.nullable().optional(),
+  driverNotes: z.array(z.object({
+    id: z.string().max(64),
+    text: z.string().max(2000),
+    author: z.string().max(120),
+    timestamp: vendingDateSchema,
+    type: z.enum(['maintenance', 'inventory', 'general']).optional(),
+    priority: z.enum(['low', 'normal', 'high']).optional(),
+  })).max(200).optional(),
+}
+
+export const vendingMachineBodySchema = z.object(vendingMachineFields).passthrough()
+export const vendingMachineCreateSchema = z.object({
+  ...vendingMachineFields,
+  name: z.string().trim().min(1).max(120),
+  location: z.string().trim().min(1).max(240),
+}).passthrough()
+
 const safeAnnouncementUrl = z.string().trim().max(2048).refine(value => {
   if (value.startsWith('/') && !value.startsWith('//')) return true
   try {
