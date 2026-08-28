@@ -236,8 +236,9 @@ export function getAllRoles(): Array<{
  * Check if a role can be assigned by another role
  */
 export function canAssignRole(assignerRole: TeamRole, targetRole: TeamRole): boolean {
-  // Owner can assign any role
-  if (assignerRole === 'OWNER') return true;
+  // Ownership is represented by Team.ownerId and requires a dedicated transfer.
+  // Ordinary role changes may assign every non-owner role.
+  if (assignerRole === 'OWNER') return targetRole !== 'OWNER';
   
   // Admin can assign Manager, Member, and Viewer roles
   if (assignerRole === 'ADMIN') {
@@ -253,7 +254,7 @@ export function canAssignRole(assignerRole: TeamRole, targetRole: TeamRole): boo
  */
 export function getAssignableRoles(assignerRole: TeamRole): TeamRole[] {
   if (assignerRole === 'OWNER') {
-    return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
+    return ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
   }
   if (assignerRole === 'ADMIN') {
     return ['MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
