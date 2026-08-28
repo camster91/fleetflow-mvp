@@ -33,12 +33,13 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #108 contain unmerged security, concurrency,
-  configuration, operations, billing, product-control, and reliability changes. PR #88 is closed and
-  superseded.
-- Recent GitHub Actions runs, including runs 33197494128 through 33198494536,
-  complete the quality job as failed before repository steps are exposed; the
-  production-container job is skipped. The account billing/spending gate must
+- Draft PRs #78 through #111 contain unmerged security, concurrency,
+  configuration, operations, billing, product-control, and reliability changes.
+  PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
+  focused PostgreSQL-default remediation.
+- Recent GitHub Actions runs, including #111 run 33205110750, complete the quality
+  job as failed before repository steps are exposed; the production-container
+  job is skipped. The account billing/spending gate must
   be resolved before these drafts can be verified.
 
 ### Prior evidence, not proof of the current candidate
@@ -122,9 +123,11 @@ Acceptance criteria:
 
 All entries are **implemented in drafts**, not verified or released.
 
-1. Operational foundations: #80 configuration/runtime, then stacked #108
-   fail-closed preflight-before-migration startup; #81 historical guidance, #82
-   unsafe scripts, and #84 backup/restore verifier are merge-independent.
+1. Operational foundations: #111 focused PostgreSQL-default remediation, #80
+   configuration/runtime, then stacked #108 fail-closed preflight-before-migration
+   startup; #81 historical guidance, #82 unsafe scripts, and #84 backup/restore
+   verifier are merge-independent. Reconcile #111 with #80 so the focused database
+   invariant is retained exactly once.
 2. Tenant and membership invariants: #78 tenant/login isolation, then #83
    ownership invariant. #83 incorporates #79; close #79 as superseded only
    after the combined diff and tests are verified.
@@ -154,7 +157,7 @@ because GitHub reports them mergeable.
 | CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
 | Production revision/configuration unknown | High | Public checks treated as availability only; #80/#108 configuration and startup gates | No deployment approval |
-| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #80 requires a secret-store password and removes the host port | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
+| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #111 is the focused three-file remediation; #80 also removes the default and port | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
 | Auth session transition/origin invariants unverified | High | #107 implements guards, explicit token purpose, cookie invalidation | No auth candidate approval until #85/#86/#107 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
@@ -214,6 +217,14 @@ must not be invented to satisfy a release checklist.
   current master: the compose default PostgreSQL password is real repository
   content and the database host port is published. #80 removes both, but whether
   the credential was deployed and needs approved rotation remains unknown.
+- 2026-08-28: opened focused draft #111 from current master after closing #109
+  and #110 as superseded because their test commit history caused additional
+  secret-scanner incidents. #111 changes only `.env.example`, `docker-compose.yml`,
+  and the release-gate test. GitGuardian reports only incident 36683862 on the
+  commit deleting the original compose credential; it reports no final-test
+  occurrence. CI run 33205110750 failed before exposing steps and skipped the
+  production-container job, so the remediation is implemented but verification
+  remains blocked. No rotation, merge, deployment, or production mutation occurred.
 
 ## Release decision
 
