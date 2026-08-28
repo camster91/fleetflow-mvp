@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #111 contain unmerged security, concurrency,
+- Draft PRs #78 through #112 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -131,10 +131,12 @@ All entries are **implemented in drafts**, not verified or released.
 2. Tenant and membership invariants: #78 tenant/login isolation, then #83
    ownership invariant. #83 incorporates #79; close #79 as superseded only
    after the combined diff and tests are verified.
-3. Authentication and privileged operations: #85 backup codes, #86 2FA
-   enrollment, then #107 session/origin boundaries; explicitly reconcile #85
-   and #107 in `pages/api/auth/2fa/validate.ts`. Continue with #87 maintenance
-   share issuance, #91 bootstrap wrapper, and #92 admin mutations.
+3. Authentication and privileged operations: #112 is the cumulative #107 + #85
+   candidate and explicitly reconciles atomic backup-code consumption with
+   session/origin boundaries. After #112 is reviewed and green, close #85 and
+   #107 as superseded. Reconcile independent #86 2FA enrollment next, then
+   continue with #87 maintenance share issuance, #91 bootstrap wrapper, and #92
+   admin mutations.
 4. Cron ordering: #89 strict cron authentication, then stacked #90 reminder
    claims.
 5. Tenant business mutations: #93 deliveries, #94 vehicles, #95 maintenance,
@@ -159,7 +161,7 @@ because GitHub reports them mergeable.
 | Production revision/configuration unknown | High | Public checks treated as availability only; #80/#108 configuration and startup gates | No deployment approval |
 | Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #111 is the focused three-file remediation; #80 also removes the default and port | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
-| Auth session transition/origin invariants unverified | High | #107 implements guards, explicit token purpose, cookie invalidation | No auth candidate approval until #85/#86/#107 are reconciled and green |
+| Auth session transition/origin invariants unverified | High | #112 cumulatively reconciles #107 guards/session lifecycle with #85 atomic backup-code consumption | No auth candidate approval until #112 and independent #86 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
 | External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
 | Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
@@ -225,6 +227,13 @@ must not be invented to satisfy a release checklist.
   occurrence. CI run 33205110750 failed before exposing steps and skipped the
   production-container job, so the remediation is implemented but verification
   remains blocked. No rotation, merge, deployment, or production mutation occurred.
+- 2026-08-28: opened cumulative auth draft #112 targeting master to reconcile
+  #107 session/origin protections with #85 atomic backup-code consumption. The
+  direct overlap is limited to the 2FA validate handler and its focused test;
+  #112 preserves both invariants and carries the independent disable-path tests.
+  CI run 33205454731 failed before exposing steps and skipped the container job.
+  #85 and #107 remain open until the cumulative candidate is independently
+  reviewed and green.
 
 ## Release decision
 
