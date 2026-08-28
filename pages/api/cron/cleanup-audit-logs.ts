@@ -1,15 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
-import { constantTimeCompare } from '../../../lib/tokens'
+import { isAuthorizedCronRequest } from '../../../lib/cronAuth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const cronSecret = req.headers['x-cron-secret']
-  const configuredSecret = process.env.CRON_SECRET
-  if (typeof cronSecret !== 'string' || !configuredSecret || !constantTimeCompare(cronSecret, configuredSecret)) {
+  if (!isAuthorizedCronRequest(req)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
