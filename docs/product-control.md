@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #118 contain unmerged security, concurrency,
+- Draft PRs #78 through #119 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -129,15 +129,13 @@ All entries are **implemented in drafts**, not verified or released.
    #118 is reviewed and green, close #80, #105, #108, #111, and #113 as
    superseded. #81 historical guidance, #82 unsafe scripts, and #84 backup/restore
    verifier remain merge-independent.
-2. Tenant, membership, login, and session boundaries: #117 is the cumulative
-   #78 + #83 + #112 candidate. It deliberately merges atomic one-time login-code
-   consumption with same-origin/session-cookie behavior and retains strict team
-   scoping plus the single-owner invariant. After #117 is reviewed and green,
-   close #78, #83, #85, #107, and #112 as superseded; #79 is already represented
-   through #83.
-3. Remaining authentication and privileged operations: reconcile independent
-   #86 2FA enrollment next, then continue with #87 maintenance share issuance,
-   #91 bootstrap wrapper, and #92 admin mutations.
+2. Tenant, authentication, and privileged operations: #119 is the cumulative
+   #117 + #86 + #87 + #91 + #92 candidate. It retains #117's deliberate login,
+   session, tenant, owner, and backup-code reconciliation, then adds serialized
+   2FA enrollment, maintenance-share issuance, guarded bootstrap, and atomic admin
+   mutations. Its 38-file manifest exactly matches the source union. After #119
+   is reviewed and green, close all represented predecessors as superseded; #79
+   is already represented through #83.
 4. Cron ordering: #89 strict cron authentication, then stacked #90 reminder
    claims.
 5. Tenant business mutations: #115 is the cumulative #93-#100 candidate. It
@@ -166,7 +164,7 @@ because GitHub reports them mergeable.
 | Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #118 product-control, configuration, database, and startup gates | No deployment approval |
 | Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #118 cumulatively retains #111's remediation with #80/#108 runtime controls and #105 release governance | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
-| Auth session transition/origin invariants unverified | High | #117 cumulatively reconciles tenant/login atomicity, team ownership, session lifecycle, and backup-code consumption | No auth candidate approval until #117 and independent #86 are reconciled and green |
+| Auth session transition/origin invariants unverified | High | #119 cumulatively reconciles tenant/login/session/2FA boundaries and privileged operations | No auth candidate approval until #119 is independently reviewed and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
 | External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
 | Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
@@ -280,6 +278,11 @@ must not be invented to satisfy a release checklist.
   compose credential. CI run 33206796172 failed before exposing steps and skipped
   the container job. All represented predecessors remain open until #118 is
   independently reviewed and green.
+- 2026-08-28: opened cumulative auth/privileged-operations draft #119 targeting
+  master from #117, #86, #87, #91, and #92. Its 38-file manifest exactly matches
+  the source union with no missing or unexpected paths. CI run 33207032244 failed
+  before exposing steps and skipped the container job. All represented predecessors
+  remain open until #119 is independently reviewed and green.
 
 ## Release decision
 
