@@ -51,6 +51,18 @@ describe('POST /api/auth/send-code', () => {
     ;(prisma.verificationToken.create as jest.Mock).mockResolvedValue({})
   })
 
+  it('rejects a cross-origin request before account lookup or delivery', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'fleetvera.example', origin: 'https://evil.example' },
+      body: { email: 'driver@example.com' },
+    })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(403)
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
+    expect(sendLoginCodeEmail).not.toHaveBeenCalled()
+  })
+
   it('keeps the generic response and records a correlated structured error when delivery fails', async () => {
     ;(sendLoginCodeEmail as jest.Mock).mockResolvedValue({
       success: false,
