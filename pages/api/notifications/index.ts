@@ -3,6 +3,41 @@ import { getServerSession, authOptions } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
 import { NotificationType } from '../../../types';
 import type { Prisma } from '@prisma/client';
+import { assertSameOrigin } from '../../../lib/apiAuth';
+import { z } from 'zod';
+
+const notificationIdSchema = z.string().trim().min(1).max(64);
+const notificationSelectionSchema = z.object({
+  notificationId: notificationIdSchema.optional(),
+  notificationIds: z.array(notificationIdSchema).max(100).optional(),
+}).strict();
+const notificationTypeSchema = z.enum([
+  'delivery_assigned',
+  'delivery_completed',
+  'maintenance_due',
+  'maintenance_completed',
+  'vehicle_alert',
+  'announcement',
+  'system',
+  'invite',
+]);
+
+function selectedIds(body: unknown, queryId?: unknown): { ids: string[] } | { error: string } {
+  const parsed = notificationSelectionSchema.safeParse(body || {});
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Invalid notification selection' };
+
+  const query = queryId === undefined ? undefined : notificationIdSchema.safeParse(queryId);
+  if (query && !query.success) return { error: 'Invalid notification ID' };
+
+  const ids = [...new Set([
+    ...(query?.success ? [query.data] : []),
+    ...(parsed.data.notificationId ? [parsed.data.notificationId] : []),
+    ...(parsed.data.notificationIds || []),
+  ])];
+  if (ids.length === 0) return { error: 'Notification ID required' };
+  if (ids.length > 100) return { error: 'Too many notification IDs' };
+  return { ids };
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -15,13 +50,16 @@ export default async function handler(
   }
 
   const userId = session.user.id;
+  if (!assertSameOrigin(req, res)) return;
 
   switch (req.method) {
     case 'GET':
       try {
         const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
         const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '20'), 10) || 20));
-        const type = req.query.type as NotificationType | undefined;
+        const parsedType = req.query.type === undefined ? undefined : notificationTypeSchema.safeParse(req.query.type);
+        if (parsedType && !parsedType.success) return res.status(400).json({ error: 'Invalid notification type' });
+        const type = parsedType?.data as NotificationType | undefined;
         const unreadOnly = req.query.unreadOnly === 'true';
         const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
 
@@ -58,16 +96,14 @@ export default async function handler(
 
     case 'POST':
       try {
-        const { notificationId, notificationIds } = req.body;
-        const ids = notificationIds || (notificationId ? [notificationId] : []);
-
-        if (ids.length === 0) {
-          return res.status(400).json({ error: 'No notification IDs provided' });
+        const selection = selectedIds(req.body);
+        if ('error' in selection) {
+          return res.status(400).json({ error: selection.error });
         }
 
         await prisma.notification.updateMany({
           where: {
-            id: { in: ids },
+            id: { in: selection.ids },
             userId,
           },
           data: {
@@ -103,18 +139,14 @@ export default async function handler(
 
     case 'DELETE':
       try {
-        const queryId = typeof req.query.id === 'string' ? req.query.id : undefined;
-        const bodyIds: string[] = Array.isArray(req.body?.notificationIds)
-          ? req.body.notificationIds.filter((id: unknown): id is string => typeof id === 'string')
-          : [];
-        const ids = [...new Set<string>(queryId ? [queryId, ...bodyIds] : bodyIds)].slice(0, 100);
-        if (ids.length === 0) {
-          return res.status(400).json({ error: 'Notification ID required' });
+        const selection = selectedIds(req.body, req.query.id);
+        if ('error' in selection) {
+          return res.status(400).json({ error: selection.error });
         }
 
         await prisma.notification.deleteMany({
           where: {
-            id: { in: ids },
+            id: { in: selection.ids },
             userId,
           },
         });
