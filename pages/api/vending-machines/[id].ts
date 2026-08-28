@@ -16,10 +16,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const scopedWhere = { AND: [{ id }, tenant.resourceWhere] }
 
   if (req.method === 'PUT') {
+    const parsed = parseBody(vendingMachineCreateSchema, req.body)
+    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
     const existing = await prisma.vendingMachine.findFirst({ where: scopedWhere })
     if (!existing) return res.status(404).json({ error: 'Not found' })
-    const parsed = parseBody(vendingMachineBodySchema, req.body)
-    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
     const { ownerId: _ownerId, ...data } = vendingMachineToDb(parsed.data, tenant.ownerId)
     const machine = await prisma.$transaction(async (tx) => {
       const result = await tx.vendingMachine.updateMany({ where: scopedWhere, data })
