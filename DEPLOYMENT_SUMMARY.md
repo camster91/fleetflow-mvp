@@ -1,3 +1,11 @@
+> [!CAUTION]
+> **Archived historical guidance — do not execute these commands.**
+> This file predates the PostgreSQL migration, guarded administrator bootstrap,
+> custom `JWT_SECRET` session runtime, committed migrations, and current
+> release gates. It is retained only for history. Use [README.md](README.md),
+> [release readiness](docs/release-readiness.md), and the current
+> [deploy/rollback runbook](docs/runbooks/deploy-and-rollback.md) instead.
+
 # FleetFlow SaaS Transformation - Deployment Summary
 
 **Date:** March 1, 2026  
