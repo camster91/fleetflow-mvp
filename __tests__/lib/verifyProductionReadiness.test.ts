@@ -23,7 +23,28 @@ describe('verify-production-readiness', () => {
   it('requires live billing configuration for a public launch', () => {
     const result = evaluateEnvironment(core, 'public')
     expect(result.ready).toBe(false)
-    expect(result.missing).toEqual(expect.arrayContaining(['STRIPE_SECRET_KEY', 'STRIPE_PUBLISHABLE_KEY', 'STRIPE_WEBHOOK_SECRET']))
+    expect(result.missing).toEqual(expect.arrayContaining([
+      'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY',
+      'STRIPE_PRICE_MONTHLY_AMOUNT', 'STRIPE_PRICE_YEARLY_AMOUNT', 'STRIPE_PRICE_CURRENCY',
+    ]))
+  })
+
+  it('accepts only the billing configuration consumed by checkout', () => {
+    const billing = {
+      ...core,
+      STRIPE_SECRET_KEY: 'sk_configured',
+      STRIPE_WEBHOOK_SECRET: 'whsec_configured',
+      STRIPE_PRICE_MONTHLY: 'price_monthly',
+      STRIPE_PRICE_YEARLY: 'price_yearly',
+      STRIPE_PRICE_MONTHLY_AMOUNT: '4900',
+      STRIPE_PRICE_YEARLY_AMOUNT: '49000',
+      STRIPE_PRICE_CURRENCY: 'cad',
+    }
+    expect(evaluateEnvironment(billing, 'public').ready).toBe(true)
+
+    const invalid = evaluateEnvironment({ ...billing, STRIPE_PRICE_YEARLY: 'price_monthly' }, 'public')
+    expect(invalid.ready).toBe(false)
+    expect(invalid.missing).toContain('Stripe price IDs, integer minor-unit amounts, and currency must be valid')
   })
 
   it('fails closed for weak secrets, insecure URLs, and malformed action keys without exposing values', () => {
