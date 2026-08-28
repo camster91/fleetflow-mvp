@@ -1,8 +1,14 @@
 import { createMocks } from 'node-mocks-http'
 
 const mockTx = {
-  user: { upsert: jest.fn() },
-  teamMember: { create: jest.fn(), update: jest.fn() },
+  $executeRaw: jest.fn(),
+  user: { findMany: jest.fn(), upsert: jest.fn() },
+  teamMember: {
+    findMany: jest.fn(),
+    count: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+  },
 }
 
 jest.mock('@/lib/auth', () => ({
@@ -16,8 +22,6 @@ jest.mock('@/lib/email', () => ({
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     team: { findFirst: jest.fn() },
-    user: { findMany: jest.fn() },
-    teamMember: { findMany: jest.fn() },
     $transaction: jest.fn((callback: (client: typeof mockTx) => unknown) => callback(mockTx)),
   },
 }))
@@ -37,8 +41,9 @@ describe('team invitation provisioning', () => {
     ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({
       id: 'team-1', name: 'Acme', ownerId: 'owner-1', members: [],
     })
-    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([])
-    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([])
+    ;mockTx.user.findMany.mockResolvedValue([])
+    ;mockTx.teamMember.findMany.mockResolvedValue([])
+    mockTx.teamMember.count.mockResolvedValue(0)
     mockTx.user.upsert.mockResolvedValue({ id: 'invited-user' })
     mockTx.teamMember.create.mockResolvedValue({ id: 'invite-1' })
     const { req, res } = createMocks({
@@ -75,8 +80,9 @@ describe('team invitation provisioning', () => {
         status: index === 9 ? 'PENDING' : 'ACCEPTED',
       })),
     })
-    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([])
-    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([])
+    ;mockTx.user.findMany.mockResolvedValue([])
+    ;mockTx.teamMember.findMany.mockResolvedValue([])
+    mockTx.teamMember.count.mockResolvedValue(10)
     const { req, res } = createMocks({
       method: 'POST',
       body: { teamId: 'team-1', emails: ['new@example.com'], role: 'MEMBER' },
@@ -107,4 +113,40 @@ describe('team invitation provisioning', () => {
     expect(mockTx.teamMember.create).not.toHaveBeenCalled()
     expect(mockTx.teamMember.update).not.toHaveBeenCalled()
   })
+  it('reactivates an existing declined invitation instead of creating a duplicate membership', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' },
+    })
+    ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({
+      id: 'team-1', name: 'Acme', ownerId: 'owner-1', members: [],
+    })
+    mockTx.user.findMany.mockResolvedValue([
+      { id: 'invited-user', email: 'returning@example.com' },
+    ])
+    mockTx.teamMember.findMany.mockResolvedValue([
+      {
+        id: 'invite-old',
+        teamId: 'team-1',
+        userId: 'invited-user',
+        inviteeEmail: 'returning@example.com',
+        status: 'DECLINED',
+      },
+    ])
+    mockTx.teamMember.count.mockResolvedValue(3)
+    mockTx.teamMember.update.mockResolvedValue({ id: 'invite-old' })
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: { teamId: 'team-1', emails: ['returning@example.com'], role: 'MEMBER' },
+    })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(200)
+    expect(mockTx.teamMember.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'invite-old' },
+      data: expect.objectContaining({ status: 'PENDING' }),
+    }))
+    expect(mockTx.teamMember.create).not.toHaveBeenCalled()
+  })
+
 })
