@@ -6,7 +6,7 @@ jest.mock('@/lib/auth', () => ({
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     notification: {
-      findMany: jest.fn(), count: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn(),
+      findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn(),
     },
   },
 }))
@@ -75,6 +75,20 @@ describe('notifications API contracts', () => {
 
     expect(res._getStatusCode()).toBe(400)
     expect(prisma.notification.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('rejects a cursor that is not owned by the authenticated user', async () => {
+    ;(prisma.notification.findFirst as jest.Mock).mockResolvedValue(null)
+    const { req, res } = createMocks({ method: 'GET', query: { cursor: 'another-users-notification' } })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(400)
+    expect(prisma.notification.findFirst).toHaveBeenCalledWith({
+      where: { id: 'another-users-notification', userId: 'user-1' },
+      select: { id: true },
+    })
+    expect(prisma.notification.findMany).not.toHaveBeenCalled()
   })
 
   it('rejects an invalid notification type filter', async () => {
