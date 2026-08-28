@@ -96,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } finally { clearInterval(renewal) }
     }
     if (parsed.data.action === 'save_draft') {
-      const updated = await prisma.documentUpload.updateMany({ where: { id: doc.id, revision: parsed.data.revision, deletedAt: null, expiresAt: { gt: new Date() } }, data: { extraction: JSON.stringify(parsed.data.extraction), reviewDraft: parsed.data.draft ? JSON.stringify(parsed.data.draft) : null, status: 'REVIEWED', revision: { increment: 1 } } })
+      const updated = await prisma.documentUpload.updateMany({ where: { id: doc.id, revision: parsed.data.revision, status: { in: ['EXTRACTED', 'REVIEWED'] }, deletedAt: null, expiresAt: { gt: new Date() } }, data: { extraction: JSON.stringify(parsed.data.extraction), reviewDraft: parsed.data.draft ? JSON.stringify(parsed.data.draft) : null, status: 'REVIEWED', revision: { increment: 1 } } })
       if (updated.count !== 1) return res.status(409).json({ error: 'Draft changed since it was loaded' })
       return res.status(200).json({ revision: parsed.data.revision + 1 })
     }
