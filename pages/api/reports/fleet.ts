@@ -2,13 +2,16 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { requireTenantContext } from '../../../lib/apiAuth';
 import { canViewReports } from '../../../lib/permissions';
+import { rateLimitMiddleware } from '../../../lib/rateLimit';
+import { REPORT_ROW_LIMIT } from '../../../lib/reporting';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
   const context = await requireTenantContext(req, res);
   if (!context) return;
-  const { tenant } = context;
+  const { tenant, session } = context;
   if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
+  if (!await rateLimitMiddleware(req, res, 'api', `reports:${session.user.id}`)) return;
 
   try {
     const vehicles = await prisma.vehicle.findMany({
@@ -24,6 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         vehicleType: true,
         driver: true,
       },
+      take: REPORT_ROW_LIMIT,
     });
 
     // Status breakdown (pie chart)
@@ -47,10 +51,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         driver: v.driver,
       }));
 
+    res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
       statusBreakdown,
       vehiclesNeedingMaintenance,
       totalVehicles: vehicles.length,
+      truncated: vehicles.length === REPORT_ROW_LIMIT,
     });
   } catch (error) {
     console.error('Fleet report error:', error);
