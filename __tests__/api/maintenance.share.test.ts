@@ -34,12 +34,27 @@ import handler from '@/pages/api/maintenance/[id]/share'
 import { prisma } from '@/lib/prisma'
 import { assertSameOrigin, requireTenantContext } from '@/lib/apiAuth'
 
+const originalNodeEnv = process.env.NODE_ENV
+const originalNextAuthUrl = process.env.NEXTAUTH_URL
+const originalPublicAppUrl = process.env.NEXT_PUBLIC_APP_URL
+
 describe('POST /api/maintenance/[id]/share', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.NODE_ENV = 'test'
+    process.env.NEXTAUTH_URL = 'https://fleet.example.com/path/'
+    delete process.env.NEXT_PUBLIC_APP_URL
     ;(assertSameOrigin as jest.Mock).mockReturnValue(true)
     ;(prisma.maintenanceTask.findFirst as jest.Mock).mockResolvedValue({ id: 'task-1' })
     mockTransaction.$executeRaw.mockResolvedValue(0)
+  })
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv
+    if (originalNextAuthUrl === undefined) delete process.env.NEXTAUTH_URL
+    else process.env.NEXTAUTH_URL = originalNextAuthUrl
+    if (originalPublicAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL
+    else process.env.NEXT_PUBLIC_APP_URL = originalPublicAppUrl
   })
 
   it('reuses the active link after taking a task-scoped transaction lock', async () => {
@@ -66,7 +81,10 @@ describe('POST /api/maintenance/[id]/share', () => {
       },
     })
     expect(mockTransaction.taskShareLink.create).not.toHaveBeenCalled()
-    expect(JSON.parse(res._getData()).token).toBe('existing-token')
+    expect(JSON.parse(res._getData())).toEqual({
+      token: 'existing-token',
+      url: 'https://fleet.example.com/task/existing-token',
+    })
   })
 
   it('creates one link inside the same locked transaction when none is active', async () => {
@@ -102,6 +120,18 @@ describe('POST /api/maintenance/[id]/share', () => {
     await handler(req as never, res as never)
 
     expect(requireTenantContext).not.toHaveBeenCalled()
+    expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('fails closed before creating a token when the production URL is unsafe', async () => {
+    process.env.NODE_ENV = 'production'
+    process.env.NEXTAUTH_URL = 'http://fleet.example.com'
+    const { req, res } = createMocks({ method: 'POST', query: { id: 'task-1' } })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(503)
+    expect(prisma.maintenanceTask.findFirst).not.toHaveBeenCalled()
     expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 })
