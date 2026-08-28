@@ -207,7 +207,8 @@ must not be invented to satisfy a release checklist.
   production-container job was skipped.
 - 2026-08-28: opened #108, stacked on #80, to require an explicit pilot/public
   release mode and run the production readiness verifier before any migration.
-  The PR targets master so the exact combined head is eligible for CI.
+  The PR targets master so the exact combined head is eligible for CI. Run
+  33204309209 failed before steps and the production-container job was skipped.
 
 ## Release decision
 
