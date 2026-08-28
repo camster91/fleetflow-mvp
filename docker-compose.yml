@@ -10,7 +10,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
@@ -27,7 +27,7 @@ services:
     environment:
       POSTGRES_DB: fleetflow
       POSTGRES_USER: fleetflow
-      POSTGRES_PASSWORD: fleetflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
