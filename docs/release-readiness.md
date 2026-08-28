@@ -1,6 +1,23 @@
 # Release readiness
 
-## Proven locally
+> This is the authoritative launch-gate checklist. Current product status,
+> merge order, risks, access, and evidence provenance are maintained in
+> [product-control.md](product-control.md). Dated test counts below prove only
+> the candidate on which they were collected.
+
+## Current evidence status — 2026-08-28
+
+- Public health, landing, and pricing endpoints are reachable over HTTPS.
+- Public health returned HTTP 200, `{"status":"ok"}`, and
+  `Cache-Control: no-store`.
+- These public checks do not identify the deployed commit or verify any
+  authenticated workflow, provider, backup, monitoring, or rollback path.
+- Current hardening work is held in draft PRs #78-#104. It is implemented but
+  unverified and unmerged.
+- GitHub Actions currently fails before repository steps execute and skips the
+  production-container job. No current merge candidate is approved.
+
+## Proven locally (dated candidate evidence)
 
 - Locked dependency install and zero-vulnerability dependency audit
 - ESLint with zero warnings/errors, strict TypeScript, 38 Jest suites / 232 tests, and production Next.js build
@@ -12,7 +29,7 @@
 - One CI workflow and a manual, environment-protected deployment workflow
 - Production-container browser QA at 375px and 1440px across the public site and 15 authenticated screens, with no page, console, or HTTP errors
 
-These checks establish a release candidate, not a live release.
+These checks established their dated release candidate; they do not establish the current draft merge train or a new live release.
 
 ## Required external evidence
 
