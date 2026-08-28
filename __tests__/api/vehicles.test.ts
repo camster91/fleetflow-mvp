@@ -54,12 +54,35 @@ describe('POST /api/vehicles', () => {
       { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'VIEWER' }] },
     ]);
     const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
-      method: 'POST', body: { name: 'Truck 1', status: 'active' },
+      method: 'POST',
+      headers: { host: 'fleetflow.test' },
+      body: { name: 'Truck 1', status: 'active' },
     });
 
     await handler(req, res);
 
     expect(res._getStatusCode()).toBe(403);
+    expect(prisma.vehicle.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a cross-origin vehicle creation request', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'owner-1' } });
+    (prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { id: 'team-1', ownerId: 'owner-1', members: [] },
+    ]);
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      method: 'POST',
+      headers: {
+        host: 'fleetflow.test',
+        origin: 'https://attacker.example',
+      },
+      body: { name: 'Truck 1', status: 'active' },
+    });
+
+    await handler(req, res);
+
+    expect(res._getStatusCode()).toBe(403);
+    expect(res._getJSONData()).toEqual({ error: 'Forbidden origin' });
     expect(prisma.vehicle.create).not.toHaveBeenCalled();
   });
 });
