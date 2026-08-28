@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #107 contain unmerged security, concurrency,
+- Draft PRs #78 through #108 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes. PR #88 is closed and
   superseded.
 - Recent GitHub Actions runs, including runs 33197494128 through 33198494536,
@@ -122,8 +122,9 @@ Acceptance criteria:
 
 All entries are **implemented in drafts**, not verified or released.
 
-1. Merge-independent operational foundations: #80 configuration/runtime,
-   #81 historical guidance, #82 unsafe scripts, #84 backup/restore verifier.
+1. Operational foundations: #80 configuration/runtime, then stacked #108
+   fail-closed preflight-before-migration startup; #81 historical guidance, #82
+   unsafe scripts, and #84 backup/restore verifier are merge-independent.
 2. Tenant and membership invariants: #78 tenant/login isolation, then #83
    ownership invariant. #83 incorporates #79; close #79 as superseded only
    after the combined diff and tests are verified.
@@ -152,7 +153,7 @@ because GitHub reports them mergeable.
 |---|---|---|---|
 | CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
-| Production revision/configuration unknown | High | Public checks treated as availability only | No deployment approval |
+| Production revision/configuration unknown | High | Public checks treated as availability only; #80/#108 configuration and startup gates | No deployment approval |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
 | Auth session transition/origin invariants unverified | High | #107 implements guards, explicit token purpose, cookie invalidation | No auth candidate approval until #85/#86/#107 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
@@ -204,6 +205,9 @@ must not be invented to satisfy a release checklist.
   purpose, centralized cookie invalidation, production JWT secret enforcement, and
   private/no-store auth responses. CI run 33203949669 failed before steps and the
   production-container job was skipped.
+- 2026-08-28: opened #108, stacked on #80, to require an explicit pilot/public
+  release mode and run the production readiness verifier before any migration.
+  The PR targets master so the exact combined head is eligible for CI.
 
 ## Release decision
 
