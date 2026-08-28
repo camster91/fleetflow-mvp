@@ -28,10 +28,10 @@ export interface TenantContext {
   role: TeamRole
   resourceWhere:
     | { ownerId: string; teamId: null }
-    | { OR: Array<{ teamId: string } | { ownerId: string; teamId: null }> }
+    | { teamId: string }
   auditWhere:
     | { userId: string; teamId: null }
-    | { OR: Array<{ teamId: string } | { userId: string; teamId: null }> }
+    | { teamId: string }
 }
 
 export type ApiKeyScope = 'read'
@@ -141,10 +141,10 @@ export async function requireApiKey(
 /**
  * Resolve the tenant selected by the authenticated user.
  *
- * Existing owner-only rows have a null teamId, so a team may read those legacy
- * rows only when their owner is the team owner. New writes should persist both
- * ownerId and teamId from this context. Users with multiple teams must select
- * one explicitly; silently merging tenants would leak data across workspaces.
+ * Personal rows have a null teamId and remain isolated from team workspaces.
+ * Team requests scope reads and writes strictly to the selected teamId. Legacy
+ * personal records must be migrated explicitly instead of being merged into a
+ * team query. Users with multiple teams must select one explicitly.
  */
 export async function resolveTenantContext(
   userId: string,
@@ -207,18 +207,8 @@ export async function resolveTenantContext(
     ownerId: team.ownerId,
     teamId: team.id,
     role,
-    resourceWhere: {
-      OR: [
-        { teamId: team.id },
-        { ownerId: team.ownerId, teamId: null },
-      ],
-    },
-    auditWhere: {
-      OR: [
-        { teamId: team.id },
-        { userId: team.ownerId, teamId: null },
-      ],
-    },
+    resourceWhere: { teamId: team.id },
+    auditWhere: { teamId: team.id },
   }
 }
 
