@@ -154,6 +154,7 @@ because GitHub reports them mergeable.
 | CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
 | Production revision/configuration unknown | High | Public checks treated as availability only; #80/#108 configuration and startup gates | No deployment approval |
+| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #80 requires a secret-store password and removes the host port | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
 | Auth session transition/origin invariants unverified | High | #107 implements guards, explicit token purpose, cookie invalidation | No auth candidate approval until #85/#86/#107 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
@@ -209,6 +210,10 @@ must not be invented to satisfy a release checklist.
   release mode and run the production readiness verifier before any migration.
   The PR targets master so the exact combined head is eligible for CI. Run
   33204309209 failed before steps and the production-container job was skipped.
+- 2026-08-28: validated GitGuardian incident 36683862 against commit c118789 and
+  current master: the compose default PostgreSQL password is real repository
+  content and the database host port is published. #80 removes both, but whether
+  the credential was deployed and needs approved rotation remains unknown.
 
 ## Release decision
 
