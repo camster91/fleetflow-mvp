@@ -31,7 +31,13 @@ describe('POST /api/auth/login boundary', () => {
       identifier: 'login:user@example.com', token: 'hashed',
       expires: new Date(Date.now() + 60_000),
     })
-    ;(prisma.$transaction as jest.Mock).mockResolvedValue([])
+    ;(prisma.$transaction as jest.Mock).mockImplementation(async (operation) => {
+      if (typeof operation !== 'function') return Promise.all(operation)
+      return operation({
+        verificationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
+        user: { update: jest.fn().mockResolvedValue(user) },
+      })
+    })
   })
 
   it('rejects cross-origin login before rate limit or database work', async () => {
@@ -49,6 +55,28 @@ describe('POST /api/auth/login boundary', () => {
     expect(cookies.join(';')).toContain('token=signed-token')
     expect(cookies.join(';')).toContain('two_factor_challenge=')
     expect(cookies.join(';')).toContain('fleetflow_team=')
+  })
+
+  it('rejects a concurrent reuse when the exact login code was already consumed', async () => {
+    const deleteMany = jest.fn().mockResolvedValue({ count: 0 })
+    const update = jest.fn()
+    ;(prisma.$transaction as jest.Mock).mockImplementationOnce(async (operation) =>
+      operation({ verificationToken: { deleteMany }, user: { update } })
+    )
+
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: {
+        identifier: 'login:user@example.com',
+        token: 'hashed',
+        expires: { gte: expect.any(Date) },
+      },
+    })
+    expect(update).not.toHaveBeenCalled()
+    expect(signToken).not.toHaveBeenCalled()
+    expect(res._getStatusCode()).toBe(401)
   })
 
   it('clears an existing session before returning a 2FA challenge', async () => {
