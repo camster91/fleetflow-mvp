@@ -61,11 +61,20 @@ export default async function handler(
         if (parsedType && !parsedType.success) return res.status(400).json({ error: 'Invalid notification type' });
         const type = parsedType?.data as NotificationType | undefined;
         const unreadOnly = req.query.unreadOnly === 'true';
-        const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+        const parsedCursor = req.query.cursor === undefined ? undefined : notificationIdSchema.safeParse(req.query.cursor);
+        if (parsedCursor && !parsedCursor.success) return res.status(400).json({ error: 'Invalid notification cursor' });
+        const cursor = parsedCursor?.data;
 
         const skip = (page - 1) * limit;
 
         const where: Prisma.NotificationWhereInput = { userId };
+        if (cursor) {
+          const ownCursor = await prisma.notification.findFirst({
+            where: { id: cursor, userId },
+            select: { id: true },
+          });
+          if (!ownCursor) return res.status(400).json({ error: 'Invalid notification cursor' });
+        }
         if (type) where.type = type;
         if (unreadOnly) where.read = false;
 
