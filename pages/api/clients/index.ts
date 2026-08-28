@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToClient, clientToDb, logActivity } from '../../../lib/fleet'
 import { parseBody, clientBodySchema } from '../../../lib/validation'
-import { requireTenantContext } from '../../../lib/apiAuth'
+import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageClients, canViewClients } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -10,6 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { session, tenant } = context
   const userId = session.user.id
+  if (!assertSameOrigin(req, res)) return
 
   if (req.method === 'GET') {
     if (!canViewClients(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -33,14 +34,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ownerId: tenant.ownerId,
       teamId: tenant.teamId,
     }
-    const client = await prisma.client.create({ data })
-    await logActivity(prisma, {
-      userId,
-      teamId: tenant.teamId,
-      userName: session.user.name, userRole: tenant.role,
-      action: 'created', entityType: 'client',
-      entityId: client.id, entityName: client.name,
-      description: `Client "${client.name}" was added`,
+    const client = await prisma.$transaction(async (tx) => {
+      const created = await tx.client.create({ data })
+      await logActivity(tx, {
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name, userRole: tenant.role,
+        action: 'created', entityType: 'client',
+        entityId: created.id, entityName: created.name,
+        description: `Client "${created.name}" was added`,
+      })
+      return created
     })
     return res.status(201).json(dbToClient(client))
   }
