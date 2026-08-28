@@ -18,6 +18,20 @@ import { signToken } from '@/lib/auth'
 describe('POST /api/auth/2fa/validate', () => {
   beforeEach(() => jest.clearAllMocks())
 
+  it('rejects a cross-origin exchange before validating the challenge', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: {
+        host: 'fleetvera.example', origin: 'https://evil.example',
+        cookie: 'two_factor_challenge=challenge-token',
+      },
+      body: { code: '123456' },
+    })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(403)
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
+  })
+
   it('exchanges a valid challenge and TOTP for a session cookie', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager',
@@ -35,6 +49,7 @@ describe('POST /api/auth/2fa/validate', () => {
     const cookies = res.getHeader('set-cookie') as string[]
     expect(cookies.join(';')).toContain('token=session-token')
     expect(cookies.join(';')).toContain('two_factor_challenge=')
+    expect(cookies.join(';')).toContain('fleetflow_team=')
     expect(res._getStatusCode()).toBe(200)
   })
 
