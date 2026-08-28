@@ -1,3 +1,10 @@
+> [!CAUTION]
+> Historical product backlog — do not use as current implementation or release
+> guidance. This file was last updated in February 2026 and describes obsolete
+> localStorage, SQLite, demo-auth, and future-backend states. The authoritative
+> product roadmap is `docs/product-control.md`; launch gates are maintained in
+> `docs/release-readiness.md`. Preserve this body only as historical context.
+
 # FleetFlow Pro - Complete Development Todo List
 
 ## Current Status Analysis
