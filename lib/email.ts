@@ -12,7 +12,21 @@ const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3';
 
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>';
-const APP_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+export function getEmailAppUrl(env: NodeJS.ProcessEnv = process.env): string | null {
+  const configured = (env.NEXTAUTH_URL || env.NEXT_PUBLIC_APP_URL)?.trim();
+  if (!configured) return null;
+  try {
+    const url = new URL(configured);
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) return null;
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
+const CONFIGURED_APP_URL = getEmailAppUrl();
+const APP_URL = CONFIGURED_APP_URL || 'http://localhost:3000';
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera';
 const MAILGUN_DOMAIN = domain || '';
 
@@ -86,13 +100,8 @@ export function validateEmailReadiness(env: NodeJS.ProcessEnv = process.env): Em
   }
   if (!applicationUrl) {
     errors.push('NEXTAUTH_URL or NEXT_PUBLIC_APP_URL is missing');
-  } else {
-    try {
-      const url = new URL(applicationUrl);
-      if (url.protocol !== 'https:') errors.push('Production application URL must use HTTPS');
-    } catch {
-      errors.push('Application URL must be an absolute HTTP(S) URL');
-    }
+  } else if (!getEmailAppUrl(env)) {
+    errors.push('Production application URL must be a canonical HTTPS origin');
   }
 
   return { ready: errors.length === 0, errors };
@@ -219,6 +228,9 @@ export async function sendEmail({
   to, subject, html, text = '', from = FROM_EMAIL, attachments, cc, bcc, replyTo, metadata,
 }: SendEmailOptions): Promise<EmailResult> {
   try {
+    if (process.env.NODE_ENV === 'production' && !CONFIGURED_APP_URL) {
+      return { success: false, errorCode: 'configuration_error', error: 'configuration_error' };
+    }
     const stored = await configuredMailgun()
     // If Mailgun is not configured, behavior depends on environment:
     //   - dev (NODE_ENV !== 'production'): log the email, return success
