@@ -25,7 +25,8 @@ describe('resolveTenantContext', () => {
 
     await expect(resolveTenantContext('member-1')).resolves.toMatchObject({
       ownerId: 'owner-1', teamId: 't1', role: 'MANAGER',
-      resourceWhere: { OR: [{ teamId: 't1' }, { ownerId: 'owner-1', teamId: null }] },
+      resourceWhere: { teamId: 't1' },
+      auditWhere: { teamId: 't1' },
     })
   })
 
