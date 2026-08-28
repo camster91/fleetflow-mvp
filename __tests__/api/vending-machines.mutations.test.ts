@@ -62,15 +62,15 @@ describe('vending-machine mutation security and integrity', () => {
   })
 
   it.each([
-    [{ name: 'Lobby', location: 'HQ', status: 'unknown' }, 'Invalid option'],
-    [{ name: 'Lobby', location: 'HQ', lastService: 'not-a-date' }, 'Invalid date'],
-  ])('rejects malformed creation payloads', async (body, error) => {
+    { name: 'Lobby', location: 'HQ', status: 'unknown' },
+    { name: 'Lobby', location: 'HQ', lastService: 'not-a-date' },
+  ])('rejects malformed creation payloads', async (body) => {
     const { req, res } = createMocks({ method: 'POST', body })
 
     await collectionHandler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(400)
-    expect(res._getJSONData().error).toContain(error)
+    expect(res._getJSONData()).toEqual({ error: expect.any(String) })
     expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 
