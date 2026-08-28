@@ -1,6 +1,6 @@
-# FleetFlow
+# Fleetvera
 
-FleetFlow is a multi-tenant fleet operations SaaS built with the Next.js Pages Router, React, TypeScript, Prisma, and PostgreSQL. It includes vehicles, deliveries, maintenance, clients, team workspaces, reporting, subscription billing, and role-based access control.
+Fleetvera is a multi-tenant fleet operations SaaS built with the Next.js Pages Router, React, TypeScript, Prisma, and PostgreSQL. It includes vehicles, deliveries, maintenance, clients, team workspaces, reporting, subscription billing, and role-based access control.
 
 ## Local setup
 
@@ -65,11 +65,11 @@ Business records are scoped to a personal workspace or an accepted team workspac
 
 The Docker entrypoint runs `prisma migrate deploy` and then starts the standalone Next.js server. GitHub Actions CI builds but does not publish or deploy. Production deployment is a manual, environment-protected workflow that requires the exact approved `master` commit SHA.
 
-See [release readiness](docs/release-readiness.md), [deploy and rollback](docs/runbooks/deploy-and-rollback.md), and [backup and restore](docs/runbooks/backup-restore.md). No production deployment, DNS change, or live account change is implied by a passing local build.
+See [product control](docs/product-control.md), [release readiness](docs/release-readiness.md), [deploy and rollback](docs/runbooks/deploy-and-rollback.md), and [backup and restore](docs/runbooks/backup-restore.md). No production deployment, DNS change, or live account change is implied by a passing local build.
 
 ## Database baseline
 
-The repository contains a PostgreSQL baseline migration for a new database. If a database already contains FleetFlow tables from an older `db push` or SQLite-era process, do not run deployment migrations blindly. Back it up, compare it with the current Prisma schema, and follow the existing-database procedure in the deployment runbook.
+The repository contains a PostgreSQL baseline migration for a new database. If a database already contains Fleetvera tables from an older `db push` or SQLite-era process, do not run deployment migrations blindly. Back it up, compare it with the current Prisma schema, and follow the existing-database procedure in the deployment runbook.
 
 ## License
 
