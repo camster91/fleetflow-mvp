@@ -8,6 +8,29 @@ function makeToken() {
   return crypto.randomBytes(24).toString('hex');
 }
 
+function configuredAppOrigin(): string | null {
+  const configured = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL)?.trim();
+  if (!configured) {
+    return process.env.NODE_ENV === 'production' ? null : 'http://localhost:3000';
+  }
+  try {
+    const url = new URL(configured);
+    if (
+      !['http:', 'https:'].includes(url.protocol) ||
+      (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      return null;
+    }
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 const SHARE_TOKEN_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -18,6 +41,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return;
   const { tenant } = context;
   if (!canManageMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
+
+  const appOrigin = configuredAppOrigin();
+  if (!appOrigin) {
+    return res.status(503).json({ error: 'Application URL is not configured safely' });
+  }
 
   const taskId = req.query.id as string;
   const task = await prisma.maintenanceTask.findFirst({ where: { AND: [{ id: taskId }, tenant.resourceWhere] } });
@@ -42,6 +70,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   });
 
-  const base = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || 'https://fleet.ashbi.ca';
-  return res.json({ token: link.token, url: `${base}/task/${link.token}` });
+  return res.json({ token: link.token, url: `${appOrigin}/task/${link.token}` });
 }
