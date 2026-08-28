@@ -5,12 +5,16 @@ import { prisma } from './prisma'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { parse } from 'cookie'
 
-const JWT_SECRET=process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || (() => {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable is not set')
+function getJwtSecret(): string {
+  const configured = process.env.JWT_SECRET?.trim()
+  if (configured && (process.env.NODE_ENV !== 'production' || configured.length >= 32)) {
+    return configured
   }
-  return 'dev-only-placeholder-not-for-production'
-})()
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured with at least 32 characters')
+  }
+  return configured || 'dev-only-placeholder-not-for-production'
+}
 
 export interface TokenPayload {
   sub: string
@@ -47,12 +51,12 @@ export function signToken(
   payload: Omit<TokenPayload, 'iat'>,
   expiresIn: SignOptions['expiresIn'] = '7d'
 ): string {
-  return jwt.sign({ purpose: 'session', ...payload }, JWT_SECRET as string, { expiresIn })
+  return jwt.sign({ purpose: 'session', ...payload }, getJwtSecret(), { expiresIn })
 }
 
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET as string) as TokenPayload
+    return jwt.verify(token, getJwtSecret()) as TokenPayload
   } catch {
     return null
   }
@@ -70,7 +74,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   if (!token) return null
 
   const payload = verifyToken(token)
-  if (!payload?.sub || payload.purpose === 'two-factor') return null
+  if (!payload?.sub || payload.purpose !== 'session') return null
 
   // Check if password was changed after token was issued (invalidate old tokens)
   const dbUser = await prisma.user.findUnique({
