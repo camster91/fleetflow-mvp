@@ -62,7 +62,7 @@ COPY --chown=nextjs:nodejs entrypoint.sh ./
 RUN sed -i 's/\r$//' entrypoint.sh && chmod 755 entrypoint.sh
 
 # Preserve the public build-time DSN for the server initializer and runtime
-# readiness preflight. Deployments may not silently substitute a different DSN.
+# readiness preflight. Changing it later requires rebuilding the browser bundle.
 ARG NEXT_PUBLIC_SENTRY_DSN=
 ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
