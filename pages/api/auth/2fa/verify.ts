@@ -2,9 +2,12 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { decryptSecret } from '../../../../lib/cryptoSecrets';
+import { assertSameOrigin } from '../../../../lib/apiAuth';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { sendBackupCodesEmail } from '../../../../lib/email';
+
+const BACKUP_CODE_PATTERN = /^\d{4}-\d{4}-\d{4}$/;
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,6 +16,8 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!assertSameOrigin(req, res)) return;
 
   try {
     const { code, backupCodes, isSetup = false } = req.body;
@@ -33,10 +38,39 @@ export default async function handler(
         where: { id: userId },
       });
 
-      if (!user || !user.twoFactorSecret) {
+      if (!user || !user.twoFactorSecret || !user.backupCodes) {
         return res.status(400).json({
           error: '2FA setup not initiated',
           code: 'SETUP_NOT_INITIATED',
+        });
+      }
+
+      if (
+        !Array.isArray(backupCodes) ||
+        backupCodes.length !== 10 ||
+        !backupCodes.every(
+          (backupCode: unknown) =>
+            typeof backupCode === 'string' && BACKUP_CODE_PATTERN.test(backupCode)
+        )
+      ) {
+        return res.status(400).json({
+          error: '2FA setup data is invalid or stale',
+          code: 'SETUP_CHANGED',
+        });
+      }
+
+      const storedBackupCodes = JSON.parse(user.backupCodes);
+      if (
+        !Array.isArray(storedBackupCodes) ||
+        storedBackupCodes.length !== backupCodes.length ||
+        !backupCodes.every((backupCode: string, index: number) =>
+          typeof storedBackupCodes[index] === 'string' &&
+          bcrypt.compareSync(backupCode, storedBackupCodes[index])
+        )
+      ) {
+        return res.status(400).json({
+          error: '2FA setup data is invalid or stale',
+          code: 'SETUP_CHANGED',
         });
       }
 
@@ -56,28 +90,35 @@ export default async function handler(
         });
       }
 
-      const hashedBackupCodes =
-        backupCodes?.map((bc: string) => bcrypt.hashSync(bc, 10)) || [];
-
-      await prisma.user.update({
-        where: { id: userId },
+      const enabled = await prisma.user.updateMany({
+        where: {
+          id: userId,
+          twoFactorEnabled: false,
+          twoFactorSecret: user.twoFactorSecret,
+          backupCodes: user.backupCodes,
+        },
         data: {
           twoFactorEnabled: true,
-          backupCodes: JSON.stringify(hashedBackupCodes),
         },
       });
+
+      if (enabled.count !== 1) {
+        return res.status(409).json({
+          error: '2FA setup changed; start setup again',
+          code: 'SETUP_CHANGED',
+        });
+      }
 
       try {
         await sendBackupCodesEmail(
           user.email,
           user.name || 'there',
-          backupCodes || []
+          backupCodes
         );
       } catch (emailError) {
         console.error('Failed to send backup codes email:', emailError);
       }
 
-      // Do not return the TOTP secret again after enablement
       return res.status(200).json({
         message: 'Two-factor authentication enabled successfully',
         enabled: true,
