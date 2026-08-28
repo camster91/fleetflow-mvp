@@ -5,6 +5,8 @@ import { serialize } from 'cookie'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 import { hashToken } from '../../../lib/tokens'
 
+class LoginCodeAlreadyConsumedError extends Error {}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -63,21 +65,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid or expired code' })
   }
 
-  // Code is valid — delete token and reset user atomically
-  await prisma.$transaction([
-    prisma.verificationToken.deleteMany({
-      where: { identifier: `login:${normalizedEmail}` },
-    }),
-    prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        lastLoginAt: new Date(),
-        emailVerified: user.emailVerified ?? new Date(),
-      },
-    }),
-  ])
+  // Atomically consume this exact unexpired code before issuing a session.
+  // A concurrent request that read the same token must observe a zero delete
+  // count and fail closed instead of receiving a second session.
+  try {
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.verificationToken.deleteMany({
+        where: {
+          identifier: `login:${normalizedEmail}`,
+          token: tokenRecord.token,
+          expires: { gte: new Date() },
+        },
+      })
+      if (consumed.count !== 1) throw new LoginCodeAlreadyConsumedError()
+
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          lastLoginAt: new Date(),
+          emailVerified: user.emailVerified ?? new Date(),
+        },
+      })
+    })
+  } catch (error) {
+    if (error instanceof LoginCodeAlreadyConsumedError) {
+      return res.status(401).json({ error: 'Invalid or expired code' })
+    }
+    throw error
+  }
 
   // Check if 2FA is enabled — require separate validation step
   if (user.twoFactorEnabled && user.twoFactorSecret) {
