@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #118 contain unmerged security, concurrency,
+- Draft PRs #78 through #120 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
@@ -127,19 +127,19 @@ All entries are **implemented in drafts**, not verified or released.
    #113 candidate, reconciling authoritative roadmap/release guidance with #80,
    #108, and #111 runtime, fail-closed startup, and PostgreSQL remediation. After
    #118 is reviewed and green, close #80, #105, #108, #111, and #113 as
-   superseded. #81 historical guidance, #82 unsafe scripts, and #84 backup/restore
-   verifier remain merge-independent.
-2. Tenant, membership, login, and session boundaries: #117 is the cumulative
-   #78 + #83 + #112 candidate. It deliberately merges atomic one-time login-code
-   consumption with same-origin/session-cookie behavior and retains strict team
-   scoping plus the single-owner invariant. After #117 is reviewed and green,
-   close #78, #83, #85, #107, and #112 as superseded; #79 is already represented
-   through #83.
-3. Remaining authentication and privileged operations: reconcile independent
-   #86 2FA enrollment next, then continue with #87 maintenance share issuance,
-   #91 bootstrap wrapper, and #92 admin mutations.
-4. Cron ordering: #89 strict cron authentication, then stacked #90 reminder
-   claims.
+   superseded. #120 cumulatively reconciles #81 historical guidance, #82 unsafe
+   script removal, and #84 backup/restore verification.
+2. Tenant, authentication, and privileged operations: #119 is the cumulative
+   #117 + #86 + #87 + #91 + #92 candidate. It retains #117's deliberate login,
+   session, tenant, owner, and backup-code reconciliation, then adds serialized
+   2FA enrollment, maintenance-share issuance, guarded bootstrap, and atomic admin
+   mutations. Its 38-file manifest exactly matches the source union. After #119
+   is reviewed and green, close all represented predecessors as superseded; #79
+   is already represented through #83.
+4. Cron ordering: #90 now targets master as the cumulative #89 + #90 candidate,
+   preserving strict cron authentication and atomic reminder claims. Its auth tests
+   also cover missing configuration and duplicated internal headers. After #90 is
+   reviewed and green, close #89 as superseded.
 5. Tenant business mutations: #115 is the cumulative #93-#100 candidate. It
    includes #114's explicit #97/#98 `lib/validation.ts` reconciliation and every
    handler/test from #93, #94, #95, #96, #99, and #100. Its 27-file manifest
@@ -166,7 +166,7 @@ because GitHub reports them mergeable.
 | Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #118 product-control, configuration, database, and startup gates | No deployment approval |
 | Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #118 cumulatively retains #111's remediation with #80/#108 runtime controls and #105 release governance | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
-| Auth session transition/origin invariants unverified | High | #117 cumulatively reconciles tenant/login atomicity, team ownership, session lifecycle, and backup-code consumption | No auth candidate approval until #117 and independent #86 are reconciled and green |
+| Auth session transition/origin invariants unverified | High | #119 cumulatively reconciles tenant/login/session/2FA boundaries and privileged operations | No auth candidate approval until #119 is independently reviewed and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
 | External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
 | Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
@@ -280,6 +280,21 @@ must not be invented to satisfy a release checklist.
   compose credential. CI run 33206796172 failed before exposing steps and skipped
   the container job. All represented predecessors remain open until #118 is
   independently reviewed and green.
+- 2026-08-28: opened cumulative auth/privileged-operations draft #119 targeting
+  master from #117, #86, #87, #91, and #92. Its 38-file manifest exactly matches
+  the source union with no missing or unexpected paths. CI run 33207032244 failed
+  before exposing steps and skipped the container job. All represented predecessors
+  remain open until #119 is independently reviewed and green.
+- 2026-08-28: opened cumulative operations/recovery draft #120 targeting master
+  from #81, #82, and #84. Its 49-path manifest exactly matches the source union,
+  including all 21 intended unsafe-script deletions. CI run 33207335601 failed
+  before exposing steps and skipped the container job. The represented predecessors
+  remain open until #120 is independently reviewed and green.
+- 2026-08-28: retargeted stacked #90 to master as the cumulative #89 + #90 cron
+  candidate and added fail-closed tests for missing server configuration and
+  duplicate internal-secret headers. CI run 33207460995 failed before exposing
+  steps and skipped the container job. #89 remains open until #90 is independently
+  reviewed and green.
 
 ## Release decision
 
