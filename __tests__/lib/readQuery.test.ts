@@ -47,6 +47,8 @@ describe('bounded read query parsing', () => {
       documentId: 'doc-1',
     })
     expect(parseAuditMetadata('{broken')).toBeUndefined()
+    expect(parseAuditMetadata('["not", "a", "record"]')).toBeUndefined()
+    expect(parseAuditMetadata('true')).toBeUndefined()
     expect(parseAuditMetadata(null)).toBeUndefined()
   })
 })
