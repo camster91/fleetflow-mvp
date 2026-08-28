@@ -33,7 +33,7 @@ evidence.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #106 contain unmerged security, concurrency,
+- Draft PRs #78 through #107 contain unmerged security, concurrency,
   configuration, operations, billing, product-control, and reliability changes. PR #88 is closed and
   superseded.
 - Recent GitHub Actions runs, including runs 33197494128 through 33198494536,
@@ -128,8 +128,9 @@ All entries are **implemented in drafts**, not verified or released.
    ownership invariant. #83 incorporates #79; close #79 as superseded only
    after the combined diff and tests are verified.
 3. Authentication and privileged operations: #85 backup codes, #86 2FA
-   enrollment, #87 maintenance share issuance, #91 bootstrap wrapper, #92 admin
-   mutations.
+   enrollment, then #107 session/origin boundaries; explicitly reconcile #85
+   and #107 in `pages/api/auth/2fa/validate.ts`. Continue with #87 maintenance
+   share issuance, #91 bootstrap wrapper, and #92 admin mutations.
 4. Cron ordering: #89 strict cron authentication, then stacked #90 reminder
    claims.
 5. Tenant business mutations: #93 deliveries, #94 vehicles, #95 maintenance,
@@ -152,6 +153,8 @@ because GitHub reports them mergeable.
 | CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
 | Production revision/configuration unknown | High | Public checks treated as availability only | No deployment approval |
+| Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
+| Auth session transition/origin invariants unverified | High | #107 implements guards, explicit token purpose, cookie invalidation | No auth candidate approval until #85/#86/#107 are reconciled and green |
 | Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
 | External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
 | Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
@@ -197,6 +200,10 @@ must not be invented to satisfy a release checklist.
 - 2026-08-28: opened #106 to serialize and make Stripe checkout/cancellation
   idempotent, bound webhook bodies, and protect billing reads. CI run 33199548149
   failed before steps; Stripe SDK/API upgrade and live Tax/provider evidence remain unresolved.
+- 2026-08-28: opened #107 for same-origin auth mutations, explicit session-token
+  purpose, centralized cookie invalidation, production JWT secret enforcement, and
+  private/no-store auth responses. CI run 33203949669 failed before steps and the
+  production-container job was skipped.
 
 ## Release decision
 
