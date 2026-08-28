@@ -306,9 +306,39 @@ must not be invented to satisfy a release checklist.
   36683862 on deletion of the original compose credential. CI run 33209063455
   failed before exposing steps and skipped the container job. The candidate remains
   draft and unverified; no predecessor was closed or merged.
+- 2026-08-28: checked out #121 locally at `1cd3ab3`, installed the locked
+  dependency graph, and found seven TypeScript failures plus 26 failures across
+  nine Jest suites caused by the cumulative integration. Commit `51621f1`
+  reconciles nullable validated inputs with their database converters and brings
+  auth, settings, reporting, tenant-scope, and admin test fixtures in line with
+  the hardened runtime contracts. The exact code head then passed `npm run ci`:
+  zero high-severity dependency audit findings, lint, strict TypeScript, the
+  deterministic AI evaluation, 166 Jest suites / 1,155 tests, Prisma generation,
+  and the optimized Next.js production build. Prisma schema validation, the
+  synthetic pilot readiness preflight, and Docker Compose expansion also passed.
+- 2026-08-28: completed Codex Security diff scan
+  `61445ded-c19c-46db-9aed-023445222d65` over immutable range
+  `6938964...51621f1`. The scan accounted for all 138 security-relevant changed
+  source/deleted-source items across authentication, authorization, tenant
+  isolation, CSRF, concurrency, Stripe, document storage, cron/reporting, and
+  deployment/recovery surfaces; it completed with full coverage and zero
+  validated findings. Delegated reviewers were unavailable, so the parent
+  performed the full inventory review.
+- 2026-08-28: pushed `51621f1` to #121. GitHub Actions run 33214332534 again
+  failed before repository checkout because recent account payments failed or
+  the Actions spending limit must be increased; the container job was therefore
+  skipped. GitGuardian still reports only historical incident 36683862 on commit
+  c118789, where the original generic Compose password existed; the candidate
+  removes that value and the host-published database port. Ashbi Local CI accepted
+  the exact head and queued it while its isolated runner image was being rebuilt.
+  No merge, deployment, production database action, provider mutation, credential
+  rotation, or customer-data access occurred.
 
 ## Release decision
 
-**Not approved.** The next highest-leverage action is restoring GitHub Actions
-execution, then building and validating the exact merge candidate above. Public
-availability is not launch evidence.
+**Not approved.** Source, dependency, test, build, schema, configuration, Compose,
+and security-diff gates are now green locally. Release approval still requires
+GitHub account billing/spending restoration, independent CI/container execution,
+disposition of GitGuardian incident 36683862 and any required credential rotation,
+a disposable backup/restore and migration drill, authenticated critical-path QA,
+and live provider/monitoring evidence. Public availability is not launch evidence.
