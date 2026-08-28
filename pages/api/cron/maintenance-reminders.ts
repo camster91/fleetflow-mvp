@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { notifyMaintenanceDue } from '../../../lib/email.server'
-import { createNotification } from '../../../lib/notifications'
 import { constantTimeCompare } from '../../../lib/tokens'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -11,7 +10,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const cronSecret = req.headers['x-cron-secret']
   const configuredSecret = process.env.CRON_SECRET
-  if (typeof cronSecret !== 'string' || !configuredSecret || !constantTimeCompare(cronSecret, configuredSecret)) {
+  if (
+    typeof cronSecret !== 'string' ||
+    !configuredSecret ||
+    configuredSecret.length < 32 ||
+    !constantTimeCompare(cronSecret, configuredSecret)
+  ) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
@@ -37,22 +41,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, remindersSent: 0 })
     }
 
-    // Create notifications in parallel
-    await Promise.all(
+    // Atomically claim each task and create its durable in-app notification.
+    // A concurrent invocation can observe the same candidate list, but only one
+    // transaction can change reminderSentAt from null.
+    const claims = await Promise.all(
       tasks.map((task) =>
-        createNotification({
-          userId: task.ownerId,
-          type: 'MAINTENANCE_DUE',
-          title: 'Maintenance Reminder',
-          message: `"${task.title}" for ${task.vehicleName || 'vehicle'} is due on ${task.dueDate.toLocaleDateString()}`,
-          data: { taskId: task.id, vehicleName: task.vehicleName, dueDate: task.dueDate },
+        prisma.$transaction(async (tx) => {
+          const claimed = await tx.maintenanceTask.updateMany({
+            where: {
+              id: task.id,
+              completed: false,
+              reminderSentAt: null,
+            },
+            data: { reminderSentAt: now },
+          })
+          if (claimed.count !== 1) return false
+
+          await tx.notification.create({
+            data: {
+              userId: task.ownerId,
+              type: 'MAINTENANCE_DUE',
+              title: 'Maintenance Reminder',
+              message: `"${task.title}" for ${task.vehicleName || 'vehicle'} is due on ${task.dueDate.toLocaleDateString()}`,
+              data: JSON.stringify({
+                taskId: task.id,
+                vehicleName: task.vehicleName,
+                dueDate: task.dueDate,
+              }),
+            },
+          })
+          return true
         })
       )
     )
+    const claimedTasks = tasks.filter((_, index) => claims[index])
 
-    // Send emails in parallel (best-effort)
+    // Email remains best-effort, but only the invocation that claimed a task
+    // can enqueue its email.
     await Promise.allSettled(
-      tasks
+      claimedTasks
         .filter((task) => !!task.owner.email)
         .map((task) => {
           const vehicleInfo = { name: task.vehicleName || 'Unknown Vehicle' }
@@ -60,15 +87,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
     )
 
-    // Mark all reminders sent in one updateMany
-    await prisma.maintenanceTask.updateMany({
-      where: { id: { in: tasks.map((t) => t.id) } },
-      data: { reminderSentAt: now },
-    })
-
     return res.status(200).json({
       success: true,
-      remindersSent: tasks.length,
+      remindersSent: claimedTasks.length,
     })
   } catch (error) {
     console.error('Maintenance reminder cron error:', error)
