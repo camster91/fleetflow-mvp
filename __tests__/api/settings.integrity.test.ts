@@ -19,10 +19,9 @@ describe('settings API integrity controls', () => {
   })
 
   it('does not return the raw serialized preference column', () => {
-    expect(profile).toContain(
-      'const { notificationPreferences: _privatePreferences, ...safeUser } = user',
-    )
-    expect(profile).toContain('return { user: { ...safeUser, prefs }, prefs }')
+    expect(profile).toContain('const safeUser = {')
+    expect(profile).not.toContain('notificationPreferences: user.notificationPreferences')
+    expect(profile).toContain('return { user: safeUser, prefs }')
   })
 
   it('keeps unsupported avatar writes visibly disabled', () => {
