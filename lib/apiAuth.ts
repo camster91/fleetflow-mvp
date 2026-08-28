@@ -196,9 +196,12 @@ export async function resolveTenantContext(
     )
   }
 
+  const membershipRole = team.members[0]?.role as TeamRole | undefined
   const role = team.ownerId === userId
     ? 'OWNER'
-    : team.members[0]?.role as TeamRole | undefined
+    : membershipRole === 'OWNER'
+      ? undefined
+      : membershipRole
   if (!role) {
     throw new TenantContextError('TENANT_FORBIDDEN', 'Workspace access denied')
   }
@@ -331,7 +334,8 @@ export async function getTeamMemberManageContext(userId: string, memberId: strin
   const userMembership = await prisma.teamMember.findFirst({
     where: { teamId: member.teamId, userId, status: 'ACCEPTED' },
   })
-  const role = (isOwner ? 'OWNER' : userMembership?.role) as TeamRole | undefined
+  const membershipRole = userMembership?.role as TeamRole | undefined
+  const role = isOwner ? 'OWNER' : membershipRole === 'OWNER' ? undefined : membershipRole
   const canManage = !!role && canManageTeam(role)
 
   return { member, isOwner, userMembership, canManage }
