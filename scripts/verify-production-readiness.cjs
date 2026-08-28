@@ -21,7 +21,7 @@ function canonicalAppUrlIsValid(env) {
   if (!present(env, 'NEXTAUTH_URL')) return false
   try {
     const url = new URL(env.NEXTAUTH_URL)
-    return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash
+    return url.protocol === 'https:' && url.pathname === '/' && !url.username && !url.password && !url.search && !url.hash
   } catch { return false }
 }
 
