@@ -40,4 +40,34 @@ function restoreContainerName() {
   return `fleetvera-restore-${crypto.randomBytes(8).toString('hex')}`
 }
 
-module.exports = { MIN_SECRET_LENGTH, parseArgs, validateSecret, artifactNames, restoreContainerName }
+const REQUIRED_RESTORE_TABLES = ['_prisma_migrations', 'User', 'Team', 'TeamMember', 'AuditLog', 'Subscription', 'Vehicle']
+
+function validateRestoreSummary(summary) {
+  const errors = []
+  if (!summary || !Number.isInteger(summary.publicTableCount) || summary.publicTableCount < 1) {
+    errors.push('Restore contains no public tables')
+  }
+  const counts = summary && summary.criticalRowCounts
+  for (const table of REQUIRED_RESTORE_TABLES) {
+    if (!counts || !Number.isInteger(counts[table]) || counts[table] < 0) {
+      errors.push(`Restore is missing required table evidence: ${table}`)
+    }
+  }
+  if (!counts || !Number.isInteger(counts.User) || counts.User < 1) {
+    errors.push('Restore contains no application users')
+  }
+  if (!summary?.migrations || !Number.isInteger(summary.migrations.applied) || summary.migrations.applied < 1) {
+    errors.push('Restore contains no completed Prisma migrations')
+  }
+  if (!summary?.migrations || summary.migrations.failed !== 0) {
+    errors.push('Restore contains failed or unfinished Prisma migrations')
+  }
+  const integrity = summary && summary.integrity
+  for (const check of ['orphanedTeamOwners', 'orphanedTeamMembers', 'orphanedMemberUsers', 'noncanonicalOwnerMemberships']) {
+    if (!integrity || integrity[check] !== 0) errors.push(`Restore integrity check failed: ${check}`)
+  }
+  return errors
+}
+
+
+module.exports = { MIN_SECRET_LENGTH, REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, validateRestoreSummary }
