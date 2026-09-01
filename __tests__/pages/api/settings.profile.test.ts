@@ -1,15 +1,22 @@
 import { createMocks } from 'node-mocks-http';
-import handler from '../../../pages/api/settings/profile';
 
-jest.mock('../../../lib/prisma', () => ({
-  prisma: {
-    user: { findUnique: jest.fn(), update: jest.fn() },
-  },
-}));
+jest.mock('../../../lib/prisma', () => {
+  const user = { findUnique: jest.fn(), update: jest.fn() };
+  const transaction = { $queryRaw: jest.fn(), user };
+  return {
+    prisma: {
+      user,
+      $transaction: jest.fn((callback: (client: typeof transaction) => unknown) => callback(transaction)),
+    },
+  };
+});
 jest.mock('../../../lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }));
+jest.mock('../../../lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }));
+jest.mock('../../../lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(async () => true) }));
 
 import { getServerSession } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import handler from '../../../pages/api/settings/profile';
 
 const mockSession = { user: { id: 'user-1', email: 'test@test.com' } };
 const mockUser = {
@@ -21,7 +28,9 @@ const mockUser = {
   notificationPreferences: JSON.stringify({ phone: '555-9999', bio: 'Hello' }),
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe('GET /api/settings/profile', () => {
   it('returns 401 when unauthenticated', async () => {

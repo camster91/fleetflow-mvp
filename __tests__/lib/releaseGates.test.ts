@@ -126,6 +126,43 @@ describe('release quality gates', () => {
     expect(dockerfile).toContain('/app/create-admin.js ./create-admin.js')
   })
 
+  test('Compose requires explicit database credentials without publishing PostgreSQL', () => {
+    const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
+    const postgres = compose.split('\n  postgres:\n')[1]?.split('\nvolumes:')[0] || ''
+    const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
+    const requiredKey = ['POSTGRES', 'PASSWORD'].join('_')
+    const settingLines = postgres
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.startsWith(requiredKey))
+
+    expect(settingLines).toHaveLength(1)
+    expect(settingLines[0]).toContain(':?Set ')
+    expect(postgres).not.toMatch(/\n\s+ports:/)
+    expect(compose).toContain('condition: service_healthy')
+    expect(exampleEnv).toMatch(/^DATABASE_URL=$/m)
+    expect(exampleEnv).toMatch(new RegExp(`^${requiredKey}=$`, 'm'))
+  })
+
+  test('production startup verifies an explicit release mode before migrations', () => {
+    const entrypoint = fs.readFileSync(path.join(root, 'entrypoint.sh'), 'utf8')
+    const verifier = 'node ./verify-production-readiness.cjs'
+    const migration = 'npx prisma migrate deploy'
+
+    expect(entrypoint).toContain('FLEETVERA_RELEASE_MODE must be explicitly set to pilot or public')
+    expect(entrypoint).toContain('pilot|public)')
+    expect(entrypoint).toContain(verifier)
+    expect(entrypoint).toContain(migration)
+    expect(entrypoint.indexOf(verifier)).toBeLessThan(entrypoint.indexOf(migration))
+    expect(entrypoint).not.toMatch(/FLEETVERA_RELEASE_MODE[^\n]*:-pilot/)
+
+    const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
+    expect(compose).toContain('FLEETVERA_RELEASE_MODE=${FLEETVERA_RELEASE_MODE:?Set FLEETVERA_RELEASE_MODE to pilot or public}')
+
+    const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
+    expect(exampleEnv).toMatch(/^FLEETVERA_RELEASE_MODE=pilot$/m)
+  })
+
   test('passwordless auth does not ship obsolete password and verification routes', () => {
     const obsoleteRoutes = [
       'pages/api/auth/change-password.ts',
@@ -147,7 +184,7 @@ describe('release quality gates', () => {
     expect(fs.existsSync(path.join(root, 'pages/api/subscription/trial-start.ts'))).toBe(false)
   })
 
-  test('CI is singular, mandatory, and production deployment is manual', () => {
+  test('repository validation is mandatory and production deployment is manual', () => {
     const workflows = path.join(root, '.github/workflows')
     const ci = fs.readFileSync(path.join(workflows, 'ci.yml'), 'utf8')
     const deploy = fs.readFileSync(path.join(workflows, 'deploy-coolify.yml'), 'utf8')
@@ -161,8 +198,11 @@ describe('release quality gates', () => {
     expect(deploy).toContain('workflow_dispatch:')
     expect(deploy).not.toMatch(/\n\s+push:/)
     expect(deploy).toContain('environment: production')
-    expect(deploy).toContain('actions: read')
-    expect(deploy).toContain('actions/workflows/ci.yml/runs')
+    expect(deploy).toContain('checks: read')
+    expect(deploy).toContain('commits/$CONFIRMED_SHA/check-runs')
+    expect(deploy).toContain('.name == "Ashbi Local CI"')
+    expect(deploy).toContain('.head_sha == $sha')
+    expect(deploy).toContain('.status == "completed"')
     expect(deploy).toContain('conclusion == "success"')
   })
 })

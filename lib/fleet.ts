@@ -158,6 +158,20 @@ export interface Announcement {
   actionLabel?: string
 }
 
+type NullableFields<T, K extends keyof T> = Omit<Partial<T>, K> & {
+  [P in K]?: T[P] | null
+}
+
+type SOPCategoryInput = NullableFields<SOPCategory, 'description'>
+type VendingMachineInput = NullableFields<
+  VendingMachine,
+  'machineType' | 'serialNumber' | 'notes' | 'lastService' | 'nextService'
+>
+type AnnouncementInput = NullableFields<
+  Announcement,
+  'category' | 'expiresAt' | 'actionUrl' | 'actionLabel'
+>
+
 // ─── DB ↔ Client converters ──────────────────────────────────────────────────
 
 export function dbToSOPCategory(db: DbSOPCategory): SOPCategory {
@@ -170,7 +184,7 @@ export function dbToSOPCategory(db: DbSOPCategory): SOPCategory {
   }
 }
 
-export function sopCategoryToDb(cat: Partial<SOPCategory>, ownerId: string) {
+export function sopCategoryToDb(cat: SOPCategoryInput, ownerId: string) {
   return {
     name: cat.name!,
     description: cat.description ?? null,
@@ -197,7 +211,7 @@ export function dbToVendingMachine(db: DbVendingMachine): VendingMachine {
   }
 }
 
-export function vendingMachineToDb(vm: Partial<VendingMachine>, ownerId: string) {
+export function vendingMachineToDb(vm: VendingMachineInput, ownerId: string) {
   return {
     name: vm.name!,
     location: vm.location!,
@@ -226,7 +240,7 @@ export function dbToAnnouncement(db: DbAnnouncement): Announcement {
   }
 }
 
-export function announcementToDb(a: Partial<Announcement>, ownerId: string, userName?: string | null) {
+export function announcementToDb(a: AnnouncementInput, ownerId: string, userName?: string | null) {
   return {
     message: a.message!,
     priority: a.priority ?? 'low',

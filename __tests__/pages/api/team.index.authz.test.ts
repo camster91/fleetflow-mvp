@@ -89,6 +89,47 @@ describe('PUT/DELETE /api/team — authorization', () => {
     expect(prisma.teamMember.update).toHaveBeenCalled();
   });
 
+  it('rejects OWNER as an ordinary assignable role', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'owner-1', email: 'o@b.com', name: 'O', role: 'admin' },
+    });
+    const { req, res } = createMocks({
+      method: 'PUT',
+      headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      body: { memberId: 'm1', role: 'OWNER' },
+    });
+
+    await handler(req as any, res as any);
+
+    expect(res._getStatusCode()).toBe(400);
+    expect(prisma.teamMember.update).not.toHaveBeenCalled();
+  });
+
+  it('protects the canonical owner even when its membership role has drifted', async () => {
+    (getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'owner-1', email: 'o@b.com', name: 'O', role: 'admin' },
+    });
+    (prisma.teamMember.findUnique as jest.Mock).mockResolvedValue({
+      id: 'owner-membership',
+      teamId: 't1',
+      role: 'ADMIN',
+      userId: 'owner-1',
+      team: { ownerId: 'owner-1' },
+    });
+    (prisma.teamMember.findFirst as jest.Mock).mockResolvedValue(null);
+
+    const { req, res } = createMocks({
+      method: 'PUT',
+      headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+      body: { memberId: 'owner-membership', role: 'MEMBER' },
+    });
+
+    await handler(req as any, res as any);
+
+    expect(res._getStatusCode()).toBe(403);
+    expect(prisma.teamMember.update).not.toHaveBeenCalled();
+  });
+
   it('forbids deleting arbitrary members without permission', async () => {
     (getServerSession as jest.Mock).mockResolvedValue({
       user: { id: 'user-1', email: 'a@b.com', name: 'A', role: 'user' },

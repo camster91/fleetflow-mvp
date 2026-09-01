@@ -25,8 +25,8 @@ jest.mock('next/link', () => {
   };
 });
 
-// Mock next-auth
-jest.mock('next-auth/react', () => ({
+// Mock the application's custom session client.
+jest.mock('./lib/session', () => ({
   useSession: () => ({
     data: {
       user: {
@@ -39,6 +39,7 @@ jest.mock('next-auth/react', () => ({
     },
     status: 'authenticated',
   }),
+  sendCode: jest.fn(),
   signIn: jest.fn(),
   signOut: jest.fn(),
   SessionProvider: ({ children }) => children,

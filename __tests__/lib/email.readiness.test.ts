@@ -1,4 +1,4 @@
-import { validateEmailReadiness } from '@/lib/email'
+import { getEmailAppUrl, validateEmailReadiness } from '@/lib/email'
 
 const readyEnv = {
   NODE_ENV: 'production',
@@ -29,4 +29,17 @@ it('reports every missing readiness input without throwing', () => {
   const result = validateEmailReadiness({ NODE_ENV: 'production' } as NodeJS.ProcessEnv)
   expect(result.ready).toBe(false)
   expect(result.errors).toHaveLength(5)
+})
+
+it.each([
+  'http://fleet.example.com',
+  'https://user:pass@fleet.example.com',
+  'https://fleet.example.com?redirect=evil',
+  'https://fleet.example.com#fragment',
+])('rejects unsafe email application URL %s', value => {
+  expect(getEmailAppUrl({ NEXTAUTH_URL: value } as NodeJS.ProcessEnv)).toBeNull()
+})
+
+it('normalizes email links to the configured HTTPS origin', () => {
+  expect(getEmailAppUrl({ NEXTAUTH_URL: 'https://fleet.example.com/path/' } as NodeJS.ProcessEnv)).toBe('https://fleet.example.com')
 })

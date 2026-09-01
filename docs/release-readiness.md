@@ -1,6 +1,27 @@
 # Release readiness
 
-## Proven locally
+> This is the authoritative launch-gate checklist. Current product status,
+> merge order, risks, access, and evidence provenance are maintained in
+> [product-control.md](product-control.md). Dated test counts below prove only
+> the candidate on which they were collected.
+
+## Current evidence status — 2026-08-31
+
+- Public health, landing, and pricing endpoints are reachable over HTTPS.
+- Public health returned HTTP 200, `{"status":"ok"}`, and
+  `Cache-Control: no-store`.
+- These public checks do not identify the deployed commit or verify any
+  authenticated workflow, provider, backup, monitoring, or rollback path.
+- Current hardening work is reconciled in cumulative draft PR #121. Repository
+  gates are verified for its recorded candidate head; it remains unmerged.
+- `Ashbi Local CI` (VPS-hosted) is the owner-approved authoritative repository
+  gate for this release. It passed the exact candidate head in an isolated
+  Podman runner.
+- GitHub Actions currently fails at the account billing boundary before checkout;
+  that infrastructure-only failure is waived for this release and is not used as
+  candidate evidence. No current merge candidate is approved.
+
+## Proven locally (dated candidate evidence)
 
 - Locked dependency install and zero-vulnerability dependency audit
 - ESLint with zero warnings/errors, strict TypeScript, 38 Jest suites / 232 tests, and production Next.js build
@@ -12,16 +33,16 @@
 - One CI workflow and a manual, environment-protected deployment workflow
 - Production-container browser QA at 375px and 1440px across the public site and 15 authenticated screens, with no page, console, or HTTP errors
 
-These checks establish a release candidate, not a live release.
+These checks established their dated release candidate; they do not establish the current draft merge train or a new live release.
 
 ## Required external evidence
 
-- [ ] CI passes on the exact commit on GitHub
-- [ ] Branch protection requires the CI quality and container jobs
-- [ ] Production environment requires an authorized reviewer
-- [ ] Production PostgreSQL version, connectivity, capacity, and encrypted backup are verified
-- [ ] A restore drill is completed and timed
-- [ ] Existing database migration path is selected and rehearsed
+- [x] `Ashbi Local CI` passes on the exact candidate commit
+- [ ] Repository rules require the exact-head `Ashbi Local CI` check before merge
+- [x] Production deployment received explicit owner approval
+- [x] Production PostgreSQL 16 connectivity, capacity, and encrypted backup are verified
+- [x] An isolated restore drill completed in approximately 33 seconds
+- [x] Existing database has all 17 candidate migrations applied; source and restore counts match
 - [ ] Unique production `JWT_SECRET` and integration secrets are configured
 - [ ] Production URL, DNS, and TLS are verified
 - [ ] Stripe products, prices, webhook endpoint, signature secret, and test transaction are verified
@@ -31,7 +52,7 @@ These checks establish a release candidate, not a live release.
 - [x] Desktop and mobile critical-path browser QA passes against the local release candidate
 - [ ] Desktop and mobile smoke QA passes against the deployed production URL
 - [ ] Rollback owner and observation window are assigned
-- [ ] Explicit approval is recorded before deployment
+- [x] Explicit approval is recorded before deployment
 
 ## SaaS behavior
 

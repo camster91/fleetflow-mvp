@@ -4,16 +4,21 @@ import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { rateLimitMiddleware } from '../../../../lib/rateLimit';
-import { parse, serialize } from 'cookie';
+import { parse } from 'cookie';
 import { signToken, verifyToken } from '../../../../lib/auth';
+import { assertSameOrigin } from '../../../../lib/apiAuth';
+import { establishSessionCookies } from '../../../../lib/authCookies';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (!assertSameOrigin(req, res)) return;
 
   // Apply rate limiting
   const allowed = await rateLimitMiddleware(req, res, 'twoFactor');
@@ -61,36 +66,42 @@ export default async function handler(
     let isBackupCode = false;
     
     if (!verified) {
-      // Check if it's a backup code
-      const backupCodes = user.backupCodes ? JSON.parse(user.backupCodes) : [];
-      
-      let backupCodeValid = false;
+      const storedBackupCodes = user.backupCodes;
+      const backupCodes = storedBackupCodes ? JSON.parse(storedBackupCodes) : [];
+
       let usedBackupCodeIndex = -1;
-      
+
       for (let i = 0; i < backupCodes.length; i++) {
         if (bcrypt.compareSync(code, backupCodes[i])) {
-          backupCodeValid = true;
           usedBackupCodeIndex = i;
           isBackupCode = true;
           break;
         }
       }
 
-      if (!backupCodeValid) {
-        return res.status(400).json({ 
+      if (usedBackupCodeIndex < 0 || !storedBackupCodes) {
+        return res.status(400).json({
           error: 'Invalid verification code',
           code: 'INVALID_CODE'
         });
       }
 
-      // Remove used backup code
-      if (usedBackupCodeIndex >= 0) {
-        backupCodes.splice(usedBackupCodeIndex, 1);
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            backupCodes: JSON.stringify(backupCodes),
-          },
+      backupCodes.splice(usedBackupCodeIndex, 1);
+      const consumed = await prisma.user.updateMany({
+        where: {
+          id: userId,
+          backupCodes: storedBackupCodes,
+          twoFactorEnabled: true,
+        },
+        data: {
+          backupCodes: JSON.stringify(backupCodes),
+        },
+      });
+
+      if (consumed.count !== 1) {
+        return res.status(400).json({
+          error: 'Invalid verification code',
+          code: 'INVALID_CODE'
         });
       }
     }
@@ -112,17 +123,7 @@ export default async function handler(
       role: user.role,
       purpose: 'session',
     });
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      path: '/',
-    };
-    res.setHeader('Set-Cookie', [
-      serialize('token', sessionToken, { ...cookieOptions, maxAge: 7 * 24 * 60 * 60 }),
-      serialize('two_factor_challenge', '', { ...cookieOptions, maxAge: 0 }),
-      serialize('fleetflow_team', '', { ...cookieOptions, maxAge: 0 }),
-    ]);
+    res.setHeader('Set-Cookie', establishSessionCookies(sessionToken));
 
     return res.status(200).json({
       message: '2FA verification successful',

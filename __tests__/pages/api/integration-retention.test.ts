@@ -11,8 +11,10 @@ jest.mock('@/lib/prisma', () => ({ prisma: {
 import handler from '@/pages/api/cron/integration-retention'
 import { prisma } from '@/lib/prisma'
 
+const secret = 'r'.repeat(32)
+
 describe('integration retention cron', () => {
-  beforeEach(() => { jest.clearAllMocks(); process.env.CRON_SECRET = 'retention-secret' })
+  beforeEach(() => { jest.clearAllMocks(); process.env.CRON_SECRET = secret })
   it('rejects unauthenticated cleanup without touching tenant-independent data', async () => {
     const { req, res } = createMocks({ method: 'POST' })
     await handler(req as any, res as any)
@@ -20,7 +22,7 @@ describe('integration retention cron', () => {
     expect((prisma as any).$transaction).not.toHaveBeenCalled()
   })
   it('deletes only bounded expired integration data in one transaction', async () => {
-    const { req, res } = createMocks({ method: 'POST', headers: { 'x-cron-secret': 'retention-secret' } })
+    const { req, res } = createMocks({ method: 'POST', headers: { 'x-cron-secret': secret } })
     await handler(req as any, res as any)
     expect(res.statusCode).toBe(200)
     expect(JSON.parse(res._getData()).deleted).toEqual({ rateLimits: 2, oauthStates: 3, syncJobs: 4, stagedRecords: 5 })

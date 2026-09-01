@@ -1,6 +1,6 @@
 /**
  * AuthContext — lightweight provider for role utilities.
- * Authentication is handled by NextAuth (useSession from next-auth/react).
+ * Authentication is handled by the custom session client in lib/session.tsx.
  * This context is retained for rolePermissions / roleDescriptions exports
  * and as a compatibility shim for any future consumers.
  */

@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToVendingMachine, vendingMachineToDb, logActivity } from '../../../lib/fleet'
-import { requireTenantContext } from '../../../lib/apiAuth'
+import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
+import { parseBody, vendingMachineCreateSchema } from '../../../lib/validation'
 import { canManageVendingMachines, canViewBusinessData } from '../../../lib/permissions'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,6 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { session, tenant } = context
   const userId = session.user.id
+  if (!assertSameOrigin(req, res)) return
 
   if (req.method === 'GET') {
     if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -25,12 +27,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageVendingMachines(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const data = { ...vendingMachineToDb(req.body, tenant.ownerId), ownerId: tenant.ownerId, teamId: tenant.teamId }
-    const machine = await prisma.vendingMachine.create({ data })
-    await logActivity(prisma, {
-      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-      action: 'created', entityType: 'vending', entityId: machine.id, entityName: machine.name,
-      description: `Vending machine "${machine.name}" at ${machine.location} was added`,
+    const parsed = parseBody(vendingMachineCreateSchema, req.body)
+    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
+    const data = { ...vendingMachineToDb(parsed.data, tenant.ownerId), ownerId: tenant.ownerId, teamId: tenant.teamId }
+    const machine = await prisma.$transaction(async (tx) => {
+      const created = await tx.vendingMachine.create({ data })
+      await logActivity(tx, {
+        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
+        action: 'created', entityType: 'vending', entityId: created.id, entityName: created.name,
+        description: `Vending machine "${created.name}" at ${created.location} was added`,
+      })
+      return created
     })
     return res.status(201).json(dbToVendingMachine(machine))
   }
