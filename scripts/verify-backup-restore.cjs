@@ -9,7 +9,7 @@ const { spawn, spawnSync } = require('child_process')
 const { createReadStream, createWriteStream, mkdirSync, renameSync, statSync, unlinkSync, writeFileSync } = require('fs')
 const { createHash, randomBytes } = require('crypto')
 const path = require('path')
-const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, validateRestoreSummary } = require('./backup-restore-lib.cjs')
+const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, restoreReadinessArgs, validateRestoreSummary } = require('./backup-restore-lib.cjs')
 
 function fail(message) { throw new Error(message) }
 function run(command, args, options = {}) {
@@ -19,11 +19,11 @@ function run(command, args, options = {}) {
 }
 function waitForPostgres(container) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
-    const result = spawnSync('docker', ['exec', container, 'pg_isready', '-U', 'restore', '-d', 'restore'], { encoding: 'utf8' })
-    if (result.status === 0) return
+    const result = spawnSync('docker', restoreReadinessArgs(container), { encoding: 'utf8' })
+    if (result.status === 0 && result.stdout.trim() === '1') return
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000)
   }
-  fail('Disposable restore database did not become ready')
+  fail('Disposable restore database did not become queryable')
 }
 function pipeDumpToEncryptedBackup(sourceContainer, backupPath) {
   const dump = spawn('docker', ['exec', sourceContainer, 'sh', '-ec', 'pg_dump --format=custom --no-owner --no-privileges -U "$POSTGRES_USER" "$POSTGRES_DB"'])

@@ -1,4 +1,4 @@
-const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, validateRestoreSummary } = require('@/scripts/backup-restore-lib.cjs')
+const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, restoreReadinessArgs, validateRestoreSummary } = require('@/scripts/backup-restore-lib.cjs')
 
 describe('backup and isolated restore verifier safety contract', () => {
   test('requires explicit safe source and absolute backup directory', () => {
@@ -16,6 +16,13 @@ describe('backup and isolated restore verifier safety contract', () => {
     expect(artifact.baseName).toMatch(/^fleetvera-postgres-20260813T120000000Z-[a-f0-9]{12}\.dump\.enc$/)
     expect(artifact.metadataName).toBe(`${artifact.baseName}.json`)
     expect(restoreContainerName()).toMatch(/^fleetvera-restore-[a-f0-9]{16}$/)
+  })
+  test('waits for the exact restore database to accept a query', () => {
+    expect(restoreReadinessArgs('fleetvera-restore-deadbeef')).toEqual([
+      'exec', 'fleetvera-restore-deadbeef', 'psql', '-v', 'ON_ERROR_STOP=1',
+      '-U', 'restore', '-d', 'restore', '-At', '-c', 'SELECT 1',
+    ])
+    expect(() => restoreReadinessArgs('restore;rm')).toThrow(/unsupported/)
   })
   test('requires migration, core-record, and ownership integrity evidence', () => {
     const valid = {

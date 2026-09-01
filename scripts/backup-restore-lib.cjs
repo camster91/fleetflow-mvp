@@ -40,6 +40,11 @@ function restoreContainerName() {
   return `fleetvera-restore-${crypto.randomBytes(8).toString('hex')}`
 }
 
+function restoreReadinessArgs(container) {
+  if (!SAFE_CONTAINER.test(container)) throw new Error('restore container contains unsupported characters')
+  return ['exec', container, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'restore', '-d', 'restore', '-At', '-c', 'SELECT 1']
+}
+
 const REQUIRED_RESTORE_TABLES = ['_prisma_migrations', 'User', 'Team', 'TeamMember', 'AuditLog', 'Subscription', 'Vehicle']
 
 function validateRestoreSummary(summary) {
@@ -70,4 +75,4 @@ function validateRestoreSummary(summary) {
 }
 
 
-module.exports = { MIN_SECRET_LENGTH, REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, validateRestoreSummary }
+module.exports = { MIN_SECRET_LENGTH, REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, restoreReadinessArgs, validateRestoreSummary }
