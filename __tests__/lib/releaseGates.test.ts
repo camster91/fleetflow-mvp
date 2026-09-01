@@ -184,7 +184,7 @@ describe('release quality gates', () => {
     expect(fs.existsSync(path.join(root, 'pages/api/subscription/trial-start.ts'))).toBe(false)
   })
 
-  test('CI is singular, mandatory, and production deployment is manual', () => {
+  test('repository validation is mandatory and production deployment is manual', () => {
     const workflows = path.join(root, '.github/workflows')
     const ci = fs.readFileSync(path.join(workflows, 'ci.yml'), 'utf8')
     const deploy = fs.readFileSync(path.join(workflows, 'deploy-coolify.yml'), 'utf8')
@@ -198,8 +198,11 @@ describe('release quality gates', () => {
     expect(deploy).toContain('workflow_dispatch:')
     expect(deploy).not.toMatch(/\n\s+push:/)
     expect(deploy).toContain('environment: production')
-    expect(deploy).toContain('actions: read')
-    expect(deploy).toContain('actions/workflows/ci.yml/runs')
+    expect(deploy).toContain('checks: read')
+    expect(deploy).toContain('commits/$CONFIRMED_SHA/check-runs')
+    expect(deploy).toContain('.name == "Ashbi Local CI"')
+    expect(deploy).toContain('.head_sha == $sha')
+    expect(deploy).toContain('.status == "completed"')
     expect(deploy).toContain('conclusion == "success"')
   })
 })
