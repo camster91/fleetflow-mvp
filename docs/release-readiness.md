@@ -5,21 +5,29 @@
 > [product-control.md](product-control.md). Dated test counts below prove only
 > the candidate on which they were collected.
 
-## Current evidence status — 2026-08-31
+## Current evidence status — 2026-09-01
 
 - Public health, landing, and pricing endpoints are reachable over HTTPS.
 - Public health returned HTTP 200, `{"status":"ok"}`, and
   `Cache-Control: no-store`.
 - These public checks do not identify the deployed commit or verify any
   authenticated workflow, provider, backup, monitoring, or rollback path.
-- Current hardening work is reconciled in cumulative draft PR #121. Repository
-  gates are verified for its recorded candidate head; it remains unmerged.
+- Cumulative hardening PR #121 merged by fast-forward at exact validated SHA
+  `9bc2f55e6c8275dfeb09753105a151221aee98dd`. Production- and
+  development-dependency PRs #122 and #123 subsequently merged after fresh
+  exact-head Ashbi validation; `master` is now
+  `07b342d092190607bf92b6c9e20b868171397a01`.
+- All 36 represented predecessor drafts were closed as superseded by #121. The
+  repository has no open pull requests.
 - `Ashbi Local CI` (VPS-hosted) is the owner-approved authoritative repository
   gate for this release. It passed the exact candidate head in an isolated
   Podman runner.
 - GitHub Actions currently fails at the account billing boundary before checkout;
   that infrastructure-only failure is waived for this release and is not used as
-  candidate evidence. No current merge candidate is approved.
+  candidate evidence. Ashbi is the authoritative repository gate.
+- Production remains on healthy image `fleetflow:3a5fa66`; the merged candidate
+  has not been deployed because the read-only production preflight fails closed
+  only on a missing or invalid `NEXT_PUBLIC_SENTRY_DSN`.
 
 ## Proven locally (dated candidate evidence)
 
@@ -33,7 +41,8 @@
 - One CI workflow and a manual, environment-protected deployment workflow
 - Production-container browser QA at 375px and 1440px across the public site and 15 authenticated screens, with no page, console, or HTTP errors
 
-These checks established their dated release candidate; they do not establish the current draft merge train or a new live release.
+These checks and the current exact-head Ashbi result establish the merged source
+candidate; they do not establish a new live release.
 
 ## Required external evidence
 
@@ -43,8 +52,9 @@ These checks established their dated release candidate; they do not establish th
 - [x] Production PostgreSQL 16 connectivity, capacity, and encrypted backup are verified
 - [x] An isolated restore drill completed in approximately 33 seconds
 - [x] Existing database has all 17 candidate migrations applied; source and restore counts match
-- [ ] Unique production `JWT_SECRET` and integration secrets are configured
-- [ ] Production URL, DNS, and TLS are verified
+- [x] Read-only production preflight verifies the required core, authentication,
+  cron, action-signing, and email-encryption configuration without revealing values
+- [x] Production URL, DNS, and TLS are verified
 - [ ] Stripe products, prices, webhook endpoint, signature secret, and test transaction are verified
 - [ ] Email domain authentication and delivery are verified
 - [ ] Sentry/monitoring and alert destination are verified; use unauthenticated `GET /api/health` as the no-store database-readiness target and record the monitor owner

@@ -1,8 +1,8 @@
 # Fleetvera product control
 
-**Status date:** 2026-08-31 (America/Toronto)
-**Repository:** `camster91/fleetflow-mvp`  
-**Current default-branch commit inspected:** `6938964a1fc64eab8d3f3e89ca8333c73f26476d`  
+**Status date:** 2026-09-01 (America/Toronto)
+**Repository:** `camster91/fleetflow-mvp`
+**Merged source baseline inspected:** `07b342d092190607bf92b6c9e20b868171397a01`
 **Status:** release hardening in progress; public launch not approved
 
 This is the authoritative product-control index. Use
@@ -25,21 +25,22 @@ evidence.
 
 ## Evidence ledger
 
-### Verified current on 2026-08-28
+### Verified current on 2026-09-01
 
-- GitHub default branch is `master` at `6938964a`.
+- GitHub default branch is `master` at `07b342d0` after exact-SHA fast-forward
+  merges of #121, #122, and #123.
 - Public `GET https://fleetflow.ashbi.ca/api/health` returned HTTP 200,
   `{"status":"ok"}`, and `Cache-Control: no-store`.
 - The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
 - The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
   yearly, with invitation-only workspace creation.
-- Draft PRs #78 through #121 contain unmerged security, concurrency,
-  configuration, operations, billing, product-control, and reliability changes.
-  PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
-  focused PostgreSQL-default remediation.
-- `Ashbi Local CI` check 98995157123 passed exact candidate head `ee57ed0` in the
-  reviewed isolated Podman profile. The owner selected this as the authoritative
-  CI gate for this release.
+- Cumulative PR #121 reconciled the security, concurrency, configuration,
+  operations, billing, product-control, and reliability work, passed Ashbi, and
+  merged at exact validated SHA `9bc2f55e`. Its 36 predecessor drafts are closed
+  as superseded; there are no open pull requests.
+- Production-dependency PR #122 and development-dependency PR #123 were each
+  updated onto current `master`, passed fresh exact-head `Ashbi Local CI`, and
+  merged by fast-forward. Check 99842776108 passed final head `07b342d0`.
 - GitHub Actions fails before checkout at the account billing boundary and skips
   its production-container job. That infrastructure-only result is waived for
   this release and is not treated as candidate evidence.
@@ -54,15 +55,13 @@ evidence.
   does not prove authenticated workflows, tenant isolation, provider delivery,
   durable backups, monitoring, or rollback readiness.
 
-### Unknown or unavailable
+### Remaining unknown or unavailable
 
-- The production image was observed read-only as `fleetflow:3a5fa66`; its full
-  environment configuration and source relation remain unverified.
-- Exact-candidate container startup, migration, recovery, and authenticated
-  browser evidence. Exact-head `Ashbi Local CI` plus local audit, typecheck,
-  tests, and production build are green.
-- Current production backup retention and a timed isolated restore using the
-  retained backup.
+- Production is healthy on `fleetflow:3a5fa66`; it has not been changed to the
+  merged candidate. A read-only production preflight validates every required
+  core/authentication/cron/action-signing/email-encryption value except a valid
+  `NEXT_PUBLIC_SENTRY_DSN`.
+- Authenticated production browser evidence for the merged candidate.
 - Authenticated desktop/mobile smoke results against the deployed candidate.
 - Stripe webhook/Portal/price/restricted-key evidence, Stripe Tax registration
   status, Mailgun, OAuth, document scanner/extractor, monitoring, and alert
@@ -76,12 +75,12 @@ evidence.
 
 | Capability | Current evidence | Approval or owner action |
 |---|---|---|
-| Private GitHub repository | Read/write connector available; drafts only | Merge and production release require explicit approval |
+| Private GitHub repository | #121-#123 merged; no open pull requests | Further merges and production release require explicit approval |
 | `Ashbi Local CI` (VPS-hosted) | Exact-head check passed in the reviewed isolated Podman profile | Owner-approved authoritative CI gate for this release |
 | GitHub Actions | Runs fail at the account billing boundary before checkout | Waived for this release; no spend change was made |
-| Local checkout | Clean Fleetvera candidate checkout is available | Merge remains subject to explicit approval |
+| Local checkout | Clean Fleetvera checkout at merged source is available | Further merges remain subject to explicit approval |
 | Public deployment | Read-only HTTPS checks available | Production mutation requires explicit approval |
-| Production host/database | No current authenticated access in this work cycle | Owner grants narrowly scoped access for approved verification |
+| Production host/database | Read-only configuration/database verification and an approved disposable restore drill completed | Production mutation remains limited to the approved release action |
 | Stripe/Mailgun/OAuth | Configuration and delivery unverified | Owner supplies approved sandbox/live evidence and credentials |
 | Monitoring/analytics/support | No current operational evidence | Owner identifies systems and grants read-only access |
 | Customers/pilot | No direct evidence available | Owner recruits/approves pilot and data permissions |
@@ -91,8 +90,8 @@ test fixtures.
 
 ## Primary objective
 
-Validate exact cumulative candidate #121 from the draft hardening work using the
-owner-approved `Ashbi Local CI` gate and the remaining release evidence.
+Deploy and validate the merged exact-head candidate using the owner-approved
+`Ashbi Local CI` gate and the remaining external release evidence.
 
 Acceptance criteria:
 
@@ -111,24 +110,25 @@ Acceptance criteria:
 
 | Priority | Outcome | Evidence / acceptance | Status |
 |---|---|---|---|
-| P0 | Exact-head CI | `Ashbi Local CI` reviewed profile passes on candidate | Complete on the current PR head; rerun after any commit |
-| P0 | Reconcile tenant/auth/concurrency drafts | Merge train below rebased, reviewed, and green without lost invariants | In progress |
-| P0 | Prove data recovery | Retained encrypted backup restored in isolation; elapsed time and integrity checks recorded | Proposed |
-| P0 | Prove production configuration | Read-only preflight passes without revealing values; migration path rehearsed | Proposed |
+| P0 | Exact-head CI | `Ashbi Local CI` reviewed profile passes on candidate | Complete on source baseline `07b342d0`; rerun after any commit |
+| P0 | Reconcile tenant/auth/concurrency drafts | Merge train below rebased, reviewed, and green without lost invariants | Complete via #121; predecessors closed |
+| P0 | Prove data recovery | Retained encrypted backup restored in isolation; elapsed time and integrity checks recorded | Complete; approximately 33 seconds with source/restore parity |
+| P0 | Prove production configuration | Read-only preflight passes without revealing values; migration path rehearsed | Blocked only by valid `NEXT_PUBLIC_SENTRY_DSN` |
 | P0 | Prove authenticated critical paths | Owner, dispatcher, technician, driver, and viewer smoke journeys pass on desktop/mobile | Proposed |
 | P0 | Prove external providers | Stripe, email, document, OAuth, monitoring, and alert evidence attached | Proposed |
-| P1 | Reconcile operator documentation | #80-#82 plus this control record reviewed; stale instructions marked historical | In progress |
+| P1 | Reconcile operator documentation | #80-#82 plus this control record reviewed; stale instructions marked historical | Complete via #120/#121 |
 | P1 | Harden repository governance | PR review, no force-push/deletion, required up-to-date checks, and constrained bypass | Proposed; settings change needs approval |
 | P1 | Complete accessibility/performance evidence | WCAG critical paths plus current LCP/INP/CLS thresholds measured | Proposed |
 | P1 | Run controlled pilot | Written permission, onboarding, four-week evidence, incident/support log | Owner-dependent |
 | P2 | Validate positioning and pricing | Current competitor research, customer interviews, unit economics, decision rule | Researched only; not validated |
 
-## Draft merge train
+## Completed merge train
 
 #121 is the exact cumulative candidate: 173 changed paths, matching the union of
 #118, #119, #120, #90, #115, #116, and #106 with no missing, unexpected, or
-per-file patch mismatches. Its recorded repository gates are verified, but it is
-still a draft and has not been released.
+per-file patch mismatches. It passed the full Ashbi gate and merged by
+fast-forward at exact validated SHA `9bc2f55e`; all represented predecessors are
+closed as superseded. It has not been deployed.
 The entries below document its represented groups and supersession trail.
 
 1. Operational foundations and product control: #118 is the cumulative #105 +
@@ -161,21 +161,20 @@ The entries below document its represented groups and supersession trail.
    serialized/idempotent Stripe lifecycle hardening. Verify the supported Stripe
    SDK/API upgrade separately after lockfile regeneration and executable CI.
 
-Before merging, rebase each logical group onto the candidate, resolve conflicts,
-run focused tests, then run the full release gate. Do not merge drafts merely
-because GitHub reports them mergeable.
+This section is retained as the reconciliation record. Future candidates must
+still be updated onto current `master` and pass the full exact-head release gate.
 
 ## Risk register
 
 | Risk | Severity | Current control | Release consequence |
 |---|---|---|---|
 | GitHub-hosted CI cannot execute repository steps | Medium | Owner-approved `Ashbi Local CI` exact-head gate | Do not use the GitHub billing failure as candidate evidence |
-| Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
-| Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #118 product-control, configuration, database, and startup gates | No deployment approval |
-| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #118 cumulatively retains #111's remediation with #80/#108 runtime controls and #105 release governance | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
+| Many independent drafts can conflict or omit invariants | Resolved for #121 | Exact union reconciliation, full gate, and predecessor closure | Reapply the same discipline to future candidates |
+| Production candidate not deployed | High | Healthy previous image retained; preflight and rollback evidence collected | Do not deploy until monitoring configuration passes |
+| Historical default PostgreSQL credential | Resolved for active database credential | Non-disclosing comparison proved the historical value is not active; candidate removes it and the host-published port | Preserve the recorded disposition |
 | Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
-| Auth session transition/origin invariants unverified | High | #119 cumulatively reconciles tenant/login/session/2FA boundaries and privileged operations | No auth candidate approval until #119 is independently reviewed and green |
-| Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
+| Auth session transition/origin invariants | Controlled in merged candidate | #119/#121 reconciliation and exact-head full gate | Reverify in authenticated production smoke QA |
+| Backup retention and timed restore | Controlled for deployment | Encrypted retained backup restored with exact source/restore parity in approximately 33 seconds | Repeat before material future migrations |
 | External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
 | Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
 | Repository rules allow broad bypass and omit review protections | High | Documented for owner decision | No unattended release |
@@ -353,6 +352,14 @@ must not be invented to satisfy a release checklist.
   ownership/reference integrity checks. The encrypted artifact is retained on
   the VPS and off-VPS locally; its passphrase is stored separately in macOS
   Keychain.
+- 2026-09-01: exact-head Ashbi check 99815882135 passed candidate
+  `9bc2f55e`; #121 was marked ready and merged by fast-forward so `master`
+  retained the validated SHA. All 36 represented predecessor drafts were then
+  closed as superseded, leaving no hidden parallel merge train.
+- 2026-09-01: dependency PRs #122 and #123 were updated sequentially onto the
+  current default branch. Each passed a fresh exact-head Ashbi gate before an
+  exact-SHA fast-forward merge. Final source head `07b342d0` passed Ashbi check
+  99842776108. Production remained unchanged.
 
 ## Release decision
 
