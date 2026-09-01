@@ -1,20 +1,23 @@
 import { createMocks } from 'node-mocks-http';
-import handler from '../../../pages/api/settings/notifications';
 
-// Mock prisma
-jest.mock('../../../lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
+jest.mock('../../../lib/prisma', () => {
+  const user = { findUnique: jest.fn(), update: jest.fn() };
+  const transaction = { $queryRaw: jest.fn(), user };
+  return {
+    prisma: {
+      user,
+      $transaction: jest.fn((callback: (client: typeof transaction) => unknown) => callback(transaction)),
     },
-  },
-}));
+  };
+});
 
 jest.mock('../../../lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }));
+jest.mock('../../../lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }));
+jest.mock('../../../lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(async () => true) }));
 
 import { getServerSession } from '../../../lib/auth';
 import { prisma } from '../../../lib/prisma';
+import handler from '../../../pages/api/settings/notifications';
 
 const mockSession = { user: { id: 'user-1', email: 'test@test.com' } };
 
@@ -42,7 +45,7 @@ describe('GET /api/settings/notifications', () => {
 
   it('returns saved notification settings', async () => {
     (getServerSession as jest.Mock).mockResolvedValue(mockSession);
-    const saved = { vehicle_added: { email: true, push: false } };
+    const saved = { emailDeliveries: true, pushDeliveries: false };
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
       notificationPreferences: JSON.stringify({ notificationSettings: saved }),
     });
@@ -81,7 +84,7 @@ describe('PUT /api/settings/notifications', () => {
     (getServerSession as jest.Mock).mockResolvedValue(mockSession);
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ notificationPreferences: null });
     (prisma.user.update as jest.Mock).mockResolvedValue({});
-    const settings = { vehicle_added: { email: true, push: false } };
+    const settings = { emailDeliveries: true, pushDeliveries: false };
     const { req, res } = createMocks({ method: 'PUT', body: { notificationSettings: settings } });
     await handler(req as any, res as any);
     expect(res._getStatusCode()).toBe(200);
@@ -94,20 +97,21 @@ describe('PUT /api/settings/notifications', () => {
     });
   });
 
-  it('merges with existing preferences (does not overwrite other fields)', async () => {
+  it('merges with supported existing preferences and drops unknown stored keys', async () => {
     (getServerSession as jest.Mock).mockResolvedValue(mockSession);
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      notificationPreferences: JSON.stringify({ phone: '555-1234', otherKey: 'value' }),
+      notificationPreferences: JSON.stringify({ phone: '555-1234', bio: 'Dispatch lead', otherKey: 'value' }),
     });
     (prisma.user.update as jest.Mock).mockResolvedValue({});
-    const settings = { maintenance_due: { email: true, push: true } };
+    const settings = { emailMaintenance: true, pushMaintenance: true };
     const { req, res } = createMocks({ method: 'PUT', body: { notificationSettings: settings } });
     await handler(req as any, res as any);
     // Verify the saved JSON preserves existing keys
     const savedArg = (prisma.user.update as jest.Mock).mock.calls[0][0];
     const savedPrefs = JSON.parse(savedArg.data.notificationPreferences);
     expect(savedPrefs.phone).toBe('555-1234');
-    expect(savedPrefs.otherKey).toBe('value');
+    expect(savedPrefs.bio).toBe('Dispatch lead');
+    expect(savedPrefs.otherKey).toBeUndefined();
     expect(savedPrefs.notificationSettings).toEqual(settings);
   });
 

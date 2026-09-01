@@ -10,6 +10,7 @@ jest.mock('@/lib/rateLimit', () => ({
   getClientIP: jest.fn(() => '127.0.0.1'),
   rateLimitMiddleware: jest.fn(async () => true),
 }))
+jest.mock('@/lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }))
 jest.mock('@/lib/tokens', () => ({
   generateNumericCode: jest.fn(() => '123456'),
   hashToken: jest.fn(() => 'hashed-login-token'),
@@ -29,6 +30,7 @@ jest.mock('@/lib/authResponseTiming', () => ({
 import handler from '@/pages/api/auth/send-code'
 import { prisma } from '@/lib/prisma'
 import { sendLoginCodeEmail } from '@/lib/email'
+import { assertSameOrigin } from '@/lib/apiAuth'
 import {
   awaitEmailDeliveryWithinTimeout,
   ensureMinimumResponseDuration,
@@ -38,6 +40,7 @@ import {
 describe('POST /api/auth/send-code', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(assertSameOrigin as jest.Mock).mockReturnValue(true)
     ;(awaitEmailDeliveryWithinTimeout as jest.Mock).mockImplementation(
       async (delivery: Promise<unknown>) => {
         try { return { status: 'delivered', value: await delivery } }
@@ -49,6 +52,22 @@ describe('POST /api/auth/send-code', () => {
     })
     ;(prisma.verificationToken.deleteMany as jest.Mock).mockResolvedValue({ count: 0 })
     ;(prisma.verificationToken.create as jest.Mock).mockResolvedValue({})
+  })
+
+  it('rejects a cross-origin request before account lookup or delivery', async () => {
+    ;(assertSameOrigin as jest.Mock).mockImplementation((_req, res) => {
+      res.status(403).json({ error: 'Forbidden origin' })
+      return false
+    })
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'fleetvera.example', origin: 'https://evil.example' },
+      body: { email: 'driver@example.com' },
+    })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(403)
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
+    expect(sendLoginCodeEmail).not.toHaveBeenCalled()
   })
 
   it('keeps the generic response and records a correlated structured error when delivery fails', async () => {

@@ -1,21 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import path from 'path'
-import { timingSafeEqual } from 'crypto'
 import { randomUUID } from 'crypto'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { isAuthorizedCronRequest } from '@/lib/cronAuth'
 import { storageFromEnv } from '@/lib/documents/storage'
-
-function authorized(req: NextApiRequest): boolean {
-  const configured = process.env.CRON_SECRET || ''; const presented = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
-  if (configured.length < 32) return false
-  const a = Buffer.from(configured); const b = Buffer.from(presented)
-  return a.length === b.length && timingSafeEqual(a, b)
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  if (!authorized(req)) return res.status(401).json({ error: 'Unauthorized' })
+  if (!isAuthorizedCronRequest(req)) return res.status(401).json({ error: 'Unauthorized' })
   const configured = process.env.DOCUMENT_STORAGE_PATH
   if (!configured && process.env.NODE_ENV === 'production') return res.status(503).json({ error: 'Document storage is not configured' })
   const storage = storageFromEnv({ ...process.env, DOCUMENT_STORAGE_PATH: configured || path.join(process.cwd(), '.private-documents') })

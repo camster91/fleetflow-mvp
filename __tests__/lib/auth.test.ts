@@ -51,6 +51,16 @@ describe('getUserFromRequest', () => {
     expect(prisma.user.findUnique).not.toHaveBeenCalled();
   });
 
+  it('rejects a purpose-less JWT as an authenticated session', async () => {
+    const token = signToken({
+      sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', purpose: undefined,
+    })
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest
+
+    await expect(getUserFromRequest(req)).resolves.toBeNull()
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
+  })
+
   it('returns the signed token expiry with the custom session', async () => {
     const token = signToken(
       { sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' },

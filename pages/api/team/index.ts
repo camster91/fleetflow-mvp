@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!memberId || typeof memberId !== 'string' || !role || typeof role !== 'string') {
       return res.status(400).json({ error: 'memberId and role are required' });
     }
-    if (!ASSIGNABLE_ROLES.includes(role as TeamRole) && role !== 'OWNER') {
+    if (!ASSIGNABLE_ROLES.includes(role as TeamRole)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
@@ -82,11 +82,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!ctx) return res.status(404).json({ error: 'Member not found' });
     if (!ctx.canManage) return res.status(403).json({ error: 'Permission denied' });
 
-    if (ctx.member.role === 'OWNER' && !ctx.isOwner) {
+    // Ownership is canonical in Team.ownerId. It cannot be transferred or
+    // changed through the ordinary membership-role endpoint.
+    if (ctx.member.team.ownerId === ctx.member.userId) {
       return res.status(403).json({ error: 'Cannot change owner role' });
-    }
-    if (role === 'OWNER' && !ctx.isOwner) {
-      return res.status(403).json({ error: 'Only owner can assign owner role' });
     }
 
     const assignerRole = (ctx.isOwner ? 'OWNER' : ctx.userMembership?.role) as TeamRole;
@@ -114,10 +113,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!ctx) return res.status(404).json({ error: 'Member not found' });
 
     const isSelf = ctx.member.userId === userId;
+    if (ctx.member.team.ownerId === ctx.member.userId) {
+      return res.status(403).json({ error: 'Cannot remove owner' });
+    }
     if (!isSelf && !ctx.canManage) {
       return res.status(403).json({ error: 'Permission denied' });
     }
-    if (ctx.member.role === 'OWNER' && !isSelf) {
+    // Reject legacy/inconsistent OWNER labels as well.
+    if (ctx.member.role === 'OWNER') {
       return res.status(403).json({ error: 'Cannot remove owner' });
     }
 

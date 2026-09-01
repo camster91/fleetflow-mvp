@@ -6,7 +6,7 @@ A fleet management SaaS app. Live at fleet.ashbi.ca. Next.js with pages router (
 ## Stack
 - Next.js (Pages Router)
 - Prisma + PostgreSQL (migrated from SQLite on 2026-03-17)
-- NextAuth with custom credentials provider
+- Custom JWT cookie authentication (`lib/auth.ts`)
 - Tailwind
 
 ## Database
@@ -14,9 +14,10 @@ A fleet management SaaS app. Live at fleet.ashbi.ca. Next.js with pages router (
 - fleetflow-postgres container on VPS coolify network
 
 ## Auth
-- NextAuth with JWT strategy
-- Env vars: NEXTAUTH_URL, NEXTAUTH_SECRET (set in deployment environment)
-- Custom auth also in pages/api/auth/login.ts (parallel system)
+- The runtime uses the custom HS256 JWT implementation in `lib/auth.ts` and the HTTP-only `token` cookie.
+- `getServerSession` and `authOptions` are compatibility exports for older call sites; they do not configure NextAuth.
+- Env vars: `JWT_SECRET` (required signing key) and `NEXTAUTH_URL` (canonical application URL retained for compatibility).
+- Login-code issuance and validation live under `pages/api/auth/`; do not introduce a parallel session system.
 
 ## Coolify
 - UUID: p804488s4gs0k0kwc4080wg0

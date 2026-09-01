@@ -3,8 +3,10 @@ import { getUserFromRequest } from '../../../../lib/auth';
 import { prisma } from '../../../../lib/prisma';
 import { encryptSecret } from '../../../../lib/cryptoSecrets';
 import { generateBackupCodes } from '../../../../lib/tokens';
+import { assertSameOrigin } from '../../../../lib/apiAuth';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
+import bcrypt from 'bcryptjs';
 
 export default async function handler(
   req: NextApiRequest,
@@ -13,6 +15,8 @@ export default async function handler(
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!assertSameOrigin(req, res)) return;
 
   try {
     const session = await getUserFromRequest(req);
@@ -42,17 +46,20 @@ export default async function handler(
       issuer: process.env.TWO_FACTOR_ISSUER || 'Fleetvera',
       length: 32,
     });
+    const backupCodes = generateBackupCodes(10);
+    const hashedBackupCodes = backupCodes.map((code) => bcrypt.hashSync(code, 10));
 
-    // Store encrypted seed — plaintext returned once for QR / manual entry
+    // Store the encrypted seed and hashes together so verification can prove it
+    // is enabling the exact setup snapshot returned to this client.
     await prisma.user.update({
       where: { id: userId },
       data: {
         twoFactorSecret: encryptSecret(secret.base32),
+        backupCodes: JSON.stringify(hashedBackupCodes),
       },
     });
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
-    const backupCodes = generateBackupCodes(10);
 
     return res.status(200).json({
       message: '2FA setup initiated',

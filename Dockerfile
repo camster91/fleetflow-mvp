@@ -18,6 +18,11 @@ RUN npx prisma generate
 # Copy source code
 COPY . .
 
+# NEXT_PUBLIC_* values are embedded in the browser bundle at build time.
+# The Sentry DSN is public, but must still be supplied explicitly.
+ARG NEXT_PUBLIC_SENTRY_DSN=
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
+
 # Build the application
 ENV NEXTAUTH_URL=http://localhost:3000
 # No SQLite fallback — DATABASE_URL must be explicitly set in production
@@ -55,6 +60,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/scripts/verify-production-readine
 # Copy entrypoint script that enforces DATABASE_URL in production
 COPY --chown=nextjs:nodejs entrypoint.sh ./
 RUN sed -i 's/\r$//' entrypoint.sh && chmod 755 entrypoint.sh
+
+# Preserve the public build-time DSN for the server initializer and runtime
+# readiness preflight. Changing it later requires rebuilding the browser bundle.
+ARG NEXT_PUBLIC_SENTRY_DSN=
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 # Set environment variables
 ENV NODE_ENV=production

@@ -1,0 +1,364 @@
+# Fleetvera product control
+
+**Status date:** 2026-08-31 (America/Toronto)
+**Repository:** `camster91/fleetflow-mvp`  
+**Current default-branch commit inspected:** `6938964a1fc64eab8d3f3e89ca8333c73f26476d`  
+**Status:** release hardening in progress; public launch not approved
+
+This is the authoritative product-control index. Use
+[release-readiness.md](release-readiness.md) for launch gates and the runbooks under
+[runbooks](runbooks) for operations. Dated plans and audit reports are evidence
+snapshots, not current instructions.
+
+## Product charter
+
+Fleetvera is an invitation-only web workspace for small fleet operators who need
+vehicles, deliveries, maintenance, clients, reports, and team access in one
+place. The current public promise is “Fleet operations, organized.” The initial
+wedge inferred from repository evidence is a small delivery or service fleet
+whose owner or dispatcher is replacing spreadsheets and disconnected tools.
+
+That target and positioning are **researched only from product artifacts**.
+They are not customer-validated. Public expansion, material pricing changes, and
+claims about saved time or cost require owner approval and real-customer
+evidence.
+
+## Evidence ledger
+
+### Verified current on 2026-08-28
+
+- GitHub default branch is `master` at `6938964a`.
+- Public `GET https://fleetflow.ashbi.ca/api/health` returned HTTP 200,
+  `{"status":"ok"}`, and `Cache-Control: no-store`.
+- The public landing and pricing pages returned HTTP 200 and Fleetvera branding.
+- The pricing page advertises Fleetvera Pro at $49 USD monthly or $490 USD
+  yearly, with invitation-only workspace creation.
+- Draft PRs #78 through #121 contain unmerged security, concurrency,
+  configuration, operations, billing, product-control, and reliability changes.
+  PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
+  focused PostgreSQL-default remediation.
+- `Ashbi Local CI` check 98995157123 passed exact candidate head `ee57ed0` in the
+  reviewed isolated Podman profile. The owner selected this as the authoritative
+  CI gate for this release.
+- GitHub Actions fails before checkout at the account billing boundary and skips
+  its production-container job. That infrastructure-only result is waived for
+  this release and is not treated as candidate evidence.
+
+### Prior evidence, not proof of the current candidate
+
+- [Task 16](release/task16-readiness-report.md) records an August 13 local gate,
+  a deployed `1aaa945` image, public checks, and an ephemeral restore drill.
+  Treat it as a dated snapshot. It does not prove the current production image
+  or any August 28 draft.
+- The public health response proves availability and a database probe only. It
+  does not prove authenticated workflows, tenant isolation, provider delivery,
+  durable backups, monitoring, or rollback readiness.
+
+### Unknown or unavailable
+
+- The production image was observed read-only as `fleetflow:3a5fa66`; its full
+  environment configuration and source relation remain unverified.
+- Exact-candidate container startup, migration, recovery, and authenticated
+  browser evidence. Exact-head `Ashbi Local CI` plus local audit, typecheck,
+  tests, and production build are green.
+- Current production backup retention and a timed isolated restore using the
+  retained backup.
+- Authenticated desktop/mobile smoke results against the deployed candidate.
+- Stripe webhook/Portal/price/restricted-key evidence, Stripe Tax registration
+  status, Mailgun, OAuth, document scanner/extractor, monitoring, and alert
+  delivery evidence.
+- Active fleets, weekly active operators, activation, retention, support load,
+  churn, gross margin, and customer outcome evidence.
+- Legal approval of policies, retention, deletion/export operations, and support
+  commitments.
+
+## Access register
+
+| Capability | Current evidence | Approval or owner action |
+|---|---|---|
+| Private GitHub repository | Read/write connector available; drafts only | Merge and production release require explicit approval |
+| `Ashbi Local CI` (VPS-hosted) | Exact-head check passed in the reviewed isolated Podman profile | Owner-approved authoritative CI gate for this release |
+| GitHub Actions | Runs fail at the account billing boundary before checkout | Waived for this release; no spend change was made |
+| Local checkout | Clean Fleetvera candidate checkout is available | Merge remains subject to explicit approval |
+| Public deployment | Read-only HTTPS checks available | Production mutation requires explicit approval |
+| Production host/database | No current authenticated access in this work cycle | Owner grants narrowly scoped access for approved verification |
+| Stripe/Mailgun/OAuth | Configuration and delivery unverified | Owner supplies approved sandbox/live evidence and credentials |
+| Monitoring/analytics/support | No current operational evidence | Owner identifies systems and grants read-only access |
+| Customers/pilot | No direct evidence available | Owner recruits/approves pilot and data permissions |
+
+Never place credential values or production data in this file, issues, logs, or
+test fixtures.
+
+## Primary objective
+
+Validate exact cumulative candidate #121 from the draft hardening work using the
+owner-approved `Ashbi Local CI` gate and the remaining release evidence.
+
+Acceptance criteria:
+
+1. `Ashbi Local CI` executes the reviewed validation profile on the exact candidate
+   commit and passes.
+2. Dependency audit, lint, strict TypeScript, Jest, production build, container
+   build/startup, migrations, and the defined release E2E command pass.
+3. Stacked and overlapping drafts are reconciled without dropping tests or
+   invariants.
+4. The candidate has a documented migration order, rollback plan, and no known
+   critical or high-severity finding.
+5. Deployment remains unapproved until external release gates are attached and
+   the owner explicitly approves the exact action.
+
+## Authoritative roadmap
+
+| Priority | Outcome | Evidence / acceptance | Status |
+|---|---|---|---|
+| P0 | Exact-head CI | `Ashbi Local CI` reviewed profile passes on candidate | Complete on the current PR head; rerun after any commit |
+| P0 | Reconcile tenant/auth/concurrency drafts | Merge train below rebased, reviewed, and green without lost invariants | In progress |
+| P0 | Prove data recovery | Retained encrypted backup restored in isolation; elapsed time and integrity checks recorded | Proposed |
+| P0 | Prove production configuration | Read-only preflight passes without revealing values; migration path rehearsed | Proposed |
+| P0 | Prove authenticated critical paths | Owner, dispatcher, technician, driver, and viewer smoke journeys pass on desktop/mobile | Proposed |
+| P0 | Prove external providers | Stripe, email, document, OAuth, monitoring, and alert evidence attached | Proposed |
+| P1 | Reconcile operator documentation | #80-#82 plus this control record reviewed; stale instructions marked historical | In progress |
+| P1 | Harden repository governance | PR review, no force-push/deletion, required up-to-date checks, and constrained bypass | Proposed; settings change needs approval |
+| P1 | Complete accessibility/performance evidence | WCAG critical paths plus current LCP/INP/CLS thresholds measured | Proposed |
+| P1 | Run controlled pilot | Written permission, onboarding, four-week evidence, incident/support log | Owner-dependent |
+| P2 | Validate positioning and pricing | Current competitor research, customer interviews, unit economics, decision rule | Researched only; not validated |
+
+## Draft merge train
+
+#121 is the exact cumulative candidate: 173 changed paths, matching the union of
+#118, #119, #120, #90, #115, #116, and #106 with no missing, unexpected, or
+per-file patch mismatches. Its recorded repository gates are verified, but it is
+still a draft and has not been released.
+The entries below document its represented groups and supersession trail.
+
+1. Operational foundations and product control: #118 is the cumulative #105 +
+   #113 candidate, reconciling authoritative roadmap/release guidance with #80,
+   #108, and #111 runtime, fail-closed startup, and PostgreSQL remediation. After
+   #118 is reviewed and green, close #80, #105, #108, #111, and #113 as
+   superseded. #120 cumulatively reconciles #81 historical guidance, #82 unsafe
+   script removal, and #84 backup/restore verification.
+2. Tenant, authentication, and privileged operations: #119 is the cumulative
+   #117 + #86 + #87 + #91 + #92 candidate. It retains #117's deliberate login,
+   session, tenant, owner, and backup-code reconciliation, then adds serialized
+   2FA enrollment, maintenance-share issuance, guarded bootstrap, and atomic admin
+   mutations. Its 38-file manifest exactly matches the source union. After #119
+   is reviewed and green, close all represented predecessors as superseded; #79
+   is already represented through #83.
+4. Cron ordering: #90 now targets master as the cumulative #89 + #90 candidate,
+   preserving strict cron authentication and atomic reminder claims. Its auth tests
+   also cover missing configuration and duplicated internal headers. After #90 is
+   reviewed and green, close #89 as superseded.
+5. Tenant business mutations: #115 is the cumulative #93-#100 candidate. It
+   includes #114's explicit #97/#98 `lib/validation.ts` reconciliation and every
+   handler/test from #93, #94, #95, #96, #99, and #100. Its 27-file manifest
+   exactly matches the source union. After #115 is reviewed and green, close
+   #93-#100 and #114 as superseded.
+6. Remaining integrity/resource controls: #116 is the cumulative #101-#104
+   candidate for document confirmation, bounded reports, secure search/activity,
+   and user settings. Its 20-file manifest exactly matches the source union. After
+   #116 is reviewed and green, close #101-#104 as superseded.
+7. Product and billing control: #105 authoritative product control, then #106
+   serialized/idempotent Stripe lifecycle hardening. Verify the supported Stripe
+   SDK/API upgrade separately after lockfile regeneration and executable CI.
+
+Before merging, rebase each logical group onto the candidate, resolve conflicts,
+run focused tests, then run the full release gate. Do not merge drafts merely
+because GitHub reports them mergeable.
+
+## Risk register
+
+| Risk | Severity | Current control | Release consequence |
+|---|---|---|---|
+| GitHub-hosted CI cannot execute repository steps | Medium | Owner-approved `Ashbi Local CI` exact-head gate | Do not use the GitHub billing failure as candidate evidence |
+| Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
+| Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #118 product-control, configuration, database, and startup gates | No deployment approval |
+| Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #118 cumulatively retains #111's remediation with #80/#108 runtime controls and #105 release governance | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
+| Custom JWT runtime still carries legacy NextAuth packages/types | Medium | #80 documents truth; lockfile cleanup deferred | Remove only with regenerated lockfile and executable CI |
+| Auth session transition/origin invariants unverified | High | #119 cumulatively reconciles tenant/login/session/2FA boundaries and privileged operations | No auth candidate approval until #119 is independently reviewed and green |
+| Backup retention and timed restore unproved | High | August 13 ephemeral drill is dated evidence | No pilot with material data |
+| External provider delivery unproved | High | Fail-closed configuration proposals; #106 billing hardening | Affected capability disabled |
+| Stripe Tax registration/configuration unknown | High legal/commercial | Automatic tax not enabled by #106 | No automatic tax change without owner and qualified tax approval |
+| Repository rules allow broad bypass and omit review protections | High | Documented for owner decision | No unattended release |
+| Stale operational/product documents remain | Medium | #81 and historical banner work | Operators use only current index/runbooks |
+| Customer value, retention, and unit economics unknown | High commercial | Invitation-only positioning | No market-leading or PMF claim |
+
+## Decisions
+
+- Keep production mutations, merges, repository-rule changes, spending changes,
+  pricing changes, and external communications behind explicit owner approval.
+- Use the exact-head `Ashbi Local CI` result as the authoritative repository gate
+  for this release; rerun it after every candidate commit.
+- Use PostgreSQL advisory locks or equivalent transactional claims for
+  cross-request invariants, with focused concurrency tests.
+- Preserve invitation-only availability until provider, recovery, monitoring,
+  legal, and pilot evidence clears.
+- Do not claim the product is market-leading or customer-validated without
+  direct behavioral evidence.
+
+## Metrics and validation plan
+
+Baselines are currently unknown. The controlled pilot must establish:
+
+- invitation accepted to first useful fleet record and first resolved exception;
+- weekly active owner/dispatcher operators and four-week retention;
+- successful delivery/maintenance task completion and correction rates;
+- document/AI preview acceptance, correction, refusal, latency, and cost;
+- authorization, provider, recovery, and support incidents;
+- subscription conversion, churn, infrastructure/provider cost, and support time.
+
+Targets must be approved after baseline and competitor/customer research; they
+must not be invented to satisfy a release checklist.
+
+## Work log
+
+- 2026-08-28: audited current `master`, repository governance, privileged
+  mutations, concurrency paths, reports, documents, settings, search, and
+  activity; opened evidence-backed drafts #78-#104.
+- 2026-08-28: confirmed public health, landing, and pricing availability
+  read-only; no authenticated production action or external provider call.
+- 2026-08-28: established this control index and marked the obsolete root
+  `TODO.md` as historical.
+- 2026-08-28: opened #106 to serialize and make Stripe checkout/cancellation
+  idempotent, bound webhook bodies, and protect billing reads. CI run 33199548149
+  failed before steps; Stripe SDK/API upgrade and live Tax/provider evidence remain unresolved.
+- 2026-08-28: opened #107 for same-origin auth mutations, explicit session-token
+  purpose, centralized cookie invalidation, production JWT secret enforcement, and
+  private/no-store auth responses. CI run 33203949669 failed before steps and the
+  production-container job was skipped.
+- 2026-08-28: opened #108, stacked on #80, to require an explicit pilot/public
+  release mode and run the production readiness verifier before any migration.
+  The PR targets master so the exact combined head is eligible for CI. Run
+  33204309209 failed before steps and the production-container job was skipped.
+- 2026-08-28: validated GitGuardian incident 36683862 against commit c118789 and
+  current master: the compose default PostgreSQL password is real repository
+  content and the database host port is published. #80 removes both, but whether
+  the credential was deployed and needs approved rotation remains unknown.
+- 2026-08-28: opened focused draft #111 from current master after closing #109
+  and #110 as superseded because their test commit history caused additional
+  secret-scanner incidents. #111 changes only `.env.example`, `docker-compose.yml`,
+  and the release-gate test. GitGuardian reports only incident 36683862 on the
+  commit deleting the original compose credential; it reports no final-test
+  occurrence. CI run 33205110750 failed before exposing steps and skipped the
+  production-container job, so the remediation is implemented but verification
+  remains blocked. No rotation, merge, deployment, or production mutation occurred.
+- 2026-08-28: opened cumulative auth draft #112 targeting master to reconcile
+  #107 session/origin protections with #85 atomic backup-code consumption. The
+  direct overlap is limited to the 2FA validate handler and its focused test;
+  #112 preserves both invariants and carries the independent disable-path tests.
+  CI run 33205454731 failed before exposing steps and skipped the container job.
+  #85 and #107 remain open until the cumulative candidate is independently
+  reviewed and green.
+- 2026-08-28: opened cumulative production-startup draft #113 targeting master
+  to reconcile #80/#108 runtime and fail-closed startup controls with #111's
+  complete database-example remediation. The combined patch is mergeable;
+  GitGuardian reports only inherited incident 36683862 on deletion of the original
+  compose credential and no release-test occurrence. CI run 33205615419 failed
+  before exposing steps and skipped the container job. #80, #108, and #111 remain
+  open until #113 is independently reviewed and green.
+- 2026-08-28: opened cumulative business-mutation draft #114 targeting master
+  to reconcile #97 vending and #98 announcement controls. Their only overlap,
+  `lib/validation.ts`, now contains both schema families; the seven-file diff also
+  carries both focused mutation suites and both scoped handler pairs. CI run
+  33205832571 failed before exposing steps and skipped the container job. #97 and
+  #98 remain open until #114 is independently reviewed and green.
+- 2026-08-28: opened cumulative tenant business-mutation draft #115 targeting
+  master from #114 plus #93, #94, #95, #96, #99, and #100. The 27-file candidate
+  manifest exactly matches the union of its source drafts with no missing or
+  unexpected paths. CI run 33206081436 failed before exposing steps and skipped
+  the container job. All predecessors remain open until #115 is independently
+  reviewed and green.
+- 2026-08-28: opened cumulative resource/read-integrity draft #116 targeting
+  master from #101-#104. Its 20-file manifest exactly matches the source union,
+  covering document review state, bounded reporting, secure read queries, and
+  settings integrity. CI run 33206279435 failed before exposing steps and skipped
+  the container job. #101-#104 remain open until #116 is independently reviewed
+  and green.
+- 2026-08-28: opened cumulative tenant/auth draft #117 targeting master from
+  #78, stacked #83, and cumulative #112. Its 28-file path manifest exactly matches
+  the source union. The shared login handler deliberately combines exact-token
+  atomic consumption with same-origin, purpose-bound 2FA, and centralized cookie
+  lifecycle behavior; its test now executes the transaction and rejects a
+  concurrent zero-row consume without signing a session. CI run 33206589683 failed
+  before exposing steps and skipped the container job. All represented predecessors
+  remain open until #117 is independently reviewed and green.
+- 2026-08-28: opened cumulative production/product-control draft #118 targeting
+  master from #105 and #113. Its 19-file path manifest exactly matches the source
+  union; the shared README deliberately preserves Fleetvera identity, the
+  authoritative control link, Node 22.12+, and explicit HS256 JWT architecture.
+  GitGuardian reports only inherited incident 36683862 on deletion of the original
+  compose credential. CI run 33206796172 failed before exposing steps and skipped
+  the container job. All represented predecessors remain open until #118 is
+  independently reviewed and green.
+- 2026-08-28: opened cumulative auth/privileged-operations draft #119 targeting
+  master from #117, #86, #87, #91, and #92. Its 38-file manifest exactly matches
+  the source union with no missing or unexpected paths. CI run 33207032244 failed
+  before exposing steps and skipped the container job. All represented predecessors
+  remain open until #119 is independently reviewed and green.
+- 2026-08-28: opened cumulative operations/recovery draft #120 targeting master
+  from #81, #82, and #84. Its 49-path manifest exactly matches the source union,
+  including all 21 intended unsafe-script deletions. CI run 33207335601 failed
+  before exposing steps and skipped the container job. The represented predecessors
+  remain open until #120 is independently reviewed and green.
+- 2026-08-28: retargeted stacked #90 to master as the cumulative #89 + #90 cron
+  candidate and added fail-closed tests for missing server configuration and
+  duplicate internal-secret headers. CI run 33207460995 failed before exposing
+  steps and skipped the container job. #89 remains open until #90 is independently
+  reviewed and green.
+- 2026-08-28: opened exact cumulative release candidate #121 from #118, #119,
+  #120, #90, #115, #116, and #106. Cross-group audit found 173 unique paths and
+  zero overlaps. Candidate verification found exactly 173 changed paths, no
+  missing or unexpected files, zero per-file patch mismatches, and product control
+  equal to the latest #105 head. GitGuardian reports only inherited incident
+  36683862 on deletion of the original compose credential. CI run 33209063455
+  failed before exposing steps and skipped the container job. The candidate remains
+  draft and unverified; no predecessor was closed or merged.
+- 2026-08-28: checked out #121 locally at `1cd3ab3`, installed the locked
+  dependency graph, and found seven TypeScript failures plus 26 failures across
+  nine Jest suites caused by the cumulative integration. Commit `51621f1`
+  reconciles nullable validated inputs with their database converters and brings
+  auth, settings, reporting, tenant-scope, and admin test fixtures in line with
+  the hardened runtime contracts. The exact code head then passed `npm run ci`:
+  zero high-severity dependency audit findings, lint, strict TypeScript, the
+  deterministic AI evaluation, 166 Jest suites / 1,155 tests, Prisma generation,
+  and the optimized Next.js production build. Prisma schema validation, the
+  synthetic pilot readiness preflight, and Docker Compose expansion also passed.
+- 2026-08-28: completed Codex Security diff scan
+  `61445ded-c19c-46db-9aed-023445222d65` over immutable range
+  `6938964...51621f1`. The scan accounted for all 138 security-relevant changed
+  source/deleted-source items across authentication, authorization, tenant
+  isolation, CSRF, concurrency, Stripe, document storage, cron/reporting, and
+  deployment/recovery surfaces; it completed with full coverage and zero
+  validated findings. Delegated reviewers were unavailable, so the parent
+  performed the full inventory review.
+- 2026-08-28: pushed `51621f1` to #121. GitHub Actions run 33214332534 again
+  failed before repository checkout because recent account payments failed or
+  the Actions spending limit must be increased; the container job was therefore
+  skipped. GitGuardian still reports only historical incident 36683862 on commit
+  c118789, where the original generic Compose password existed; the candidate
+  removes that value and the host-published database port. `Ashbi Local CI` check
+  98995157123 subsequently passed exact final head `ee57ed0` using the reviewed
+  isolated Podman profile. The owner selected the VPS-hosted check as the
+  authoritative CI gate and waived the GitHub Actions billing-boundary failure
+  for this release.
+  No merge, deployment, production database action, provider mutation, credential
+  rotation, or customer-data access occurred.
+- 2026-09-01: the owner explicitly approved merge and deployment. A non-disclosing
+  comparison confirmed historical GitGuardian incident 36683862 is not the
+  active production PostgreSQL password; the candidate removes the historical
+  value, so that specific credential does not require rotation. The pre-deploy
+  verifier exposed and fixed a restore-database readiness race, then completed
+  an encrypted backup and isolated PostgreSQL 16 restore in approximately 33
+  seconds. Source and restore matched at 47 public tables, 17 completed and zero
+  failed migrations, every critical-table aggregate count, and all four
+  ownership/reference integrity checks. The encrypted artifact is retained on
+  the VPS and off-VPS locally; its passphrase is stored separately in macOS
+  Keychain.
+
+## Release decision
+
+**Not approved.** Source, dependency, test, build, schema, configuration, Compose,
+security-diff, exact-head `Ashbi Local CI`, historical-secret disposition, and
+disposable backup/restore gates are green. GitHub Actions is waived for this
+release. Production verification still requires authenticated critical-path QA
+and provider/monitoring evidence. Public availability alone is not launch
+evidence.

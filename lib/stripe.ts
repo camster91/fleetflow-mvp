@@ -89,6 +89,7 @@ export async function createCheckoutSession({
   successUrl,
   cancelUrl,
   trialDays = 0,
+  idempotencyKey,
 }: {
   priceId: string;
   customerId?: string;
@@ -96,11 +97,11 @@ export async function createCheckoutSession({
   successUrl: string;
   cancelUrl: string;
   trialDays?: number;
+  idempotencyKey?: string;
 }) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
     mode: 'subscription',
-    payment_method_types: ['card'],
     line_items: [
       {
         price: priceId,
@@ -136,8 +137,9 @@ export async function createCheckoutSession({
     sessionConfig.customer_creation = 'always';
   }
 
-  const session = await stripe.checkout.sessions.create(sessionConfig);
-  return session;
+  return idempotencyKey
+    ? stripe.checkout.sessions.create(sessionConfig, { idempotencyKey })
+    : stripe.checkout.sessions.create(sessionConfig);
 }
 
 // Helper function to create a customer portal session
@@ -161,20 +163,41 @@ export async function createStripeCustomer({
   email,
   name,
   userId,
+  idempotencyKey,
 }: {
   email: string;
   name?: string;
   userId: string;
+  idempotencyKey?: string;
 }) {
   requireStripeSecret('STRIPE_SECRET_KEY')
-  const customer = await stripe.customers.create({
+  const params: Stripe.CustomerCreateParams = {
     email,
     name,
-    metadata: {
-      userId,
-    },
-  });
-  return customer;
+    metadata: { userId },
+  }
+  return idempotencyKey
+    ? stripe.customers.create(params, { idempotencyKey })
+    : stripe.customers.create(params);
+}
+
+export async function findOpenCheckoutSessions(customerId: string, userId: string) {
+  requireStripeSecret('STRIPE_SECRET_KEY')
+  const sessions = await stripe.checkout.sessions.list({
+    customer: customerId,
+    status: 'open',
+    limit: 10,
+  })
+  return sessions.data.filter(session =>
+    session.mode === 'subscription'
+    && session.metadata?.userId === userId
+    && Boolean(session.url)
+  )
+}
+
+export async function expireCheckoutSession(sessionId: string) {
+  requireStripeSecret('STRIPE_SECRET_KEY')
+  return stripe.checkout.sessions.expire(sessionId)
 }
 
 // Helper function to retrieve a Stripe customer

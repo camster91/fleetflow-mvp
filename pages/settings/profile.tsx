@@ -5,38 +5,12 @@ import { PageHeader } from '../../components/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { FileUpload } from '../../components/ui/FileUpload';
 import { Camera, Save, Globe, Clock } from 'lucide-react';
 import { notify } from '../../services/notifications';
 
 export default function ProfileSettingsPage() {
   const { data: session, update } = useSession();
   const [isLoading, setIsLoading] = useState(false);
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const avatarInputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleAvatarUpload = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const dataUrl = e.target?.result as string;
-      try {
-        const res = await fetch('/api/settings/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ image: dataUrl }),
-        });
-        if (res.ok) {
-          await update();
-          notify.success('Avatar updated');
-        } else {
-          notify.error('Failed to upload avatar');
-        }
-      } catch {
-        notify.error('Failed to upload avatar');
-      }
-    };
-    reader.readAsDataURL(file);
-  };
   const [profile, setProfile] = useState({
     name: session?.user?.name || '',
     email: session?.user?.email || '',
@@ -115,31 +89,22 @@ export default function ProfileSettingsPage() {
               <div className="w-24 h-24 bg-blue-900 rounded-full flex items-center justify-center text-white text-3xl font-bold">
                 {profile.name.charAt(0) || 'U'}
               </div>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f); }}
-              />
               <button
                 type="button"
                 className="absolute bottom-0 right-0 p-2 bg-white rounded-full shadow-md border border-slate-200 hover:bg-slate-50"
-                onClick={() => avatarInputRef.current?.click()}
+                disabled
+                title="Profile photo uploads are coming soon"
               >
                 <Camera className="h-4 w-4 text-slate-600" />
               </button>
             </div>
             <div className="flex-1">
               <p className="text-sm text-slate-600 mb-3">
-                Upload a new avatar. Large files will be resized automatically.
+                Profile photo uploads are not yet available.
               </p>
               <div className="flex gap-3">
-                <Button variant="outline" size="sm" onClick={() => avatarInputRef.current?.click()}>
-                  Upload New
-                </Button>
-                <Button variant="ghost" size="sm" className="text-red-600">
-                  Remove
+                <Button variant="outline" size="sm" disabled title="Profile photo uploads are coming soon">
+                  Upload coming soon
                 </Button>
               </div>
             </div>

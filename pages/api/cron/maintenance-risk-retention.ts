@@ -1,18 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { timingSafeEqual } from 'crypto'
 import { prisma } from '@/lib/prisma'
-
-function authorized(req: NextApiRequest) {
-  const configured = process.env.CRON_SECRET || ''
-  const supplied = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
-  if (configured.length < 32) return false
-  const a = Buffer.from(configured), b = Buffer.from(supplied)
-  return a.length === b.length && timingSafeEqual(a, b)
-}
+import { isAuthorizedCronRequest } from '@/lib/cronAuth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
-  if (!authorized(req)) return res.status(401).json({ error: 'Unauthorized' })
+  if (!isAuthorizedCronRequest(req)) return res.status(401).json({ error: 'Unauthorized' })
   const now = new Date()
   try {
     const deleted = await prisma.$transaction(async tx => {

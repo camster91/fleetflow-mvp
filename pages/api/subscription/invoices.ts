@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { requireTenantContext } from '../../../lib/apiAuth'
 import { canViewBilling } from '../../../lib/permissions'
+import { rateLimitMiddleware } from '../../../lib/rateLimit'
 
 const CURRENCIES = new Set(['USD', 'CAD', 'EUR', 'GBP', 'AUD', 'NZD'])
 
@@ -14,10 +15,11 @@ function safeStripePdf(value: string | null): string | null {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }) }
   const context = await requireTenantContext(req, res)
   if (!context) return
   if (!canViewBilling(context.tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+  if (!await rateLimitMiddleware(req, res, 'api', `billing-read:${context.session.user.id}`)) return
 
   try {
     const invoices = await prisma.invoice.findMany({
@@ -35,6 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           !Number.isFinite(invoice.createdAt.getTime()) || !Number.isFinite(invoice.periodStart.getTime()) || !Number.isFinite(invoice.periodEnd.getTime())) return []
       return [{ ...invoice, currency, invoicePdf: safeStripePdf(invoice.invoicePdf) }]
     })
+    res.setHeader('Cache-Control', 'private, no-store')
     return res.status(200).json({ invoices: validInvoices })
   } catch {
     console.error('Invoice history query failed')

@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma'
 import { generateNumericCode, hashToken } from '../../../lib/tokens'
 import { sendLoginCodeEmail } from '../../../lib/email'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
+import { assertSameOrigin } from '../../../lib/apiAuth'
 import {
   awaitEmailDeliveryWithinTimeout,
   EMAIL_DELIVERY_TIMEOUT_MS,
@@ -15,8 +16,11 @@ const GENERIC_MESSAGE = 'If an account exists, a login code has been sent.'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
   }
+  res.setHeader('Cache-Control', 'private, no-store')
+  if (!assertSameOrigin(req, res)) return
 
   const startedAt = Date.now()
   const genericResponse = async () => {

@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { requireTenantContext } from '../../../lib/apiAuth';
 import { canExportData } from '../../../lib/permissions';
+import { rateLimitMiddleware } from '../../../lib/rateLimit';
+import { parseReportDateRange, REPORT_ROW_LIMIT } from '../../../lib/reporting';
 
 function toCsv(rows: Record<string, unknown>[]): string {
   if (!rows.length) return '';
@@ -16,34 +18,20 @@ function toCsv(rows: Record<string, unknown>[]): string {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
   const context = await requireTenantContext(req, res);
   if (!context) return;
-  const { tenant } = context;
+  const { tenant, session } = context;
   if (!canExportData(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
+  if (!await rateLimitMiddleware(req, res, 'api', `reports:${session.user.id}`)) return;
   const type = req.query.type as string;
-  const startRaw = req.query.startDate as string | undefined;
-  const endRaw = req.query.endDate as string | undefined;
-  const startDate = startRaw ? new Date(startRaw) : new Date(Date.now() - 30 * 86400000);
-  const endDate = endRaw ? new Date(endRaw) : new Date();
-
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return res.status(400).json({ error: 'Invalid date range' });
-  }
-  if (endDate < startDate) {
-    return res.status(400).json({ error: 'endDate must be on or after startDate' });
-  }
-  // Cap export window to limit memory / DoS via unbounded date ranges
-  const maxRangeMs = 366 * 86400000;
-  if (endDate.getTime() - startDate.getTime() > maxRangeMs) {
-    return res.status(400).json({ error: 'Date range too large (max 366 days)' });
-  }
+  const range = parseReportDateRange(req.query.startDate, req.query.endDate);
+  if (!range.ok) return res.status(400).json({ error: range.error });
+  const { startDate, endDate } = range;
 
   if (!['maintenance', 'deliveries', 'fleet'].includes(type)) {
     return res.status(400).json({ error: 'Invalid report type. Use: maintenance, deliveries, or fleet' });
   }
-
-  const EXPORT_ROW_LIMIT = 5000;
 
   try {
     let rows: Record<string, unknown>[] = [];
@@ -53,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { AND: [tenant.resourceWhere, { createdAt: { gte: startDate, lte: endDate } }] },
         include: { vehicle: { select: { name: true } } },
         orderBy: { createdAt: 'asc' },
-        take: EXPORT_ROW_LIMIT,
+        take: REPORT_ROW_LIMIT,
       });
       rows = tasks.map(t => ({
         Title: t.title,
@@ -70,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const deliveries = await prisma.delivery.findMany({
         where: { AND: [tenant.resourceWhere, { createdAt: { gte: startDate, lte: endDate } }] },
         orderBy: { createdAt: 'asc' },
-        take: EXPORT_ROW_LIMIT,
+        take: REPORT_ROW_LIMIT,
       });
       rows = deliveries.map(d => ({
         Customer: d.customer,
@@ -86,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const vehicles = await prisma.vehicle.findMany({
         where: tenant.resourceWhere,
         orderBy: { name: 'asc' },
-        take: EXPORT_ROW_LIMIT,
+        take: REPORT_ROW_LIMIT,
       });
       rows = vehicles.map(v => ({
         Name: v.name,
@@ -104,6 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const csv = toCsv(rows);
     const filename = `${type}-report-${startDate.toISOString().slice(0, 10)}-to-${endDate.toISOString().slice(0, 10)}.csv`;
 
+    res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.status(200).send(csv);

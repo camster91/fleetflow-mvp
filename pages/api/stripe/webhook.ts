@@ -5,10 +5,19 @@ import { prisma } from '../../../lib/prisma'
 import { constructWebhookEvent, resolvePricePlan, retrieveInvoiceSnapshot, retrieveSubscriptionSnapshot, type StripeInvoiceSnapshot, type StripeSubscriptionSnapshot } from '../../../lib/stripe'
 
 export const config = { api: { bodyParser: false } }
+export const STRIPE_WEBHOOK_MAX_BYTES = 1024 * 1024
+
+class WebhookBodyTooLarge extends Error {}
 
 async function getRawBody(req: NextApiRequest): Promise<Buffer> {
   const chunks: Buffer[] = []
-  for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+  let size = 0
+  for await (const part of req) {
+    const chunk = typeof part === 'string' ? Buffer.from(part) : part
+    size += chunk.length
+    if (size > STRIPE_WEBHOOK_MAX_BYTES) throw new WebhookBodyTooLarge()
+    chunks.push(chunk)
+  }
   return Buffer.concat(chunks)
 }
 
@@ -179,13 +188,31 @@ function eventInvoiceId(event: Stripe.Event): string | null {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }) }
   const signature = req.headers['stripe-signature']
   if (!signature || typeof signature !== 'string') return res.status(400).json({ error: 'Missing stripe-signature header' })
 
+  const contentLengthHeader = Array.isArray(req.headers['content-length'])
+    ? req.headers['content-length'][0]
+    : req.headers['content-length']
+  const declaredLength = Number(contentLengthHeader)
+  if (Number.isFinite(declaredLength) && declaredLength > STRIPE_WEBHOOK_MAX_BYTES) {
+    return res.status(413).json({ error: 'Webhook payload is too large' })
+  }
+
+  let rawBody: Buffer
+  try {
+    rawBody = await getRawBody(req)
+  } catch (error) {
+    if (error instanceof WebhookBodyTooLarge) {
+      return res.status(413).json({ error: 'Webhook payload is too large' })
+    }
+    return res.status(400).json({ error: 'Webhook payload is invalid' })
+  }
+
   let event: Stripe.Event
   try {
-    event = constructWebhookEvent(await getRawBody(req), signature)
+    event = constructWebhookEvent(rawBody, signature)
   } catch {
     console.error('Stripe webhook signature verification failed')
     return res.status(400).json({ error: 'Webhook signature verification failed' })

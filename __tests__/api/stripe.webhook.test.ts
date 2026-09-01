@@ -4,6 +4,7 @@ import handler, {
   getInvoiceSubscriptionId,
   getSubscriptionPeriod,
   isDuplicateWebhookEvent,
+  STRIPE_WEBHOOK_MAX_BYTES,
 } from '../../pages/api/stripe/webhook'
 import { prisma } from '../../lib/prisma'
 
@@ -177,6 +178,30 @@ describe('Stripe webhook compatibility', () => {
     await handler(req, res)
     expect(res._getStatusCode()).toBe(200)
     expect(constructWebhookEvent).toHaveBeenCalledWith(raw, 'sig')
+  })
+
+  test('rejects an oversized declared body before signature validation', async () => {
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      method: 'POST',
+      headers: {
+        'stripe-signature': 'sig',
+        'content-length': String(STRIPE_WEBHOOK_MAX_BYTES + 1),
+      },
+    })
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(413)
+    expect(constructWebhookEvent).not.toHaveBeenCalled()
+  })
+
+  test('rejects a streamed body that crosses the byte limit', async () => {
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      method: 'POST', headers: { 'stripe-signature': 'sig' },
+    })
+    const chunk = Buffer.alloc(Math.ceil(STRIPE_WEBHOOK_MAX_BYTES / 2) + 1)
+    Object.assign(req, { async *[Symbol.asyncIterator]() { yield chunk; yield chunk } })
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(413)
+    expect(constructWebhookEvent).not.toHaveBeenCalled()
   })
 
   test('returns 500 without committing a marker when invoice reconciliation fails', async () => {

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity, mergeMaintenanceUpdate } from '../../../lib/fleet'
-import { requireTenantContext } from '../../../lib/apiAuth'
+import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 import { driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
 
@@ -9,6 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const context = await requireTenantContext(req, res)
   if (!context) return
   const { session, tenant } = context
+  if (!assertSameOrigin(req, res)) return
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
@@ -45,14 +46,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const merged = mergeMaintenanceUpdate(existing, req.body)
     const { ownerId: _ownerId, ...fields } = maintenanceTaskToDb(merged, tenant.ownerId, vehicleId)
     const wasCompleted = req.body.completed === true && !existing.completed
-    const task = await prisma.maintenanceTask.update({ where: { id }, data: fields })
-    await logActivity(prisma, {
-      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-      action: wasCompleted ? 'completed' : 'updated',
-      entityType: 'maintenance', entityId: id, entityName: task.title,
-      description: wasCompleted
-        ? `Maintenance "${task.title}" for ${task.vehicleName ?? 'vehicle'} was completed`
-        : `Maintenance task "${task.title}" was updated`,
+    const task = await prisma.$transaction(async (tx) => {
+      const updated = await tx.maintenanceTask.update({ where: { id }, data: fields })
+      await logActivity(tx, {
+        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
+        action: wasCompleted ? 'completed' : 'updated',
+        entityType: 'maintenance', entityId: id, entityName: updated.title,
+        description: wasCompleted
+          ? `Maintenance "${updated.title}" for ${updated.vehicleName ?? 'vehicle'} was completed`
+          : `Maintenance task "${updated.title}" was updated`,
+      })
+      return updated
     })
     return res.json(dbToMaintenanceTask(task))
   }
@@ -61,11 +65,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!canManageMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const task = await prisma.maintenanceTask.findFirst({ where: scopedWhere })
     if (!task) return res.status(404).json({ error: 'Not found' })
-    await prisma.maintenanceTask.delete({ where: { id } })
-    await logActivity(prisma, {
-      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-      action: 'deleted', entityType: 'maintenance', entityId: id, entityName: task.title,
-      description: `Maintenance task "${task.title}" was deleted`,
+    await prisma.$transaction(async (tx) => {
+      await tx.maintenanceTask.delete({ where: { id } })
+      await logActivity(tx, {
+        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
+        action: 'deleted', entityType: 'maintenance', entityId: id, entityName: task.title,
+        description: `Maintenance task "${task.title}" was deleted`,
+      })
     })
     return res.json({ success: true })
   }

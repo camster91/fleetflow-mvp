@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userId: session.user.id,
       teamId: member.teamId,
       status: 'ACCEPTED',
-      role: { in: ['OWNER', 'ADMIN'] },
+      role: 'ADMIN',
     },
   })
   if (member.team.ownerId !== session.user.id && !requesterMembership) {

@@ -1,3 +1,11 @@
+> [!CAUTION]
+> **Archived historical guidance — do not execute these commands.**
+> This file predates the PostgreSQL migration, guarded administrator bootstrap,
+> custom `JWT_SECRET` session runtime, and committed production migrations. It is
+> retained only for history. Use [README.md](README.md),
+> [release readiness](docs/release-readiness.md), and the current
+> [deploy/rollback runbook](docs/runbooks/deploy-and-rollback.md) instead.
+
 # 🚀 FleetFlow Pro - Production Deployment Setup
 
 ## Critical Environment Variables

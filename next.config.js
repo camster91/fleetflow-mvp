@@ -1,6 +1,20 @@
 const path = require('path')
 const { withSentryConfig } = require('@sentry/nextjs')
 
+function httpsOrigin(value) {
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' ? url.origin : null
+  } catch {
+    return null
+  }
+}
+
+const sentryConnectOrigin = httpsOrigin(process.env.NEXT_PUBLIC_SENTRY_DSN)
+const connectSources = ["'self'", 'https://api.stripe.com', 'https://api.mailgun.net']
+if (sentryConnectOrigin) connectSources.push(sentryConnectOrigin)
+
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -20,7 +34,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob:",
       "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://api.stripe.com https://api.mailgun.net",
+      `connect-src ${connectSources.join(' ')}`,
       "frame-ancestors 'none'",
     ].join('; '),
   },

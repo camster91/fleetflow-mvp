@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity } from '../../../lib/fleet'
 import { parseBody, maintenanceCreateValuesSchema } from '../../../lib/validation'
-import { requireTenantContext } from '../../../lib/apiAuth'
+import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 import { assignedMaintenanceWhere, driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
 
@@ -11,6 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { session, tenant } = context
   const userId = session.user.id
+  if (!assertSameOrigin(req, res)) return
 
   if (req.method === 'GET') {
     if (!canViewMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -45,12 +46,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ownerId: tenant.ownerId,
       teamId: tenant.teamId,
     }
-    const task = await prisma.maintenanceTask.create({ data })
-    await logActivity(prisma, {
-      userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-      action: 'created', entityType: 'maintenance',
-      entityId: task.id, entityName: task.title,
-      description: `Maintenance task "${task.title}" scheduled for ${task.vehicleName ?? 'unknown vehicle'}`,
+    const task = await prisma.$transaction(async (tx) => {
+      const created = await tx.maintenanceTask.create({ data })
+      await logActivity(tx, {
+        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
+        action: 'created', entityType: 'maintenance',
+        entityId: created.id, entityName: created.title,
+        description: `Maintenance task "${created.title}" scheduled for ${created.vehicleName ?? 'unknown vehicle'}`,
+      })
+      return created
     })
     return res.status(201).json(dbToMaintenanceTask(task))
   }

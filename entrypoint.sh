@@ -14,6 +14,21 @@ fi
 
 echo "Database configuration detected."
 
+case "${FLEETVERA_RELEASE_MODE:-}" in
+  pilot|public)
+    ;;
+  *)
+    echo "ERROR: FLEETVERA_RELEASE_MODE must be explicitly set to pilot or public."
+    echo "Refusing to infer a weaker release mode."
+    exit 1
+    ;;
+esac
+
+# Validate the exact runtime configuration before any database mutation.
+echo "Verifying ${FLEETVERA_RELEASE_MODE} release configuration..."
+node ./verify-production-readiness.cjs
+echo "Release configuration verified."
+
 # Run Prisma migrations (idempotent)
 echo "Running database migrations..."
 npx prisma migrate deploy
