@@ -5,7 +5,7 @@
 > [product-control.md](product-control.md). Dated test counts below prove only
 > the candidate on which they were collected.
 
-## Current evidence status — 2026-08-28
+## Current evidence status — 2026-08-31
 
 - Public health, landing, and pricing endpoints are reachable over HTTPS.
 - Public health returned HTTP 200, `{"status":"ok"}`, and

@@ -1,6 +1,6 @@
 # Fleetvera product control
 
-**Status date:** 2026-08-28 (America/Toronto)  
+**Status date:** 2026-08-31 (America/Toronto)
 **Repository:** `camster91/fleetflow-mvp`  
 **Current default-branch commit inspected:** `6938964a1fc64eab8d3f3e89ca8333c73f26476d`  
 **Status:** release hardening in progress; public launch not approved
@@ -111,7 +111,7 @@ Acceptance criteria:
 
 | Priority | Outcome | Evidence / acceptance | Status |
 |---|---|---|---|
-| P0 | Exact-head CI | `Ashbi Local CI` reviewed profile passes on candidate | Complete for `ee57ed0`; rerun after any commit |
+| P0 | Exact-head CI | `Ashbi Local CI` reviewed profile passes on candidate | Complete on the current PR head; rerun after any commit |
 | P0 | Reconcile tenant/auth/concurrency drafts | Merge train below rebased, reviewed, and green without lost invariants | In progress |
 | P0 | Prove data recovery | Retained encrypted backup restored in isolation; elapsed time and integrity checks recorded | Proposed |
 | P0 | Prove production configuration | Read-only preflight passes without revealing values; migration path rehearsed | Proposed |
