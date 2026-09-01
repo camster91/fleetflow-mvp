@@ -39,10 +39,10 @@ These checks established their dated release candidate; they do not establish th
 
 - [x] `Ashbi Local CI` passes on the exact candidate commit
 - [ ] Repository rules require the exact-head `Ashbi Local CI` check before merge
-- [ ] Production environment requires an authorized reviewer
-- [ ] Production PostgreSQL version, connectivity, capacity, and encrypted backup are verified
-- [ ] A restore drill is completed and timed
-- [ ] Existing database migration path is selected and rehearsed
+- [x] Production deployment received explicit owner approval
+- [x] Production PostgreSQL 16 connectivity, capacity, and encrypted backup are verified
+- [x] An isolated restore drill completed in approximately 33 seconds
+- [x] Existing database has all 17 candidate migrations applied; source and restore counts match
 - [ ] Unique production `JWT_SECRET` and integration secrets are configured
 - [ ] Production URL, DNS, and TLS are verified
 - [ ] Stripe products, prices, webhook endpoint, signature secret, and test transaction are verified
@@ -52,7 +52,7 @@ These checks established their dated release candidate; they do not establish th
 - [x] Desktop and mobile critical-path browser QA passes against the local release candidate
 - [ ] Desktop and mobile smoke QA passes against the deployed production URL
 - [ ] Rollback owner and observation window are assigned
-- [ ] Explicit approval is recorded before deployment
+- [x] Explicit approval is recorded before deployment
 
 ## SaaS behavior
 

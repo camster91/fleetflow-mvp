@@ -1,4 +1,4 @@
-const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, restoreReadinessArgs, validateRestoreSummary } = require('@/scripts/backup-restore-lib.cjs')
+const { REQUIRED_RESTORE_TABLES, parseArgs, validateSecret, artifactNames, restoreContainerName, restoreReadinessArgs, validateRestoreSummary, validateRestoreParity } = require('@/scripts/backup-restore-lib.cjs')
 
 describe('backup and isolated restore verifier safety contract', () => {
   test('requires explicit safe source and absolute backup directory', () => {
@@ -49,5 +49,13 @@ describe('backup and isolated restore verifier safety contract', () => {
       'Restore contains failed or unfinished Prisma migrations',
       'Restore integrity check failed: noncanonicalOwnerMemberships',
     ]))
+
+    const empty = { ...valid, criticalRowCounts: { ...valid.criticalRowCounts, User: 0 } }
+    expect(validateRestoreSummary(empty, { requireApplicationUser: false })).toEqual([])
+    expect(validateRestoreParity(empty, empty)).toEqual([])
+    expect(validateRestoreParity(empty, {
+      ...empty,
+      criticalRowCounts: { ...empty.criticalRowCounts, Vehicle: 1 },
+    })).toContain('Restore row count differs from source: Vehicle')
   })
 })

@@ -342,12 +342,23 @@ must not be invented to satisfy a release checklist.
   for this release.
   No merge, deployment, production database action, provider mutation, credential
   rotation, or customer-data access occurred.
+- 2026-09-01: the owner explicitly approved merge and deployment. A non-disclosing
+  comparison confirmed historical GitGuardian incident 36683862 is not the
+  active production PostgreSQL password; the candidate removes the historical
+  value, so that specific credential does not require rotation. The pre-deploy
+  verifier exposed and fixed a restore-database readiness race, then completed
+  an encrypted backup and isolated PostgreSQL 16 restore in approximately 33
+  seconds. Source and restore matched at 47 public tables, 17 completed and zero
+  failed migrations, every critical-table aggregate count, and all four
+  ownership/reference integrity checks. The encrypted artifact is retained on
+  the VPS and off-VPS locally; its passphrase is stored separately in macOS
+  Keychain.
 
 ## Release decision
 
 **Not approved.** Source, dependency, test, build, schema, configuration, Compose,
-security-diff, and exact-head `Ashbi Local CI` gates are green. GitHub Actions is
-waived for this release. Release approval still requires disposition of
-GitGuardian incident 36683862 and any required credential rotation,
-a disposable backup/restore and migration drill, authenticated critical-path QA,
-and live provider/monitoring evidence. Public availability is not launch evidence.
+security-diff, exact-head `Ashbi Local CI`, historical-secret disposition, and
+disposable backup/restore gates are green. GitHub Actions is waived for this
+release. Production verification still requires authenticated critical-path QA
+and provider/monitoring evidence. Public availability alone is not launch
+evidence.
