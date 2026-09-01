@@ -12,10 +12,14 @@
   `Cache-Control: no-store`.
 - These public checks do not identify the deployed commit or verify any
   authenticated workflow, provider, backup, monitoring, or rollback path.
-- Current hardening work is held in draft PRs #78-#104. It is implemented but
-  unverified and unmerged.
-- GitHub Actions currently fails before repository steps execute and skips the
-  production-container job. No current merge candidate is approved.
+- Current hardening work is reconciled in cumulative draft PR #121. Repository
+  gates are verified for its recorded candidate head; it remains unmerged.
+- `Ashbi Local CI` (VPS-hosted) is the owner-approved authoritative repository
+  gate for this release. It passed the exact candidate head in an isolated
+  Podman runner.
+- GitHub Actions currently fails at the account billing boundary before checkout;
+  that infrastructure-only failure is waived for this release and is not used as
+  candidate evidence. No current merge candidate is approved.
 
 ## Proven locally (dated candidate evidence)
 
@@ -33,8 +37,8 @@ These checks established their dated release candidate; they do not establish th
 
 ## Required external evidence
 
-- [ ] CI passes on the exact commit on GitHub
-- [ ] Branch protection requires the CI quality and container jobs
+- [x] `Ashbi Local CI` passes on the exact candidate commit
+- [ ] Repository rules require the exact-head `Ashbi Local CI` check before merge
 - [ ] Production environment requires an authorized reviewer
 - [ ] Production PostgreSQL version, connectivity, capacity, and encrypted backup are verified
 - [ ] A restore drill is completed and timed

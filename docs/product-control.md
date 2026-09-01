@@ -37,10 +37,12 @@ evidence.
   configuration, operations, billing, product-control, and reliability changes.
   PRs #88, #109, and #110 are closed and superseded; #111 is the authoritative
   focused PostgreSQL-default remediation.
-- Recent GitHub Actions runs, including #111 run 33205110750, complete the quality
-  job as failed before repository steps are exposed; the production-container
-  job is skipped. The account billing/spending gate must
-  be resolved before these drafts can be verified.
+- `Ashbi Local CI` check 98995157123 passed exact candidate head `ee57ed0` in the
+  reviewed isolated Podman profile. The owner selected this as the authoritative
+  CI gate for this release.
+- GitHub Actions fails before checkout at the account billing boundary and skips
+  its production-container job. That infrastructure-only result is waived for
+  this release and is not treated as candidate evidence.
 
 ### Prior evidence, not proof of the current candidate
 
@@ -54,10 +56,11 @@ evidence.
 
 ### Unknown or unavailable
 
-- Exact current production image, environment configuration, and relation to
-  `master`.
-- Green CI, typecheck, test, build, container, migration, and browser evidence
-  for the proposed merge candidate.
+- The production image was observed read-only as `fleetflow:3a5fa66`; its full
+  environment configuration and source relation remain unverified.
+- Exact-candidate container startup, migration, recovery, and authenticated
+  browser evidence. Exact-head `Ashbi Local CI` plus local audit, typecheck,
+  tests, and production build are green.
 - Current production backup retention and a timed isolated restore using the
   retained backup.
 - Authenticated desktop/mobile smoke results against the deployed candidate.
@@ -74,8 +77,9 @@ evidence.
 | Capability | Current evidence | Approval or owner action |
 |---|---|---|
 | Private GitHub repository | Read/write connector available; drafts only | Merge and production release require explicit approval |
-| GitHub Actions | Runs visible but fail before steps | Owner resolves account billing/spending; no spend change was made |
-| Local checkout | No usable Fleetvera checkout in the shared workspace | Optional after GitHub access is restored locally |
+| `Ashbi Local CI` (VPS-hosted) | Exact-head check passed in the reviewed isolated Podman profile | Owner-approved authoritative CI gate for this release |
+| GitHub Actions | Runs fail at the account billing boundary before checkout | Waived for this release; no spend change was made |
+| Local checkout | Clean Fleetvera candidate checkout is available | Merge remains subject to explicit approval |
 | Public deployment | Read-only HTTPS checks available | Production mutation requires explicit approval |
 | Production host/database | No current authenticated access in this work cycle | Owner grants narrowly scoped access for approved verification |
 | Stripe/Mailgun/OAuth | Configuration and delivery unverified | Owner supplies approved sandbox/live evidence and credentials |
@@ -87,13 +91,13 @@ test fixtures.
 
 ## Primary objective
 
-Restore executable CI and validate exact cumulative candidate #121 from the draft
-hardening work.
+Validate exact cumulative candidate #121 from the draft hardening work using the
+owner-approved `Ashbi Local CI` gate and the remaining release evidence.
 
 Acceptance criteria:
 
-1. The GitHub Actions quality and production-container jobs execute on the exact
-   candidate commit.
+1. `Ashbi Local CI` executes the reviewed validation profile on the exact candidate
+   commit and passes.
 2. Dependency audit, lint, strict TypeScript, Jest, production build, container
    build/startup, migrations, and the defined release E2E command pass.
 3. Stacked and overlapping drafts are reconciled without dropping tests or
@@ -107,7 +111,7 @@ Acceptance criteria:
 
 | Priority | Outcome | Evidence / acceptance | Status |
 |---|---|---|---|
-| P0 | Restore GitHub Actions execution | Quality and container jobs expose steps and pass on candidate | Blocked by owner billing/spending action |
+| P0 | Exact-head CI | `Ashbi Local CI` reviewed profile passes on candidate | Complete for `ee57ed0`; rerun after any commit |
 | P0 | Reconcile tenant/auth/concurrency drafts | Merge train below rebased, reviewed, and green without lost invariants | In progress |
 | P0 | Prove data recovery | Retained encrypted backup restored in isolation; elapsed time and integrity checks recorded | Proposed |
 | P0 | Prove production configuration | Read-only preflight passes without revealing values; migration path rehearsed | Proposed |
@@ -123,7 +127,8 @@ Acceptance criteria:
 
 #121 is the exact cumulative candidate: 173 changed paths, matching the union of
 #118, #119, #120, #90, #115, #116, and #106 with no missing, unexpected, or
-per-file patch mismatches. It is **implemented in draft**, not verified or released.
+per-file patch mismatches. Its recorded repository gates are verified, but it is
+still a draft and has not been released.
 The entries below document its represented groups and supersession trail.
 
 1. Operational foundations and product control: #118 is the cumulative #105 +
@@ -164,7 +169,7 @@ because GitHub reports them mergeable.
 
 | Risk | Severity | Current control | Release consequence |
 |---|---|---|---|
-| CI cannot execute repository steps | High | Drafts remain unmerged | No candidate approval |
+| GitHub-hosted CI cannot execute repository steps | Medium | Owner-approved `Ashbi Local CI` exact-head gate | Do not use the GitHub billing failure as candidate evidence |
 | Many independent drafts can conflict or omit invariants | High | Explicit merge train and diff review | No bulk merge |
 | Production revision/configuration unknown | High | Public checks treated as availability only; cumulative #118 product-control, configuration, database, and startup gates | No deployment approval |
 | Default PostgreSQL credential may have been deployed and database is host-published on master | High if deployed; exposure unknown | #118 cumulatively retains #111's remediation with #80/#108 runtime controls and #105 release governance | Determine usage; rotate with approval if ever deployed; no candidate approval without disposition |
@@ -181,7 +186,8 @@ because GitHub reports them mergeable.
 
 - Keep production mutations, merges, repository-rule changes, spending changes,
   pricing changes, and external communications behind explicit owner approval.
-- Treat all draft PRs as implemented but unverified while CI is unable to run.
+- Use the exact-head `Ashbi Local CI` result as the authoritative repository gate
+  for this release; rerun it after every candidate commit.
 - Use PostgreSQL advisory locks or equivalent transactional claims for
   cross-request invariants, with focused concurrency tests.
 - Preserve invitation-only availability until provider, recovery, monitoring,
@@ -329,16 +335,19 @@ must not be invented to satisfy a release checklist.
   the Actions spending limit must be increased; the container job was therefore
   skipped. GitGuardian still reports only historical incident 36683862 on commit
   c118789, where the original generic Compose password existed; the candidate
-  removes that value and the host-published database port. Ashbi Local CI accepted
-  the exact head and queued it while its isolated runner image was being rebuilt.
+  removes that value and the host-published database port. `Ashbi Local CI` check
+  98995157123 subsequently passed exact final head `ee57ed0` using the reviewed
+  isolated Podman profile. The owner selected the VPS-hosted check as the
+  authoritative CI gate and waived the GitHub Actions billing-boundary failure
+  for this release.
   No merge, deployment, production database action, provider mutation, credential
   rotation, or customer-data access occurred.
 
 ## Release decision
 
 **Not approved.** Source, dependency, test, build, schema, configuration, Compose,
-and security-diff gates are now green locally. Release approval still requires
-GitHub account billing/spending restoration, independent CI/container execution,
-disposition of GitGuardian incident 36683862 and any required credential rotation,
+security-diff, and exact-head `Ashbi Local CI` gates are green. GitHub Actions is
+waived for this release. Release approval still requires disposition of
+GitGuardian incident 36683862 and any required credential rotation,
 a disposable backup/restore and migration drill, authenticated critical-path QA,
 and live provider/monitoring evidence. Public availability is not launch evidence.
