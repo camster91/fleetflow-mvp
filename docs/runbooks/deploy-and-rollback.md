@@ -2,7 +2,9 @@
 
 ## Prepare
 
-1. Record the candidate commit SHA and successful GitHub CI run.
+1. Record the candidate commit SHA and successful exact-head `Ashbi Local CI`
+   check. GitHub Actions is not the authoritative repository gate for this
+   release.
 2. Explicitly set `FLEETVERA_RELEASE_MODE=pilot` (or `public` for public launch) in the exact production environment and run `npm run verify:production-config`. It prints only missing configuration names and must pass before deployment. The container entrypoint reruns this same verifier and refuses to infer a release mode.
 3. Confirm the production environment approval and all release-readiness checks.
 4. Create and verify a database backup. Record its identifier, timestamp, and restore test.

@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   actions: read
+  checks: read
 
 concurrency:
   group: fleetflow-production
@@ -33,14 +34,18 @@ jobs:
             echo "Confirmed SHA does not match current master."
             exit 1
           fi
-      - name: Verify CI succeeded for approved SHA
+      - name: Verify Ashbi Local CI succeeded for approved SHA
         env:
           GH_TOKEN: ${{ github.token }}
           CONFIRMED_SHA: ${{ inputs.confirmed_sha }}
         run: |
-          gh api --method GET "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=master&per_page=100" \
+          gh api --method GET "repos/${{ github.repository }}/commits/$CONFIRMED_SHA/check-runs" \
             | jq --exit-status --arg sha "$CONFIRMED_SHA" \
-              'any(.workflow_runs[]; .head_sha == $sha and .conclusion == "success")'
+              'any(.check_runs[];
+                .name == "Ashbi Local CI"
+                and .head_sha == $sha
+                and .status == "completed"
+                and .conclusion == "success")'
       - name: Trigger Coolify webhook
         env:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
