@@ -47,7 +47,9 @@ candidate; they do not establish a new live release.
 ## Required external evidence
 
 - [x] `Ashbi Local CI` passes on the exact candidate commit
-- [ ] Repository rules require the exact-head `Ashbi Local CI` check before merge
+- [x] Active default-branch ruleset 20870736 requires strict, up-to-date
+  `Ashbi Local CI` from integration 4583183 before merge; the owner bypass remains
+  a separately documented governance risk
 - [x] Production deployment received explicit owner approval
 - [x] Production PostgreSQL 16 connectivity, capacity, and encrypted backup are verified
 - [x] An isolated restore drill completed in approximately 33 seconds

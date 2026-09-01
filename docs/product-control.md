@@ -41,6 +41,10 @@ evidence.
 - Production-dependency PR #122 and development-dependency PR #123 were each
   updated onto current `master`, passed fresh exact-head `Ashbi Local CI`, and
   merged by fast-forward. Check 99842776108 passed final head `07b342d0`.
+- Active default-branch ruleset 20870736 requires strict, up-to-date
+  `Ashbi Local CI` from integration 4583183. The named owner retains an always
+  bypass, which remains a governance risk rather than evidence that the rule is
+  absent.
 - GitHub Actions fails before checkout at the account billing boundary and skips
   its production-container job. That infrastructure-only result is waived for
   this release and is not treated as candidate evidence.
