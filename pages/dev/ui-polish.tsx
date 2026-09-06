@@ -2,7 +2,7 @@
  * Development-only UI polish sandbox for manual verification.
  * Returns 404 outside development so it never ships as a product surface.
  */
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Head from 'next/head'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -11,15 +11,12 @@ import { FadeIn } from '@/components/ui/FadeIn'
 import { FtueWizard } from '@/components/onboarding/FtueWizard'
 import { confirmAction, promptAction, notify } from '@/services/notifications'
 
+const IS_DEV = process.env.NODE_ENV !== 'production'
+
 export default function UiPolishSandboxPage() {
-  const [allowed, setAllowed] = useState(false)
   const [showFtue, setShowFtue] = useState(false)
 
-  useEffect(() => {
-    setAllowed(process.env.NODE_ENV !== 'production')
-  }, [])
-
-  if (!allowed) {
+  if (!IS_DEV) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-600">
         Not found
