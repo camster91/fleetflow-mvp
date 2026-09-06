@@ -5,6 +5,7 @@ import { Calculator, ExternalLink, MapPin } from 'lucide-react'
 import { DashboardLayout } from '../../components/layouts/DashboardLayout'
 import { PageHeader } from '../../components/PageHeader'
 import { Card } from '../../components/ui/Card'
+import { confirmAction } from '../../services/notifications'
 
 interface IntegrationView {
   provider: string; name: string; status: string; connected: boolean; needsReconnect: boolean
@@ -69,7 +70,11 @@ export default function IntegrationsPage() {
     finally { setBusy(null) }
   }
   async function disconnect(item: IntegrationView) {
-    if (!window.confirm(`Disconnect ${item.name}? Imported review records remain for audit, but credentials are removed.`)) return
+    const ok = await confirmAction(
+      'Imported review records remain for audit, but credentials are removed.',
+      `Disconnect ${item.name}?`
+    )
+    if (!ok) return
     setBusy(item.provider); setError('')
     try {
       const response = await fetch(`/api/integrations/${item.provider}/connect`, { method: 'DELETE' })

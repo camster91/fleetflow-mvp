@@ -22,20 +22,25 @@ import { Loader2 } from 'lucide-react';
  * Button variant styles mapping
  */
 const variantStyles = {
-  primary: 'bg-emerald-900 text-white hover:bg-emerald-800 active:bg-emerald-950 focus:ring-emerald-500',
-  secondary: 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500',
-  ghost: 'bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-400',
-  danger: 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 focus:ring-red-500',
-  outline: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 active:bg-slate-100 focus:ring-slate-400',
+  primary:
+    'bg-emerald-900 text-white hover:bg-emerald-800 active:bg-emerald-950 focus:ring-emerald-500 dark:bg-emerald-700 dark:hover:bg-emerald-600',
+  secondary:
+    'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500',
+  ghost:
+    'bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-400 dark:text-slate-200 dark:hover:bg-slate-800',
+  danger:
+    'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-red-500',
+  outline:
+    'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 active:bg-slate-100 focus:ring-slate-400 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-600 dark:hover:bg-slate-800',
 } as const;
 
 /**
- * Button size styles mapping
+ * Button size styles mapping — md/lg meet 44px touch target guidance
  */
 const sizeStyles = {
-  sm: 'px-3 py-1.5 text-sm gap-1.5',
-  md: 'px-4 py-2 text-base gap-2',
-  lg: 'px-6 py-3 text-lg gap-2',
+  sm: 'min-h-9 px-3 py-1.5 text-sm gap-1.5',
+  md: 'min-h-11 px-4 py-2 text-base gap-2',
+  lg: 'min-h-12 px-6 py-3 text-lg gap-2',
 } as const;
 
 /**

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { CreditCard, Zap, Check, AlertTriangle, Loader2, ReceiptText } from 'lucide-react';
+import { confirmAction } from '../../services/notifications';
 
 interface SubscriptionData {
   plan: string;
@@ -86,7 +87,11 @@ export default function BillingPage() {
   };
 
   const handleCancel = async () => {
-    if (!confirm('Are you sure you want to cancel? You will retain access until the end of the current billing period.')) return;
+    const ok = await confirmAction(
+      'You will retain access until the end of the current billing period.',
+      'Cancel subscription'
+    );
+    if (!ok) return;
     setActionLoading(true);
     try {
       const r = await fetch('/api/subscription/cancel', { method: 'POST' });

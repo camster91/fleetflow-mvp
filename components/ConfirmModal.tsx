@@ -84,14 +84,14 @@ export default function ConfirmModal({
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition font-medium disabled:opacity-50"
+            className="min-h-11 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition font-medium disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             {cancelText}
           </button>
           <button
             onClick={handleConfirm}
             disabled={isLoading}
-            className={`px-4 py-2 text-white ${style.buttonColor} ${style.buttonHover} rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
+            className={`min-h-11 px-4 py-2 text-white ${style.buttonColor} ${style.buttonHover} rounded-lg transition font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2`}
           >
             {isLoading ? (
               <>

@@ -150,29 +150,40 @@ export const reportNotifications = {
     notify.error(`Failed to ${action} report. ${error ? `Error: ${error}` : 'Please try again.'}`),
 };
 
-// Confirmation dialog helper (simulated for now - would use a modal in production)
+// Confirmation dialog helper — uses accessible ConfirmDialog when mounted
 export const confirmAction = async (
   message: string,
   title: string = 'Confirm Action'
 ): Promise<boolean> => {
-  // In a real implementation, this would show a custom modal
-  // For now, we'll use browser confirm but wrap it in a promise
-  return new Promise((resolve) => {
-    const confirmed = window.confirm(`${title}\n\n${message}\n\nAre you sure you want to continue?`);
-    resolve(confirmed);
-  });
+  const { getConfirmDialogBridge } = await import('../components/ui/ConfirmDialog');
+  const bridge = getConfirmDialogBridge();
+  if (bridge) {
+    return bridge.openConfirm({
+      title,
+      message,
+      variant: 'danger',
+      confirmLabel: 'Continue',
+    });
+  }
+  return window.confirm(`${title}\n\n${message}\n\nAre you sure you want to continue?`);
 };
 
-// Prompt dialog helper
+// Prompt dialog helper — uses accessible ConfirmDialog when mounted
 export const promptAction = async (
   message: string,
   defaultValue: string = '',
   title: string = 'Input Required'
 ): Promise<string | null> => {
-  // In a real implementation, this would show a custom modal with form
-  // For now, we'll use browser prompt but wrap it in a promise
-  return new Promise((resolve) => {
-    const result = window.prompt(`${title}\n\n${message}`, defaultValue);
-    resolve(result);
-  });
+  const { getConfirmDialogBridge } = await import('../components/ui/ConfirmDialog');
+  const bridge = getConfirmDialogBridge();
+  if (bridge) {
+    return bridge.openPrompt({
+      title,
+      message,
+      promptDefault: defaultValue,
+      confirmLabel: 'Continue',
+      variant: 'info',
+    });
+  }
+  return window.prompt(`${title}\n\n${message}`, defaultValue);
 };

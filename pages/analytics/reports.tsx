@@ -21,7 +21,7 @@ import {
   Edit,
   Play,
 } from 'lucide-react';
-import { notify } from '../../services/notifications';
+import { notify, confirmAction } from '../../services/notifications';
 import { format } from 'date-fns';
 
 interface Report {
@@ -70,8 +70,9 @@ export default function ReportsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleDeleteReport = (id: string) => {
-    if (!confirm('Are you sure you want to delete this report?')) return;
+  const handleDeleteReport = async (id: string) => {
+    const ok = await confirmAction('This report will be removed from your list.', 'Delete report');
+    if (!ok) return;
     setReports(reports.filter(r => r.id !== id));
     notify.success('Report deleted');
   };

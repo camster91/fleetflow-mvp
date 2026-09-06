@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
+import { confirmAction } from '@/services/notifications'
 
 type Field = { value: string | number | null; confidence: number; citationIds: string[] }
 type Line = { description: string; quantity: number | null; amount: number | null; confidence: number; citationIds: string[] }
@@ -42,7 +43,30 @@ export default function DocumentsPage() {
     } catch (error) { setMessage((error as Error).message) } finally { setBusy(false) }
   }
   const confirmPending = async () => { if (!pending) return; setBusy(true); try { await operation({ action: 'confirm', confirm: true, previewToken: pending.token }); setMessage(`${pending.kind === 'expense' ? 'Expense' : 'Maintenance task'} created and audited.`); setPending(null) } catch (error) { setMessage((error as Error).message) } finally { setBusy(false) } }
-  const remove = async () => { if (!selected || !window.confirm(`Delete ${selected.originalName}? The private file and extracted draft will be removed.`)) return; setBusy(true); setMessage('Deleting document…'); try { const response = await fetch(`/api/documents/upload?id=${encodeURIComponent(selected.id)}`, { method: 'DELETE' }); if (!response.ok) { const data = await response.json(); throw new Error(data.error || 'Document could not be deleted') } await load(); focusUploadAfterDelete.current = true; setMessage('Document deleted. Created fleet records are retained.') } catch (error) { setMessage((error as Error).message) } finally { setBusy(false) } }
+  const remove = async () => {
+    if (!selected) return
+    const ok = await confirmAction(
+      'The private file and extracted draft will be removed. Created fleet records are retained.',
+      `Delete ${selected.originalName}?`
+    )
+    if (!ok) return
+    setBusy(true)
+    setMessage('Deleting document…')
+    try {
+      const response = await fetch(`/api/documents/upload?id=${encodeURIComponent(selected.id)}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Document could not be deleted')
+      }
+      await load()
+      focusUploadAfterDelete.current = true
+      setMessage('Document deleted. Created fleet records are retained.')
+    } catch (error) {
+      setMessage((error as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return <DashboardLayout title="Document intelligence" subtitle="Upload service invoices and inspection records, then verify every extracted field."><div className="space-y-4 pb-20">
     <section ref={uploadRegionRef} tabIndex={-1} aria-labelledby="document-upload-label" className="rounded-xl border bg-white p-4 focus:outline-none focus:ring-2 focus:ring-blue-700"><label id="document-upload-label" className="block font-semibold" htmlFor="document-upload">Private PDF, JPEG, or PNG</label><p className="mt-1 text-sm text-slate-600">Maximum 10 MB, 25 PDF pages, retained for 30 days. Files are never public.</p><input id="document-upload" className="mt-3 block min-h-11 w-full" type="file" accept="application/pdf,image/jpeg,image/png" disabled={busy} onChange={event => void upload(event.target.files?.[0])}/></section>

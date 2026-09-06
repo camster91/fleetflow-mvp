@@ -35,28 +35,28 @@ type AlertType = 'success' | 'warning' | 'error' | 'info';
  */
 const alertStyles: Record<AlertType, { bg: string; border: string; text: string; icon: string }> = {
   success: {
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
-    text: 'text-emerald-800',
-    icon: 'text-emerald-500',
+    bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    text: 'text-emerald-900 dark:text-emerald-100',
+    icon: 'text-emerald-600 dark:text-emerald-400',
   },
   warning: {
-    bg: 'bg-amber-50',
-    border: 'border-amber-200',
-    text: 'text-amber-800',
-    icon: 'text-amber-500',
+    bg: 'bg-amber-50 dark:bg-amber-950/40',
+    border: 'border-amber-200 dark:border-amber-800',
+    text: 'text-amber-900 dark:text-amber-100',
+    icon: 'text-amber-600 dark:text-amber-400',
   },
   error: {
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    text: 'text-red-800',
-    icon: 'text-red-500',
+    bg: 'bg-red-50 dark:bg-red-950/40',
+    border: 'border-red-200 dark:border-red-800',
+    text: 'text-red-900 dark:text-red-100',
+    icon: 'text-red-600 dark:text-red-400',
   },
   info: {
-    bg: 'bg-blue-50',
-    border: 'border-blue-200',
-    text: 'text-blue-800',
-    icon: 'text-blue-500',
+    bg: 'bg-slate-50 dark:bg-slate-800/80',
+    border: 'border-slate-200 dark:border-slate-700',
+    text: 'text-slate-800 dark:text-slate-100',
+    icon: 'text-emerald-700 dark:text-emerald-400',
   },
 } as const;
 
@@ -122,8 +122,8 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
 
     const variantClasses = {
       default: `${styles.bg} ${styles.border} ${styles.text}`,
-      outlined: `bg-white ${styles.border} ${styles.text}`,
-      solid: `${type === 'success' ? 'bg-emerald-500' : type === 'warning' ? 'bg-amber-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'} text-white border-transparent`,
+      outlined: `bg-white dark:bg-slate-900 ${styles.border} ${styles.text}`,
+      solid: `${type === 'success' ? 'bg-emerald-600' : type === 'warning' ? 'bg-amber-600' : type === 'error' ? 'bg-red-600' : 'bg-slate-700'} text-white border-transparent`,
     };
 
     const iconColorClass = variant === 'solid' ? 'text-white' : styles.icon;
@@ -167,8 +167,8 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
               size="sm"
               onClick={handleDismiss}
               className={`
-                shrink-0 -mr-2 -mt-1 h-8 w-8 p-0
-                ${variant === 'solid' ? 'text-white hover:text-white/80 hover:bg-white/10' : 'text-slate-400 hover:text-slate-600'}
+                shrink-0 -mr-2 -mt-1 min-h-11 min-w-11 p-0
+                ${variant === 'solid' ? 'text-white hover:text-white/80 hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}
               `}
               aria-label="Dismiss alert"
             >
@@ -217,21 +217,59 @@ export const AlertGroup: React.FC<AlertGroupProps> = ({
  */
 export interface InlineAlertProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
+  /** Optional typed banner style for page-level fetch errors */
+  type?: AlertType;
+  dismissible?: boolean;
+  onDismiss?: () => void;
+  title?: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-export const InlineAlert: React.FC<InlineAlertProps> = ({ 
+export const InlineAlert: React.FC<InlineAlertProps> = ({
   children,
   className = '',
-  ...props 
-}) => (
-  <span 
-    className={`inline-flex items-center gap-1 text-sm text-red-600 ${className}`}
-    role="alert"
-    {...props}
-  >
-    <XCircle size={14} aria-hidden="true" />
-    {children}
-  </span>
-);
+  type,
+  dismissible,
+  onDismiss,
+  title,
+  actionLabel,
+  onAction,
+  ...props
+}) => {
+  // Page-level banner mode when type is provided
+  if (type) {
+    return (
+      <Alert
+        type={type}
+        title={title}
+        dismissible={dismissible}
+        onDismiss={onDismiss}
+        className={className}
+        {...(props as React.HTMLAttributes<HTMLDivElement>)}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <span>{children}</span>
+          {actionLabel && onAction && (
+            <Button variant="outline" size="sm" className="min-h-11 shrink-0" onClick={onAction}>
+              {actionLabel}
+            </Button>
+          )}
+        </div>
+      </Alert>
+    );
+  }
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-sm text-red-600 dark:text-red-400 ${className}`}
+      role="alert"
+      {...props}
+    >
+      <XCircle size={14} aria-hidden="true" />
+      {children}
+    </span>
+  );
+};
 
 export default Alert;
