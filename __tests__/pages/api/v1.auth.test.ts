@@ -141,12 +141,39 @@ describe('requireApiKey', () => {
 
   it('gives an accepted member only the selected team rows, never owner legacy rows', async () => {
     ;(prisma.apiKey.findUnique as jest.Mock).mockResolvedValue({ ...stored, userId: 'member-1', user: { id: 'member-1', email: 'm@example.com', name: 'Member' } })
-    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([{ id: 'team-a', ownerId: 'owner-1', members: [{ role: 'VIEWER' }] }])
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([{ id: 'team-a', ownerId: 'owner-1', members: [{ role: 'MANAGER' }] }])
     const { req, res } = createMocks({ method: 'GET', headers: { authorization: `Bearer ${plaintext}`, 'x-team-id': 'team-a' } })
     expect(await requireApiKey(req as any, res as any, 'read')).toMatchObject({
       apiResourceWhere: { teamId: 'team-a' },
-      tenant: { ownerId: 'owner-1', teamId: 'team-a', role: 'VIEWER' },
+      tenant: { ownerId: 'owner-1', teamId: 'team-a', role: 'MANAGER' },
     })
+  })
+
+  it.each(['DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'])(
+    'rejects an existing key once its owner is downgraded to %s',
+    async (role) => {
+      const memberKey = { ...stored, userId: 'member-1', user: { id: 'member-1', email: 'm@example.com', name: 'Member' } }
+      ;(prisma.apiKey.findUnique as jest.Mock).mockResolvedValue(memberKey)
+      ;(prisma.team.findMany as jest.Mock).mockResolvedValueOnce([{ id: 'team-a', ownerId: 'owner-1', members: [{ role: 'ADMIN' }] }])
+      const before = createMocks({ method: 'GET', headers: { authorization: `Bearer ${plaintext}`, 'x-team-id': 'team-a' } })
+      expect(await requireApiKey(before.req as any, before.res as any, 'read')).not.toBeNull()
+
+      ;(prisma.team.findMany as jest.Mock).mockResolvedValueOnce([{ id: 'team-a', ownerId: 'owner-1', members: [{ role }] }])
+      const after = createMocks({ method: 'GET', headers: { authorization: `Bearer ${plaintext}`, 'x-team-id': 'team-a' } })
+      expect(await requireApiKey(after.req as any, after.res as any, 'read')).toBeNull()
+      expect(after.res._getStatusCode()).toBe(403)
+      expect(JSON.parse(after.res._getData()).error.code).toBe('API_ACCESS_FORBIDDEN')
+      expect(prisma.apiKey.update).toHaveBeenCalledTimes(1)
+    }
+  )
+
+  it('rejects an existing key once its owner is removed from the workspace', async () => {
+    ;(prisma.apiKey.findUnique as jest.Mock).mockResolvedValue({ ...stored, userId: 'member-1', user: { id: 'member-1', email: 'm@example.com', name: 'Member' } })
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([])
+    const { req, res } = createMocks({ method: 'GET', headers: { authorization: `Bearer ${plaintext}`, 'x-team-id': 'team-a' } })
+    expect(await requireApiKey(req as any, res as any, 'read')).toBeNull()
+    expect(res._getStatusCode()).toBe(403)
+    expect(JSON.parse(res._getData()).error.code).toBe('TENANT_FORBIDDEN')
   })
 
   it('does not fail authentication when the last-used timestamp update fails', async () => {

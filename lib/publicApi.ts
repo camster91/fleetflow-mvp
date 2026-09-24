@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { apiError } from './apiAuth'
+import { apiError, type ApiKeyContext } from './apiAuth'
+import { canViewDeliveries, canViewMaintenance, canViewVehicles } from './permissions'
+import { assignedMaintenanceWhere, assignedResourceWhere, isDriverRole } from './driverScope'
 import { constantTimeCompare } from './tokens'
 import crypto from 'crypto'
 
@@ -108,6 +110,35 @@ export function sendCursorPage<T extends { id: string }>(
     data,
     pagination: { limit, nextCursor: hasMore ? createPublicApiCursor(endpoint, where, data[data.length - 1].id) : null },
   })
+}
+
+export type PublicApiResource = 'vehicles' | 'deliveries' | 'maintenance'
+
+const PUBLIC_API_VIEW_PERMISSIONS = {
+  vehicles: canViewVehicles,
+  deliveries: canViewDeliveries,
+  maintenance: canViewMaintenance,
+} as const
+
+/**
+ * Apply the same role view permissions and driver assignment scoping as the
+ * session API routes. Returns null after writing 403 when the role may not read.
+ */
+export function publicApiReadScope(
+  res: NextApiResponse,
+  context: ApiKeyContext,
+  resource: PublicApiResource
+): { where: object; driverOnly: boolean } | null {
+  const { role } = context.tenant
+  if (!PUBLIC_API_VIEW_PERMISSIONS[resource](role)) {
+    apiError(res, 403, 'FORBIDDEN', `Your workspace role cannot read ${resource}`)
+    return null
+  }
+  const scopeWhere = resource === 'maintenance' ? assignedMaintenanceWhere : assignedResourceWhere
+  return {
+    where: scopeWhere(context.apiResourceWhere, role, context.user.id),
+    driverOnly: isDriverRole(role),
+  }
 }
 
 export function sendPublicApiFailure(res: NextApiResponse) {

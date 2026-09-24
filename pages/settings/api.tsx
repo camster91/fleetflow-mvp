@@ -53,11 +53,12 @@ export default function APISettingsPage() {
   useEffect(() => {
     fetch('/api/settings/api-keys')
       .then(async (response) => {
-        if (!response.ok) throw new Error('Failed to load API keys');
-        return response.json();
+        const data = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(typeof data?.error === 'string' ? data.error : 'Failed to load API keys');
+        return data;
       })
-      .then((data) => setApiKeys(data.keys || []))
-      .catch(() => notify.error('Failed to load API keys'))
+      .then((data) => setApiKeys(data?.keys || []))
+      .catch((error: Error) => notify.error(error.message || 'Failed to load API keys'))
       .finally(() => setLoading(false));
   }, []);
 
