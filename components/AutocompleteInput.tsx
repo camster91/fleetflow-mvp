@@ -16,6 +16,32 @@ interface AutocompleteInputProps {
   disabled?: boolean
 }
 
+// Render matches as React nodes (never HTML) and match with indexOf so user
+// input is never compiled into a RegExp.
+export function highlightMatches(text: string, query: string): React.ReactNode[] {
+  if (!query) return [text]
+  const haystack = text.toLowerCase()
+  const needle = query.toLowerCase()
+  // Lower-casing can change string length for some characters; only highlight
+  // when offsets stay aligned with the original text.
+  if (haystack.length !== text.length) return [text]
+  const nodes: React.ReactNode[] = []
+  let cursor = 0
+  let match = haystack.indexOf(needle)
+  while (match !== -1) {
+    if (match > cursor) nodes.push(text.slice(cursor, match))
+    nodes.push(
+      <mark key={match} className="bg-primary-200 text-primary-900">
+        {text.slice(match, match + needle.length)}
+      </mark>
+    )
+    cursor = match + needle.length
+    match = haystack.indexOf(needle, cursor)
+  }
+  if (cursor < text.length) nodes.push(text.slice(cursor))
+  return nodes
+}
+
 export default function AutocompleteInput({
   value,
   onChange,
@@ -196,12 +222,7 @@ export default function AutocompleteInput({
                   }`}
                 >
                   <Clock className="h-3 w-3 text-gray-400" />
-                  <span dangerouslySetInnerHTML={{
-                    __html: item.replace(
-                      new RegExp(`(${inputValue})`, 'gi'),
-                      '<mark class="bg-primary-200 text-primary-900">$1</mark>'
-                    )
-                  }} />
+                  <span>{highlightMatches(item, inputValue)}</span>
                 </button>
               ))}
             </div>
@@ -227,12 +248,7 @@ export default function AutocompleteInput({
                   }`}
                 >
                   <Search className="h-3 w-3 text-gray-400" />
-                  <span dangerouslySetInnerHTML={{
-                    __html: item.replace(
-                      new RegExp(`(${inputValue})`, 'gi'),
-                      '<mark class="bg-primary-200 text-primary-900">$1</mark>'
-                    )
-                  }} />
+                  <span>{highlightMatches(item, inputValue)}</span>
                 </button>
               ))}
             </div>
