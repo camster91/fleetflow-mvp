@@ -1,4 +1,4 @@
-import { verifyToken, signToken, hashPassword, verifyPassword, getUserFromRequest } from '@/lib/auth';
+import { verifyToken, signToken, hashPassword, verifyPassword, getUserFromRequest, tokenVersionOf } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import type { NextApiRequest } from 'next';
 
@@ -79,5 +79,55 @@ describe('getUserFromRequest', () => {
 
     expect(session?.expires).toEqual(expect.any(String));
     expect(new Date(session!.expires!).getTime()).toBeGreaterThan(Date.now());
+  });
+});
+
+describe('session token versions', () => {
+  const dbUser = {
+    passwordChangedAt: null,
+    role: 'fleet_manager',
+    email: 'a@b.com',
+    name: 'A',
+    onboardingCompleted: true,
+  };
+
+  it('treats a token without a version claim as version 0', async () => {
+    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 0 });
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
+
+    await expect(getUserFromRequest(req)).resolves.toEqual(
+      expect.objectContaining({ user: expect.objectContaining({ id: 'u1', tokenVersion: 0 }) })
+    );
+  });
+
+  it('rejects a token whose version is behind the user record', async () => {
+    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 1 });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 2 });
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
+
+    await expect(getUserFromRequest(req)).resolves.toBeNull();
+  });
+
+  it('rejects a legacy unversioned token once the user has revoked sessions', async () => {
+    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 1 });
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
+
+    await expect(getUserFromRequest(req)).resolves.toBeNull();
+  });
+
+  it('accepts a token at the current version', async () => {
+    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 3 });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 3 });
+    const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
+
+    await expect(getUserFromRequest(req)).resolves.not.toBeNull();
+  });
+
+  it('rejects a malformed version claim', () => {
+    expect(tokenVersionOf({ tv: -1 })).toBeNull();
+    expect(tokenVersionOf({ tv: 1.5 })).toBeNull();
+    expect(tokenVersionOf({})).toBe(0);
   });
 });

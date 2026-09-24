@@ -4,7 +4,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession, authOptions, type Session } from './auth'
 import { prisma } from './prisma'
-import { canManageTeam } from './permissions'
+import { canAccessApi, canManageTeam } from './permissions'
 import type { TeamRole } from '../types'
 import { parse as parseCookie } from 'cookie'
 import { constantTimeCompare, hashToken } from './tokens'
@@ -125,6 +125,13 @@ export async function requireApiKey(
       return null
     }
     throw error
+  }
+
+  // Re-check the owner's current role on every request so keys stop working
+  // as soon as the owner is removed from, or downgraded in, the workspace.
+  if (!canAccessApi(tenant.role)) {
+    apiError(res, 403, 'API_ACCESS_FORBIDDEN', 'Your workspace role does not permit API access')
+    return null
   }
 
   void prisma.apiKey.update({

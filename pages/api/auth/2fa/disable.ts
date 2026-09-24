@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromRequest } from '../../../../lib/auth';
+import { getUserFromRequest, signToken } from '../../../../lib/auth';
+import { sessionCookie } from '../../../../lib/authCookies';
 import { prisma } from '../../../../lib/prisma';
 import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import speakeasy from 'speakeasy';
@@ -94,14 +95,26 @@ export default async function handler(
       }
     }
 
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         twoFactorEnabled: false,
         twoFactorSecret: null,
         backupCodes: null,
+        // Revoke every other session when 2FA protection is removed.
+        tokenVersion: { increment: 1 },
       },
+      select: { tokenVersion: true },
     });
+
+    // Keep this browser signed in with a token for the new version.
+    res.setHeader('Set-Cookie', sessionCookie(signToken({
+      sub: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      tv: updated.tokenVersion,
+    })));
 
     return res.status(200).json({
       message: 'Two-factor authentication disabled successfully',

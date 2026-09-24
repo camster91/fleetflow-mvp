@@ -5,7 +5,10 @@ const backupCodes = Array.from({ length: 10 }, (_, i) =>
 )
 const storedBackupCodes = backupCodes.map((code) => `hash(${code})`)
 
-jest.mock('@/lib/auth', () => ({ getUserFromRequest: jest.fn() }))
+jest.mock('@/lib/auth', () => ({
+  getUserFromRequest: jest.fn(),
+  signToken: jest.fn(() => 'rotated-session'),
+}))
 jest.mock('@/lib/prisma', () => ({
   prisma: { user: { findUnique: jest.fn(), updateMany: jest.fn() } },
 }))
@@ -21,7 +24,7 @@ jest.mock('bcryptjs', () => ({
 jest.mock('@/lib/email', () => ({ sendBackupCodesEmail: jest.fn(() => Promise.resolve()) }))
 
 import handler from '@/pages/api/auth/2fa/verify'
-import { getUserFromRequest } from '@/lib/auth'
+import { getUserFromRequest, signToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendBackupCodesEmail } from '@/lib/email'
 
@@ -34,6 +37,8 @@ describe('POST /api/auth/2fa/verify setup', () => {
       id: 'u1',
       email: 'user@example.com',
       name: 'User',
+      role: 'fleet_manager',
+      tokenVersion: 2,
       twoFactorEnabled: false,
       twoFactorSecret: 'encrypted-secret',
       backupCodes: JSON.stringify(storedBackupCodes),
@@ -53,8 +58,11 @@ describe('POST /api/auth/2fa/verify setup', () => {
         twoFactorSecret: 'encrypted-secret',
         backupCodes: JSON.stringify(storedBackupCodes),
       },
-      data: { twoFactorEnabled: true },
+      data: { twoFactorEnabled: true, tokenVersion: { increment: 1 } },
     })
+    // Enabling 2FA revokes other sessions and re-issues this one at the new version.
+    expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ sub: 'u1', tv: 3 }))
+    expect(res.getHeader('set-cookie')).toEqual(expect.stringContaining('token=rotated-session'))
     expect(sendBackupCodesEmail).toHaveBeenCalledWith(
       'user@example.com',
       'User',

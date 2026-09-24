@@ -88,6 +88,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'Cannot change owner role' });
     }
 
+    // Admins are peers: only the owner may change an admin's role.
+    if (!ctx.isOwner && ctx.member.role === 'ADMIN') {
+      return res.status(403).json({ error: 'Only the owner can change an admin role' });
+    }
+
     const assignerRole = (ctx.isOwner ? 'OWNER' : ctx.userMembership?.role) as TeamRole;
     if (!canAssignRole(assignerRole, role as TeamRole)) {
       return res.status(403).json({ error: 'Cannot assign this role' });
@@ -118,6 +123,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     if (!isSelf && !ctx.canManage) {
       return res.status(403).json({ error: 'Permission denied' });
+    }
+    // Admins are peers: only the owner may remove another admin.
+    if (!isSelf && !ctx.isOwner && ctx.member.role === 'ADMIN') {
+      return res.status(403).json({ error: 'Only the owner can remove an admin' });
     }
     // Reject legacy/inconsistent OWNER labels as well.
     if (ctx.member.role === 'OWNER') {

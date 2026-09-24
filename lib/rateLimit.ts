@@ -90,13 +90,30 @@ const rateLimiters = {
   }),
 };
 
-// Get client IP address
-export function getClientIP(req: NextApiRequest): string {
+// Number of reverse proxies (Traefik/Coolify) in front of the app that append
+// to X-Forwarded-For. Defaults to 1. Set to 0 when the app is exposed directly.
+export function trustedProxyHops(): number {
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
+  if (!raw) return 1;
+  const hops = Number(raw);
+  return Number.isInteger(hops) && hops >= 0 ? hops : 1;
+}
+
+// Get client IP address.
+// Clients can put anything in X-Forwarded-For, so only the entries appended by
+// trusted proxies are meaningful. Walking from the socket peer back through
+// X-Forwarded-For right-to-left, the address TRUSTED_PROXY_HOPS positions away
+// is the right-most hop no trusted proxy vouches for — the real client.
+export function getClientIP(req: Pick<NextApiRequest, 'headers' | 'socket'>): string {
   const forwarded = req.headers['x-forwarded-for'];
-  const ip = forwarded 
-    ? (typeof forwarded === 'string' ? forwarded : forwarded[0])?.split(',')[0]?.trim()
-    : req.socket.remoteAddress;
-  return ip || 'unknown';
+  const forwardedChain = (Array.isArray(forwarded) ? forwarded.join(',') : forwarded || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  // Nearest hop first: the socket peer, then X-Forwarded-For from right to left.
+  const hops = [req.socket?.remoteAddress, ...forwardedChain.reverse()];
+  const index = Math.min(trustedProxyHops(), hops.length - 1);
+  return hops[index] || 'unknown';
 }
 
 // Rate limit check result

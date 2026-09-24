@@ -33,11 +33,13 @@ model User {
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String?
   backupCodes      String? // Hashed backup codes, JSON array
+  lastTotpStep     Int?    // Last accepted TOTP time step; rejects code replay
 
   // Password reset
   passwordResetToken   String?   @unique
   passwordResetExpires DateTime?
   passwordChangedAt    DateTime? // used to invalidate JWTs issued before password change
+  tokenVersion         Int       @default(0) // bumped to revoke every issued session JWT
 
   // Login tracking
   lastLoginAt         DateTime?
@@ -860,7 +862,7 @@ model Announcement {
 
 model TaskShareLink {
   id        String    @id @default(cuid())
-  token     String    @unique
+  token     String    @unique // sha256 hex of the share token; plaintext is never stored
   taskId    String
   task      MaintenanceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
   ownerId   String

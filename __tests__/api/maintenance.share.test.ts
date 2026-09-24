@@ -1,9 +1,10 @@
+import { createHash } from 'crypto'
 import { createMocks } from 'node-mocks-http'
 
 const mockTransaction = {
   $executeRaw: jest.fn(),
   taskShareLink: {
-    findFirst: jest.fn(),
+    updateMany: jest.fn(),
     create: jest.fn(),
   },
 }
@@ -62,12 +63,9 @@ describe('POST /api/maintenance/[id]/share', () => {
     else process.env.NEXT_PUBLIC_APP_URL = originalPublicAppUrl
   })
 
-  it('reuses the active link after taking a task-scoped transaction lock', async () => {
-    mockTransaction.taskShareLink.findFirst.mockResolvedValue({
-      id: 'link-1', taskId: 'task-1', token: 'existing-token',
-      ownerId: 'owner-1', expiresAt: new Date(Date.now() + 60_000),
-      usedAt: null, revokedAt: null,
-    })
+  it('revokes the active link and issues a fresh one inside the task-scoped lock', async () => {
+    mockTransaction.taskShareLink.updateMany.mockResolvedValue({ count: 1 })
+    mockTransaction.taskShareLink.create.mockResolvedValue({})
 
     const { req, res } = createMocks({
       method: 'POST',
@@ -77,28 +75,24 @@ describe('POST /api/maintenance/[id]/share', () => {
     await handler(req as never, res as never)
 
     expect(mockTransaction.$executeRaw).toHaveBeenCalledTimes(1)
-    expect(mockTransaction.taskShareLink.findFirst).toHaveBeenCalledWith({
+    expect(mockTransaction.taskShareLink.updateMany).toHaveBeenCalledWith({
       where: {
         taskId: 'task-1',
         usedAt: null,
         revokedAt: null,
         expiresAt: { gt: expect.any(Date) },
       },
+      data: { revokedAt: expect.any(Date) },
     })
-    expect(mockTransaction.taskShareLink.create).not.toHaveBeenCalled()
-    expect(JSON.parse(res._getData())).toEqual({
-      token: 'existing-token',
-      url: 'https://fleet.example.com/task/existing-token',
-    })
+    expect(res._getStatusCode()).toBe(200)
+    const body = JSON.parse(res._getData())
+    expect(body.token).toMatch(/^[a-f0-9]{48}$/)
+    expect(body.url).toBe(`https://fleet.example.com/task/${body.token}`)
   })
 
-  it('creates one link inside the same locked transaction when none is active', async () => {
-    mockTransaction.taskShareLink.findFirst.mockResolvedValue(null)
-    mockTransaction.taskShareLink.create.mockResolvedValue({
-      id: 'link-2', taskId: 'task-1', token: 'new-token',
-      ownerId: 'owner-1', expiresAt: new Date(Date.now() + 60_000),
-      usedAt: null, revokedAt: null,
-    })
+  it('stores only the sha256 hash of the share token', async () => {
+    mockTransaction.taskShareLink.updateMany.mockResolvedValue({ count: 0 })
+    mockTransaction.taskShareLink.create.mockResolvedValue({})
 
     const { req, res } = createMocks({
       method: 'POST',
@@ -107,14 +101,17 @@ describe('POST /api/maintenance/[id]/share', () => {
     })
     await handler(req as never, res as never)
 
+    const { token } = JSON.parse(res._getData())
     expect(mockTransaction.taskShareLink.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         taskId: 'task-1',
         ownerId: 'owner-1',
-        token: expect.stringMatching(/^[a-f0-9]{48}$/),
+        token: createHash('sha256').update(token).digest('hex'),
         expiresAt: expect.any(Date),
       }),
     })
+    const stored = mockTransaction.taskShareLink.create.mock.calls[0][0].data.token
+    expect(stored).not.toBe(token)
     expect(res._getStatusCode()).toBe(200)
   })
 

@@ -3,6 +3,7 @@ import { prisma } from '../../../../lib/prisma';
 import crypto from 'crypto';
 import { assertSameOrigin, requireTenantContext } from '../../../../lib/apiAuth';
 import { canManageMaintenance } from '../../../../lib/permissions';
+import { hashToken } from '../../../../lib/tokens';
 
 function makeToken() {
   return crypto.randomBytes(24).toString('hex');
@@ -51,24 +52,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const task = await prisma.maintenanceTask.findFirst({ where: { AND: [{ id: taskId }, tenant.resourceWhere] } });
   if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  const link = await prisma.$transaction(async transaction => {
+  const token = makeToken();
+  await prisma.$transaction(async transaction => {
     // Serialize issuance for this task. Hash collisions only serialize unrelated
     // tasks; they cannot weaken the one-active-link invariant.
     await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${taskId}))`;
 
+    // Only sha256(token) is stored, so an existing link cannot be shown again.
+    // Revoke any active link and issue a fresh one to keep one link active.
     const now = new Date();
-    const existing = await transaction.taskShareLink.findFirst({
+    await transaction.taskShareLink.updateMany({
       where: { taskId, usedAt: null, revokedAt: null, expiresAt: { gt: now } },
+      data: { revokedAt: now },
     });
-    if (existing) return existing;
 
-    return transaction.taskShareLink.create({
+    await transaction.taskShareLink.create({
       data: {
-        token: makeToken(), taskId, ownerId: tenant.ownerId,
+        token: hashToken(token), taskId, ownerId: tenant.ownerId,
         expiresAt: new Date(now.getTime() + SHARE_TOKEN_LIFETIME_MS),
       },
     });
   });
 
-  return res.json({ token: link.token, url: `${appOrigin}/task/${link.token}` });
+  return res.json({ token, url: `${appOrigin}/task/${token}` });
 }

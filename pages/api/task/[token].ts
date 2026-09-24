@@ -1,15 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit';
+import { hashToken } from '../../../lib/tokens';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ip = getClientIP(req);
   const allowed = await rateLimitMiddleware(req, res, 'api', ip);
   if (!allowed) return;
 
-  const token = req.query.token as string;
+  const token = req.query.token;
+  if (typeof token !== 'string' || !token) return res.status(404).json({ error: 'Link not found' });
+  // Links are stored as sha256(token); the plaintext only lives in the URL.
   const link = await prisma.taskShareLink.findUnique({
-    where: { token },
+    where: { token: hashToken(token) },
     include: { task: true },
   });
   if (!link) return res.status(404).json({ error: 'Link not found' });

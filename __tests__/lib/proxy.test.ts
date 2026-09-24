@@ -38,3 +38,36 @@ describe('public and protected route policy', () => {
     }
   )
 })
+
+describe('session token claims', () => {
+  const { jwtVerify } = jest.requireMock('jose') as { jwtVerify: jest.Mock }
+
+  function dashboardWithCookie() {
+    return new NextRequest('https://fleet.example/dashboard', {
+      headers: { cookie: 'token=signed' },
+    })
+  }
+
+  it('lets a versioned session token through', async () => {
+    jwtVerify.mockResolvedValueOnce({ payload: { sub: 'u1', purpose: 'session', tv: 2 } })
+    const response = await proxy(dashboardWithCookie())
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  it('lets a legacy session token without a version claim through', async () => {
+    jwtVerify.mockResolvedValueOnce({ payload: { sub: 'u1', purpose: 'session' } })
+    const response = await proxy(dashboardWithCookie())
+    expect(response.headers.get('x-middleware-next')).toBe('1')
+  })
+
+  it.each([
+    ['a 2FA challenge', { sub: 'u1', purpose: 'two-factor' }],
+    ['a purpose-less token', { sub: 'u1' }],
+    ['a malformed version claim', { sub: 'u1', purpose: 'session', tv: 'x' }],
+  ])('treats %s as signed out', async (_label, payload) => {
+    jwtVerify.mockResolvedValueOnce({ payload })
+    const response = await proxy(dashboardWithCookie())
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toContain('/auth/login')
+  })
+})

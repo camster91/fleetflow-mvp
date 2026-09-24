@@ -22,6 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     email: user.email,
     name: user.name,
     role: user.role,
+    tv: user.tokenVersion ?? 0,
   })
 
   res.setHeader('Set-Cookie', sessionCookie(token))

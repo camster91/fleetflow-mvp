@@ -1,16 +1,28 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import { constantTimeCompare, generateAPIKey, hashToken } from '../../../lib/tokens';
-import { requireSession, assertSameOrigin } from '../../../lib/apiAuth';
+import { requireSession, requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth';
+import { canAccessApi } from '../../../lib/permissions';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const session = await requireSession(req, res);
-  if (!session) return;
-
-  const userId = session.user.id;
+  // Revoking your own key only ever reduces access, so it stays available
+  // even after a role downgrade. Listing and creating keys require API access.
+  let userId: string;
+  if (req.method === 'DELETE') {
+    const session = await requireSession(req, res);
+    if (!session) return;
+    userId = session.user.id;
+  } else {
+    const context = await requireTenantContext(req, res);
+    if (!context) return;
+    if (!canAccessApi(context.tenant.role)) {
+      return res.status(403).json({ error: 'Your workspace role does not permit API access' });
+    }
+    userId = context.session.user.id;
+  }
 
   switch (req.method) {
     case 'GET':

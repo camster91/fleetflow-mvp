@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const where=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
     const [vehicles, total] = await Promise.all([
-      prisma.vehicle.findMany({ where, orderBy: { createdAt: 'asc' }, skip, take: limit }),
+      prisma.vehicle.findMany({ where, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], skip, take: limit }),
       prisma.vehicle.count({ where }),
     ])
     return res.json({ data: vehicles.map(item=>isDriverRole(tenant.role)?driverVehicleDto(item):dbToVehicle(item)), total, page, limit, hasMore: skip + limit < total })

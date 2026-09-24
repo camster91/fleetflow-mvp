@@ -4,7 +4,7 @@ import { apiError } from '../../lib/apiAuth'
 const errorResponses = {
   '400': { description: 'Invalid pagination', content: { 'application/json': { example: { error: { code: 'INVALID_PAGINATION', message: 'limit must be a positive integer' } } } } },
   '401': { description: 'Missing, malformed, invalid, or revoked API key' },
-  '403': { description: 'Insufficient scope or workspace access denied' },
+  '403': { description: 'Insufficient scope, workspace access denied, or the key owner\'s current workspace role does not permit API access or reading this resource' },
   '409': { description: 'Multiple workspaces exist; send x-team-id' },
   '429': { description: 'Rate limit exceeded; inspect Retry-After' },
   '405': { description: 'Method not allowed; these v1 endpoints are read-only' },
