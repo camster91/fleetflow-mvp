@@ -49,6 +49,8 @@ test.afterAll(async () => {
   await db.auditLog.deleteMany({ where: { userId: { in: [ownerId, viewerId, otherId] } } })
   await db.integrationConnection.deleteMany({ where: { ownerId: { in: [ownerId, otherId] } } })
   await db.delivery.deleteMany({ where: { id: deliveryId } }); await db.vehicle.deleteMany({ where: { id: vehicleId } })
+  // Teams cannot be deleted while they still own records (docs/data-deletion-policy.md).
+  await db.delivery.deleteMany({ where: { teamId: { in: [teamId, otherTeamId] } } }); await db.vehicle.deleteMany({ where: { teamId: { in: [teamId, otherTeamId] } } })
   await db.teamMember.deleteMany({ where: { teamId: { in: [teamId, otherTeamId] } } }); await db.team.deleteMany({ where: { id: { in: [teamId, otherTeamId] } } }); await db.user.deleteMany({ where: { id: { in: [ownerId, viewerId, otherId] } } })
   await db.$disconnect(); await new Promise<void>((resolve) => mockServer.close(() => resolve()))
 })

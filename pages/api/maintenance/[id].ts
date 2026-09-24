@@ -4,8 +4,9 @@ import { dbToMaintenanceTask, maintenanceTaskToDb, logActivity, mergeMaintenance
 import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 import { driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
+import { withPrismaErrors } from '../../../lib/prismaErrors'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
   if (!context) return
   const { session, tenant } = context
@@ -78,3 +79,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   res.status(405).json({ error: 'Method not allowed' })
 }
+
+export default withPrismaErrors(handler)

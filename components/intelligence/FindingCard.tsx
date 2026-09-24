@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, ChevronDown, Check, ThumbsDown, ThumbsUp, X } from 'lucide-react'
 import { ActionPreview } from '@/components/assistant/ActionPreview'
+import { localDateOnly } from '@/lib/dateOnly'
 
 export interface BriefEvidence {
   entityType: 'vehicle' | 'delivery' | 'maintenance' | 'client'
@@ -61,7 +62,7 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
   const disclosureId = `finding-evidence-${finding.id.replace(/[^a-zA-Z0-9_-]/g, '-')}`
   const deliveryEvidence = finding.evidence.find(item => item.entityType === 'delivery' && item.timestamp)
   const vehicleEvidence = finding.evidence.find(item => item.entityType === 'vehicle' && item.timestamp)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = localDateOnly()
 
   return (
     <article ref={cardRef} tabIndex={-1} data-testid="finding-card" className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">

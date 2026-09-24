@@ -20,6 +20,8 @@ test.afterAll(async () => {
   await db.intelligenceFinding.deleteMany({ where: { ownerId } });
   await db.deliveryEvent.deleteMany({ where: { deliveryId } });
   await db.delivery.deleteMany({ where: { ownerId } });
+  // Teams cannot be deleted while they still own records (docs/data-deletion-policy.md).
+  await db.maintenanceTask.deleteMany({ where: { teamId } });
   await db.teamMember.deleteMany({ where: { teamId } });
   await db.team.deleteMany({ where: { id: teamId } });
   await db.user.deleteMany({

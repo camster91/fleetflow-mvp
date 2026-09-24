@@ -3,6 +3,7 @@ import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
 import { assertSameOrigin } from '../../../lib/apiAuth'
 import { rateLimit } from '../../../lib/security'
+import { sendPrismaError } from '../../../lib/prismaErrors'
 
 function requestMetadata(req: NextApiRequest) {
   const forwarded = req.headers['x-forwarded-for']
@@ -101,6 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({ user: updatedUser })
     } catch (error) {
+      if (sendPrismaError(res, error, { notFound: 'User not found' })) return
       console.error('Error updating user role:', error)
       return res.status(500).json({ error: 'Failed to update user role' })
     }
@@ -134,6 +136,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({ success: true })
     } catch (error) {
+      if (sendPrismaError(res, error, {
+        notFound: 'User not found',
+        foreignKey: 'This user still has records that must be kept, such as vehicle expense history or team records. Remove or reassign them first.',
+      })) return
       console.error('Error deleting user:', error)
       return res.status(500).json({ error: 'Failed to delete user' })
     }

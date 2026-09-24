@@ -63,6 +63,7 @@ model User {
 
   // Login history for security audit
   loginHistory LoginHistory[]
+  passwordHistory PasswordHistory[]
 
   // Teams - User can own multiple teams and be member of multiple teams
   ownedTeams Team[]
@@ -171,6 +172,7 @@ model LoginHistory {
 model PasswordHistory {
   id        String   @id @default(cuid())
   userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   password  String   // Hashed password
   createdAt DateTime @default(now())
 
@@ -429,7 +431,7 @@ model Vehicle {
   ownerId         String
   owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId          String?
-  team            Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   
   // Related data
   deliveries      Delivery[]
@@ -489,7 +491,7 @@ model Delivery {
   ownerId           String
   owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   
   // Timestamps
   createdAt         DateTime @default(now())
@@ -555,7 +557,7 @@ model MaintenanceTask {
   ownerId           String
   owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   shareLinks        TaskShareLink[]
   
   // Parts needed (JSON string)
@@ -601,7 +603,7 @@ model Client {
   ownerId           String
   owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   
   // Contact person (JSON string)
   contactPerson     String?  // JSON string: ContactPerson
@@ -643,7 +645,7 @@ model SOPCategory {
   ownerId           String
   owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   
   // Count (denormalized for performance)
   documentCount     Int      @default(0)
@@ -676,7 +678,7 @@ model VendingMachine {
   ownerId           String
   owner             User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId            String?
-  team              Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team              Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   
   // Notes (JSON string)
   driverNotes       String?  // JSON string: VendingMachineNote[]
@@ -816,7 +818,7 @@ model ExpenseRecord {
   ownerId          String
   owner            User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId           String?
-  team             Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team             Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   vehicleId        String
   vehicle          Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
   vendor           String
@@ -849,7 +851,7 @@ model Announcement {
   ownerId     String
   owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teamId      String?
-  team        Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: NoAction)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

@@ -1,7 +1,75 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
 import { notifyMaintenanceDue } from '../../../lib/email.server'
 import { isAuthorizedCronRequest } from '../../../lib/cronAuth'
+import { startOfUtcDay, toDateOnly } from '../../../lib/dateOnly'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const DUE_SOON_DAYS = 7
+const CANDIDATE_LIMIT = 200
+// Claims run in small sequential batches so one run never holds more than this
+// many pooled connections (Promise.all over 200 transactions could exhaust the
+// pool with P2024).
+const CLAIM_BATCH_SIZE = 10
+
+type ReminderKind = 'due_soon' | 'overdue'
+
+/**
+ * Dedupe rules (at most one reminder per task per day, using reminderSentAt):
+ * - due soon: due between the start of today (UTC) and the end of the 7th day
+ *   ahead, and never reminded.
+ * - overdue: due before the start of today (UTC) and not reminded since the
+ *   due date (never reminded, or only an earlier "due soon" reminder). Claiming
+ *   sets reminderSentAt after the due date, so each task gets one overdue
+ *   reminder.
+ *
+ * Date-only due dates are stored at UTC midnight (lib/dateOnly.ts), so "today"
+ * is the current UTC day. A per-workspace time zone is a follow-up.
+ */
+function reminderConditions(kind: ReminderKind): Prisma.MaintenanceTaskWhereInput {
+  if (kind === 'due_soon') return { reminderSentAt: null }
+  return {
+    OR: [
+      { reminderSentAt: null },
+      { reminderSentAt: { lt: prisma.maintenanceTask.fields.dueDate } },
+    ],
+  }
+}
+
+async function claimAndNotify(
+  task: { id: string; ownerId: string; title: string; vehicleName: string | null; dueDate: Date },
+  kind: ReminderKind,
+  now: Date,
+): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const claimed = await tx.maintenanceTask.updateMany({
+      where: { id: task.id, completed: false, ...reminderConditions(kind) },
+      data: { reminderSentAt: now },
+    })
+    if (claimed.count !== 1) return false
+
+    const dueDay = toDateOnly(task.dueDate)
+    const vehicle = task.vehicleName || 'vehicle'
+    await tx.notification.create({
+      data: {
+        userId: task.ownerId,
+        type: 'MAINTENANCE_DUE',
+        title: kind === 'overdue' ? 'Maintenance Overdue' : 'Maintenance Reminder',
+        message: kind === 'overdue'
+          ? `"${task.title}" for ${vehicle} was due on ${dueDay} and is overdue`
+          : `"${task.title}" for ${vehicle} is due on ${dueDay}`,
+        data: JSON.stringify({
+          taskId: task.id,
+          vehicleName: task.vehicleName,
+          dueDate: dueDay,
+          reminder: kind,
+        }),
+      },
+    })
+    return true
+  })
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -14,76 +82,79 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const now = new Date()
-    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const startOfToday = startOfUtcDay(now)
+    const dueSoonEnd = new Date(startOfToday.getTime() + (DUE_SOON_DAYS + 1) * DAY_MS)
+    const include = {
+      owner: { select: { id: true, email: true, name: true } },
+      vehicle: { select: { name: true } },
+    } as const
 
-    const tasks = await prisma.maintenanceTask.findMany({
+    const overdue = await prisma.maintenanceTask.findMany({
       where: {
         completed: false,
-        dueDate: { gte: now, lte: sevenDaysFromNow },
-        reminderSentAt: null,
+        dueDate: { lt: startOfToday },
+        ...reminderConditions('overdue'),
       },
-      include: {
-        owner: { select: { id: true, email: true, name: true } },
-        vehicle: { select: { name: true } },
+      include,
+      take: CANDIDATE_LIMIT,
+      orderBy: { dueDate: 'asc' },
+    })
+    const dueSoon = await prisma.maintenanceTask.findMany({
+      where: {
+        completed: false,
+        dueDate: { gte: startOfToday, lt: dueSoonEnd },
+        ...reminderConditions('due_soon'),
       },
-      take: 200,
+      include,
+      take: CANDIDATE_LIMIT,
       orderBy: { dueDate: 'asc' },
     })
 
-    if (tasks.length === 0) {
-      return res.status(200).json({ success: true, remindersSent: 0 })
+    const candidates = [
+      ...overdue.map((task) => ({ task, kind: 'overdue' as const })),
+      ...dueSoon.map((task) => ({ task, kind: 'due_soon' as const })),
+    ]
+
+    let skipped = 0
+    let failed = 0
+    const claimed: typeof candidates = []
+    for (let i = 0; i < candidates.length; i += CLAIM_BATCH_SIZE) {
+      const batch = candidates.slice(i, i + CLAIM_BATCH_SIZE)
+      const results = await Promise.allSettled(batch.map(({ task, kind }) => claimAndNotify(task, kind, now)))
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          failed += 1
+          console.error('Maintenance reminder claim failed:', batch[index].task.id, result.reason)
+        } else if (result.value) {
+          claimed.push(batch[index])
+        } else {
+          skipped += 1
+        }
+      })
     }
-
-    // Atomically claim each task and create its durable in-app notification.
-    // A concurrent invocation can observe the same candidate list, but only one
-    // transaction can change reminderSentAt from null.
-    const claims = await Promise.all(
-      tasks.map((task) =>
-        prisma.$transaction(async (tx) => {
-          const claimed = await tx.maintenanceTask.updateMany({
-            where: {
-              id: task.id,
-              completed: false,
-              reminderSentAt: null,
-            },
-            data: { reminderSentAt: now },
-          })
-          if (claimed.count !== 1) return false
-
-          await tx.notification.create({
-            data: {
-              userId: task.ownerId,
-              type: 'MAINTENANCE_DUE',
-              title: 'Maintenance Reminder',
-              message: `"${task.title}" for ${task.vehicleName || 'vehicle'} is due on ${task.dueDate.toLocaleDateString()}`,
-              data: JSON.stringify({
-                taskId: task.id,
-                vehicleName: task.vehicleName,
-                dueDate: task.dueDate,
-              }),
-            },
-          })
-          return true
-        })
-      )
-    )
-    const claimedTasks = tasks.filter((_, index) => claims[index])
 
     // Email remains best-effort, but only the invocation that claimed a task
     // can enqueue its email.
     await Promise.allSettled(
-      claimedTasks
-        .filter((task) => !!task.owner.email)
-        .map((task) => {
+      claimed
+        .filter(({ task }) => !!task.owner.email)
+        .map(({ task, kind }) => {
           const vehicleInfo = { name: task.vehicleName || 'Unknown Vehicle' }
-          return notifyMaintenanceDue(vehicleInfo, [task.title], [task.owner.email!])
+          const label = kind === 'overdue' ? `${task.title} (overdue since ${toDateOnly(task.dueDate)})` : task.title
+          return notifyMaintenanceDue(vehicleInfo, [label], [task.owner.email!])
         })
     )
 
-    return res.status(200).json({
-      success: true,
-      remindersSent: claimedTasks.length,
-    })
+    const stats = {
+      remindersSent: claimed.length,
+      dueSoonSent: claimed.filter(({ kind }) => kind === 'due_soon').length,
+      overdueSent: claimed.filter(({ kind }) => kind === 'overdue').length,
+      skipped,
+      failed,
+    }
+    console.info('Maintenance reminder cron run:', JSON.stringify(stats))
+
+    return res.status(200).json({ success: true, ...stats })
   } catch (error) {
     console.error('Maintenance reminder cron error:', error)
     return res.status(500).json({ error: 'Internal server error' })

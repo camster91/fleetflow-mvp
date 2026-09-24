@@ -18,6 +18,7 @@ import ConfirmModal from '../../components/ConfirmModal';
 import MaintenanceTaskDetailModal from '../../components/MaintenanceTaskDetailModal';
 import toast from 'react-hot-toast';
 import { downloadCSV } from '../../lib/csvExport';
+import { localDateOnly } from '../../lib/dateOnly';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function MaintenancePage() {
@@ -78,7 +79,7 @@ export default function MaintenancePage() {
       variant: 'info',
       onConfirm: async () => {
         try {
-          await api.updateMaintenanceTask(task.id, { completed: true, completedDate: new Date().toISOString().split('T')[0] });
+          await api.updateMaintenanceTask(task.id, { completed: true, completedDate: localDateOnly() });
           notify.success('Maintenance task completed');
           await loadData();
         } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to complete task'); }
