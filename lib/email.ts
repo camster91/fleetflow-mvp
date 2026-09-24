@@ -30,7 +30,7 @@ const APP_URL = CONFIGURED_APP_URL || 'http://localhost:3000';
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera';
 const MAILGUN_DOMAIN = domain || '';
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => ({
     '&': '&amp;',
     '<': '&lt;',
