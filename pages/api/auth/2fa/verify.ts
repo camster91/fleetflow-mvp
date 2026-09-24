@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getUserFromRequest } from '../../../../lib/auth';
+import { getUserFromRequest, signToken } from '../../../../lib/auth';
+import { sessionCookie } from '../../../../lib/authCookies';
 import { prisma } from '../../../../lib/prisma';
 import { decryptSecret } from '../../../../lib/cryptoSecrets';
 import { assertSameOrigin } from '../../../../lib/apiAuth';
@@ -99,6 +100,8 @@ export default async function handler(
         },
         data: {
           twoFactorEnabled: true,
+          // Revoke every other session issued before 2FA was turned on.
+          tokenVersion: { increment: 1 },
         },
       });
 
@@ -108,6 +111,15 @@ export default async function handler(
           code: 'SETUP_CHANGED',
         });
       }
+
+      // Keep this browser signed in with a token for the new version.
+      res.setHeader('Set-Cookie', sessionCookie(signToken({
+        sub: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tv: (user.tokenVersion ?? 0) + 1,
+      })));
 
       try {
         await sendBackupCodesEmail(

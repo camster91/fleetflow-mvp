@@ -5,6 +5,7 @@ import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 import { hashToken } from '../../../lib/tokens'
 import { assertSameOrigin } from '../../../lib/apiAuth'
 import { beginTwoFactorCookies, establishSessionCookies } from '../../../lib/authCookies'
+import { isAccountLocked, nextFailedAttemptState } from '../../../lib/loginLockout'
 
 class LoginCodeAlreadyConsumedError extends Error {}
 
@@ -41,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // Check account lockout
-  if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+  if (isAccountLocked(user)) {
     return res.status(423).json({ error: 'Account temporarily locked. Try again later.' })
   }
 
@@ -55,12 +56,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (!tokenRecord || new Date(tokenRecord.expires) < new Date()) {
     // Invalid or expired code — update attempts + clean up token atomically
-    const attempts = user.failedLoginAttempts + 1
-    const lockout = attempts >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null
+    // An expired lock restarts the counter (see nextFailedAttemptState).
     await prisma.$transaction([
       prisma.user.update({
         where: { id: user.id },
-        data: { failedLoginAttempts: attempts, lockedUntil: lockout },
+        data: nextFailedAttemptState(user),
       }),
       ...(tokenRecord
         ? [prisma.verificationToken.deleteMany({ where: { identifier: `login:${normalizedEmail}` } })]
@@ -108,6 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: user.name,
       role: user.role,
       purpose: 'two-factor',
+      tv: user.tokenVersion ?? 0,
     }, '5m')
     res.setHeader('Set-Cookie', beginTwoFactorCookies(challenge))
     return res.json({
@@ -115,7 +116,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  const token = signToken({ sub: user.id, email: user.email, name: user.name, role: user.role })
+  const token = signToken({
+    sub: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    tv: user.tokenVersion ?? 0,
+  })
 
   res.setHeader('Set-Cookie', establishSessionCookies(token))
 

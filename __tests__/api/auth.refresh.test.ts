@@ -41,7 +41,7 @@ describe('POST /api/auth/refresh', () => {
 
   it('rotates the authenticated session cookie', async () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue({
-      user: { id: 'u1', email: 'user@example.com', name: 'User', role: 'user' },
+      user: { id: 'u1', email: 'user@example.com', name: 'User', role: 'user', tokenVersion: 3 },
     })
     const { req, res } = createMocks<NextApiRequest, NextApiResponse>({ method: 'POST' })
 
@@ -52,6 +52,7 @@ describe('POST /api/auth/refresh', () => {
       email: 'user@example.com',
       name: 'User',
       role: 'user',
+      tv: 3,
     })
     expect(res.getHeader('set-cookie')).toEqual(expect.stringContaining('token=rotated-token'))
     expect(res._getStatusCode()).toBe(200)

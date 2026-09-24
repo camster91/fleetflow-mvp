@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { createMocks } from 'node-mocks-http'
 
 const mockTx = {
@@ -37,6 +38,30 @@ const activeLink = {
 
 describe('public task share API', () => {
   beforeEach(() => jest.clearAllMocks())
+
+  it('looks links up by the sha256 hash of the URL token', async () => {
+    ;(prisma.taskShareLink.findUnique as jest.Mock).mockResolvedValue(activeLink)
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'secret' } })
+
+    await handler(req as never, res as never)
+
+    expect(prisma.taskShareLink.findUnique).toHaveBeenCalledWith({
+      where: { token: createHash('sha256').update('secret').digest('hex') },
+      include: { task: true },
+    })
+    expect(res._getStatusCode()).toBe(200)
+  })
+
+  it('does not match a legacy plaintext token row', async () => {
+    ;(prisma.taskShareLink.findUnique as jest.Mock).mockImplementation(async ({ where }) =>
+      where.token === 'secret' ? activeLink : null
+    )
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'secret' } })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(404)
+  })
 
   it.each([
     ['expired', { expiresAt: new Date(Date.now() - 1), revokedAt: null }],

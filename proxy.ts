@@ -58,6 +58,18 @@ async function getTokenPayload(req: NextRequest) {
       new TextEncoder().encode(getJwtSecret()),
       { algorithms: ['HS256'] }
     )
+    // Mirror getUserFromRequest's claim checks. The proxy deliberately does
+    // not query the database on every navigation, so the tokenVersion
+    // comparison that enforces revocation ("log out everywhere", 2FA changes)
+    // happens in getUserFromRequest on every API call; here we only reject
+    // tokens that could never pass it.
+    if (payload.purpose !== 'session') return null
+    if (
+      payload.tv !== undefined &&
+      !(typeof payload.tv === 'number' && Number.isInteger(payload.tv) && payload.tv >= 0)
+    ) {
+      return null
+    }
     return payload
   } catch {
     return null

@@ -22,6 +22,8 @@ export interface TokenPayload {
   name: string | null
   role: string
   purpose?: 'session' | 'two-factor'
+  /** User.tokenVersion at issue time. Tokens issued before this claim existed count as 0. */
+  tv?: number
   iat?: number
   exp?: number
 }
@@ -32,6 +34,7 @@ export interface SessionUser {
   name: string | null
   role: string
   onboardingCompleted?: boolean
+  tokenVersion?: number
 }
 
 export interface Session {
@@ -52,6 +55,16 @@ export function signToken(
   expiresIn: SignOptions['expiresIn'] = '7d'
 ): string {
   return jwt.sign({ purpose: 'session', ...payload }, getJwtSecret(), { expiresIn })
+}
+
+/**
+ * Token version carried by a verified payload. Tokens signed before the claim
+ * was introduced have no `tv` and are treated as version 0 so existing
+ * sessions survive the deploy that adds revocation.
+ */
+export function tokenVersionOf(payload: Pick<TokenPayload, 'tv'>): number | null {
+  if (payload.tv === undefined) return 0
+  return Number.isInteger(payload.tv) && payload.tv >= 0 ? payload.tv : null
 }
 
 export function verifyToken(token: string): TokenPayload | null {
@@ -79,10 +92,20 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   // Check if password was changed after token was issued (invalidate old tokens)
   const dbUser = await prisma.user.findUnique({
     where: { id: payload.sub },
-    select: { passwordChangedAt: true, role: true, email: true, name: true, onboardingCompleted: true },
+    select: {
+      passwordChangedAt: true,
+      tokenVersion: true,
+      role: true,
+      email: true,
+      name: true,
+      onboardingCompleted: true,
+    },
   })
 
   if (!dbUser) return null
+
+  // "Log out everywhere" and 2FA changes bump tokenVersion to revoke old JWTs.
+  if (tokenVersionOf(payload) !== (dbUser.tokenVersion ?? 0)) return null
 
   if (dbUser.passwordChangedAt && payload.iat) {
     const changedAt = new Date(dbUser.passwordChangedAt).getTime() / 1000
@@ -97,6 +120,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
       name: dbUser.name,
       role: dbUser.role,
       onboardingCompleted: dbUser.onboardingCompleted,
+      tokenVersion: dbUser.tokenVersion ?? 0,
     },
   }
 }
