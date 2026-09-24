@@ -42,7 +42,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [billingAvailable, setBillingAvailable] = useState(false);
-  const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(null);
+  const [billingCheckFailed, setBillingCheckFailed] = useState(false);
   const [pricing, setPricing] = useState<BillingPricing | null>(null);
 
   useEffect(() => {
@@ -53,13 +53,12 @@ export default function BillingPage() {
       .then(([status, availability]) => {
         setSub(status.subscription || null)
         setBillingAvailable(Boolean(availability.available))
-        setAvailabilityMessage(availability.message || null)
         setPricing(availability.pricing || null)
       })
       .catch(() => {
         setSub(null)
         setBillingAvailable(false)
-        setAvailabilityMessage('Billing status could not be verified. Please try again later.')
+        setBillingCheckFailed(true)
         setPricing(null)
       })
       .finally(() => setLoading(false));
@@ -115,7 +114,7 @@ export default function BillingPage() {
   const trialExpired = sub?.status === 'TRIAL' && sub.trialEndsAt && new Date(sub.trialEndsAt) < new Date();
 
   const isActive = sub?.status === 'ACTIVE';
-  const showPricing = !isActive;
+  const showPricing = !isActive && billingAvailable;
   const formatPrice = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value / 100)
   const savings = pricing && pricing.monthly.amount > 0
     ? Math.max(0, Math.round((1 - pricing.yearly.amount / (pricing.monthly.amount * 12)) * 100))
@@ -136,10 +135,17 @@ export default function BillingPage() {
       <PageHeader title="Billing & Subscription" subtitle="Manage your Fleetvera subscription" />
       <div className="max-w-2xl mx-auto space-y-6">
 
-        {!billingAvailable && (
+        {billingCheckFailed && (
           <div role="status" className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
             <AlertTriangle className="h-5 w-5 shrink-0" />
-            <div><p className="font-semibold">Online billing is unavailable</p><p>{availabilityMessage}</p></div>
+            <div><p className="font-semibold">Billing status could not be verified</p><p>Please try again later.</p></div>
+          </div>
+        )}
+
+        {!billingAvailable && !billingCheckFailed && (
+          <div role="status" className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+            <Check className="h-5 w-5 shrink-0 text-blue-700" />
+            <div><p className="font-semibold">Fleetvera is free during the beta</p><p>No payment details are needed. We will give beta workspaces advance notice before paid plans start.</p></div>
           </div>
         )}
 
@@ -151,7 +157,7 @@ export default function BillingPage() {
               <StatusBadge status={sub.status} cancelAtPeriodEnd={sub.cancelAtPeriodEnd} />
             </div>
             <div className="space-y-2 text-sm text-slate-600">
-              <p><span className="font-medium text-slate-800">Plan:</span> Fleetvera {sub.plan === 'UNLIMITED' ? 'Unlimited' : 'Per User'}</p>
+              <p><span className="font-medium text-slate-800">Plan:</span> Fleetvera Pro</p>
               {sub.status === 'TRIAL' && (
                 <p>
                   <span className="font-medium text-slate-800">Trial:</span>{' '}
@@ -198,7 +204,7 @@ export default function BillingPage() {
                 'Unlimited vehicles', 'Unlimited deliveries',
                 'Real-time analytics', 'Team collaboration',
                 'Maintenance scheduling', 'Client management',
-                'CSV exports', 'Priority support',
+                'CSV exports', 'API access',
               ].map(f => (
                 <div key={f} className="flex items-center gap-2 text-sm text-slate-700">
                   <Check className="h-4 w-4 text-emerald-500 shrink-0" />

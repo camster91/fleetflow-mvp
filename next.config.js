@@ -19,7 +19,6 @@ if (sentryConnectOrigin) connectSources.push(sentryConnectOrigin)
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
   {
@@ -63,27 +62,6 @@ const nextConfig = {
   experimental: {
     // Optimize package imports
     optimizePackageImports: ['lucide-react'],
-  },
-  
-  // Webpack optimization
-  webpack: (config, { isServer }) => {
-    // Optimize chunk size
-    if (!isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            // 'initial' only: keep eagerly-loaded deps in the shared vendors
-            // chunk, but let next/dynamic async imports (e.g. recharts in
-            // the report panels / ChartCard) split into their own lazy chunk.
-            chunks: 'initial',
-          },
-        },
-      }
-    }
-    return config
   },
   
   async headers() {
