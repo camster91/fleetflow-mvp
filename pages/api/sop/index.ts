@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const skip = (page - 1) * limit
 
     const [cats, total] = await Promise.all([
-      prisma.sOPCategory.findMany({ where: tenant.resourceWhere, orderBy: { name: 'asc' }, skip, take: limit }),
+      prisma.sOPCategory.findMany({ where: tenant.resourceWhere, orderBy: [{ name: 'asc' }, { id: 'asc' }], skip, take: limit }),
       prisma.sOPCategory.count({ where: tenant.resourceWhere }),
     ])
     return res.json({ data: cats.map(dbToSOPCategory), total, page, limit, hasMore: skip + limit < total })

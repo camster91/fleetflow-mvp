@@ -69,6 +69,7 @@ export default async function handler(
             orderBy: [
               { role: 'asc' },
               { invitedAt: 'desc' },
+              { id: 'asc' },
             ],
             skip,
             take: limit,

@@ -43,10 +43,29 @@ async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 const get = <T>(url: string) => apiFetch<T>(url)
-type CollectionResponse<T> = T[] | { data: T[] }
-const getCollection = async <T>(url: string): Promise<T[]> => {
-  const response = await get<CollectionResponse<T>>(url)
-  return Array.isArray(response) ? response : response.data
+type CollectionResponse<T> = T[] | { data: T[]; hasMore?: boolean }
+// List APIs cap `limit` at 200 and default to 50; page through every page so
+// fleets with more than one page of records see all of them.
+export const COLLECTION_PAGE_SIZE = 200
+export const COLLECTION_MAX_PAGES = 50
+export const getCollection = async <T>(url: string): Promise<T[]> => {
+  const rows: T[] = []
+  const seen = new Set<unknown>()
+  const separator = url.includes('?') ? '&' : '?'
+  for (let page = 1; page <= COLLECTION_MAX_PAGES; page++) {
+    const response = await get<CollectionResponse<T>>(`${url}${separator}page=${page}&limit=${COLLECTION_PAGE_SIZE}`)
+    if (Array.isArray(response)) return response
+    // A row inserted mid-scan can shift offsets; skip ids we've already seen.
+    for (const row of response.data) {
+      const id = (row as { id?: unknown })?.id
+      if (id !== undefined && seen.has(id)) continue
+      if (id !== undefined) seen.add(id)
+      rows.push(row)
+    }
+    if (!response.hasMore || response.data.length === 0) return rows
+  }
+  console.warn(`getCollection(${url}) stopped after ${COLLECTION_MAX_PAGES} pages`)
+  return rows
 }
 const post = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
 const put = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) })

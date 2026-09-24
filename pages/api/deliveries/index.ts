@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const where=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
     const [deliveries, total] = await Promise.all([
-      prisma.delivery.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
+      prisma.delivery.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip, take: limit }),
       prisma.delivery.count({ where }),
     ])
     return res.json({ data: deliveries.map(item=>isDriverRole(tenant.role)?driverDeliveryDto(item):dbToDelivery(item)), total, page, limit, hasMore: skip + limit < total })
@@ -51,28 +51,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       return created
     })
+    // The delivery is already committed. Notifications are best-effort so a
+    // failure here never turns into a 500 that prompts a duplicate retry.
     if (delivery.assignedDriverId) {
-      const driverUser = await prisma.user.findFirst({
-        where: {
-          id: delivery.assignedDriverId,
-        },
-      })
-      if (driverUser) {
-        await createNotification({
-          userId: driverUser.id,
-          type: 'SYSTEM',
-          title: 'New Delivery Assignment',
-          message: `You have been assigned a delivery for "${delivery.customer}"`,
-          data: { deliveryId: delivery.id, customer: delivery.customer },
+      try {
+        const driverUser = await prisma.user.findFirst({
+          where: {
+            id: delivery.assignedDriverId,
+          },
         })
-        if (driverUser.email) {
-          notifyDeliveryAssigned(
-            delivery,
-            driverUser.name || delivery.driver || 'Unknown driver',
-            driverUser.email,
-            session.user.name || 'Manager',
-          ).catch(console.error)
+        if (driverUser) {
+          await createNotification({
+            userId: driverUser.id,
+            type: 'SYSTEM',
+            title: 'New Delivery Assignment',
+            message: `You have been assigned a delivery for "${delivery.customer}"`,
+            data: { deliveryId: delivery.id, customer: delivery.customer },
+          })
+          if (driverUser.email) {
+            notifyDeliveryAssigned(
+              delivery,
+              driverUser.name || delivery.driver || 'Unknown driver',
+              driverUser.email,
+              session.user.name || 'Manager',
+            ).catch(console.error)
+          }
         }
+      } catch (error) {
+        console.error('Delivery assignment notification failed', error)
       }
     }
 
