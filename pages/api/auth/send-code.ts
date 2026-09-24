@@ -5,6 +5,7 @@ import { generateNumericCode, hashToken } from '../../../lib/tokens'
 import { sendLoginCodeEmail } from '../../../lib/email'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 import { assertSameOrigin } from '../../../lib/apiAuth'
+import { hasExpiredLock, isAccountLocked } from '../../../lib/loginLockout'
 import {
   awaitEmailDeliveryWithinTimeout,
   EMAIL_DELIVERY_TIMEOUT_MS,
@@ -40,8 +41,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!emailAllowed) return
 
   const user = await prisma.user.findUnique({ where: { email: normalizedEmail } })
-  if (!user || (user.lockedUntil && new Date(user.lockedUntil) > new Date())) {
+  if (!user || isAccountLocked(user)) {
     return genericResponse()
+  }
+  if (hasExpiredLock(user)) {
+    // The lock lapsed: restart the failure counter so one more wrong code does
+    // not immediately re-lock the account. Guarded so a fresh lock set by a
+    // concurrent request is never cleared.
+    await prisma.user.updateMany({
+      where: { id: user.id, lockedUntil: { lte: new Date() } },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    })
   }
 
   const code = generateNumericCode(6)

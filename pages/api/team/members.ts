@@ -128,6 +128,11 @@ export default async function handler(
           return res.status(403).json({ error: 'Cannot change owner role' });
         }
 
+        // Admins are peers: only the owner may change an admin's role.
+        if (member.role === 'ADMIN' && !isOwner) {
+          return res.status(403).json({ error: 'Only the owner can change an admin role' });
+        }
+
         // Only owner can assign admin role
         if (role === 'ADMIN' && !isOwner) {
           return res.status(403).json({ error: 'Only owner can assign admin role' });
@@ -166,7 +171,7 @@ export default async function handler(
 
         // User can remove themselves
         // Owner can remove anyone
-        // Admin can remove non-owners
+        // Admin can remove non-owner, non-admin members
         if (!isSelf && !isOwner) {
           const userMembership = await prisma.teamMember.findFirst({
             where: {
@@ -177,7 +182,8 @@ export default async function handler(
             },
           });
 
-          if (!userMembership || member.role === 'OWNER') {
+          // Admins are peers: only the owner may remove another admin.
+          if (!userMembership || member.role === 'OWNER' || member.role === 'ADMIN') {
             return res.status(403).json({ error: 'Permission denied' });
           }
         }

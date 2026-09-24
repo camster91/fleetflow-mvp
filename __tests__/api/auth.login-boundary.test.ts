@@ -92,6 +92,55 @@ describe('POST /api/auth/login boundary', () => {
     expect(cookies.join(';')).toContain('token=')
     expect(cookies.join(';')).toContain('fleetflow_team=')
   })
+
+  it('embeds the user token version in the issued session', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...user, tokenVersion: 7 })
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(200)
+    expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ sub: 'u1', tv: 7 }))
+  })
+
+  it('restarts the failure count once an old lock has expired', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      ...user, failedLoginAttempts: 5, lockedUntil: new Date(Date.now() - 1000),
+    })
+    ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.user.update as jest.Mock).mockImplementation((args) => args)
+
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+
+    expect(res._getStatusCode()).toBe(401)
+    // One wrong code after an expired lock must not re-lock the account.
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { failedLoginAttempts: 1, lockedUntil: null },
+    })
+  })
+
+  it('locks on the fifth consecutive failure', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...user, failedLoginAttempts: 4 })
+    ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.user.update as jest.Mock).mockImplementation((args) => args)
+
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'u1' },
+      data: { failedLoginAttempts: 5, lockedUntil: expect.any(Date) },
+    })
+  })
+
+  it('still refuses an account whose lock has not expired', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      ...user, failedLoginAttempts: 5, lockedUntil: new Date(Date.now() + 60_000),
+    })
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(423)
+  })
 })
 
 function request(origin: string) {

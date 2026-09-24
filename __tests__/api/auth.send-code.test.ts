@@ -2,7 +2,7 @@ import { createMocks } from 'node-mocks-http'
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
-    user: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn(), updateMany: jest.fn() },
     verificationToken: { deleteMany: jest.fn(), create: jest.fn() },
   },
 }))
@@ -52,6 +52,47 @@ describe('POST /api/auth/send-code', () => {
     })
     ;(prisma.verificationToken.deleteMany as jest.Mock).mockResolvedValue({ count: 0 })
     ;(prisma.verificationToken.create as jest.Mock).mockResolvedValue({})
+  })
+
+  it('resets the failure counter when a previous lock has expired', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'user-1', email: 'driver@example.com', name: 'Driver',
+      failedLoginAttempts: 5, lockedUntil: new Date(Date.now() - 1000),
+    })
+    ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(sendLoginCodeEmail as jest.Mock).mockResolvedValue({ success: true })
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'fleetvera.example', origin: 'https://fleetvera.example' },
+      body: { email: 'driver@example.com' },
+    })
+
+    await handler(req as never, res as never)
+
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1', lockedUntil: { lte: expect.any(Date) } },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    })
+    expect(sendLoginCodeEmail).toHaveBeenCalled()
+    expect(res._getStatusCode()).toBe(200)
+  })
+
+  it('does not issue a code or reset the counter while the lock is active', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'user-1', email: 'driver@example.com', name: 'Driver',
+      failedLoginAttempts: 5, lockedUntil: new Date(Date.now() + 60_000),
+    })
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'fleetvera.example', origin: 'https://fleetvera.example' },
+      body: { email: 'driver@example.com' },
+    })
+
+    await handler(req as never, res as never)
+
+    expect(prisma.user.updateMany).not.toHaveBeenCalled()
+    expect(prisma.verificationToken.create).not.toHaveBeenCalled()
+    expect(res._getStatusCode()).toBe(200)
   })
 
   it('rejects a cross-origin request before account lookup or delivery', async () => {
