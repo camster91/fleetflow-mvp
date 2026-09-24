@@ -13,9 +13,20 @@ jest.mock('@/lib/prisma', () => ({
 
 import handler from '@/pages/api/notifications'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from '@/lib/auth'
 
 describe('notifications API contracts', () => {
   beforeEach(() => jest.clearAllMocks())
+
+  it('returns 401 without a session and never queries notifications', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValueOnce(null)
+    const { req, res } = createMocks({ method: 'GET' })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(401)
+    expect(prisma.notification.findMany).not.toHaveBeenCalled()
+  })
 
   it('returns cursor metadata without exposing another user', async () => {
     ;(prisma.notification.findMany as jest.Mock).mockResolvedValue([

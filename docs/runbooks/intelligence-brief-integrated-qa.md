@@ -1,12 +1,12 @@
 # Intelligence Brief Integrated Browser QA
 
-Use `scripts/run-intelligence-integrated-qa.ps1` for the final pre-release check against a disposable PostgreSQL container. The script owns its database, ports, test secrets, records, production server, and cleanup; it must never target a user or production database.
+Use `scripts/run-intelligence-integrated-qa.cjs` (`npm run test:e2e:intelligence-qa`) for the final pre-release check against a disposable PostgreSQL container. The script owns its database, ports, test secrets, records, production server, and cleanup; it must never target a user or production database.
 
 ## Running the harness
 
-- Docker must be available locally.
-- Ports 55439 and 3110 must be free, or pass alternate `-PostgresPort` and `-Port` values.
-- Run `powershell -ExecutionPolicy Bypass -File .\scripts\run-intelligence-integrated-qa.ps1` from the repository root.
+- Docker must be available locally (or set `CONTAINER_RUNTIME=podman`).
+- Ports 55439 and 3110 must be free, or pass alternate values: `npm run test:e2e:intelligence-qa -- --postgres-port 55440 --port 3111`.
+- Run `npm run test:e2e:intelligence-qa` from the repository root (Linux, macOS, or Windows).
 
 The harness rehearses both supported migration paths before browser QA: an upgrade through the previously shipped `20260808020000_intelligence_findings` migration followed by `20260808030000_intelligence_runs`, with a seeded finding preserved across the upgrade, and a separate fresh database applying every migration.
 

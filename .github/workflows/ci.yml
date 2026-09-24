@@ -25,12 +25,30 @@ jobs:
     name: Audit, lint, typecheck, test, and build
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # NODE_ENV is deliberately not set here: `npm ci` would then skip the
+    # devDependencies (jest, eslint, typescript, prisma) the gate needs, and
+    # `next build` already sets NODE_ENV=production for itself.
     env:
       CI: true
-      NODE_ENV: production
-      DATABASE_URL: postgresql://fleetflow:ci-only@localhost:5432/fleetflow
+      DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow
+      SHADOW_DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow_shadow
       JWT_SECRET: ci-only-signing-secret-at-least-32-characters
       NEXTAUTH_URL: http://localhost:3000
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fleetflow
+          # Disposable, job-local database: passwordless trust auth keeps credentials out of the repo.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: fleetflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleetflow -d fleetflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -48,11 +66,78 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install locked dependencies
-        run: npm ci --no-audit --no-fund
-      - name: Validate database schema and migrations
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Validate database schema
         run: npx prisma validate
+      - name: Apply migrations to a fresh database
+        run: npx prisma migrate deploy
+      - name: Create shadow database for drift detection
+        run: echo 'CREATE DATABASE fleetflow_shadow;' | npx prisma db execute --url "$DATABASE_URL" --stdin
+      - name: Fail on migration drift
+        run: >-
+          npx prisma migrate diff
+          --from-migrations prisma/migrations
+          --to-schema-datamodel prisma/schema.prisma
+          --shadow-database-url "$SHADOW_DATABASE_URL"
+          --exit-code
       - name: Run mandatory release gate
+        # Same `npm run ci` as Ashbi Local CI; ai:evaluate persists its run to the migrated database.
         run: npm run ci
+
+  e2e:
+    name: Playwright smoke (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+      DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow
+      JWT_SECRET: ci-only-signing-secret-at-least-32-characters
+      NEXTAUTH_URL: http://localhost:3000
+      PLAYWRIGHT_HTML_OPEN: never
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fleetflow
+          # Disposable, job-local database: passwordless trust auth keeps credentials out of the repo.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: fleetflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleetflow -d fleetflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+      - name: Seed synthetic data
+        run: npm run db:seed
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build
+      - name: Run smoke suite
+        # playwright.config.ts starts `npm run start` on localhost:3000; it never targets production by default.
+        run: npm run test:e2e:smoke -- --reporter=line,html
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   container:
     name: Build production container
