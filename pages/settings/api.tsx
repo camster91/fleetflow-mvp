@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   Check,
 } from 'lucide-react';
-import { notify } from '../../services/notifications';
+import { notify, confirmAction } from '../../services/notifications';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ApiKey {
@@ -88,7 +88,11 @@ export default function APISettingsPage() {
   };
 
   const revokeKey = async (id: string) => {
-    if (!confirm('Are you sure you want to revoke this API key?')) return;
+    const ok = await confirmAction(
+      'Apps using this key will stop working immediately.',
+      'Revoke API key'
+    );
+    if (!ok) return;
     setRevokingId(id);
     try {
       const response = await fetch(`/api/settings/api-keys?id=${encodeURIComponent(id)}`, { method: 'DELETE' });

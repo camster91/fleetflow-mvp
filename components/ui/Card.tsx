@@ -33,8 +33,8 @@ const shadowStyles = {
  */
 const borderStyles = {
   none: 'border-0',
-  default: 'border border-slate-200',
-  dashed: 'border-2 border-dashed border-slate-300',
+  default: 'border border-slate-200 dark:border-slate-700',
+  dashed: 'border-2 border-dashed border-slate-300 dark:border-slate-600',
 } as const;
 
 /**
@@ -121,7 +121,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={`
-          bg-white rounded-xl overflow-hidden
+          bg-white dark:bg-slate-900 rounded-xl overflow-hidden
           ${shadowStyles[shadow]}
           ${borderStyles[border]}
           ${typeof hover === 'boolean' ? (hover ? legacyHoverClass : '') : hoverStyles[hover]}
@@ -130,19 +130,19 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         {...props}
       >
         {hasHeader && (
-          <div className="px-6 py-4 border-b border-slate-100">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
             {header ? (
               <div className="flex-1">{header}</div>
             ) : (
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   {title && (
-                    <h3 className="text-lg font-semibold text-slate-900 truncate">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
                       {title}
                     </h3>
                   )}
                   {subtitle && (
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       {subtitle}
                     </p>
                   )}
@@ -160,7 +160,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
         </div>
 
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+          <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/40">
             {footer}
           </div>
         )}
@@ -185,7 +185,7 @@ export const CardHeader = React.forwardRef<HTMLDivElement, CardHeaderProps>(
   ({ children, className = '', ...props }, ref) => (
     <div 
       ref={ref}
-      className={`px-6 py-4 border-b border-slate-100 ${className}`}
+      className={`px-6 py-4 border-b border-slate-100 dark:border-slate-800 ${className}`}
       {...props}
     >
       {children}
@@ -240,7 +240,7 @@ export const CardFooter = React.forwardRef<HTMLDivElement, CardFooterProps>(
   ({ children, align = 'end', className = '', ...props }, ref) => (
     <div 
       ref={ref}
-      className={`px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center gap-3 ${footerAlignStyles[align]} ${className}`}
+      className={`px-6 py-4 border-t border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-950/40 flex items-center gap-3 ${footerAlignStyles[align]} ${className}`}
       {...props}
     >
       {children}

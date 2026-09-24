@@ -21,7 +21,7 @@ import {
   Shield,
   ChevronDown,
 } from 'lucide-react';
-import { notify } from '../../services/notifications';
+import { notify, confirmAction } from '../../services/notifications';
 import { canManageTeam } from '../../lib/permissions';
 
 interface TeamMember {
@@ -73,7 +73,11 @@ export default function TeamPage() {
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!confirm('Are you sure you want to remove this member?')) return;
+    const ok = await confirmAction(
+      'This person will lose access to the team workspace.',
+      'Remove team member'
+    );
+    if (!ok) return;
     try {
       const r = await fetch('/api/team', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberId }) });
       if (r.ok) { setMembers(prev => prev.filter(m => m.id !== memberId)); notify.success('Member removed'); }

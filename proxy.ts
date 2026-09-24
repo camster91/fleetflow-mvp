@@ -47,7 +47,7 @@ const PROTECTED_PREFIXES = [
 
 const PUBLIC_API_PREFIXES = ['/api/auth', '/api/task']
 
-const PUBLIC_PREFIXES = ['/task', '/help']
+const PUBLIC_PREFIXES = ['/task', '/help', '/dev']
 
 async function getTokenPayload(req: NextRequest) {
   const token = req.cookies.get('token')?.value

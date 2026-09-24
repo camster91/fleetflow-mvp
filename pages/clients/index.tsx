@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
+import { InlineAlert } from '../../components/ui/Alert';
+import { FadeIn } from '../../components/ui/FadeIn';
 import ClientFormModal from '../../components/ClientFormModal';
 import * as api from '../../services/apiService';
 import type { Client } from '../../services/apiService';
@@ -48,7 +50,7 @@ function TypeBadge({ type }: { type?: string }) {
 
 export default function ClientsPage() {
   const router = useRouter();
-  const { data: clients, loading: isLoading, refetch: loadData } = useDataFetch<Client[]>(
+  const { data: clients, loading: isLoading, error: fetchError, refetch: loadData } = useDataFetch<Client[]>(
     api.getClients, [], []
   );
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -89,6 +91,18 @@ export default function ClientsPage() {
           </Button>
         }
       />
+
+      {fetchError && (
+        <InlineAlert
+          type="error"
+          title="Couldn’t load clients"
+          className="mb-4"
+          actionLabel="Try again"
+          onAction={() => void loadData()}
+        >
+          {fetchError}
+        </InlineAlert>
+      )}
 
       <div className="mb-6">
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
@@ -149,8 +163,9 @@ export default function ClientsPage() {
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((client) => (
-            <Card key={client.id} hover className="flex flex-col">
+          {filtered.map((client, index) => (
+            <FadeIn key={client.id} delay={Math.min(index * 40, 240)}>
+            <Card hover className="flex flex-col">
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2.5 bg-blue-50 rounded-xl">
                   <Building className="h-6 w-6 text-blue-600" />
@@ -159,14 +174,16 @@ export default function ClientsPage() {
                   <TypeBadge type={client.type} />
                   <button
                     onClick={() => { setEditingClient(client); setIsFormOpen(true); }}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg ml-1"
+                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-slate-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg ml-1"
+                    aria-label={`Edit ${client.name}`}
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => router.push(`/clients/${client.id}`)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-slate-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg"
                     title="View details"
+                    aria-label={`View ${client.name}`}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </button>
@@ -206,6 +223,7 @@ export default function ClientsPage() {
                 )}
               </div>
             </Card>
+            </FadeIn>
           ))}
         </div>
       )}

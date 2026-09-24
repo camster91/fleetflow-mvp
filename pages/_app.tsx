@@ -6,6 +6,7 @@ import { SessionProvider, useSession } from '../lib/session'
 import { AuthProvider } from '../context/AuthContext'
 import { Toaster } from 'react-hot-toast'
 import { OfflineBanner } from '../components/OfflineBanner'
+import { ConfirmDialogProvider } from '../components/ui/ConfirmDialog'
 import '../styles/globals.css'
 
 function OnboardingGuard({ children }: { children: React.ReactNode }) {
@@ -29,69 +30,75 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <SessionProvider>
       <AuthProvider>
-        <OnboardingGuard>
-        <OfflineBanner />
-        <Head>
-          <title>Fleetvera - Fleet Operations, Organized</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="description" content="Fleet management dashboard — vehicles, maintenance, deliveries and analytics." />
-          <meta name="keywords" content="fleet management, delivery, logistics, vehicles, dashboard" />
+        <ConfirmDialogProvider>
+          <OnboardingGuard>
+            <OfflineBanner />
+            <Head>
+              <title>Fleetvera - Fleet Operations, Organized</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1" />
+              <meta name="description" content="Fleet management dashboard — vehicles, maintenance, deliveries and analytics." />
+              <meta name="keywords" content="fleet management, delivery, logistics, vehicles, dashboard" />
 
-          {/* Open Graph */}
-          <meta property="og:title" content="Fleetvera" />
-          <meta property="og:description" content="Fleet operations, organized." />
-          <meta property="og:type" content="website" />
-          
-          {/* PWA */}
-          <link rel="manifest" href="/manifest.json" />
-          <meta name="theme-color" content="#123C36" />
-        </Head>
-        
-        <Component {...pageProps} />
-        
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#1e293b',
-              color: '#f8fafc',
-              borderRadius: '0.5rem',
-              padding: '0.75rem 1rem',
-              fontSize: '0.875rem',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            },
-            success: {
-              duration: 3000,
-              style: {
-                background: '#10b981',
-                color: '#ffffff',
-              },
-              iconTheme: {
-                primary: '#ffffff',
-                secondary: '#10b981',
-              },
-            },
-            error: {
-              duration: 4000,
-              style: {
-                background: '#ef4444',
-                color: '#ffffff',
-              },
-              iconTheme: {
-                primary: '#ffffff',
-                secondary: '#ef4444',
-              },
-            },
-            loading: {
-              style: {
-                background: '#3b82f6',
-                color: '#ffffff',
-              },
-            },
-          }}
-        />
-      </OnboardingGuard>
+              {/* Open Graph */}
+              <meta property="og:title" content="Fleetvera" />
+              <meta property="og:description" content="Fleet operations, organized." />
+              <meta property="og:type" content="website" />
+              
+              {/* PWA */}
+              <link rel="manifest" href="/manifest.json" />
+              <meta name="theme-color" content="#123C36" />
+            </Head>
+            
+            <Component {...pageProps} />
+            
+            <Toaster
+              position="top-right"
+              gutter={10}
+              toastOptions={{
+                duration: 4000,
+                className: 'shadow-lg',
+                style: {
+                  background: '#102421',
+                  color: '#f4f8f7',
+                  borderRadius: '0.75rem',
+                  padding: '0.875rem 1rem',
+                  fontSize: '0.875rem',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: '0 16px 40px -24px rgb(8 43 39 / 0.45)',
+                },
+                success: {
+                  duration: 3000,
+                  style: {
+                    background: '#123c36',
+                    color: '#ffffff',
+                    border: '1px solid rgba(66,214,164,0.35)',
+                  },
+                  iconTheme: {
+                    primary: '#42d6a4',
+                    secondary: '#123c36',
+                  },
+                },
+                error: {
+                  duration: 4500,
+                  style: {
+                    background: '#7f1d1d',
+                    color: '#ffffff',
+                  },
+                  iconTheme: {
+                    primary: '#ffffff',
+                    secondary: '#7f1d1d',
+                  },
+                },
+                loading: {
+                  style: {
+                    background: '#1e293b',
+                    color: '#ffffff',
+                  },
+                },
+              }}
+            />
+          </OnboardingGuard>
+        </ConfirmDialogProvider>
       </AuthProvider>
     </SessionProvider>
   )

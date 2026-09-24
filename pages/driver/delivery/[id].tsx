@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useDataFetch } from '../../../hooks/useDataFetch'
 import type { Delivery } from '../../../services/apiService'
+import { promptAction } from '../../../services/notifications'
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -177,12 +178,12 @@ export default function DriverDeliveryPage() {
                     Mark as Delivered
                   </button>
                   <button
-                    onClick={() => {
-                      const notes = prompt('Describe the issue:')
+                    onClick={async () => {
+                      const notes = await promptAction('Describe the issue:', '', 'Report delivery issue')
                       if (notes) updateStatus('failed', notes)
                     }}
                     disabled={updating}
-                    className="w-full py-4 bg-white border-2 border-red-200 text-red-600 text-lg font-semibold rounded-xl hover:bg-red-50 active:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full min-h-14 py-4 bg-white border-2 border-red-200 text-red-600 text-lg font-semibold rounded-xl hover:bg-red-50 active:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <AlertTriangle className="h-5 w-5" />
                     Report Issue

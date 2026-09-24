@@ -96,7 +96,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     }) => (
       <div
         className={`
-          bg-slate-200 
+          bg-slate-200 dark:bg-slate-700
           ${variantClasses[variant]}
           ${animationClasses[animation]}
           ${!isLast ? `mb-[${lineGap}px]` : ''}
@@ -166,7 +166,7 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
   const numLines = lines ?? contentLines ?? 3;
   return (
     <div 
-      className={`bg-white rounded-xl border border-slate-200 p-6 ${className}`}
+      className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 ${className}`}
       {...props}
     >
       {hasHeader && (

@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
+import { InlineAlert } from '../../components/ui/Alert';
+import { FadeIn } from '../../components/ui/FadeIn';
 import * as api from '../../services/apiService';
 import type { Vehicle } from '../../services/apiService';
 import { notify } from '../../services/notifications';
@@ -24,7 +26,7 @@ import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function VehiclesPage() {
   const router = useRouter();
-  const { data: vehicles, loading: isLoading, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
+  const { data: vehicles, loading: isLoading, error: fetchError, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
     api.getVehicles, [], []
   );
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
@@ -114,6 +116,18 @@ export default function VehiclesPage() {
         }
       />
 
+      {fetchError && (
+        <InlineAlert
+          type="error"
+          title="Couldn’t load vehicles"
+          className="mb-4"
+          actionLabel="Try again"
+          onAction={() => void loadVehicles()}
+        >
+          {fetchError}
+        </InlineAlert>
+      )}
+
       {/* Stats */}
       <div className="mb-6">
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
@@ -148,8 +162,8 @@ export default function VehiclesPage() {
             </select>
           </div>
           <div className="flex items-center space-x-2">
-            <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg ${viewMode === 'table' ? 'bg-blue-100 text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}><List className="h-5 w-5" /></button>
-            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-900' : 'text-slate-400 hover:text-slate-600'}`}><Grid className="h-5 w-5" /></button>
+            <button type="button" aria-label="Table view" onClick={() => setViewMode('table')} className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg ${viewMode === 'table' ? 'bg-emerald-100 text-emerald-900' : 'text-slate-400 hover:text-slate-600'}`}><List className="h-5 w-5" /></button>
+            <button type="button" aria-label="Grid view" onClick={() => setViewMode('grid')} className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg ${viewMode === 'grid' ? 'bg-emerald-100 text-emerald-900' : 'text-slate-400 hover:text-slate-600'}`}><Grid className="h-5 w-5" /></button>
           </div>
         </div>
       </Card>
@@ -163,8 +177,8 @@ export default function VehiclesPage() {
         <Card padding="none">
           {/* Mobile cards */}
           <div className="md:hidden divide-y divide-slate-100">
-            {filteredVehicles.map((vehicle) => (
-              <div key={vehicle.id} className="p-4">
+            {filteredVehicles.map((vehicle, index) => (
+              <FadeIn key={vehicle.id} delay={Math.min(index * 40, 240)} className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={`p-2.5 rounded-xl shrink-0 ${vehicle.status === 'active' ? 'bg-emerald-50 text-emerald-600' : vehicle.status === 'delayed' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>
                     <Truck className="h-5 w-5" />
@@ -182,11 +196,11 @@ export default function VehiclesPage() {
                   <div className="flex items-center gap-1"><Battery className="h-3.5 w-3.5" />{vehicle.mileage.toLocaleString()} mi</div>
                 </div>
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => handleView(vehicle)} className="flex-1 py-2 border border-slate-300 rounded-lg text-sm font-medium min-h-[40px] text-slate-700 hover:bg-slate-50" style={{ touchAction: 'manipulation' }}>View</button>
-                  <button onClick={() => handleEdit(vehicle)} className="flex-1 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium min-h-[40px]" style={{ touchAction: 'manipulation' }}>Edit</button>
-                  <button onClick={() => handleDelete(vehicle)} className="p-2 border border-red-200 text-red-600 rounded-lg min-h-[40px] min-w-[40px] flex items-center justify-center hover:bg-red-50" style={{ touchAction: 'manipulation' }}><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={() => handleView(vehicle)} className="flex-1 py-2 border border-slate-300 rounded-lg text-sm font-medium min-h-11 text-slate-700 hover:bg-slate-50 touch-target" style={{ touchAction: 'manipulation' }}>View</button>
+                  <button onClick={() => handleEdit(vehicle)} className="flex-1 py-2 bg-emerald-800 text-white rounded-lg text-sm font-medium min-h-11 touch-target" style={{ touchAction: 'manipulation' }}>Edit</button>
+                  <button onClick={() => handleDelete(vehicle)} className="p-2 border border-red-200 text-red-600 rounded-lg min-h-11 min-w-11 flex items-center justify-center hover:bg-red-50 touch-target" style={{ touchAction: 'manipulation' }} aria-label="Delete vehicle"><Trash2 className="h-4 w-4" /></button>
                 </div>
-              </div>
+              </FadeIn>
             ))}
           </div>
           {/* Desktop table */}

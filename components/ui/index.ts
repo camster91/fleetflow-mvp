@@ -109,3 +109,18 @@ export {
   type ToastType,
   type ToastPosition,
 } from './Toast';
+
+// Empty states
+export { EmptyState } from './EmptyState';
+
+// Motion
+export { FadeIn, type FadeInProps } from './FadeIn';
+
+// Confirm / prompt dialogs
+export {
+  ConfirmDialogProvider,
+  useConfirmDialog,
+  getConfirmDialogBridge,
+  type ConfirmDialogRequest,
+  type ConfirmDialogVariant,
+} from './ConfirmDialog';

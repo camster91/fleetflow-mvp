@@ -12,6 +12,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
+import { InlineAlert } from '../../components/ui/Alert';
+import { FadeIn } from '../../components/ui/FadeIn';
 import * as api from '../../services/apiService';
 import type { Delivery, Vehicle, Client } from '../../services/apiService';
 import { notify } from '../../services/notifications';
@@ -24,7 +26,7 @@ import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function DeliveriesPage() {
   const router = useRouter();
-  const { data: allData, loading: isLoading, refetch: loadData } = useDataFetch(
+  const { data: allData, loading: isLoading, error: fetchError, refetch: loadData } = useDataFetch(
     async () => {
       const [d, v, c] = await Promise.all([api.getDeliveries(), api.getVehicles(), api.getClients()]);
       return { deliveries: d, vehicles: v, clients: c };
@@ -138,6 +140,18 @@ export default function DeliveriesPage() {
         }
       />
 
+      {fetchError && (
+        <InlineAlert
+          type="error"
+          title="Couldn’t load deliveries"
+          className="mb-4"
+          actionLabel="Try again"
+          onAction={() => void loadData()}
+        >
+          {fetchError}
+        </InlineAlert>
+      )}
+
       {/* Stats */}
       <div className="mb-6">
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
@@ -195,8 +209,9 @@ export default function DeliveriesPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filtered.map((delivery) => (
-            <Card key={delivery.id} hover className={isStale(delivery) ? 'ring-2 ring-amber-300' : ''}>
+          {filtered.map((delivery, index) => (
+            <FadeIn key={delivery.id} delay={Math.min(index * 40, 240)}>
+            <Card hover className={isStale(delivery) ? 'ring-2 ring-amber-300' : ''}>
               {isStale(delivery) && (
                 <div className="flex items-center gap-1.5 text-xs text-amber-600 bg-amber-50 rounded-lg px-2.5 py-1.5 mb-3">
                   <AlertCircle className="h-3.5 w-3.5" />
@@ -260,6 +275,7 @@ export default function DeliveriesPage() {
                 </div>
               )}
             </Card>
+            </FadeIn>
           ))}
         </div>
       )}
