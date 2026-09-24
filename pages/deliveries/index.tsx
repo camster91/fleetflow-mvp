@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import {
   Package, Plus, Search, MapPin, Truck, Clock,
@@ -26,7 +26,7 @@ import { useRecordQuery } from '../../hooks/useRecordQuery';
 
 export default function DeliveriesPage() {
   const router = useRouter();
-  const { data: allData, loading: isLoading, error: fetchError, refetch: loadData } = useDataFetch(
+  const { data: allData, loading: isLoading, error: fetchError, lastUpdated, refetch: loadData } = useDataFetch(
     async () => {
       const [d, v, c] = await Promise.all([api.getDeliveries(), api.getVehicles(), api.getClients()]);
       return { deliveries: d, vehicles: v, clients: c };
@@ -39,16 +39,18 @@ export default function DeliveriesPage() {
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
-  const [lastPolled, setLastPolled] = useState<Date>(new Date());
-  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const lastPolled = lastUpdated ?? new Date();
 
-  // Poll in-transit deliveries every 30 seconds
+  // Poll every 30 seconds in the background: keep the current list on screen,
+  // and pause while the tab is hidden (refresh once when it becomes visible).
   useEffect(() => {
-    pollRef.current = setInterval(() => {
-      loadData();
-      setLastPolled(new Date());
-    }, 30000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    const poll = () => { if (!document.hidden) void loadData({ background: true }); };
+    const interval = setInterval(poll, 30000);
+    document.addEventListener('visibilitychange', poll);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', poll);
+    };
   }, [loadData]);
 
   const minutesAgo = Math.floor((Date.now() - lastPolled.getTime()) / 60000);
@@ -143,7 +145,7 @@ export default function DeliveriesPage() {
       {fetchError && (
         <InlineAlert
           type="error"
-          title="Couldn’t load deliveries"
+          title={deliveries.length > 0 ? 'Couldn’t refresh deliveries — showing the last loaded list' : 'Couldn’t load deliveries'}
           className="mb-4"
           actionLabel="Try again"
           onAction={() => void loadData()}

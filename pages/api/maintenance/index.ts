@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const [tasks, total] = await Promise.all([
       prisma.maintenanceTask.findMany({
         where,
-        orderBy: { dueDate: 'asc' },
+        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
         include: { vehicle: { select: { name: true } } },
         skip,
         take: limit,

@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const skip = (page - 1) * limit
 
     const [clients, total] = await Promise.all([
-      prisma.client.findMany({ where: tenant.resourceWhere, orderBy: { name: 'asc' }, skip, take: limit }),
+      prisma.client.findMany({ where: tenant.resourceWhere, orderBy: [{ name: 'asc' }, { id: 'asc' }], skip, take: limit }),
       prisma.client.count({ where: tenant.resourceWhere }),
     ])
     return res.json({ data: clients.map(dbToClient), total, page, limit, hasMore: skip + limit < total })
