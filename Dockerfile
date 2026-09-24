@@ -23,10 +23,10 @@ COPY . .
 ARG NEXT_PUBLIC_SENTRY_DSN=
 ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
-# Build the application
-ENV NEXTAUTH_URL=http://localhost:3000
-# No SQLite fallback — DATABASE_URL must be explicitly set in production
-ENV DATABASE_URL=postgresql://fleetflow:build-only@localhost:5432/fleetflow
+# Build the application. These are build-time placeholders only: ARG values
+# do not persist into the image, and the runtime must supply real values.
+ARG NEXTAUTH_URL=http://localhost:3000
+ARG DATABASE_URL=postgresql://build@localhost:5432/fleetflow
 
 RUN npm run build
 
@@ -37,7 +37,7 @@ FROM node:22-alpine AS runner
 RUN apk add --no-cache curl openssl
 
 # Install Prisma CLI globally for migrations
-RUN npm install -g prisma@5
+RUN npm install -g prisma@5.22.0
 
 # Set working directory
 WORKDIR /app
@@ -78,7 +78,7 @@ EXPOSE 3000
 USER nextjs
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
   CMD curl -fsS http://localhost:3000/api/health || exit 1
 
 # Start the app via entrypoint (validates DATABASE_URL before launching)
