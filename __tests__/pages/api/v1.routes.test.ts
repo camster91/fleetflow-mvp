@@ -61,6 +61,40 @@ describe('public v1 read API', () => {
     expect(readPublicApiCursor(body.pagination.nextCursor, endpoint, context.apiResourceWhere)).toBe('b')
   })
 
+  it.each([
+    ['vehicles', vehicles, prisma.vehicle.findMany, 'TECHNICIAN'],
+    ['deliveries', deliveries, prisma.delivery.findMany, 'TECHNICIAN'],
+    ['maintenance', maintenance, prisma.maintenanceTask.findMany, 'DISPATCHER'],
+  ] as const)('%s enforces the session view permission for %s', async (_name, handler, findMany, role) => {
+    ;(requireApiKey as jest.Mock).mockResolvedValue({ ...context, tenant: { ...tenant, role } })
+    const { req, res } = createMocks({ method: 'GET' })
+    await handler(req as any, res as any)
+    expect(res._getStatusCode()).toBe(403)
+    expect(JSON.parse(res._getData()).error.code).toBe('FORBIDDEN')
+    expect(findMany).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['vehicles', vehicles, prisma.vehicle.findMany, { assignedDriverId: 'driver-1' }],
+    ['deliveries', deliveries, prisma.delivery.findMany, { assignedDriverId: 'driver-1' }],
+    ['maintenance', maintenance, prisma.maintenanceTask.findMany, { vehicle: { assignedDriverId: 'driver-1' } }],
+  ] as const)('%s scopes a driver key to assigned work with the driver field set', async (_name, handler, findMany, assignment) => {
+    ;(requireApiKey as jest.Mock).mockResolvedValue({
+      ...context,
+      user: { id: 'driver-1', email: 'd@example.com', name: 'Driver' },
+      tenant: { ...tenant, role: 'DRIVER' },
+    })
+    ;(findMany as jest.Mock).mockResolvedValue([])
+    const { req, res } = createMocks({ method: 'GET' })
+    await handler(req as any, res as any)
+    expect(res._getStatusCode()).toBe(200)
+    const query = (findMany as jest.Mock).mock.calls[0][0]
+    expect(query.where).toEqual({ AND: [context.apiResourceWhere, assignment] })
+    expect(query.select).not.toHaveProperty('costEstimate')
+    expect(query.select).not.toHaveProperty('completedTime')
+    expect(query.select).not.toHaveProperty('year')
+  })
+
   it('caps page size and rejects invalid pagination', async () => {
     ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue([])
     const capped = createMocks({ method: 'GET', query: { limit: '500' } })
