@@ -11,6 +11,7 @@ import type {
   Vehicle as DbVehicle,
   VendingMachine as DbVendingMachine,
 } from '@prisma/client'
+import { parseDateOnly, toDateOnly } from './dateOnly'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -279,12 +280,6 @@ const toJsonStr = (v: unknown): string | null =>
 const toDateStr = (d: Date | string | null | undefined): string | undefined =>
   d instanceof Date ? d.toISOString() : (d ?? undefined) as string | undefined
 
-const toDateOnly = (d: Date | string | null | undefined): string | undefined => {
-  if (!d) return undefined
-  const s = d instanceof Date ? d.toISOString() : d
-  return s.split('T')[0]
-}
-
 // ─── Vehicle converters ───────────────────────────────────────────────────────
 
 export function dbToVehicle(v: DbVehicle): Vehicle {
@@ -416,10 +411,10 @@ export function maintenanceTaskToDb(t: Omit<MaintenanceTask, 'id'>, ownerId: str
     type: t.type,
     vehicleName: t.vehicle || null,
     vehicleId: vehicleId || t.vehicleId || null,
-    dueDate: new Date(t.dueDate + 'T00:00:00'),
+    dueDate: parseDateOnly(t.dueDate) ?? new Date(NaN),
     priority: t.priority,
     completed: t.completed ?? false,
-    completedDate: t.completedDate ? new Date(t.completedDate) : null,
+    completedDate: parseDateOnly(t.completedDate),
     notes: t.notes || null,
     estimatedDuration: t.estimatedDuration || null,
     partsNeeded: toJsonStr(t.partsNeeded),

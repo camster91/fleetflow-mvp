@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Wrench, Calendar, AlertTriangle, FileText, Truck, Clock } from 'lucide-react'
 import FormModal from './FormModal'
 import AutocompleteInput from './AutocompleteInput'
+import { localDateOnly } from '../lib/dateOnly'
 import * as dataService from '../services/dataServiceWithSync'
 import * as recentItems from '../services/recentItems'
 
@@ -93,7 +94,7 @@ export default function MaintenanceTaskFormModal({
         setFormData({
           vehicle: '',
           type: '',
-          dueDate: nextWeek.toISOString().split('T')[0],
+          dueDate: localDateOnly(nextWeek),
           priority: 'medium',
           notes: '',
           estimatedDuration: '',
