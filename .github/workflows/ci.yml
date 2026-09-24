@@ -30,8 +30,8 @@ jobs:
     # `next build` already sets NODE_ENV=production for itself.
     env:
       CI: true
-      DATABASE_URL: postgresql://fleetflow:ci-only@localhost:5432/fleetflow
-      SHADOW_DATABASE_URL: postgresql://fleetflow:ci-only@localhost:5432/fleetflow_shadow
+      DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow
+      SHADOW_DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow_shadow
       JWT_SECRET: ci-only-signing-secret-at-least-32-characters
       NEXTAUTH_URL: http://localhost:3000
     services:
@@ -39,7 +39,8 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: fleetflow
-          POSTGRES_PASSWORD: ci-only
+          # Disposable, job-local database: passwordless trust auth keeps credentials out of the repo.
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: fleetflow
         ports:
           - 5432:5432
@@ -89,7 +90,7 @@ jobs:
     timeout-minutes: 25
     env:
       CI: true
-      DATABASE_URL: postgresql://fleetflow:ci-only@localhost:5432/fleetflow
+      DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow
       JWT_SECRET: ci-only-signing-secret-at-least-32-characters
       NEXTAUTH_URL: http://localhost:3000
       PLAYWRIGHT_HTML_OPEN: never
@@ -98,7 +99,8 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: fleetflow
-          POSTGRES_PASSWORD: ci-only
+          # Disposable, job-local database: passwordless trust auth keeps credentials out of the repo.
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_DB: fleetflow
         ports:
           - 5432:5432

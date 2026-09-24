@@ -67,12 +67,12 @@ main(async () => {
   }
 
   try {
-    startPostgres({ name: freshName, port: freshPort, password: 'postgres', database: db.database })
-    startPostgres({ name: upgradeName, port: upgradePort, password: 'postgres', database: db.database })
+    startPostgres({ name: freshName, port: freshPort, database: db.database })
+    startPostgres({ name: upgradeName, port: upgradePort, database: db.database })
     waitPostgres(freshName, { ...db, attempts: 40 })
     waitPostgres(upgradeName, { ...db, attempts: 40 })
 
-    const freshUrl = `postgresql://postgres:postgres@127.0.0.1:${freshPort}/fleetvera?schema=public`
+    const freshUrl = `postgresql://postgres@127.0.0.1:${freshPort}/fleetvera?schema=public`
     const freshEnv = { ...process.env, DATABASE_URL: freshUrl }
     npx(['prisma', 'migrate', 'deploy'], null, freshEnv)
     npx(['prisma', 'migrate', 'diff', '--from-url', freshUrl, '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code'], null, freshEnv)
@@ -85,7 +85,7 @@ main(async () => {
       cpSync(path.join('prisma/migrations', entry.name), path.join(tempRoot, 'migrations', entry.name), { recursive: true })
     }
 
-    const upgradeUrl = `postgresql://postgres:postgres@127.0.0.1:${upgradePort}/fleetvera?schema=public`
+    const upgradeUrl = `postgresql://postgres@127.0.0.1:${upgradePort}/fleetvera?schema=public`
     const upgradeEnv = { ...process.env, DATABASE_URL: upgradeUrl }
     npx(['prisma', 'migrate', 'deploy', '--schema', path.join(tempRoot, 'schema.prisma')], null, upgradeEnv)
     process.stdout.write(upgradeSql(FIXTURE_SQL))

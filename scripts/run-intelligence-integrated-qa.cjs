@@ -25,7 +25,7 @@ main(async () => {
   const containerName = `fleetvera-intelligence-qa-${process.pid}`
   const fixturePrefix = 'fleetvera-intelligence-migrations-'
   const migrationFixture = path.join(os.tmpdir(), `${fixturePrefix}${process.pid}`)
-  const upgradeDatabaseUrl = `postgresql://fleetvera:fleetvera_qa@127.0.0.1:${postgresPort}/fleetvera_qa`
+  const upgradeDatabaseUrl = `postgresql://fleetvera@127.0.0.1:${postgresPort}/fleetvera_qa`
   let serverProcess = null
 
   const env = {
@@ -40,7 +40,7 @@ main(async () => {
   const query = (database, sql) => psql(containerName, { user: 'fleetvera', database, sql, extraArgs: ['-tA'] }).stdout.trim()
 
   try {
-    startPostgres({ name: containerName, port: postgresPort, user: 'fleetvera', password: 'fleetvera_qa', database: 'fleetvera_qa' })
+    startPostgres({ name: containerName, port: postgresPort, user: 'fleetvera', database: 'fleetvera_qa' })
     try {
       waitPostgres(containerName, { user: 'fleetvera', database: 'fleetvera_qa', attempts: 60 })
     } catch {
@@ -68,7 +68,7 @@ main(async () => {
     if (container(['exec', containerName, 'createdb', '-U', 'fleetvera', 'fleetvera_fresh']).status !== 0) {
       throw new Error('Could not create the fresh-install database')
     }
-    const freshEnv = { ...env, DATABASE_URL: `postgresql://fleetvera:fleetvera_qa@127.0.0.1:${postgresPort}/fleetvera_fresh` }
+    const freshEnv = { ...env, DATABASE_URL: `postgresql://fleetvera@127.0.0.1:${postgresPort}/fleetvera_fresh` }
     npx(['prisma', 'migrate', 'deploy'], 'Fresh migration failed', freshEnv)
     if (query('fleetvera_fresh', `SELECT ${RUN_TABLE_EXISTS}`) !== 't') throw new Error('Fresh migration path did not create IntelligenceRun')
 

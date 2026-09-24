@@ -23,7 +23,7 @@ main(async () => {
 
   const env = {
     ...process.env,
-    DATABASE_URL: 'postgresql://fleetvera:fleetvera_qa@127.0.0.1:55461/fleetvera_qa',
+    DATABASE_URL: 'postgresql://fleetvera@127.0.0.1:55461/fleetvera_qa',
     JWT_SECRET: 'fleetvera-task16-local-jwt-secret-at-least-32-characters',
     API_CURSOR_SECRET: 'fleetvera-task16-local-cursor-secret-32-characters',
     NEXTAUTH_URL: 'http://127.0.0.1:3116',
@@ -56,7 +56,7 @@ main(async () => {
   const npmRun = (args) => run('npm', ['run', ...args], { env }).status
 
   try {
-    startPostgres({ name: containerName, port: 55461, user: 'fleetvera', password: 'fleetvera_qa', database: 'fleetvera_qa' })
+    startPostgres({ name: containerName, port: 55461, user: 'fleetvera', database: 'fleetvera_qa' })
     try {
       waitPostgres(containerName, { user: 'fleetvera', database: 'fleetvera_qa', attempts: 60 })
     } catch {

@@ -46,10 +46,14 @@ function removeContainers(...names) {
   spawnSync(containerRuntime, ['rm', '-f', ...names], { stdio: 'ignore' })
 }
 
-function startPostgres({ name, port, bindHost = '127.0.0.1', user, password, database }) {
+/**
+ * Start a disposable postgres:16-alpine bound to loopback only. It uses trust
+ * auth, so connection URLs carry no password.
+ */
+function startPostgres({ name, port, bindHost = '127.0.0.1', user, database }) {
   const envArgs = []
   if (user) envArgs.push('-e', `POSTGRES_USER=${user}`)
-  envArgs.push('-e', `POSTGRES_PASSWORD=${password}`, '-e', `POSTGRES_DB=${database}`)
+  envArgs.push('-e', 'POSTGRES_HOST_AUTH_METHOD=trust', '-e', `POSTGRES_DB=${database}`)
   const result = container(['run', '--name', name, ...envArgs, '-p', `${bindHost}:${port}:5432`, '-d', 'postgres:16-alpine'], { capture: true })
   if (result.status !== 0) throw new Error(`Could not start disposable PostgreSQL ${name}: ${result.stderr.trim()}`)
 }
