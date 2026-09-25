@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
-import ConfirmModal from '../../components/ConfirmModal';
+import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import * as api from '../../services/apiService';
 import type { VendingMachine } from '../../services/apiService';
 import { notify } from '../../services/notifications';
@@ -26,7 +26,7 @@ export default function VendingMachinesPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMachine, setEditingMachine] = useState<VendingMachine | null>(null);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const { openConfirm } = useConfirmDialog();
 
   const loadData = useCallback(async () => {
     try {
@@ -47,8 +47,8 @@ export default function VendingMachinesPage() {
   });
 
   const handleDelete = (m: VendingMachine) => {
-    setConfirmModal({
-      isOpen: true, title: 'Delete Machine',
+    void openConfirm({
+      title: 'Delete Machine', variant: 'danger',
       message: `Delete "${m.name}"? This cannot be undone.`,
       onConfirm: async () => {
         try {
@@ -189,15 +189,6 @@ export default function VendingMachinesPage() {
           </div>
         </div>
       )}
-
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onClose={() => setConfirmModal((p) => ({ ...p, isOpen: false }))}
-        variant="danger"
-      />
     </DashboardLayout>
   );
 }

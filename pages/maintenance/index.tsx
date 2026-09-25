@@ -14,7 +14,7 @@ import * as api from '../../services/apiService';
 import type { MaintenanceTask, Vehicle } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import MaintenanceTaskFormModal from '../../components/MaintenanceTaskFormModal';
-import ConfirmModal from '../../components/ConfirmModal';
+import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import MaintenanceTaskDetailModal from '../../components/MaintenanceTaskDetailModal';
 import toast from 'react-hot-toast';
 import { downloadCSV } from '../../lib/csvExport';
@@ -32,9 +32,7 @@ export default function MaintenancePage() {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean; title: string; message: string; onConfirm: () => void; variant: 'danger' | 'warning' | 'info';
-  }>({ isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'info' });
+  const { openConfirm } = useConfirmDialog();
 
   const loadData = useCallback(async () => {
     try {
@@ -73,8 +71,8 @@ export default function MaintenancePage() {
   };
 
   const handleMarkComplete = (task: MaintenanceTask) => {
-    setConfirmModal({
-      isOpen: true, title: 'Mark as Complete',
+    void openConfirm({
+      title: 'Mark as Complete',
       message: `Mark "${task.type}" for ${task.vehicle} as completed?`,
       variant: 'info',
       onConfirm: async () => {
@@ -282,15 +280,6 @@ export default function MaintenancePage() {
           vehicles={vehicles}
         />
       )}
-
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={() => { confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }}
-        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-        variant={confirmModal.variant}
-      />
     </DashboardLayout>
   );
 }

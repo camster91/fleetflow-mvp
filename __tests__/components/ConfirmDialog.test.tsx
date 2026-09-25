@@ -75,3 +75,59 @@ describe('ConfirmDialog', () => {
     })
   })
 })
+
+describe('ConfirmDialog async onConfirm', () => {
+  function AsyncHarness({ action }: { action: () => Promise<void> }) {
+    const { openConfirm } = useConfirmDialog()
+    return (
+      <Button
+        onClick={async () => {
+          const ok = await openConfirm({ title: 'Archive', message: 'Archive it?', onConfirm: action })
+          document.body.setAttribute('data-async-result', ok ? 'yes' : 'no')
+        }}
+      >
+        Open async
+      </Button>
+    )
+  }
+
+  beforeEach(() => document.body.removeAttribute('data-async-result'))
+
+  test('stays open and re-enables controls when the action throws', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const action = jest.fn().mockRejectedValue(new Error('boom'))
+    render(
+      <ConfirmDialogProvider>
+        <AsyncHarness action={action} />
+      </ConfirmDialogProvider>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Open async' }))
+    await screen.findByRole('alertdialog')
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled())
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(action).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(document.body.getAttribute('data-async-result')).toBe('no'))
+    errorSpy.mockRestore()
+  })
+
+  test('traps Tab focus inside the dialog', async () => {
+    render(
+      <ConfirmDialogProvider>
+        <AsyncHarness action={jest.fn().mockResolvedValue(undefined)} />
+      </ConfirmDialogProvider>
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Open async' }))
+    await screen.findByRole('alertdialog')
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    const confirm = screen.getByRole('button', { name: 'Confirm' })
+    confirm.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(cancel).toHaveFocus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(confirm).toHaveFocus()
+  })
+})

@@ -6,7 +6,7 @@ import { Card, StatCard } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
-import ConfirmModal from '../../components/ConfirmModal';
+import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import SOPCategoryFormModal from '../../components/SOPCategoryFormModal';
 import * as api from '../../services/apiService';
 import type { SOPCategory } from '../../services/apiService';
@@ -19,7 +19,7 @@ export default function SOPPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<SOPCategory | null>(null);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const { openConfirm } = useConfirmDialog();
 
   const loadData = useCallback(async () => {
     try {
@@ -37,9 +37,9 @@ export default function SOPPage() {
   );
 
   const handleDelete = (cat: SOPCategory) => {
-    setConfirmModal({
-      isOpen: true,
+    void openConfirm({
       title: 'Delete Category',
+      variant: 'danger',
       message: `Delete "${cat.name}"? This cannot be undone.`,
       onConfirm: async () => {
         try {
@@ -122,14 +122,6 @@ export default function SOPPage() {
           notify.success(editingCategory ? `"${cat.name}" updated` : `"${cat.name}" created`);
           await loadData();
         }}
-      />
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onClose={() => setConfirmModal((p) => ({ ...p, isOpen: false }))}
-        variant="danger"
       />
     </DashboardLayout>
   );

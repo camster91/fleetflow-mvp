@@ -18,7 +18,7 @@ import * as api from '../../services/apiService';
 import type { Delivery, Vehicle, Client } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import DeliveryFormModal from '../../components/DeliveryFormModal';
-import ConfirmModal from '../../components/ConfirmModal';
+import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
@@ -37,7 +37,7 @@ export default function DeliveriesPage() {
   const { deliveries, vehicles, clients } = allData;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+  const { openConfirm } = useConfirmDialog();
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
   const lastPolled = lastUpdated ?? new Date();
 
@@ -98,9 +98,9 @@ export default function DeliveriesPage() {
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
   });
   const handleDelete = (d: Delivery) => {
-    setConfirmModal({
-      isOpen: true,
+    void openConfirm({
       title: 'Delete Delivery',
+      variant: 'danger',
       message: `Delete delivery for "${d.customer}"? This cannot be undone.`,
       onConfirm: async () => {
         try {
@@ -296,14 +296,6 @@ export default function DeliveriesPage() {
           notify.success(editingDelivery ? `Delivery for "${delivery.customer}" updated` : `Delivery for "${delivery.customer}" created`);
           await loadData();
         }}
-      />
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onClose={() => setConfirmModal((p) => ({ ...p, isOpen: false }))}
-        variant="danger"
       />
     </DashboardLayout>
   );
