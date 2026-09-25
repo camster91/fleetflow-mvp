@@ -52,6 +52,10 @@ function deriveKey(): Buffer {
  */
 function decryptionKeys(): Buffer[] {
   const keys = [deriveKey()]
+  // Before key bytes were kept verbatim, a whitespace-padded
+  // TOKEN_ENCRYPTION_KEY was trimmed; keep reading seeds written that way.
+  const explicit = process.env.TOKEN_ENCRYPTION_KEY
+  if (explicit && explicit.trim() && explicit.trim() !== explicit) keys.push(keyFromMaterial(explicit.trim()))
   for (const entry of (process.env.TOKEN_ENCRYPTION_KEY_PREVIOUS || '').split(',')) {
     if (!entry.trim()) continue
     // Try the exact entry and its trimmed form, so both "a, b" lists and keys

@@ -64,4 +64,15 @@ describe('cryptoSecrets key bytes', () => {
     process.env.TOKEN_ENCRYPTION_KEY_PREVIOUS = padded
     expect(decryptSecret(stored)).toBe('RETIRED')
   })
+
+  it('still reads seeds written while a padded current key was trimmed, and flags them for re-encryption', () => {
+    const trimmed = 'padded-current-'.padEnd(40, 'p')
+    process.env.TOKEN_ENCRYPTION_KEY = trimmed
+    const stored = encryptSecret('TRIMMEDERA')
+    const padded = `  ${trimmed}  `
+    process.env.TOKEN_ENCRYPTION_KEY = padded
+    expect(decryptSecret(stored)).toBe('TRIMMEDERA')
+    const keys = tool.loadKeys({ TOKEN_ENCRYPTION_KEY: padded })
+    expect(tool.decryptWithKeys(stored, keys)).toEqual({ plaintext: 'TRIMMEDERA', current: false })
+  })
 })

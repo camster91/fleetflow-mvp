@@ -68,6 +68,28 @@ async function listMembers(req: NextApiRequest, res: NextApiResponse) {
     isOwner: m.userId === tenant.ownerId,
   }));
 
+  // Ownership lives on Team.ownerId and may have no TeamMember row; the
+  // roster must still show the canonical owner.
+  if (tenant.ownerId && !teamMembers.some((m) => m.userId === tenant.ownerId)) {
+    const owner = await prisma.user.findUnique({
+      where: { id: tenant.ownerId },
+      select: { id: true, name: true, email: true, image: true, role: true, createdAt: true },
+    });
+    if (owner) {
+      members.unshift({
+        id: `owner:${owner.id}`,
+        role: 'OWNER',
+        status: 'ACCEPTED',
+        invitedAt: owner.createdAt,
+        joinedAt: owner.createdAt,
+        user: owner,
+        invitedByUser: null,
+        isSelf: owner.id === userId,
+        isOwner: true,
+      } as (typeof members)[number]);
+    }
+  }
+
   return res.json(members);
 }
 
