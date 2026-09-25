@@ -14,16 +14,53 @@ import { MATRIX_OWNER_ID, MATRIX_TEAM, matrixUser, type MatrixRole } from '../..
 const db = new PrismaClient()
 
 export async function signIn(page: Page, role: MatrixRole, baseURL: string) {
-  const user = matrixUser(role)
-  const row = await db.user.findUnique({ where: { id: user.id }, select: { email: true, name: true, role: true, tokenVersion: true } })
-  if (!row) throw new Error(`Role-matrix user ${user.id} is missing; run \`npm run db:seed\` first`)
-  const token = await signToken({ sub: user.id, email: row.email, name: row.name, role: row.role, tv: row.tokenVersion }, '1h')
+  await signInUser(page, matrixUser(role).id, baseURL, MATRIX_TEAM.id)
+}
+
+/** Sign a session for any seeded or test-created user (optionally selecting a team workspace). */
+export async function signInUser(page: Page, userId: string, baseURL: string, teamId?: string) {
+  const row = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true, role: true, tokenVersion: true } })
+  if (!row) throw new Error(`E2E user ${userId} is missing; run \`npm run db:seed\` first`)
+  const token = await signToken({ sub: userId, email: row.email, name: row.name, role: row.role, tv: row.tokenVersion }, '1h')
   const { hostname } = new URL(baseURL)
   await page.context().addCookies([
     { name: 'token', value: token, domain: hostname, path: '/', httpOnly: true, sameSite: 'Lax' },
-    { name: 'fleetflow_team', value: MATRIX_TEAM.id, domain: hostname, path: '/', httpOnly: true, sameSite: 'Lax' },
+    ...(teamId ? [{ name: 'fleetflow_team', value: teamId, domain: hostname, path: '/', httpOnly: true, sameSite: 'Lax' as const }] : []),
   ])
 }
+
+/**
+ * Create a throwaway user with a personal workspace for auth-flow specs, so
+ * per-email rate limits and lockout state never leak between tests or reruns.
+ * Returns the user and a cleanup that removes it with its login codes.
+ */
+export async function createSyntheticUser(label: string) {
+  const id = `e2e-auth-${label}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  const email = `${id}@matrix.fleetvera.test`
+  await db.user.create({ data: { id, email, name: `E2E ${label} (synthetic)`, role: 'fleet_manager', emailVerified: new Date(), onboardingCompleted: true } })
+  const cleanup = async () => {
+    await db.verificationToken.deleteMany({ where: { identifier: `login:${email}` } })
+    await db.user.deleteMany({ where: { id } })
+  }
+  return { id, email, cleanup }
+}
+
+export async function userSecurityState(userId: string) {
+  return db.user.findUniqueOrThrow({ where: { id: userId }, select: { twoFactorEnabled: true, tokenVersion: true, backupCodes: true } })
+}
+
+/**
+ * Give this browser context its own client address. The app trusts one proxy
+ * hop (TRUSTED_PROXY_HOPS), so X-Forwarded-For selects the per-IP login rate
+ * limit bucket; a fresh address per test keeps retries and reruns deterministic.
+ */
+export async function useFreshClientAddress(page: Page) {
+  const octet = () => Math.floor(Math.random() * 250) + 1
+  await page.context().setExtraHTTPHeaders({ 'x-forwarded-for': `10.${octet()}.${octet()}.${octet()}` })
+}
+
+/** A Prisma handle for specs that seed or verify rows directly. */
+export const matrixDb = db
 
 /** Same-origin API client that reuses the page's session cookies. */
 export function api(page: Page, baseURL: string) {
