@@ -9,6 +9,7 @@ import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canAssignDrivers, canManageDeliveries, canViewDeliveries } from '../../../lib/permissions'
 import { resolveDriverAssignment } from '../../../lib/driverAssignment'
 import { assignedResourceWhere, driverDeliveryDto, isDriverRole } from '../../../lib/driverScope'
+import { beginIdempotentRequest } from '../../../lib/idempotency'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -33,6 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const idempotency = await beginIdempotentRequest(req, res, { tenant, userId, route: 'POST /api/deliveries' })
+    if (!idempotency.proceed) return
     const parsed = deliveryCreateSchema.safeParse(req.body ?? {})
     if (!parsed.success) return res.status(400).json({ error: 'Invalid delivery', fields: invalidDeliveryFields(parsed.error) })
     // Only validated fields reach the database; the driver name is derived from the assignment.
@@ -52,8 +55,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityId: created.id, entityName: created.customer,
         description: `Delivery for "${created.customer}" was created`,
       })
+      await idempotency.store(tx, 201, dbToDelivery(created))
       return created
-    })
+    }).catch(idempotency.replayOnConflict)
+    if (!delivery) return
     // The delivery is already committed. Notifications are best-effort so a
     // failure here never turns into a 500 that prompts a duplicate retry.
     if (delivery.assignedDriverId) {

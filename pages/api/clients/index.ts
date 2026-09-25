@@ -4,6 +4,7 @@ import { dbToClient, clientToDb, logActivity } from '../../../lib/fleet'
 import { parseBody, clientBodySchema } from '../../../lib/validation'
 import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageClients, canViewClients } from '../../../lib/permissions'
+import { beginIdempotentRequest } from '../../../lib/idempotency'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -27,6 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageClients(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const idempotency = await beginIdempotentRequest(req, res, { tenant, userId, route: 'POST /api/clients' })
+    if (!idempotency.proceed) return
     const parsed = parseBody(clientBodySchema, req.body)
     if ('error' in parsed) return res.status(400).json({ error: parsed.error })
     const data = {
@@ -44,8 +47,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityId: created.id, entityName: created.name,
         description: `Client "${created.name}" was added`,
       })
+      await idempotency.store(tx, 201, dbToClient(created))
       return created
-    })
+    }).catch(idempotency.replayOnConflict)
+    if (!client) return
     return res.status(201).json(dbToClient(client))
   }
 

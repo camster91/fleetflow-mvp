@@ -5,6 +5,7 @@ import { parseBody, maintenanceCreateValuesSchema } from '../../../lib/validatio
 import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 import { assignedMaintenanceWhere, driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
+import { beginIdempotentRequest } from '../../../lib/idempotency'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -35,6 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const idempotency = await beginIdempotentRequest(req, res, { tenant, userId, route: 'POST /api/maintenance' })
+    if (!idempotency.proceed) return
     const parsed = parseBody(maintenanceCreateValuesSchema, req.body)
     if ('error' in parsed) return res.status(400).json({ error: parsed.error })
     const body = parsed.data
@@ -54,8 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityId: created.id, entityName: created.title,
         description: `Maintenance task "${created.title}" scheduled for ${created.vehicleName ?? 'unknown vehicle'}`,
       })
+      await idempotency.store(tx, 201, dbToMaintenanceTask(created))
       return created
-    })
+    }).catch(idempotency.replayOnConflict)
+    if (!task) return
     return res.status(201).json(dbToMaintenanceTask(task))
   }
 

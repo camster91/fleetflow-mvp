@@ -68,13 +68,46 @@ export const getCollection = async <T>(url: string): Promise<T[]> => {
   return rows
 }
 const post = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
+
+// ─── Idempotent creates ───────────────────────────────────────────────────────
+
+export const CREATE_NETWORK_RETRIES = 2
+const CREATE_RETRY_DELAY_MS = 300
+
+export const newIdempotencyKey = (): string => {
+  const c = globalThis.crypto
+  if (typeof c?.randomUUID === 'function') return c.randomUUID()
+  const bytes = new Uint8Array(16)
+  if (typeof c?.getRandomValues === 'function') c.getRandomValues(bytes)
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * POST for create endpoints. Each call is one submit attempt with its own
+ * Idempotency-Key. If the request fails at the network level (the response is
+ * unknown), it is retried with the same key so the server replays the first
+ * result instead of creating a duplicate. HTTP errors are not retried.
+ */
+const create = async <T>(url: string, body: unknown): Promise<T> => {
+  const init: RequestInit = { method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': newIdempotencyKey() } }
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await apiFetch<T>(url, init)
+    } catch (error) {
+      // fetch() rejects with a TypeError only for network failures.
+      if (!(error instanceof TypeError) || attempt >= CREATE_NETWORK_RETRIES) throw error
+      await new Promise(resolve => setTimeout(resolve, CREATE_RETRY_DELAY_MS * 2 ** attempt))
+    }
+  }
+}
 const put = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) })
 const del = <T>(url: string) => apiFetch<T>(url, { method: 'DELETE' })
 
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 
 export const getVehicles = () => getCollection<Vehicle>('/api/vehicles')
-export const addVehicle = (v: Omit<Vehicle, 'id'>) => post<Vehicle>('/api/vehicles', v)
+export const addVehicle = (v: Omit<Vehicle, 'id'>) => create<Vehicle>('/api/vehicles', v)
 export const updateVehicle = (id: string, v: Partial<Vehicle>) => put<Vehicle>(`/api/vehicles/${id}`, v)
 export const deleteVehicle = (id: string) => del<{ success: boolean }>(`/api/vehicles/${id}`)
 export interface DriverOption { id:string; name:string; label:string }
@@ -83,14 +116,14 @@ export const getDrivers = async () => (await get<{drivers:DriverOption[]}>('/api
 // ─── Deliveries ───────────────────────────────────────────────────────────────
 
 export const getDeliveries = () => getCollection<Delivery>('/api/deliveries')
-export const addDelivery = (d: Omit<Delivery, 'id'>) => post<Delivery>('/api/deliveries', d)
+export const addDelivery = (d: Omit<Delivery, 'id'>) => create<Delivery>('/api/deliveries', d)
 export const updateDelivery = (id: string, d: Partial<Delivery>) => put<Delivery>(`/api/deliveries/${id}`, d)
 export const deleteDelivery = (id: string) => del<{ success: boolean }>(`/api/deliveries/${id}`)
 
 // ─── Maintenance ──────────────────────────────────────────────────────────────
 
 export const getMaintenanceTasks = () => getCollection<MaintenanceTask>('/api/maintenance')
-export const addMaintenanceTask = (t: Omit<MaintenanceTask, 'id'>) => post<MaintenanceTask>('/api/maintenance', t)
+export const addMaintenanceTask = (t: Omit<MaintenanceTask, 'id'>) => create<MaintenanceTask>('/api/maintenance', t)
 export const updateMaintenanceTask = (id: string, t: Partial<MaintenanceTask>) =>
   put<MaintenanceTask>(`/api/maintenance/${id}`, t)
 export const deleteMaintenanceTask = (id: string) => del<{ success: boolean }>(`/api/maintenance/${id}`)
@@ -98,7 +131,7 @@ export const deleteMaintenanceTask = (id: string) => del<{ success: boolean }>(`
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
 export const getClients = () => getCollection<Client>('/api/clients')
-export const addClient = (c: Omit<Client, 'id' | 'created' | 'updated'>) => post<Client>('/api/clients', c)
+export const addClient = (c: Omit<Client, 'id' | 'created' | 'updated'>) => create<Client>('/api/clients', c)
 export const updateClient = (id: string, c: Partial<Client>) => put<Client>(`/api/clients/${id}`, c)
 export const deleteClient = (id: string) => del<{ success: boolean }>(`/api/clients/${id}`)
 export const getClientById = async (id: string) => get<Client>(`/api/clients/${id}`)
