@@ -3,6 +3,7 @@ import { requireTenantContext } from '@/lib/apiAuth'
 import { prisma } from '@/lib/prisma'
 import { dbToDelivery, dbToMaintenanceTask, dbToVehicle } from '@/lib/fleet'
 import { resolveDashboardRole } from '@/lib/dashboardRoles'
+import { canViewDeliveries, canViewMaintenance, canViewVehicles } from '@/lib/permissions'
 import { DRIVER_DELIVERY_SELECT, DRIVER_MAINTENANCE_SELECT, DRIVER_VEHICLE_SELECT, driverDeliveryDto, driverMaintenanceDto, driverVehicleDto } from '@/lib/driverScope'
 
 const TAKE = 10
@@ -14,7 +15,12 @@ const content = {
   viewer: { decisions: ['What needs attention?', 'How much work is open?', 'Is dashboard coverage complete?'], actions: [] },
 } as const
 
-async function source<T>(rows: () => Promise<T[]>, total: () => Promise<number>) {
+// A source the role may not list (same helpers as the list routes) is never
+// queried; it is reported as FORBIDDEN so the UI can tell it apart from an outage.
+const forbiddenSource = () => ({ available: false, error: 'FORBIDDEN', items: [] as unknown[], total: null, truncated: false })
+
+async function source<T>(allowed: boolean, rows: () => Promise<T[]>, total: () => Promise<number>) {
+  if (!allowed) return forbiddenSource()
   try { const [items, count] = await Promise.all([rows(), total()]); return { available: true, error: null, items, total: count, truncated: count > items.length } }
   catch { return { available: false, error: 'SOURCE_UNAVAILABLE', items: [] as T[], total: null, truncated: false } }
 }
@@ -30,18 +36,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ? { ...context.tenant.resourceWhere, vehicle: { assignedDriverId: context.session.user.id } }
     : context.tenant.resourceWhere
   const driverDashboard = dashboardRole === 'driver'
+  const role = context.tenant.role
   const [vehicles, deliveries, maintenance] = await Promise.all([
-    source<unknown>(() => driverDashboard
+    source<unknown>(canViewVehicles(role), () => driverDashboard
       ? prisma.vehicle.findMany({ where: vehicleWhere, orderBy: { createdAt: 'asc' }, select: DRIVER_VEHICLE_SELECT, take: TAKE }).then(rows => rows.map(driverVehicleDto))
       : prisma.vehicle.findMany({ where: vehicleWhere, orderBy: { createdAt: 'asc' }, take: TAKE }).then(rows => rows.map(dbToVehicle)), () => prisma.vehicle.count({ where: vehicleWhere })),
-    source<unknown>(() => driverDashboard
+    source<unknown>(canViewDeliveries(role), () => driverDashboard
       ? prisma.delivery.findMany({ where: deliveryWhere, orderBy: { createdAt: 'desc' }, select: DRIVER_DELIVERY_SELECT, take: TAKE }).then(rows => rows.map(driverDeliveryDto))
       : prisma.delivery.findMany({ where: deliveryWhere, orderBy: { createdAt: 'desc' }, take: TAKE }).then(rows => rows.map(dbToDelivery)), () => prisma.delivery.count({ where: deliveryWhere })),
-    source<unknown>(() => driverDashboard
+    source<unknown>(canViewMaintenance(role), () => driverDashboard
       ? prisma.maintenanceTask.findMany({ where: maintenanceWhere, orderBy: { dueDate: 'asc' }, select: DRIVER_MAINTENANCE_SELECT, take: TAKE }).then(rows => rows.map(driverMaintenanceDto))
       : prisma.maintenanceTask.findMany({ where: maintenanceWhere, orderBy: { dueDate: 'asc' }, include: { vehicle: { select: { name: true } } }, take: TAKE }).then(rows => rows.map(dbToMaintenanceTask)), () => prisma.maintenanceTask.count({ where: maintenanceWhere })),
   ])
   const sources = { vehicles, deliveries, maintenance }
-  if (Object.values(sources).every(item => !item.available)) return res.status(503).json({ error: 'Dashboard data unavailable' })
+  const permitted = Object.values(sources).filter(item => item.error !== 'FORBIDDEN')
+  if (permitted.length > 0 && permitted.every(item => !item.available)) return res.status(503).json({ error: 'Dashboard data unavailable' })
   return res.status(200).json({ role: context.tenant.role, dashboardRole, onboardingCompleted: context.session.user.onboardingCompleted === true, decisions: [...content[dashboardRole].decisions], actions: content[dashboardRole].actions.map(([label,href]) => ({ label,href })), sources })
 }

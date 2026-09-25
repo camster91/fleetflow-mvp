@@ -10,6 +10,8 @@ import * as api from '../../services/apiService';
 import type { Client } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import toast from 'react-hot-toast';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageClients } from '../../lib/permissions';
 
 export default function ClientDetailPage() {
   const router = useRouter();
@@ -19,6 +21,8 @@ export default function ClientDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<Client>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageClients(role);
 
   const loadClient = useCallback(async () => {
     if (!id) return;
@@ -84,9 +88,9 @@ export default function ClientDetailPage() {
               <Button variant="outline" size="sm" iconLeft={<X className="h-4 w-4" />} onClick={() => { setIsEditing(false); setEditForm(client); }}>Cancel</Button>
               <Button variant="primary" size="sm" iconLeft={<Save className="h-4 w-4" />} onClick={handleSave} disabled={isSaving}>{isSaving ? 'Saving...' : 'Save'}</Button>
             </>
-          ) : (
+          ) : canManage ? (
             <Button variant="outline" size="sm" iconLeft={<Edit className="h-4 w-4" />} onClick={() => setIsEditing(true)}>Edit</Button>
-          )}
+          ) : null}
         </div>
       </div>
 

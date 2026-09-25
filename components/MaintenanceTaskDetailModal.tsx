@@ -10,9 +10,11 @@ interface Props {
   onClose: () => void;
   onUpdated: (task: MaintenanceTask) => void;
   onComplete: (task: MaintenanceTask) => void;
+  /** Share, edit and complete are offered only to roles that may manage maintenance. */
+  canManage?: boolean;
 }
 
-export default function MaintenanceTaskDetailModal({ isOpen, task, onClose, onUpdated, onComplete }: Props) {
+export default function MaintenanceTaskDetailModal({ isOpen, task, onClose, onUpdated, onComplete, canManage = true }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -121,7 +123,7 @@ export default function MaintenanceTaskDetailModal({ isOpen, task, onClose, onUp
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {!task.completed && !isEditing && (
+              {canManage && !task.completed && !isEditing && (
                 <>
                   <button onClick={handleShare} disabled={sharing}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg transition">
@@ -283,7 +285,7 @@ export default function MaintenanceTaskDetailModal({ isOpen, task, onClose, onUp
                     <Save className="h-4 w-4" />{saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </>
-              ) : !task.completed ? (
+              ) : canManage && !task.completed ? (
                 <button onClick={() => onComplete(task)}
                   className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
                   <CheckCircle className="h-4 w-4" /> Mark Complete

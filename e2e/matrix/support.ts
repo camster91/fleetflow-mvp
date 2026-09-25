@@ -1,7 +1,7 @@
 import { expect, type APIResponse, type Page } from '@playwright/test'
 import { PrismaClient } from '@prisma/client'
 import { signToken } from '../../lib/auth'
-import { MATRIX_TEAM, matrixUser, type MatrixRole } from '../../prisma/matrix-fixtures'
+import { MATRIX_OWNER_ID, MATRIX_TEAM, matrixUser, type MatrixRole } from '../../prisma/matrix-fixtures'
 
 /*
  * Test-only authentication for the role matrix. Login is a passwordless email
@@ -46,12 +46,31 @@ export async function disconnectMatrixDb() {
   await db.$disconnect()
 }
 
+/**
+ * Insert a synthetic document that already created its fleet record
+ * (status CONFIRMED) in the matrix workspace; returns a cleanup function.
+ * Only metadata is stored: no file exists behind the storage key.
+ */
+export async function seedConfirmedDocument(name: string) {
+  const id = `e2e-matrix-doc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+  const extraction = { documentType: 'service_invoice', fields: { vendor: { value: 'E2E Matrix Garage', confidence: 0.95, citationIds: [] } }, services: [], parts: [], citations: [], warnings: [] }
+  await db.documentUpload.create({ data: {
+    id, ownerId: MATRIX_OWNER_ID, teamId: MATRIX_TEAM.id, scopeKey: `team:${MATRIX_TEAM.id}`, uploadedById: MATRIX_OWNER_ID,
+    uploadedBySnapshot: 'owner@matrix.fleetvera.test', originalName: name, mimeType: 'application/pdf', byteSize: 16,
+    contentSha256: id.padEnd(64, '0').slice(0, 64), storageKey: `e2e-matrix/${id}`, status: 'CONFIRMED', scanStatus: 'CLEAN',
+    extraction: JSON.stringify(extraction), revision: 4, expiresAt: new Date(Date.now() + 86_400_000),
+  } })
+  return async () => { await db.documentUpload.deleteMany({ where: { id } }) }
+}
+
 type Resource = 'vehicles' | 'deliveries' | 'maintenance' | 'clients'
 export interface RoleExpectation {
   dashboardHeading: string
   view: Record<Resource, boolean>
   create: Record<Resource, boolean>
   manageTeam: boolean
+  /** May read the member list (names and emails) at GET /api/team. */
+  viewTeam: boolean
   apiKeys: boolean
   viewBilling: boolean
 }
@@ -64,25 +83,25 @@ const all = (value: boolean): Record<Resource, boolean> => ({ vehicles: value, d
  * places. docs/testing/e2e-matrix.md mirrors this table.
  */
 export const EXPECTATIONS: Record<MatrixRole, RoleExpectation> = {
-  OWNER: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: true, apiKeys: true, viewBilling: true },
-  ADMIN: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: true, apiKeys: true, viewBilling: true },
-  MANAGER: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: false, apiKeys: true, viewBilling: true },
+  OWNER: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: true, viewTeam: true, apiKeys: true, viewBilling: true },
+  ADMIN: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: true, viewTeam: true, apiKeys: true, viewBilling: true },
+  MANAGER: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: false, viewTeam: true, apiKeys: true, viewBilling: true },
   DISPATCHER: {
     dashboardHeading: 'Dispatch command centre',
     view: { vehicles: true, deliveries: true, maintenance: false, clients: true },
     create: { vehicles: false, deliveries: true, maintenance: false, clients: false },
-    manageTeam: false, apiKeys: false, viewBilling: false,
+    manageTeam: false, viewTeam: false, apiKeys: false, viewBilling: false,
   },
   TECHNICIAN: {
     dashboardHeading: 'Maintenance command centre',
     view: { vehicles: false, deliveries: false, maintenance: true, clients: false },
     create: { vehicles: false, deliveries: false, maintenance: true, clients: false },
-    manageTeam: false, apiKeys: false, viewBilling: false,
+    manageTeam: false, viewTeam: false, apiKeys: false, viewBilling: false,
   },
   DRIVER: {
     dashboardHeading: 'Driver command centre',
     view: { vehicles: true, deliveries: true, maintenance: true, clients: false },
-    create: all(false), manageTeam: false, apiKeys: false, viewBilling: false,
+    create: all(false), manageTeam: false, viewTeam: false, apiKeys: false, viewBilling: false,
   },
-  VIEWER: { dashboardHeading: 'Fleet overview', view: all(true), create: all(false), manageTeam: false, apiKeys: false, viewBilling: false },
+  VIEWER: { dashboardHeading: 'Fleet overview', view: all(true), create: all(false), manageTeam: false, viewTeam: true, apiKeys: false, viewBilling: false },
 }

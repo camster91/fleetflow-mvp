@@ -10,8 +10,9 @@ jest.mock('@/components/marketing/Footer', () => ({ Footer: () => null }))
 const unsupportedClaims = /white-label|SLA|dedicated account manager|priority support|custom reports/i
 
 function mockFetch(responses: Record<string, { ok: boolean; body?: unknown }>) {
+  const withRole = { '/api/team/workspaces': { ok: true, body: { activeTeamId: 't1', workspaces: [{ id: 't1', role: 'OWNER' }] } }, ...responses }
   global.fetch = jest.fn(async (url: string) => {
-    const match = responses[url]
+    const match = withRole[url as keyof typeof withRole]
     return { ok: match?.ok ?? false, json: async () => match?.body ?? {} }
   }) as unknown as typeof fetch
 }

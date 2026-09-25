@@ -20,6 +20,8 @@ import toast from 'react-hot-toast';
 import { downloadCSV } from '../../lib/csvExport';
 import { localDateOnly } from '../../lib/dateOnly';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageMaintenance } from '../../lib/permissions';
 
 export default function MaintenancePage() {
   const parseDateOnly = (value: string) => new Date(`${value.split('T')[0]}T12:00:00`);
@@ -33,6 +35,8 @@ export default function MaintenancePage() {
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const { openConfirm } = useConfirmDialog();
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageMaintenance(role);
 
   const loadData = useCallback(async () => {
     try {
@@ -81,7 +85,7 @@ export default function MaintenancePage() {
           await api.updateMaintenanceTask(task.id, { completed: true, completedDate: localDateOnly() });
           notify.success('Maintenance task completed');
           await loadData();
-        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to complete task'); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to complete task'); throw err; }
       },
     });
   };
@@ -128,7 +132,7 @@ export default function MaintenancePage() {
                 Notes: t.notes || '',
               })));
             }}>Export CSV</Button>
-            <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => setIsFormOpen(true)}>Add Task</Button>
+            {canManage && <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => setIsFormOpen(true)}>Add Task</Button>}
           </div>
         }
       />
@@ -193,8 +197,8 @@ export default function MaintenancePage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex gap-1 justify-end">
-                            <button onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setIsDetailOpen(true); }} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg">Edit</button>
-                            {!task.completed && (
+                            <button onClick={(e) => { e.stopPropagation(); setSelectedTask(task); setIsDetailOpen(true); }} className="px-2 py-1 text-xs bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg">{canManage ? 'Edit' : 'View'}</button>
+                            {canManage && !task.completed && (
                               <button onClick={(e) => { e.stopPropagation(); handleMarkComplete(task); }} className="px-2 py-1 text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg">Complete</button>
                             )}
                           </div>
@@ -271,9 +275,10 @@ export default function MaintenancePage() {
         onClose={() => { setIsDetailOpen(false); setSelectedTask(null); }}
         onUpdated={async () => { await loadData(); setIsDetailOpen(false); setSelectedTask(null); }}
         onComplete={async (task) => { await handleMarkComplete(task); setIsDetailOpen(false); setSelectedTask(null); }}
+        canManage={canManage}
       />
 
-      {isFormOpen && (
+      {canManage && isFormOpen && (
         <MaintenanceTaskFormModal
           isOpen={isFormOpen}
           onClose={() => setIsFormOpen(false)}

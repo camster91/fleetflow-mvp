@@ -51,6 +51,27 @@ describe('GET /api/team/members', () => {
     })
   })
 
+  it.each(['DISPATCHER', 'TECHNICIAN', 'DRIVER'])('refuses the member list to %s', async (role) => {
+    ;(prisma.teamMember.findFirst as jest.Mock).mockResolvedValue({ role, status: 'ACCEPTED' })
+    ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({ id: 'team-1', ownerId: 'owner-1' })
+    const res = await call()
+    expect(res._getStatusCode()).toBe(403)
+    expect(prisma.teamMember.findMany).not.toHaveBeenCalled()
+  })
+
+  it.each(['ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'])('returns the member list to %s', async (role) => {
+    ;(prisma.teamMember.findFirst as jest.Mock).mockResolvedValue({ role, status: 'ACCEPTED' })
+    const res = await call()
+    expect(res._getStatusCode()).toBe(200)
+  })
+
+  it('returns the member list to the team owner', async () => {
+    ;(prisma.teamMember.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({ id: 'team-1', ownerId: 'user-1' })
+    const res = await call()
+    expect(res._getStatusCode()).toBe(200)
+  })
+
   it('returns a bounded page of members for team members', async () => {
     const res = await call({ teamId: 'team-1', page: '2', limit: '500' })
     expect(res._getStatusCode()).toBe(200)

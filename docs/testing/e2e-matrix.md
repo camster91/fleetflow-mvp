@@ -48,9 +48,15 @@ All rows are in `e2e/matrix/roles.spec.ts`; the test title is shown per row.
 | Maintenance create: `POST /api/maintenance` (`maintenance: create …`) | ✅ | ✅ | ✅ | ⛔ | ✅ | ⛔ | ⛔ |
 | Clients list: API + `/clients` (`clients: list …`) | ✅ | ✅ | ✅ | ✅ | ⛔ | ⛔ | ✅ |
 | Clients create: `POST /api/clients` (`clients: create …`) | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| List pages show Add/Edit/Delete only to roles that may create (`<resource>: list …`) | ✅ | ✅ | ✅ | deliveries | maintenance | ⛔ | ⛔ |
 | Team page loads; invite (+ role change 403 for non-managers) (`team: …`) | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
+| Team member list `GET /api/team` + list on `/team` (`team: …`) | ✅ | ✅ | ✅ | ⛔ notice | ⛔ notice | ⛔ notice | ✅ read-only |
+| `/team` invite, change-role and remove controls (`team: …`) | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ | ⛔ |
+| Dashboard sources match list permissions and list totals (`dashboard data follows list permissions and totals`) | all | all | all | no maintenance | maintenance only | scoped | all |
 | API keys page loads; list/create/revoke (`api keys: …`) | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
-| Billing: subscription status + free-beta notice (`billing: …`) | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| Billing: subscription status (`billing: …`) | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| Billing: free-beta notice, never "could not be verified" (`billing: …`) | ✅ | ✅ | ✅ | ✅ read-only | ✅ read-only | ✅ read-only | ✅ read-only |
+| Documents: a CONFIRMED document offers no second record (`documents: a CONFIRMED document …`) | ✅ | | | | | | |
 | Driver sees only assigned deliveries/vehicles/maintenance, API + page + dashboard (`DRIVER assignment scope › …`) | | | | | | ✅ | |
 
 The expected table lives in `EXPECTATIONS` (`e2e/matrix/support.ts`) and is
@@ -68,17 +74,10 @@ npm run test:e2e:matrix      # or test:e2e:ci for smoke + matrix
 
 ## Known gaps (not yet asserted)
 
-These were found while building the matrix and are tracked as follow-ups
-rather than locked in by assertions:
+The role gaps found while building the matrix (#173: team list, `/team`
+controls, list-page actions, dashboard scoping, billing notice, confirmed
+documents) are fixed and asserted above.
 
-- `GET /api/team` returns the member list to DISPATCHER, TECHNICIAN and DRIVER,
-  although `canViewTeam` excludes them.
-- `/team` hard-codes the current role as OWNER, so invite, role-change and
-  remove controls render for every role (the APIs still return 403).
-- List pages render "Add …" buttons for roles that cannot create (the APIs
-  still return 403).
-- `/billing` shows "Billing status could not be verified" to roles without
-  billing access instead of a notice suited to them.
 - Not yet covered from #153: plan/billing state transitions, auth flows
   (email code, 2FA, invite acceptance), SOPs, vending machines, routes,
   intelligence, assistant, reports, admin, GDPR, and the nightly
