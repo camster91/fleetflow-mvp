@@ -14,7 +14,7 @@
     "admin:bootstrap": "node create-admin.js",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:studio": "prisma studio",
-    "secrets:reencrypt-2fa": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/reencrypt-2fa-seeds.ts",
+    "secrets:reencrypt-2fa": "node scripts/reencrypt-2fa-seeds.cjs",
     "verify:integration-migrations": "node scripts/verify-integration-migrations.cjs",
     "ai:evaluate": "node scripts/evaluate-ai.cjs",
     "test": "jest",

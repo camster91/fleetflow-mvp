@@ -21,8 +21,10 @@ let warnedAboutFallback = false
  * so rotating the session secret can no longer strand 2FA seeds.
  */
 function currentKeyMaterial(): string | null {
-  const explicit = process.env.TOKEN_ENCRYPTION_KEY?.trim()
-  if (explicit) return explicit
+  // Hash the exact configured bytes (trimming only decides emptiness) so keys
+  // with surrounding whitespace keep decrypting what they encrypted before.
+  const explicit = process.env.TOKEN_ENCRYPTION_KEY
+  if (explicit && explicit.trim()) return explicit
   const legacy = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET
   if (legacy && process.env.NODE_ENV === 'production' && !warnedAboutFallback) {
     warnedAboutFallback = true
@@ -45,16 +47,18 @@ function deriveKey(): Buffer {
 /**
  * Keys accepted for decryption, current first. TOKEN_ENCRYPTION_KEY_PREVIOUS
  * is a comma-separated list of retired key materials kept only until
- * `npm run secrets:reencrypt-2fa -- --apply` has moved every seed to the
+ * `node reencrypt-2fa-seeds.cjs --apply` (in the app container) has moved every seed to the
  * current key.
  */
 function decryptionKeys(): Buffer[] {
   const keys = [deriveKey()]
-  const previous = (process.env.TOKEN_ENCRYPTION_KEY_PREVIOUS || '')
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean)
-  for (const material of previous) keys.push(keyFromMaterial(material))
+  for (const entry of (process.env.TOKEN_ENCRYPTION_KEY_PREVIOUS || '').split(',')) {
+    if (!entry.trim()) continue
+    // Try the exact entry and its trimmed form, so both "a, b" lists and keys
+    // that genuinely contain surrounding whitespace can be recovered.
+    keys.push(keyFromMaterial(entry))
+    if (entry.trim() !== entry) keys.push(keyFromMaterial(entry.trim()))
+  }
   return keys
 }
 
