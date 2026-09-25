@@ -4,6 +4,8 @@
  */
 const REQUIRED_CORE = ['DATABASE_URL', 'JWT_SECRET', 'NEXTAUTH_URL', 'API_CURSOR_SECRET', 'ACTION_PREVIEW_KEYS', 'ACTION_PREVIEW_CURRENT_KID', 'CRON_SECRET']
 const REQUIRED_EMAIL = ['EMAIL_CONFIG_ENCRYPTION_KEY']
+// Encrypts TOTP 2FA seeds. Must be explicit so rotating JWT_SECRET cannot strand them.
+const REQUIRED_ENCRYPTION = ['TOKEN_ENCRYPTION_KEY']
 const REQUIRED_BILLING = [
   'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
   'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY',
@@ -61,6 +63,7 @@ function evaluateEnvironment(env, mode = 'pilot') {
   for (const name of ['JWT_SECRET', 'API_CURSOR_SECRET', 'CRON_SECRET']) if (present(env, name) && !secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
   if (!keyRingIsValid(env)) missing.push('ACTION_PREVIEW_KEYS/ACTION_PREVIEW_CURRENT_KID must be a valid 1-3 key ring')
   for (const name of REQUIRED_EMAIL) if (!secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters`)
+  for (const name of REQUIRED_ENCRYPTION) if (!secretAtLeast(env, name)) missing.push(`${name} must be at least 32 characters (set it to the current JWT_SECRET value first if 2FA users exist)`)
   for (const name of REQUIRED_MONITORING) if (!validHttpsUrl(env, name)) missing.push(`${name} must be a valid https URL`)
 
   if (mode === 'public') {

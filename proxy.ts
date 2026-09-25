@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
+// Must match getJwtSecret in lib/auth.ts: JWT_SECRET only, trimmed, and at
+// least 32 characters in production.
 function getJwtSecret() {
-  const secret = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET
-  if (secret) return secret
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET environment variable is not set')
+  const configured = process.env.JWT_SECRET?.trim()
+  if (configured && (process.env.NODE_ENV !== 'production' || configured.length >= 32)) {
+    return configured
   }
-  return 'dev-only-placeholder-not-for-production'
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured with at least 32 characters')
+  }
+  return configured || 'dev-only-placeholder-not-for-production'
 }
 
 const PUBLIC_PAGES = new Set([

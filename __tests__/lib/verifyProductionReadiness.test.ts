@@ -12,10 +12,19 @@ const core = {
   MAILGUN_DOMAIN: 'mg.example.com',
   EMAIL_FROM: 'Fleetvera <noreply@mg.example.com>',
   EMAIL_CONFIG_ENCRYPTION_KEY: 'e'.repeat(32),
+  TOKEN_ENCRYPTION_KEY: 'f'.repeat(32),
   NEXT_PUBLIC_SENTRY_DSN: 'https://public@example.ingest.sentry.io/123',
 }
 
 describe('verify-production-readiness', () => {
+  it('requires an explicit TOKEN_ENCRYPTION_KEY so 2FA seeds are not tied to JWT_SECRET', () => {
+    const { TOKEN_ENCRYPTION_KEY: _omit, ...withoutKey } = core
+    const result = evaluateEnvironment(withoutKey)
+    expect(result.ready).toBe(false)
+    expect(result.missing.some(message => message.startsWith('TOKEN_ENCRYPTION_KEY'))).toBe(true)
+    expect(evaluateEnvironment({ ...core, TOKEN_ENCRYPTION_KEY: 'short' }).ready).toBe(false)
+  })
+
   it('accepts a minimally configured controlled pilot without optional providers', () => {
     expect(evaluateEnvironment(core)).toEqual({ mode: 'pilot', ready: true, missing: [], warnings: [] })
   })
