@@ -6,6 +6,7 @@ import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canAssignDrivers, canManageVehicles, canViewVehicles } from '../../../lib/permissions'
 import { resolveDriverAssignment } from '../../../lib/driverAssignment'
 import { assignedResourceWhere, driverVehicleDto, isDriverRole } from '../../../lib/driverScope'
+import { beginIdempotentRequest } from '../../../lib/idempotency'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -30,6 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const idempotency = await beginIdempotentRequest(req, res, { tenant, userId, route: 'POST /api/vehicles' })
+    if (!idempotency.proceed) return
     const parsed = parseBody(vehicleBodySchema, req.body)
     if ('error' in parsed) return res.status(400).json({ error: parsed.error })
     if (Object.prototype.hasOwnProperty.call(req.body, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -53,8 +56,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         entityName: created.name,
         description: `Vehicle "${created.name}" was added to the fleet`,
       })
+      await idempotency.store(tx, 201, dbToVehicle(created))
       return created
-    })
+    }).catch(idempotency.replayOnConflict)
+    if (!vehicle) return
     return res.status(201).json(dbToVehicle(vehicle))
   }
 

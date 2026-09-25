@@ -406,6 +406,24 @@ model MaintenanceRiskFeedback {
   @@index([expiresAt])
 }
 
+// Stored create responses for Idempotency-Key replay (lib/idempotency.ts).
+// Rows expire after 24 hours and are removed by /api/cron/cleanup-audit-logs.
+model IdempotencyKey {
+  id           String   @id @default(cuid())
+  scope        String
+  userId       String
+  key          String
+  route        String
+  requestHash  String
+  statusCode   Int
+  responseBody Json
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@unique([scope, key])
+  @@index([expiresAt])
+}
+
 // Core Business Models
 model Vehicle {
   id              String   @id @default(cuid())
