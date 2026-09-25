@@ -17,8 +17,16 @@ Never paste secret values, database URLs, or customer data into GitHub, logs, or
 
 ## 1. Security prerequisites
 
+- [ ] **Before rotating anything, decouple 2FA encryption.** `lib/cryptoSecrets.ts` encrypts TOTP
+      2FA seeds with a key derived from `TOKEN_ENCRYPTION_KEY`, **falling back to `JWT_SECRET`**.
+      If `TOKEN_ENCRYPTION_KEY` is unset in production today, first set `TOKEN_ENCRYPTION_KEY` to
+      the **current** `JWT_SECRET` value, deploy, and confirm a 2FA login still works. Only then
+      rotate `JWT_SECRET`. Rotating it first makes every enrolled user's 2FA seed undecryptable
+      and locks them out.
 - [ ] **#30:** generate a new `JWT_SECRET` (at least 32 random bytes) in the Coolify secret store
       and treat every previously committed value as burned. Rotating it logs out existing sessions.
+      (If the old value was also used as `TOKEN_ENCRYPTION_KEY`, plan a separate re-encryption of
+      2FA seeds to a fresh key; until then that key is only as secret as the leaked value.)
 - [ ] Generate a fresh `CRON_SECRET` and `API_CURSOR_SECRET` (each at least 32 characters) and an
       `ACTION_PREVIEW_KEYS` ring. See `.env.example` for the format.
 - [ ] Check that no production account still uses a legacy default password from the old setup
@@ -34,6 +42,7 @@ Set these in Coolify, never in git:
 | `NEXTAUTH_URL` | Canonical `https://` origin with no path |
 | `JWT_SECRET`, `API_CURSOR_SECRET`, `CRON_SECRET` | At least 32 characters each |
 | `ACTION_PREVIEW_KEYS`, `ACTION_PREVIEW_CURRENT_KID` | A 1–3 key ring |
+| `TOKEN_ENCRYPTION_KEY` | Encrypts 2FA seeds. Must be set explicitly, **never** left to fall back to `JWT_SECRET` (see §1) |
 | `EMAIL_CONFIG_ENCRYPTION_KEY` | At least 32 characters. Mailgun credentials are entered later in `/admin/email-delivery` |
 | `NEXT_PUBLIC_SENTRY_DSN` | Needed at **build** time (build arg) and at runtime |
 | `FLEETVERA_RELEASE_MODE` | `pilot` |
