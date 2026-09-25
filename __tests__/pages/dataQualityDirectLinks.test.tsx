@@ -36,7 +36,7 @@ jest.mock('@/components/MaintenanceTaskDetailModal', () => ({
     isOpen ? <div data-testid="maintenance-detail">{task?.id}</div> : null,
 }))
 jest.mock('@/components/MaintenanceTaskFormModal', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/ConfirmModal', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/ui/ConfirmDialog', () => ({ useConfirmDialog: () => ({ openConfirm: jest.fn(), openPrompt: jest.fn() }) }))
 jest.mock('@/components/DeliveryTimeline', () => ({ DeliveryTimeline: () => null }))
 
 import { useDataFetch } from '@/hooks/useDataFetch'

@@ -18,7 +18,7 @@ import type { Vehicle } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import VehicleFormModal from '../../components/VehicleFormModal';
 import VehicleDetailModal from '../../components/VehicleDetailModal';
-import ConfirmModal from '../../components/ConfirmModal';
+import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
@@ -34,9 +34,7 @@ export default function VehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-  const [confirmModal, setConfirmModal] = useState({
-    isOpen: false, title: '', message: '', onConfirm: () => {}, variant: 'danger' as const,
-  });
+  const { openConfirm } = useConfirmDialog();
 
   const {
     filtered: filteredVehicles,
@@ -78,8 +76,7 @@ export default function VehiclesPage() {
   });
 
   const handleDelete = (vehicle: Vehicle) => {
-    setConfirmModal({
-      isOpen: true,
+    void openConfirm({
       title: 'Delete Vehicle',
       message: `Delete "${vehicle.name}"? This cannot be undone.`,
       variant: 'danger',
@@ -284,12 +281,6 @@ export default function VehiclesPage() {
         }}
       />
       <VehicleDetailModal isOpen={isDetailOpen} onClose={() => setIsDetailOpen(false)} vehicle={selectedVehicle} />
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-        onConfirm={() => { confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, isOpen: false }); }}
-        title={confirmModal.title} message={confirmModal.message} variant={confirmModal.variant}
-      />
     </DashboardLayout>
   );
 }

@@ -4,7 +4,7 @@ import {
   Crown, User, Truck, Wrench, DollarSign, EyeIcon
 } from 'lucide-react'
 import FormModal from './FormModal'
-import ConfirmModal from './ConfirmModal'
+import { useConfirmDialog } from './ui/ConfirmDialog'
 
 interface User {
   id: string
@@ -34,7 +34,7 @@ export default function AdminUserManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const { openConfirm } = useConfirmDialog()
   // Fetch users
   useEffect(() => {
     fetchUsers()
@@ -88,11 +88,19 @@ export default function AdminUserManagement() {
       }
       
       await fetchUsers()
-      setIsDeleteModalOpen(false)
-      setSelectedUser(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user')
     }
+  }
+
+  const confirmDeleteUser = (user: User) => {
+    void openConfirm({
+      title: 'Delete User',
+      message: `Are you sure you want to delete "${user.name || user.email}"? This action cannot be undone and all their data will be permanently removed.`,
+      variant: 'danger',
+      confirmLabel: 'Delete User',
+      onConfirm: () => handleDeleteUser(user.id),
+    })
   }
 
   const filteredUsers = users.filter(user =>
@@ -207,10 +215,7 @@ export default function AdminUserManagement() {
                       
                       {/* Delete button */}
                       <button
-                        onClick={() => {
-                          setSelectedUser(user)
-                          setIsDeleteModalOpen(true)
-                        }}
+                        onClick={() => confirmDeleteUser(user)}
                         className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
                         title="Delete user" aria-label="Delete user"
                       >
@@ -300,20 +305,6 @@ export default function AdminUserManagement() {
           </div>
         </div>
       </FormModal>
-
-      {/* Delete Confirmation Modal */}
-      <ConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false)
-          setSelectedUser(null)
-        }}
-        onConfirm={() => selectedUser && handleDeleteUser(selectedUser.id)}
-        title="Delete User"
-        message={`Are you sure you want to delete "${selectedUser?.name || selectedUser?.email}"? This action cannot be undone and all their data will be permanently removed.`}
-        variant="danger"
-        confirmText="Delete User"
-      />
     </div>
   )
 }
