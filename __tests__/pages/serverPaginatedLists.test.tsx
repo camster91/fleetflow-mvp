@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog'
 
 // List pages page, search, filter and sort on the server (#163) with the
@@ -6,7 +6,8 @@ import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog'
 type Query = Record<string, string | string[] | undefined>
 const mockRouter = { isReady: true, pathname: '/vehicles', query: {} as Query, push: jest.fn(), replace: jest.fn() }
 jest.mock('next/router', () => ({ useRouter: () => mockRouter }))
-jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'MANAGER', loading: false }) }))
+let mockRoleState: { role: string | null; loading: boolean } = { role: 'MANAGER', loading: false }
+jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => mockRoleState }))
 jest.mock('@/services/apiService', () => ({
   getVehiclePage: jest.fn(), getDeliveryPage: jest.fn(), getClientPage: jest.fn(), getMaintenancePage: jest.fn(),
   getMaintenanceTasksDue: jest.fn(), getVehicles: jest.fn(), getClients: jest.fn(), getAllMatching: jest.fn(),
@@ -16,8 +17,15 @@ jest.mock('@/services/notifications', () => ({ notify: { success: jest.fn(), err
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }))
 jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
 jest.mock('@/components/PageHeader', () => ({ PageHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => <header><h1>{title}</h1>{actions}</header> }))
-jest.mock('@/components/VehicleFormModal', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/VehicleDetailModal', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/VehicleFormModal', () => ({
+  __esModule: true,
+  default: ({ isOpen, vehicle }: { isOpen: boolean; vehicle?: { id: string } | null }) =>
+    isOpen ? <div data-testid="vehicle-edit">{vehicle?.id}</div> : null,
+}))
+jest.mock('@/components/VehicleDetailModal', () => ({
+  __esModule: true,
+  default: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div data-testid="vehicle-detail" /> : null),
+}))
 jest.mock('@/components/DeliveryFormModal', () => ({
   __esModule: true,
   default: ({ isOpen, delivery }: { isOpen: boolean; delivery?: { id: string; status: string } }) =>
@@ -43,6 +51,7 @@ const renderPage = (Page: React.ComponentType) => render(<ConfirmDialogProvider>
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockRoleState = { role: 'MANAGER', loading: false }
   mockRouter.query = {}
   mockRouter.pathname = '/vehicles'
   mockRouter.push.mockResolvedValue(true)
@@ -139,5 +148,29 @@ describe('clients and maintenance lists', () => {
     ))
     expect(api.getMaintenanceTasksDue).toHaveBeenCalledWith(expect.stringMatching(/-01$/), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
     expect(screen.getByRole('button', { name: 'Overdue' })).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('edit links wait for the workspace role (Codex finding on #175)', () => {
+  it.each([
+    ['/vehicles', VehiclesPage, 'v1', 'vehicle-edit'],
+    ['/deliveries', DeliveriesPage, 'd1', 'delivery-edit'],
+  ] as const)('%s?edit= opens the editor when the role resolves after the list', async (pathname, Page, id, testId) => {
+    mockRouter.pathname = pathname
+    mockRouter.query = { edit: id }
+    mockRoleState = { role: null, loading: true }
+    const { rerender } = renderPage(Page)
+    // The list has loaded but the role has not: the link must not be consumed yet.
+    await waitFor(() => expect(pathname === '/vehicles' ? api.getVehiclePage : api.getDeliveryPage).toHaveBeenCalled())
+    await act(async () => { await Promise.resolve() })
+    expect(mockRouter.replace).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('vehicle-detail')).not.toBeInTheDocument()
+    expect(screen.queryByTestId(testId)).not.toBeInTheDocument()
+
+    mockRoleState = { role: 'MANAGER', loading: false }
+    rerender(<ConfirmDialogProvider><Page /></ConfirmDialogProvider>)
+    expect(await screen.findByTestId(testId)).toHaveTextContent(id)
+    expect(screen.queryByTestId('vehicle-detail')).not.toBeInTheDocument()
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname, query: {} }, undefined, { shallow: true }))
   })
 })

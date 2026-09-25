@@ -45,7 +45,7 @@ export default function MaintenancePage() {
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const { openConfirm } = useConfirmDialog();
-  const { role } = useWorkspaceRole();
+  const { role, loading: roleLoading } = useWorkspaceRole();
   const canManage = role !== null && canManageMaintenance(role);
 
   // Overdue/upcoming and the stat cards are relative to the viewer's calendar day.
@@ -117,7 +117,8 @@ export default function MaintenancePage() {
   const loadedTasks = useMemo(() => [...filteredTasks, ...tasks], [filteredTasks, tasks]);
   useRecordQuery({
     records: loadedTasks,
-    loading: isLoading,
+    // Wait for the workspace role too: edit links open the editor only for managers.
+    loading: isLoading || roleLoading,
     resource: 'maintenance',
     onMatch: (task) => { setSelectedTask(task); setIsDetailOpen(true); },
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),

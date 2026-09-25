@@ -63,7 +63,7 @@ export default function DeliveriesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const { openConfirm } = useConfirmDialog();
-  const { role } = useWorkspaceRole();
+  const { role, loading: roleLoading } = useWorkspaceRole();
   const canManage = role !== null && canManageDeliveries(role);
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
   const lastPolled = lastUpdated ?? new Date();
@@ -112,7 +112,8 @@ export default function DeliveriesPage() {
   };
   useRecordQuery({
     records: deliveries,
-    loading: isLoading,
+    // Wait for the workspace role too: edit links open the editor only for managers.
+    loading: isLoading || roleLoading,
     resource: 'deliveries',
     // Only roles that may update deliveries get the edit form from a deep link.
     onMatch: canManage ? handleEdit : () => undefined,

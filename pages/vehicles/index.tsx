@@ -49,7 +49,7 @@ export default function VehiclesPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const { openConfirm } = useConfirmDialog();
-  const { role } = useWorkspaceRole();
+  const { role, loading: roleLoading } = useWorkspaceRole();
   const canManage = role !== null && canManageVehicles(role);
 
   const filteredVehicles = vehicles;
@@ -87,7 +87,8 @@ export default function VehiclesPage() {
 
   useRecordQuery({
     records: vehicles,
-    loading: isLoading,
+    // Wait for the workspace role too: edit links open the editor only for managers.
+    loading: isLoading || roleLoading,
     resource: 'vehicles',
     onMatch: handleView,
     onEdit: canManage ? handleEdit : undefined,
