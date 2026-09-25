@@ -1,0 +1,3 @@
+# Formatting-only commits, skipped by `git blame` (git config blame.ignoreRevsFile .git-blame-ignore-revs).
+# Prettier adoption (#179)
+af3e8c704b32ca43c50bfc378bac8d0f81bce5fa

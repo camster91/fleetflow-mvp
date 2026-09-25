@@ -55,16 +55,17 @@ async function listMembers(req: NextApiRequest, res: NextApiResponse) {
     orderBy: [{ invitedAt: 'asc' }, { id: 'asc' }],
   })
 
+  // Ownership is canonical in Team.ownerId: a stale membership row for the owner (e.g. an
+  // invite sent to the owner's own email) must not show them as pending or non-owner.
   const members = teamMembers.map((m) => ({
     id: m.id,
-    role: m.role,
-    status: m.status,
+    role: m.userId === tenant.ownerId ? 'OWNER' : m.role,
+    status: m.userId === tenant.ownerId ? 'ACCEPTED' : m.status,
     invitedAt: m.invitedAt,
     joinedAt: m.joinedAt,
     user: m.user ?? null,
     invitedByUser: null,
     isSelf: m.userId === userId,
-    // Ownership is canonical in Team.ownerId, whatever the membership row says.
     isOwner: m.userId === tenant.ownerId,
   }))
 

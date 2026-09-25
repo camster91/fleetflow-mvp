@@ -69,19 +69,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invitation is invalid; request a new invite' })
     }
 
-    const updated = await prisma.teamMember.update({
-      where: { id: invitationId },
+    // Conditional on PENDING so two concurrent responses (or an accept racing a revoke)
+    // cannot both win: only the first transition applies.
+    const status = accept ? 'ACCEPTED' : 'DECLINED'
+    const updated = await prisma.teamMember.updateMany({
+      where: { id: invitationId, status: 'PENDING' },
       data: {
-        status: accept ? 'ACCEPTED' : 'DECLINED',
+        status,
         joinedAt: accept ? new Date() : null,
         userId: session.user.id,
         inviteeEmail: intendedEmail || sessionEmail,
       },
     })
 
+    if (updated.count === 0) {
+      return res.status(409).json({ error: 'Invitation is no longer pending' })
+    }
+
     return res.status(200).json({
       success: true,
-      status: updated.status,
+      status,
       team: invitation.team.name,
     })
   } catch (error) {

@@ -34,7 +34,8 @@ export const googleMapsConfigSchema = z
       .string()
       .url()
       .refine((value) => {
-        const url = new URL(value)
+        const url = parseUrl(value)
+        if (!url) return false
         const testLoopback =
           process.env.INTEGRATION_ALLOW_TEST_PROVIDERS === '1' &&
           process.env.NODE_ENV !== 'production' &&
@@ -53,6 +54,14 @@ export function validateGoogleMapsConfig(config: unknown) {
   return googleMapsConfigSchema.safeParse(config)
 }
 
+function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value)
+  } catch {
+    return null
+  }
+}
+
 export const quickBooksConfigSchema = z
   .object({
     clientId: z.string().min(1).max(512),
@@ -61,7 +70,9 @@ export const quickBooksConfigSchema = z
       .string()
       .url()
       .refine((value) => {
-        const url = new URL(value)
+        // Zod still runs refinements after `.url()` fails, so an unset or malformed value must not throw.
+        const url = parseUrl(value)
+        if (!url) return false
         return (
           url.protocol === 'https:' ||
           (process.env.INTEGRATION_ALLOW_TEST_PROVIDERS === '1' &&
@@ -74,7 +85,8 @@ export const quickBooksConfigSchema = z
       .string()
       .url()
       .refine((value) => {
-        const url = new URL(value)
+        const url = parseUrl(value)
+        if (!url) return false
         const testLoopback =
           process.env.INTEGRATION_ALLOW_TEST_PROVIDERS === '1' &&
           process.env.NODE_ENV !== 'production' &&

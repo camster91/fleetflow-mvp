@@ -70,7 +70,7 @@ beforeEach(() => {
   for (const model of [db.vehicle, db.delivery, db.maintenanceTask, db.client]) {
     model.findMany.mockResolvedValue([])
     model.count.mockResolvedValue(0)
-    model.aggregate.mockResolvedValue({ _avg: { mileage: null } })
+    model.aggregate.mockResolvedValue({ _sum: { mileage: null } })
   }
 })
 
@@ -209,10 +209,25 @@ describe('GET list routes: driver scoping survives search and filters', () => {
 })
 
 describe('GET list routes: summary', () => {
+  it('averages mileage over every vehicle, counting null mileage as zero', async () => {
+    signIn('MANAGER')
+    // 4 vehicles, one with null mileage: _sum skips the null, the divisor must not.
+    db.vehicle.count.mockResolvedValue(4)
+    db.vehicle.aggregate.mockResolvedValue({ _sum: { mileage: 30000 } })
+    const { body } = await get(vehiclesHandler, { summary: '1' })
+    expect(body.summary.averageMileage).toBe(7500)
+  })
+
+  it('reports zero average mileage for an empty fleet', async () => {
+    signIn('MANAGER')
+    const { body } = await get(vehiclesHandler, { summary: '1' })
+    expect(body.summary).toEqual({ total: 0, active: 0, maintenanceDue: 0, averageMileage: 0 })
+  })
+
   it('is only included when requested and covers the whole scope, ignoring search and filters', async () => {
     signIn('MANAGER')
     db.vehicle.count.mockResolvedValue(3)
-    db.vehicle.aggregate.mockResolvedValue({ _avg: { mileage: 1234.6 } })
+    db.vehicle.aggregate.mockResolvedValue({ _sum: { mileage: 3704 } })
 
     const plain = await get(vehiclesHandler, { q: 'van' })
     expect(plain.body).not.toHaveProperty('summary')
@@ -220,7 +235,7 @@ describe('GET list routes: summary', () => {
 
     const { body } = await get(vehiclesHandler, { q: 'van', summary: '1' })
     expect(body.summary).toEqual({ total: 3, active: 3, maintenanceDue: 3, averageMileage: 1235 })
-    expect(db.vehicle.aggregate).toHaveBeenCalledWith({ where: TEAM, _avg: { mileage: true } })
+    expect(db.vehicle.aggregate).toHaveBeenCalledWith({ where: TEAM, _sum: { mileage: true } })
     expect(db.vehicle.count).toHaveBeenCalledWith({ where: TEAM })
     expect(db.vehicle.count).toHaveBeenCalledWith({ where: { AND: [TEAM, { status: 'active' }] } })
   })

@@ -113,16 +113,18 @@ test.describe('feature access by role', () => {
       await expectStatus(await client.get('/api/intelligence/brief'), FEATURES.intelligence.has(role) ? 200 : 403)
       if (FEATURES.intelligence.has(role)) await expectHeading(page, '/intelligence', 'Fleet intelligence findings')
 
-      // Workspace time zone: everyone reads it, only owners and admins change it.
+      // Workspace time zone: everyone reads it, only owners and admins change it. The PATCH carries an
+      // invalid zone so it never writes the shared team (the owner workflow below owns the real change and
+      // runs in parallel): editors get past the role gate to validation (400), everyone else gets 403.
       const workspace = await client.get('/api/settings/workspace')
       await expectStatus(workspace, 200)
-      const { timeZone, canEdit } = await workspace.json()
+      const { canEdit } = await workspace.json()
       expect(canEdit).toBe(FEATURES.workspaceSettings.has(role))
       const patch = await page.request.patch('/api/settings/workspace', {
-        data: { timeZone },
+        data: { timeZone: 'Mars/Olympus_Mons' },
         headers: sameOrigin(baseURL!),
       })
-      await expectStatus(patch, FEATURES.workspaceSettings.has(role) ? 200 : 403)
+      await expectStatus(patch, FEATURES.workspaceSettings.has(role) ? 400 : 403)
 
       // Checkout is never offered during the free beta: billing roles get "unavailable", others are forbidden.
       await expectStatus(

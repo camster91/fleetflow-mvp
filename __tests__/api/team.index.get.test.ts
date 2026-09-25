@@ -75,7 +75,21 @@ describe('GET /api/team per role', () => {
       { ...member('m1', 'ADMIN', 'owner@example.test'), userId: 'owner' },
     ])
     const res = await get()
-    expect(res._getJSONData()[0]).toEqual(expect.objectContaining({ isOwner: true }))
+    expect(res._getJSONData()[0]).toEqual(expect.objectContaining({ isOwner: true, role: 'OWNER' }))
+  })
+
+  it('normalizes a stale pending membership row for the owner to an accepted owner', async () => {
+    asRole('ADMIN')
+    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([
+      { ...member('m1', 'MEMBER', 'owner@example.test'), userId: 'owner', status: 'PENDING', joinedAt: null },
+      member('m2', 'DRIVER', 'driver@example.test'),
+    ])
+    const res = await get()
+    const body = res._getJSONData()
+    expect(body).toHaveLength(2)
+    expect(body[0]).toEqual(expect.objectContaining({ role: 'OWNER', status: 'ACCEPTED', isOwner: true }))
+    expect(body[1]).toEqual(expect.objectContaining({ role: 'DRIVER', status: 'ACCEPTED', isOwner: false }))
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
   })
 
   it('includes the canonical owner when Team.ownerId has no membership row', async () => {

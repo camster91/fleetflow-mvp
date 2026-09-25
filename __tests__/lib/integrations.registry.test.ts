@@ -45,6 +45,29 @@ describe('integration provider registry', () => {
     ).toBe(true)
   })
 
+  it('reports unset or malformed QuickBooks URLs as invalid instead of throwing', () => {
+    for (const redirectUri of ['', 'not a url']) {
+      expect(
+        validateQuickBooksConfig({
+          clientId: 'id',
+          clientSecret: 'secret',
+          redirectUri,
+          apiBaseUrl: 'also not a url',
+        }).success
+      ).toBe(false)
+    }
+    const quickbooks = createProviderRegistry()
+      .list()
+      .find((provider) => provider.id === 'quickbooks')
+    const saved = process.env.QUICKBOOKS_REDIRECT_URI
+    delete process.env.QUICKBOOKS_REDIRECT_URI
+    try {
+      expect(quickbooks?.readiness().ready).toBe(false)
+    } finally {
+      if (saved !== undefined) process.env.QUICKBOOKS_REDIRECT_URI = saved
+    }
+  })
+
   it('requires an HTTPS Maps endpoint on the Google host and server-only key', () => {
     expect(validateGoogleMapsConfig({ apiKey: 'key', baseUrl: 'https://maps.googleapis.com' }).success).toBe(true)
     expect(validateGoogleMapsConfig({ apiKey: 'key', baseUrl: 'http://maps.googleapis.com' }).success).toBe(false)
