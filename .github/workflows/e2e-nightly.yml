@@ -1,0 +1,86 @@
+name: E2E nightly (cross-browser)
+
+# The PR `e2e` job in ci.yml runs the same suite on Chromium only. This runs
+# the smoke suite and the full feature x role matrix on Chromium, Firefox,
+# WebKit and a 375px mobile viewport against a locally built server and a
+# disposable Postgres. It never targets staging or production.
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright matrix (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium
+            browser: chromium
+          - project: firefox
+            browser: firefox
+          - project: webkit
+            browser: webkit
+          - project: mobile-375
+            browser: chromium
+    env:
+      CI: true
+      DATABASE_URL: postgresql://fleetflow@localhost:5432/fleetflow
+      JWT_SECRET: ci-only-signing-secret-at-least-32-characters
+      NEXTAUTH_URL: http://localhost:3000
+      PLAYWRIGHT_HTML_OPEN: never
+      # Adds the mobile-375 project (playwright.config.ts).
+      E2E_ALL_BROWSERS: '1'
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fleetflow
+          # Disposable, job-local database: passwordless trust auth keeps credentials out of the repo.
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: fleetflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fleetflow -d fleetflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+      - name: Seed synthetic data
+        run: npm run db:seed
+      - name: Install ${{ matrix.browser }}
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Build
+        run: npm run build
+      - name: Run smoke suite and feature x role matrix
+        run: npx playwright test e2e/smoke.spec.ts e2e/matrix --project=${{ matrix.project }} --reporter=line,html
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: playwright-report/
+          retention-days: 7

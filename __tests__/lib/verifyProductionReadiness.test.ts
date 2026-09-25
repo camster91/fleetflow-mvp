@@ -25,6 +25,12 @@ describe('verify-production-readiness', () => {
     expect(evaluateEnvironment({ ...core, TOKEN_ENCRYPTION_KEY: 'short' }).ready).toBe(false)
   })
 
+  it('fails when the test-only E2E mail capture is configured', () => {
+    const result = evaluateEnvironment({ ...core, E2E_EMAIL_CAPTURE_DIR: '/tmp/mail' })
+    expect(result.ready).toBe(false)
+    expect(result.missing).toContain('E2E_EMAIL_CAPTURE_DIR must not be set outside local end-to-end tests')
+  })
+
   it('accepts a minimally configured controlled pilot without optional providers', () => {
     expect(evaluateEnvironment(core)).toEqual({ mode: 'pilot', ready: true, missing: [], warnings: [] })
   })

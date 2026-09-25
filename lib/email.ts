@@ -2,6 +2,7 @@
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { configuredMailgun } from '@/lib/emailConfig';
+import { captureEmail, e2eEmailCaptureDir } from '@/lib/emailCapture';
 
 const mailgun = new Mailgun(formData);
 
@@ -228,6 +229,12 @@ export async function sendEmail({
   to, subject, html, text = '', from = FROM_EMAIL, attachments, cc, bcc, replyTo, metadata,
 }: SendEmailOptions): Promise<EmailResult> {
   try {
+    // Test-only capture for the local Playwright server; never active on an HTTPS deployment (lib/emailCapture.ts).
+    const captureDir = e2eEmailCaptureDir();
+    if (captureDir) {
+      const captured = await captureEmail(captureDir, { to, subject, text, html });
+      return { success: true, messageId: captured.messageId };
+    }
     if (process.env.NODE_ENV === 'production' && !CONFIGURED_APP_URL) {
       return { success: false, errorCode: 'configuration_error', error: 'configuration_error' };
     }

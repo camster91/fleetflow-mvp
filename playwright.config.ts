@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { LOCAL_BASE_URL, resolveBaseURL } from './e2e/support/base-url';
+import { E2E_EMAIL_CAPTURE_DIR } from './e2e/support/mail-capture';
 
 // Defaults to a local server; remote/production targets are opt-in (see e2e/support/base-url.ts).
 const { baseURL, remote } = resolveBaseURL();
@@ -37,42 +38,33 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  /* Configure projects for major browsers */
+  /*
+   * chromium runs on every PR (`npm run test:e2e:ci`). firefox and webkit are
+   * always defined for the release scripts; the 375px mobile project is only
+   * added for the nightly cross-browser run (E2E_ALL_BROWSERS=1, see
+   * .github/workflows/e2e-nightly.yml) so a bare `npx playwright test` stays
+   * desktop-only.
+   */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
-
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
     },
-
-    /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
-    },
-
-    /* Test against branded browsers. */
-    {
-      name: 'Microsoft Edge',
-      use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    },
-    {
-      name: 'Google Chrome',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    },
+    ...(process.env.E2E_ALL_BROWSERS === '1'
+      ? [{
+          name: 'mobile-375',
+          // Chromium at a 375px-wide phone viewport with touch input.
+          use: { ...devices['Pixel 5'], viewport: { width: 375, height: 812 } },
+        }]
+      : []),
   ],
 
   /*
@@ -86,6 +78,8 @@ export default defineConfig({
         url: LOCAL_BASE_URL,
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000,
+        // Test-only outbound mail capture for auth flows (lib/emailCapture.ts); ignored unless the app URL is loopback http.
+        env: { E2E_EMAIL_CAPTURE_DIR },
       }
     : undefined,
 });

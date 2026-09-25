@@ -72,6 +72,8 @@ function evaluateEnvironment(env, mode = 'pilot') {
       missing.push('Stripe price IDs, integer minor-unit amounts, and currency must be valid')
     }
   }
+  // Test-only mail capture (lib/emailCapture.ts) must never be configured on a deployment.
+  if (present(env, 'E2E_EMAIL_CAPTURE_DIR')) missing.push('E2E_EMAIL_CAPTURE_DIR must not be set outside local end-to-end tests')
   if (!['pilot', 'public'].includes(mode)) missing.push('FLEETVERA_RELEASE_MODE must be pilot or public')
 
   const warnings = []
