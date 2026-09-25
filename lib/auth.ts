@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken'
-import type { SignOptions } from 'jsonwebtoken'
+import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -14,6 +13,10 @@ function getJwtSecret(): string {
     throw new Error('JWT_SECRET must be configured with at least 32 characters')
   }
   return configured || 'dev-only-placeholder-not-for-production'
+}
+
+function getJwtKey(): Uint8Array {
+  return new TextEncoder().encode(getJwtSecret())
 }
 
 export interface TokenPayload {
@@ -50,11 +53,23 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash)
 }
 
-export function signToken(
-  payload: Omit<TokenPayload, 'iat'>,
-  expiresIn: SignOptions['expiresIn'] = '7d'
-): string {
-  return jwt.sign({ purpose: 'session', ...payload }, getJwtSecret(), { expiresIn })
+/**
+ * Sign an HS256 JWT. `expiresIn` is a jose time span such as '7d' or '5m', or
+ * a number of seconds from now (matching the former jsonwebtoken semantics).
+ * Tokens keep the same header ({ alg: 'HS256', typ: 'JWT' }) and claims
+ * (purpose, sub, email, name, role, tv, iat, exp) as the jsonwebtoken era, so
+ * cookies issued before the switch keep verifying.
+ */
+export async function signToken(
+  payload: Omit<TokenPayload, 'iat' | 'exp'>,
+  expiresIn: string | number = '7d'
+): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  return new SignJWT({ purpose: 'session', ...payload })
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt(now)
+    .setExpirationTime(typeof expiresIn === 'number' ? now + expiresIn : expiresIn)
+    .sign(getJwtKey())
 }
 
 /**
@@ -67,9 +82,10 @@ export function tokenVersionOf(payload: Pick<TokenPayload, 'tv'>): number | null
   return Number.isInteger(payload.tv) && payload.tv >= 0 ? payload.tv : null
 }
 
-export function verifyToken(token: string): TokenPayload | null {
+export async function verifyToken(token: string): Promise<TokenPayload | null> {
   try {
-    return jwt.verify(token, getJwtSecret()) as TokenPayload
+    const { payload } = await jwtVerify(token, getJwtKey(), { algorithms: ['HS256'] })
+    return payload as unknown as TokenPayload
   } catch {
     return null
   }
@@ -86,7 +102,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   const token = cookies.token
   if (!token) return null
 
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload?.sub || payload.purpose !== 'session') return null
 
   // Check if password was changed after token was issued (invalidate old tokens)

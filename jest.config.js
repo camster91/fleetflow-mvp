@@ -1,3 +1,6 @@
+// jose ships ESM only; let babel-jest compile it to CommonJS for tests.
+const JOSE_TRANSFORM = ['/node_modules/(?!jose/)'];
+
 /** @type {import('jest').Config} */
 const config = {
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
@@ -16,6 +19,7 @@ const config = {
       },
       modulePathIgnorePatterns: ['<rootDir>/.next/'],
       testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+      transformIgnorePatterns: JOSE_TRANSFORM,
     },
     {
       displayName: 'ui',
@@ -48,6 +52,7 @@ const config = {
         '<rootDir>/.next/',
         '<rootDir>/__tests__/pages/api/',
       ],
+      transformIgnorePatterns: JOSE_TRANSFORM,
     },
     {
       displayName: 'unit',
@@ -62,6 +67,7 @@ const config = {
       },
       modulePathIgnorePatterns: ['<rootDir>/.next/'],
       testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+      transformIgnorePatterns: JOSE_TRANSFORM,
     },
   ],
   // Legacy flat config kept for coverage collection
@@ -77,6 +83,7 @@ const config = {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
   },
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
+  transformIgnorePatterns: JOSE_TRANSFORM,
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
       presets: [

@@ -112,7 +112,7 @@ export default async function handler(
     });
 
     // Keep this browser signed in with a token for the new version.
-    res.setHeader('Set-Cookie', sessionCookie(signToken({
+    res.setHeader('Set-Cookie', sessionCookie(await signToken({
       sub: user.id,
       email: user.email,
       name: user.name,
