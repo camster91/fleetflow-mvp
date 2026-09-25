@@ -56,6 +56,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/create-admin.js ./create-admin.js
 # Keep the read-only production preflight available in the final image so the
 # exact runtime environment can be checked before a cutover.
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/verify-production-readiness.cjs ./verify-production-readiness.cjs
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/reencrypt-2fa-seeds.cjs ./reencrypt-2fa-seeds.cjs
 
 # Copy entrypoint script that enforces DATABASE_URL in production
 COPY --chown=nextjs:nodejs entrypoint.sh ./

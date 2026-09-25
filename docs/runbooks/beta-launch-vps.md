@@ -12,21 +12,27 @@ Never paste secret values, database URLs, or customer data into GitHub, logs, or
       endpoints must all use it, and the other hostname should redirect to it.
 - [ ] **Release mode.** Use `FLEETVERA_RELEASE_MODE=pilot` for the free beta. Stripe is not
       required in pilot mode, and `/billing` shows the free-beta notice while Stripe is unconfigured.
-- [ ] **Gate.** Record which CI result approves the SHA: `Ashbi Local CI`, GitHub Actions
-      (`quality` + `e2e`), or both.
+- [ ] **Gate.** `.github/workflows/deploy-coolify.yml` only deploys a SHA with a successful
+      `Ashbi Local CI` check, so that check must be green. Also require the GitHub Actions
+      `quality` and `e2e` jobs if they are enabled. They add coverage but do not replace
+      `Ashbi Local CI` unless the deploy workflow is changed.
 
 ## 1. Security prerequisites
 
 - [ ] **Before rotating anything, decouple 2FA encryption.** `lib/cryptoSecrets.ts` encrypts TOTP
       2FA seeds with a key derived from `TOKEN_ENCRYPTION_KEY`, **falling back to `JWT_SECRET`**.
       If `TOKEN_ENCRYPTION_KEY` is unset in production today, first set `TOKEN_ENCRYPTION_KEY` to
-      the **current** `JWT_SECRET` value, deploy, and confirm a 2FA login still works. Only then
+      the **current** `JWT_SECRET` value (exactly, byte for byte), deploy, and confirm a 2FA login
+      still works. The production preflight now refuses to start without `TOKEN_ENCRYPTION_KEY`. Only then
       rotate `JWT_SECRET`. Rotating it first makes every enrolled user's 2FA seed undecryptable
       and locks them out.
 - [ ] **#30:** generate a new `JWT_SECRET` (at least 32 random bytes) in the Coolify secret store
       and treat every previously committed value as burned. Rotating it logs out existing sessions.
-      (If the old value was also used as `TOKEN_ENCRYPTION_KEY`, plan a separate re-encryption of
-      2FA seeds to a fresh key; until then that key is only as secret as the leaked value.)
+      (If the old value is now serving as `TOKEN_ENCRYPTION_KEY`, move it to
+      `TOKEN_ENCRYPTION_KEY_PREVIOUS`, set a fresh `TOKEN_ENCRYPTION_KEY`, deploy, then run
+      `docker exec <app-container> node reencrypt-2fa-seeds.cjs` (dry run) and again with
+      `--apply`. Remove `TOKEN_ENCRYPTION_KEY_PREVIOUS` once it reports `failed: 0` and
+      `reencrypted: 0` on a second dry run.)
 - [ ] Generate a fresh `CRON_SECRET` and `API_CURSOR_SECRET` (each at least 32 characters) and an
       `ACTION_PREVIEW_KEYS` ring. See `.env.example` for the format.
 - [ ] Check that no production account still uses a legacy default password from the old setup
@@ -49,12 +55,12 @@ Set these in Coolify, never in git:
 | `TRUSTED_PROXY_HOPS` | `1` behind Traefik, so rate limits and audit IPs use the real client IP |
 | `AI_PROVIDER`, `DOCUMENT_SCANNER_PROVIDER` | Leave `disabled` until #74 and #73 are complete |
 
-- [ ] In the container, run `npm run verify:production-config`. It must report `ready: true`. It
+- [ ] In the app container, run `node verify-production-readiness.cjs` (the entrypoint also runs it). It must report `ready: true`. It
       prints only the names of missing settings, never their values.
 
 ## 3. Database
 
-`master` adds three migrations that run automatically on deploy (`prisma migrate deploy` in the
+`master` adds five migrations that run automatically on deploy (`prisma migrate deploy` in the
 entrypoint):
 
 - `20260925000000_auth_hardening`: adds `tokenVersion` and `lastTotpStep`, stores share tokens
@@ -62,11 +68,19 @@ entrypoint):
 - `20260925010000_team_delete_restrict_password_history_fk`: blocks deleting a team that still owns
   records, and adds the `PasswordHistory` foreign key after removing orphaned rows.
 - `20260925020000_maintenance_overdue_reminder`: adds `overdueReminderSentAt`, backfilled.
+- `20260925030000_idempotency_keys`: adds the `IdempotencyKey` table (24h replay records for
+  create requests, cleaned up by `cleanup-audit-logs`).
+- `20260925040000_workspace_time_zone`: adds `timeZone` to teams and users, defaulting to
+  `America/Toronto`. Owners and admins can change it under Settings › Company.
 
 - [ ] Take a verified backup (`docs/runbooks/backup-restore.md`) and record its ID and timestamp.
-- [ ] Rehearse all three migrations on a **restored copy** of production, then run
-      `prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code`
-      against it (#72).
+- [ ] Rehearse the migrations on a **restored copy** of production (#72):
+      1. Point `DATABASE_URL` at the restored copy and run `npx prisma migrate deploy`.
+      2. Confirm the migrated copy matches the schema exactly:
+         `npx prisma migrate diff --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma --exit-code`
+         (exit code 0 means no difference).
+      3. Optionally, repeat CI's repository drift check. It needs an empty scratch database as shadow:
+         `npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url "$SHADOW_DATABASE_URL" --exit-code`.
 
 ## 4. Networking
 
@@ -86,7 +100,7 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 | `maintenance-reminders` | Daily, early morning in the fleets' time zone (e.g. 10:00 UTC) |
 | `cleanup-audit-logs` | Daily |
 | `ai-retention` | Daily |
-| `document-retention` | Daily |
+| `document-retention` | Only once document storage is configured (#73). In production it returns 503 while `DOCUMENT_STORAGE_PATH` is unset, so leave it unscheduled during the beta. |
 | `integration-retention` | Daily |
 | `maintenance-risk-retention` | Daily |
 | `pilot-retention` | Daily |
@@ -103,7 +117,7 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 
 - [ ] Confirm the approved CI check is green on the exact `master` SHA.
 - [ ] Run the **Deploy to Coolify** workflow with that full SHA (`docs/runbooks/deploy-and-rollback.md`).
-- [ ] Watch the entrypoint logs: the preflight passes, then `migrate deploy` applies 3 migrations,
+- [ ] Watch the entrypoint logs: the preflight passes, then `migrate deploy` applies the pending migrations,
       then the app starts. The container health check allows a 60s start period.
 
 ## 8. Smoke test (synthetic accounts only)
