@@ -18,8 +18,8 @@ import * as api from '../../services/apiService';
 import type { Client } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import toast from 'react-hot-toast';
-import { useDataFetch } from '../../hooks/useDataFetch';
-import { useFilteredData } from '../../hooks/useFilteredData';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { Pagination, SortSelect, type SortOption } from '../../components/ui/Pagination';
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
 import { canManageClients } from '../../lib/permissions';
 
@@ -50,33 +50,36 @@ function TypeBadge({ type }: { type?: string }) {
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[type ?? 'other'] ?? map.other}`}>{label}</span>;
 }
 
+const SORT_OPTIONS: SortOption[] = [
+  { value: '', label: 'Name (A–Z)' },
+  { value: 'name', label: 'Name (Z–A)', order: 'desc' },
+  { value: 'rating', label: 'Rating (highest)', order: 'desc' },
+  { value: 'createdAt', label: 'Recently added', order: 'desc' },
+  { value: 'type', label: 'Type', order: 'asc' },
+];
+
 export default function ClientsPage() {
   const router = useRouter();
   const { role } = useWorkspaceRole();
   const canManage = role !== null && canManageClients(role);
-  const { data: clients, loading: isLoading, error: fetchError, refetch: loadData } = useDataFetch<Client[]>(
-    api.getClients, [], []
-  );
+  const list = usePaginatedList<Client, api.ClientSummary>({
+    fetchPage: (params, signal) => api.getClientPage({ ...params, summary: 1 }, signal),
+    filterKeys: ['type'],
+    sortKeys: ['name', 'rating', 'createdAt', 'type'],
+  });
+  const { rows: clients, loading: isLoading, error: fetchError, refetch: loadData, summary } = list;
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  const {
-    filtered,
-    searchQuery,
-    setSearchQuery,
-    filters,
-    setFilter,
-  } = useFilteredData<Client>({
-    data: clients,
-    searchFields: ['name', 'address', 'phone', 'email', 'businessName'] as (keyof Client)[],
-    filterFn: (c, f) => !f.type || f.type === 'all' || c.type === f.type,
-  });
+  const filtered = clients;
+  const { searchInput: searchQuery, setSearchInput: setSearchQuery, filters, setFilter, isFiltered } = list;
   const typeFilter = filters.type || 'all';
 
+  // Stat cards cover every client in the workspace, not just this page.
   const stats = [
-    { title: 'Total Clients', value: clients.length, icon: <Building className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
-    { title: 'Restaurant/Hotel', value: clients.filter((c) => c.type === 'restaurant' || c.type === 'hotel').length, icon: <Building className="h-6 w-6 text-purple-600" />, iconBgColor: 'bg-purple-50' },
-    { title: 'High Rating', value: clients.filter((c) => (c.rating ?? 0) >= 4).length, icon: <Star className="h-6 w-6 text-amber-500" />, iconBgColor: 'bg-amber-50' },
+    { title: 'Total Clients', value: summary?.total ?? 0, icon: <Building className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
+    { title: 'Restaurant/Hotel', value: summary?.restaurantHotel ?? 0, icon: <Building className="h-6 w-6 text-purple-600" />, iconBgColor: 'bg-purple-50' },
+    { title: 'High Rating', value: summary?.highRating ?? 0, icon: <Star className="h-6 w-6 text-amber-500" />, iconBgColor: 'bg-amber-50' },
   ];
 
   return (
@@ -128,17 +131,19 @@ export default function ClientsPage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
-              type="text"
+              type="search"
+              aria-label="Search clients"
               placeholder="Search by name, address, phone, email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900"
+              className="w-full min-h-11 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900"
             />
           </div>
           <select
+            aria-label="Filter by type"
             value={typeFilter}
             onChange={(e) => setFilter('type', e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            className="min-h-11 px-3 py-2 border border-slate-300 rounded-lg text-sm"
           >
             <option value="all">All Types</option>
             <option value="restaurant">Restaurant</option>
@@ -150,22 +155,24 @@ export default function ClientsPage() {
             <option value="institution">Institution</option>
             <option value="other">Other</option>
           </select>
+          <SortSelect id="client-sort" options={SORT_OPTIONS} sort={list.sort} order={list.order} onChange={list.setSort} />
         </div>
       </Card>
 
-      {isLoading ? (
+      {isLoading && clients.length === 0 ? (
         <SkeletonTable rows={5} columns={4} />
       ) : filtered.length === 0 ? (
         <Card>
           <EmptyState
-            type={searchQuery ? 'search' : 'data'}
-            title={searchQuery ? 'No clients found' : 'No clients yet'}
-            description={searchQuery ? 'Try adjusting your search or filter' : 'Add your first client to get started'}
-            actionLabel={!searchQuery && canManage ? 'Add Client' : undefined}
-            onAction={!searchQuery && canManage ? () => setIsFormOpen(true) : undefined}
+            type={isFiltered ? 'search' : 'data'}
+            title={isFiltered ? 'No clients found' : 'No clients yet'}
+            description={isFiltered ? 'Try adjusting your search or filter' : 'Add your first client to get started'}
+            actionLabel={!isFiltered && canManage ? 'Add Client' : undefined}
+            onAction={!isFiltered && canManage ? () => setIsFormOpen(true) : undefined}
           />
         </Card>
       ) : (
+        <>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((client, index) => (
             <FadeIn key={client.id} delay={Math.min(index * 40, 240)}>
@@ -230,6 +237,18 @@ export default function ClientsPage() {
             </FadeIn>
           ))}
         </div>
+        <Card className="mt-4">
+          <Pagination
+            label="clients"
+            page={list.page}
+            pageSize={list.pageSize}
+            total={list.total}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            disabled={isLoading}
+          />
+        </Card>
+        </>
       )}
 
       {/* FAB */}

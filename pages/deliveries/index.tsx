@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import {
   Package, Plus, Search, MapPin, Truck, Clock,
@@ -21,32 +21,49 @@ import DeliveryFormModal from '../../components/DeliveryFormModal';
 import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
-import { useFilteredData } from '../../hooks/useFilteredData';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { Pagination, SortSelect, type SortOption } from '../../components/ui/Pagination';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
 import { canManageDeliveries } from '../../lib/permissions';
 
+const SORT_OPTIONS: SortOption[] = [
+  { value: '', label: 'Newest first' },
+  { value: 'createdAt', label: 'Oldest first', order: 'asc' },
+  { value: 'customer', label: 'Customer (A–Z)', order: 'asc' },
+  { value: 'scheduledTime', label: 'Scheduled time', order: 'asc' },
+  { value: 'status', label: 'Status', order: 'asc' },
+];
+
 export default function DeliveriesPage() {
   const router = useRouter();
-  const { data: allData, loading: isLoading, error: fetchError, lastUpdated, refetch: loadData } = useDataFetch(
+  const list = usePaginatedList<Delivery, api.DeliverySummary>({
+    fetchPage: (params, signal) => api.getDeliveryPage({ ...params, summary: 1 }, signal),
+    filterKeys: ['status'],
+    sortKeys: ['createdAt', 'customer', 'scheduledTime', 'status'],
+  });
+  const { rows: deliveries, loading: isLoading, error: fetchError, lastUpdated, refetch: loadList, summary } = list;
+  // Vehicles and clients only feed the form pickers. Roles that may not list
+  // them (drivers cannot read clients) must still see their deliveries.
+  const { data: lookups, refetch: loadLookups } = useDataFetch(
     async () => {
-      // Vehicles and clients only feed the form pickers. Roles that may not list
-      // them (drivers cannot read clients) must still see their deliveries.
-      const [d, v, c] = await Promise.all([
-        api.getDeliveries(),
+      const [v, c] = await Promise.all([
         api.getVehicles().catch(() => [] as Vehicle[]),
         api.getClients().catch(() => [] as Client[]),
       ]);
-      return { deliveries: d, vehicles: v, clients: c };
+      return { vehicles: v, clients: c };
     },
-    { deliveries: [] as Delivery[], vehicles: [] as Vehicle[], clients: [] as Client[] },
+    { vehicles: [] as Vehicle[], clients: [] as Client[] },
     []
   );
-  const { deliveries, vehicles, clients } = allData;
+  const { vehicles, clients } = lookups;
+  const loadData = useCallback(async (options?: { background?: boolean }) => {
+    await Promise.all([loadList(options), loadLookups(options)]);
+  }, [loadList, loadLookups]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const { openConfirm } = useConfirmDialog();
-  const { role } = useWorkspaceRole();
+  const { role, loading: roleLoading } = useWorkspaceRole();
   const canManage = role !== null && canManageDeliveries(role);
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
   const lastPolled = lastUpdated ?? new Date();
@@ -54,14 +71,15 @@ export default function DeliveriesPage() {
   // Poll every 30 seconds in the background: keep the current list on screen,
   // and pause while the tab is hidden (refresh once when it becomes visible).
   useEffect(() => {
-    const poll = () => { if (!document.hidden) void loadData({ background: true }); };
+    // Only the visible page is re-polled; picker lookups refresh on saves.
+    const poll = () => { if (!document.hidden) void loadList({ background: true }); };
     const interval = setInterval(poll, 30000);
     document.addEventListener('visibilitychange', poll);
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', poll);
     };
-  }, [loadData]);
+  }, [loadList]);
 
   const minutesAgo = Math.floor((Date.now() - lastPolled.getTime()) / 60000);
 
@@ -73,24 +91,17 @@ export default function DeliveriesPage() {
     return Date.now() - new Date(ref).getTime() > 2 * 60 * 60 * 1000;
   };
 
-  const {
-    filtered,
-    searchQuery,
-    setSearchQuery,
-    filters,
-    setFilter,
-  } = useFilteredData<Delivery>({
-    data: deliveries,
-    searchFields: ['customer', 'address', 'driver'],
-    filterFn: (d, f) => !f.status || f.status === 'all' || d.status === f.status,
-  });
+  const filtered = deliveries;
+  const { searchInput: searchQuery, setSearchInput: setSearchQuery, filters, setFilter, isFiltered } = list;
   const statusFilter = filters.status || 'all';
+  const statusCount = (status: string) => summary?.byStatus?.[status] ?? 0;
 
+  // Stat cards and chip counts cover every delivery in scope, not just this page.
   const stats = [
-    { title: 'Total', value: deliveries.length, icon: <Package className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
-    { title: 'In Transit', value: deliveries.filter((d) => d.status === 'in-transit').length, icon: <Truck className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
-    { title: 'Pending', value: deliveries.filter((d) => d.status === 'pending').length, icon: <Clock className="h-6 w-6 text-amber-600" />, iconBgColor: 'bg-amber-50' },
-    { title: 'Delivered', value: deliveries.filter((d) => d.status === 'delivered').length, icon: <CheckCircle className="h-6 w-6 text-emerald-600" />, iconBgColor: 'bg-emerald-50' },
+    { title: 'Total', value: summary?.total ?? 0, icon: <Package className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
+    { title: 'In Transit', value: statusCount('in-transit'), icon: <Truck className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
+    { title: 'Pending', value: statusCount('pending'), icon: <Clock className="h-6 w-6 text-amber-600" />, iconBgColor: 'bg-amber-50' },
+    { title: 'Delivered', value: statusCount('delivered'), icon: <CheckCircle className="h-6 w-6 text-emerald-600" />, iconBgColor: 'bg-emerald-50' },
   ];
 
   const handleEdit = (d: Delivery) => {
@@ -101,12 +112,15 @@ export default function DeliveriesPage() {
   };
   useRecordQuery({
     records: deliveries,
-    loading: isLoading,
+    // Wait for the workspace role too: edit links open the editor only for managers.
+    loading: isLoading || roleLoading,
     resource: 'deliveries',
     // Only roles that may update deliveries get the edit form from a deep link.
     onMatch: canManage ? handleEdit : () => undefined,
     onEdit: canManage ? handleEdit : undefined,
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
+    // Edit links carry form prefills under list-filter names; drop them with the link.
+    editPrefillKeys: ['status', 'notes'],
   });
   const handleDelete = (d: Delivery) => {
     void openConfirm({
@@ -144,9 +158,9 @@ export default function DeliveriesPage() {
         actions={
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" iconLeft={<Download className="h-4 w-4" />} onClick={() => {
-              import('../../lib/csvExport').then(({ downloadCSV }) => {
-                downloadCSV('deliveries', filtered.map(d => ({ Customer: d.customer, Address: d.address, Driver: d.driver, Status: d.status, Progress: d.progress + '%', 'Completed Time': d.completedTime || '' })));
-              });
+              Promise.all([import('../../lib/csvExport'), api.getAllMatching<Delivery>('/api/deliveries', list.queryParams)]).then(([{ downloadCSV }, rows]) => {
+                downloadCSV('deliveries', rows.map(d => ({ Customer: d.customer, Address: d.address, Driver: d.driver, Status: d.status, Progress: d.progress + '%', 'Completed Time': d.completedTime || '' })));
+              }).catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Failed to export deliveries'));
             }}>Export CSV</Button>
             {canManage && <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => setIsFormOpen(true)}>New Delivery</Button>}
           </div>
@@ -186,23 +200,25 @@ export default function DeliveriesPage() {
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input type="text" placeholder="Search deliveries..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900" />
+            <input type="search" aria-label="Search deliveries" placeholder="Search deliveries..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full min-h-11 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900" />
           </div>
-          <select value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}
-            className="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+          <select aria-label="Filter by status" value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}
+            className="min-h-11 px-3 py-2 border border-slate-300 rounded-lg text-sm">
             <option value="all">All Status</option>
             <option value="pending">Pending</option>
             <option value="in-transit">In Transit</option>
             <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
           </select>
+          <SortSelect id="delivery-sort" options={SORT_OPTIONS} sort={list.sort} order={list.order} onChange={list.setSort} />
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
           {['all', 'pending', 'in-transit', 'delivered'].map((s) => (
-            <button key={s} onClick={() => setFilter('status', s)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === s ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            <button key={s} type="button" aria-pressed={statusFilter === s} onClick={() => setFilter('status', s)}
+              className={`min-h-11 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${statusFilter === s ? 'bg-blue-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
               {s === 'all' ? 'All Deliveries' : s.charAt(0).toUpperCase() + s.slice(1).replace('-', ' ')}
-              {s !== 'all' && <span className="ml-2 text-xs">({deliveries.filter((d) => d.status === s).length})</span>}
+              {s !== 'all' && <span className="ml-2 text-sm">({statusCount(s)})</span>}
             </button>
           ))}
         </div>
@@ -214,13 +230,14 @@ export default function DeliveriesPage() {
         Last updated {minutesAgo === 0 ? 'just now' : `${minutesAgo} min${minutesAgo > 1 ? 's' : ''} ago`}
       </div>
 
-      {isLoading ? <SkeletonTable rows={5} columns={5} /> : filtered.length === 0 ? (
+      {isLoading && deliveries.length === 0 ? <SkeletonTable rows={5} columns={5} /> : filtered.length === 0 ? (
         <Card>
-          <EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results found' : 'No deliveries yet'}
-            description={searchQuery ? 'Try adjusting your search' : 'Create your first delivery to start tracking'}
-            actionLabel={!searchQuery && canManage ? 'Create Delivery' : undefined} onAction={!searchQuery && canManage ? () => setIsFormOpen(true) : undefined} />
+          <EmptyState type={isFiltered ? 'search' : 'data'} title={isFiltered ? 'No results found' : 'No deliveries yet'}
+            description={isFiltered ? 'Try adjusting your search or filters' : 'Create your first delivery to start tracking'}
+            actionLabel={!isFiltered && canManage ? 'Create Delivery' : undefined} onAction={!isFiltered && canManage ? () => setIsFormOpen(true) : undefined} />
         </Card>
       ) : (
+        <>
         <div className="space-y-4">
           {filtered.map((delivery, index) => (
             <FadeIn key={delivery.id} delay={Math.min(index * 40, 240)}>
@@ -291,6 +308,18 @@ export default function DeliveriesPage() {
             </FadeIn>
           ))}
         </div>
+        <Card className="mt-4">
+          <Pagination
+            label="deliveries"
+            page={list.page}
+            pageSize={list.pageSize}
+            total={list.total}
+            onPageChange={list.setPage}
+            onPageSizeChange={list.setPageSize}
+            disabled={isLoading}
+          />
+        </Card>
+        </>
       )}
 
       {canManage && <button onClick={() => setIsFormOpen(true)} className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="New delivery" style={{ touchAction: 'manipulation' }}>

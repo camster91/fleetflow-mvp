@@ -6,18 +6,16 @@ const mockRouter = { isReady: true, pathname: '/vehicles', query: {} as Record<s
 jest.mock('next/router', () => ({ useRouter: () => mockRouter }))
 jest.mock('@/services/apiService', () => ({
   getVehicles: jest.fn(), getDeliveries: jest.fn(), getClients: jest.fn(),
-  getMaintenanceTasks: jest.fn(), updateDelivery: jest.fn(), updateMaintenanceTask: jest.fn(),
+  getMaintenanceTasks: jest.fn(), getMaintenanceTasksDue: jest.fn(), updateDelivery: jest.fn(), updateMaintenanceTask: jest.fn(),
   deleteVehicle: jest.fn(), deleteDelivery: jest.fn(), deleteMaintenanceTask: jest.fn(),
 }))
 jest.mock('@/services/notifications', () => ({ notify: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }))
-jest.mock('@/hooks/useDataFetch', () => ({ useDataFetch: jest.fn() }))
-jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'OWNER', loading: false }) }))
-jest.mock('@/hooks/useFilteredData', () => ({
-  useFilteredData: ({ data }: { data: unknown[] }) => ({
-    filtered: data, searchQuery: '', setSearchQuery: jest.fn(), filters: {}, setFilter: jest.fn(),
-  }),
+jest.mock('@/hooks/usePaginatedList', () => ({
+  ...jest.requireActual('@/hooks/usePaginatedList'),
+  usePaginatedList: jest.fn(),
 }))
+jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'OWNER', loading: false }) }))
 jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }))
 jest.mock('@/components/PageHeader', () => ({ PageHeader: () => null }))
 jest.mock('@/components/VehicleDetailModal', () => ({
@@ -40,7 +38,7 @@ jest.mock('@/components/MaintenanceTaskFormModal', () => ({ __esModule: true, de
 jest.mock('@/components/ui/ConfirmDialog', () => ({ useConfirmDialog: () => ({ openConfirm: jest.fn(), openPrompt: jest.fn() }) }))
 jest.mock('@/components/DeliveryTimeline', () => ({ DeliveryTimeline: () => null }))
 
-import { useDataFetch } from '@/hooks/useDataFetch'
+import { usePaginatedList } from '@/hooks/usePaginatedList'
 import * as api from '@/services/apiService'
 import VehiclesPage from '@/pages/vehicles'
 import DeliveriesPage from '@/pages/deliveries'
@@ -54,6 +52,13 @@ const vehicle = (id: string) => ({
 const delivery = (id: string) => ({
   id, customer: `Customer ${id}`, address: '1 Main St', status: 'pending', driver: 'Driver',
   progress: 0, items: 1, scheduledTime: new Date().toISOString(), estimatedArrival: null,
+})
+// The page's current server page of rows, as returned by usePaginatedList.
+const listOf = (rows: unknown[]) => ({
+  rows, total: rows.length, summary: undefined, loading: false, error: null, lastUpdated: null, refetch: jest.fn(),
+  page: 1, pageSize: 25, pageCount: 1, setPage: jest.fn(), setPageSize: jest.fn(),
+  searchInput: '', setSearchInput: jest.fn(), q: '', filters: {}, setFilter: jest.fn(),
+  sort: '', order: '', setSort: jest.fn(), queryParams: {}, isFiltered: false,
 })
 const task = (id: string) => ({
   id, vehicle: 'Vehicle', type: 'Oil change', dueDate: '2026-08-09',
@@ -69,15 +74,15 @@ describe('data-quality direct record links', () => {
     ;(api.getDeliveries as jest.Mock).mockResolvedValue([])
     ;(api.getClients as jest.Mock).mockResolvedValue([])
     ;(api.getMaintenanceTasks as jest.Mock).mockResolvedValue([])
+    ;(api.getMaintenanceTasksDue as jest.Mock).mockResolvedValue([])
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([]))
     global.fetch = jest.fn()
   })
 
   it('opens the matching tenant-loaded vehicle detail and consumes the query', async () => {
     mockRouter.pathname = '/vehicles'
     mockRouter.query = { record: 'v-2' }
-    ;(useDataFetch as jest.Mock).mockReturnValue({
-      data: [vehicle('v-1'), vehicle('v-2')], loading: false, refetch: jest.fn(),
-    })
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([vehicle('v-1'), vehicle('v-2')]))
     render(<VehiclesPage />)
     expect(await screen.findByTestId('vehicle-detail')).toHaveTextContent('v-2')
     expect(mockReplace).toHaveBeenCalledWith({ pathname: '/vehicles', query: {} }, undefined, { shallow: true })
@@ -86,10 +91,7 @@ describe('data-quality direct record links', () => {
   it('opens the matching tenant-loaded delivery editor', async () => {
     mockRouter.pathname = '/deliveries'
     mockRouter.query = { record: 'd-2' }
-    ;(useDataFetch as jest.Mock).mockReturnValue({
-      data: { deliveries: [delivery('d-1')], vehicles: [], clients: [] },
-      loading: false, refetch: jest.fn(),
-    })
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([delivery('d-1')]))
     ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => delivery('d-2') })
     render(<DeliveriesPage />)
     expect(await screen.findByTestId('delivery-edit')).toHaveTextContent('d-2')
@@ -99,8 +101,7 @@ describe('data-quality direct record links', () => {
   it('opens the matching tenant-loaded maintenance detail', async () => {
     mockRouter.pathname = '/maintenance'
     mockRouter.query = { record: 'm-2' }
-    ;(api.getMaintenanceTasks as jest.Mock).mockResolvedValue([task('m-1')])
-    ;(api.getVehicles as jest.Mock).mockResolvedValue([])
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([task('m-1')]))
     ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => task('m-2') })
     render(<MaintenancePage />)
     expect(await screen.findByTestId('maintenance-detail')).toHaveTextContent('m-2')
@@ -110,9 +111,7 @@ describe('data-quality direct record links', () => {
   it.each([403, 404])('does not open an unavailable record after a %s response and then consumes the query', async (status) => {
     mockRouter.pathname = '/vehicles'
     mockRouter.query = { record: 'other-tenant' }
-    ;(useDataFetch as jest.Mock).mockReturnValue({
-      data: [vehicle('v-1')], loading: false, refetch: jest.fn(),
-    })
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([vehicle('v-1')]))
     ;(global.fetch as jest.Mock).mockResolvedValue({ ok: false, status, json: async () => ({ error: 'hidden' }) })
     render(<VehiclesPage />)
     await waitFor(() => expect(mockReplace).toHaveBeenCalled())
@@ -123,10 +122,7 @@ describe('data-quality direct record links', () => {
   it('waits for a deep-link lookup before consuming the query', async () => {
     mockRouter.pathname = '/deliveries'
     mockRouter.query = { record: 'd-2' }
-    ;(useDataFetch as jest.Mock).mockReturnValue({
-      data: { deliveries: [delivery('d-1')], vehicles: [], clients: [] },
-      loading: false, refetch: jest.fn(),
-    })
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([delivery('d-1')]))
     let resolveLookup!: (value: unknown) => void
     ;(global.fetch as jest.Mock).mockReturnValue(new Promise((resolve) => { resolveLookup = resolve }))
     render(<DeliveriesPage />)
@@ -142,9 +138,7 @@ describe('data-quality direct record links', () => {
     mockRouter.pathname = '/vehicles'
     mockRouter.query = { record: 'v-2' }
     mockReplace.mockRejectedValueOnce(new Error('navigation interrupted'))
-    ;(useDataFetch as jest.Mock).mockReturnValue({
-      data: [vehicle('v-2')], loading: false, refetch: jest.fn(),
-    })
+    ;(usePaginatedList as jest.Mock).mockReturnValue(listOf([vehicle('v-2')]))
     render(<VehiclesPage />)
     expect(await screen.findByTestId('vehicle-detail')).toHaveTextContent('v-2')
     await waitFor(() => expect(mockReplace).toHaveBeenCalled())
@@ -153,11 +147,8 @@ describe('data-quality direct record links', () => {
   it('retries an aborted lookup when the paged list refreshes during resolution', async () => {
     mockRouter.pathname = '/deliveries'
     mockRouter.query = { record: 'd-2' }
-    let currentData = {
-      data: { deliveries: [delivery('d-1')], vehicles: [], clients: [] },
-      loading: false, refetch: jest.fn(),
-    }
-    ;(useDataFetch as jest.Mock).mockImplementation(() => currentData)
+    let currentList = listOf([delivery('d-1')])
+    ;(usePaginatedList as jest.Mock).mockImplementation(() => currentList)
     let firstSignal: AbortSignal | undefined
     ;(global.fetch as jest.Mock)
       .mockImplementationOnce((_url, init) => {
@@ -168,10 +159,7 @@ describe('data-quality direct record links', () => {
 
     const { rerender } = render(<DeliveriesPage />)
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1))
-    currentData = {
-      ...currentData,
-      data: { ...currentData.data, deliveries: [delivery('d-1'), delivery('d-3')] },
-    }
+    currentList = listOf([delivery('d-1'), delivery('d-3')])
     rerender(<DeliveriesPage />)
 
     expect(await screen.findByTestId('delivery-edit')).toHaveTextContent('d-2')

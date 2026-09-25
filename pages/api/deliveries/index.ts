@@ -10,6 +10,17 @@ import { canAssignDrivers, canManageDeliveries, canViewDeliveries } from '../../
 import { resolveDriverAssignment } from '../../../lib/driverAssignment'
 import { assignedResourceWhere, driverDeliveryDto, isDriverRole } from '../../../lib/driverScope'
 import { beginIdempotentRequest } from '../../../lib/idempotency'
+import { DELIVERY_LIST_SPEC, DELIVERY_STATUSES, parseListQuery, scopedWhere } from '../../../lib/listQuery'
+import type { Prisma } from '@prisma/client'
+
+/** Whole-scope counts per status for the list page stat cards and filter chips. */
+async function deliverySummary(scope: object) {
+  const [total, ...counts] = await Promise.all([
+    prisma.delivery.count({ where: scope }),
+    ...DELIVERY_STATUSES.map((status) => prisma.delivery.count({ where: scopedWhere(scope, [{ status }]) })),
+  ])
+  return { total, byStatus: Object.fromEntries(DELIVERY_STATUSES.map((status, index) => [status, counts[index]])) }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -20,16 +31,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
-    const skip = (page - 1) * limit
+    const parsed = parseListQuery(req.query, DELIVERY_LIST_SPEC)
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error })
+    const { page, limit, skip, conditions, orderBy } = parsed.value
 
-    const where=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
-    const [deliveries, total] = await Promise.all([
-      prisma.delivery.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip, take: limit }),
+    const scope=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
+    const where = scopedWhere(scope, conditions)
+    const [deliveries, total, summary] = await Promise.all([
+      prisma.delivery.findMany({ where, orderBy: orderBy as Prisma.DeliveryOrderByWithRelationInput[], skip, take: limit }),
       prisma.delivery.count({ where }),
+      parsed.value.summary ? deliverySummary(scope) : undefined,
     ])
-    return res.json({ data: deliveries.map(item=>isDriverRole(tenant.role)?driverDeliveryDto(item):dbToDelivery(item)), total, page, limit, hasMore: skip + limit < total })
+    return res.json({ data: deliveries.map(item=>isDriverRole(tenant.role)?driverDeliveryDto(item):dbToDelivery(item)), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
   }
 
   if (req.method === 'POST') {
