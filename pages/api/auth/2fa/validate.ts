@@ -30,7 +30,7 @@ export default async function handler(
     const { code, rememberDevice = false } = req.body;
 
     const challengeToken = parse(req.headers.cookie || '').two_factor_challenge;
-    const challenge = challengeToken ? verifyToken(challengeToken) : null;
+    const challenge = challengeToken ? await verifyToken(challengeToken) : null;
     if (!challenge?.sub || challenge.purpose !== 'two-factor') {
       return res.status(401).json({ error: 'Two-factor challenge expired or invalid' });
     }
@@ -147,7 +147,7 @@ export default async function handler(
       return rejectInvalidCode();
     }
 
-    const sessionToken = signToken({
+    const sessionToken = await signToken({
       sub: user.id,
       email: user.email,
       name: user.name,

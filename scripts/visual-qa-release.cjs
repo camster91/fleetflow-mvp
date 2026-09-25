@@ -1,7 +1,6 @@
 const { chromium } = require('playwright')
 const fs = require('fs')
 const path = require('path')
-const jwt = require('jsonwebtoken')
 
 const baseUrl = process.env.VISUAL_QA_BASE_URL || 'http://localhost:3300'
 const userId = process.env.VISUAL_QA_USER_ID || 'qa-admin'
@@ -36,11 +35,14 @@ async function exercise(browser, name, viewport) {
   }
   await page.goto(`${baseUrl}/auth/login`, { waitUntil: 'networkidle' })
   await page.screenshot({ path: path.join(output, `${name}-01-login.png`), fullPage: true })
-  const token = jwt.sign(
-    { sub: userId, email: userEmail, name: 'QA Admin', role: 'admin', purpose: 'session' },
-    jwtSecret,
-    { algorithm: 'HS256', expiresIn: '15m' }
+  const { SignJWT } = await import('jose')
+  const token = await new SignJWT(
+    { sub: userId, email: userEmail, name: 'QA Admin', role: 'admin', purpose: 'session' }
   )
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt()
+    .setExpirationTime('15m')
+    .sign(new TextEncoder().encode(jwtSecret))
   await context.addCookies([{ name: 'token', value: token, url: baseUrl, httpOnly: true, sameSite: 'Lax' }])
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' })
   await page.waitForLoadState('networkidle')

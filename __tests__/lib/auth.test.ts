@@ -10,20 +10,20 @@ jest.mock('@/lib/prisma', () => ({
 }));
 
 describe('signToken / verifyToken', () => {
-  it('returns payload for a valid token', () => {
-    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'user' });
-    const payload = verifyToken(token);
+  it('returns payload for a valid token', async () => {
+    const token = await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'user' });
+    const payload = await verifyToken(token);
     expect(payload).not.toBeNull();
     expect(payload!.sub).toBe('u1');
     expect(payload!.email).toBe('a@b.com');
   });
 
-  it('returns null for an invalid token', () => {
-    expect(verifyToken('bad.token.here')).toBeNull();
+  it('returns null for an invalid token', async () => {
+    expect(await verifyToken('bad.token.here')).toBeNull();
   });
 
-  it('returns null for an empty string', () => {
-    expect(verifyToken('')).toBeNull();
+  it('returns null for an empty string', async () => {
+    expect(await verifyToken('')).toBeNull();
   });
 });
 
@@ -42,7 +42,7 @@ describe('hashPassword / verifyPassword', () => {
 
 describe('getUserFromRequest', () => {
   it('never accepts a two-factor challenge as an authenticated session', async () => {
-    const token = signToken({
+    const token = await signToken({
       sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', purpose: 'two-factor',
     } as any, '5m');
     const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
@@ -52,7 +52,7 @@ describe('getUserFromRequest', () => {
   });
 
   it('rejects a purpose-less JWT as an authenticated session', async () => {
-    const token = signToken({
+    const token = await signToken({
       sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', purpose: undefined,
     })
     const req = { headers: { cookie: `token=${token}` } } as NextApiRequest
@@ -62,7 +62,7 @@ describe('getUserFromRequest', () => {
   })
 
   it('returns the signed token expiry with the custom session', async () => {
-    const token = signToken(
+    const token = await signToken(
       { sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' },
       '1h'
     );
@@ -92,7 +92,7 @@ describe('session token versions', () => {
   };
 
   it('treats a token without a version claim as version 0', async () => {
-    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' });
+    const token = await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' });
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 0 });
     const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
 
@@ -102,7 +102,7 @@ describe('session token versions', () => {
   });
 
   it('rejects a token whose version is behind the user record', async () => {
-    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 1 });
+    const token = await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 1 });
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 2 });
     const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
 
@@ -110,7 +110,7 @@ describe('session token versions', () => {
   });
 
   it('rejects a legacy unversioned token once the user has revoked sessions', async () => {
-    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' });
+    const token = await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' });
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 1 });
     const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
 
@@ -118,7 +118,7 @@ describe('session token versions', () => {
   });
 
   it('accepts a token at the current version', async () => {
-    const token = signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 3 });
+    const token = await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 3 });
     (prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...dbUser, tokenVersion: 3 });
     const req = { headers: { cookie: `token=${token}` } } as NextApiRequest;
 

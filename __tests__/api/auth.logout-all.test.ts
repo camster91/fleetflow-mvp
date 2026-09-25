@@ -46,10 +46,10 @@ describe('POST /api/auth/logout-all', () => {
   })
 
   it('revokes every existing session: an old cookie gets 401 afterwards', async () => {
-    const otherDevice = signToken({
+    const otherDevice = await signToken({
       sub: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager', tv: 0,
     })
-    const thisDevice = signToken({
+    const thisDevice = await signToken({
       sub: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager', tv: 0,
     })
 
@@ -73,7 +73,7 @@ describe('POST /api/auth/logout-all', () => {
   })
 
   it('keeps pre-existing tokens without a version claim valid until a revocation', async () => {
-    const legacy = signToken({ sub: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager' })
+    const legacy = await signToken({ sub: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager' })
 
     const first = post(`token=${legacy}`)
     await refresh(first.req, first.res)

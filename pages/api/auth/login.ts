@@ -104,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Check if 2FA is enabled — require separate validation step
   if (user.twoFactorEnabled && user.twoFactorSecret) {
-    const challenge = signToken({
+    const challenge = await signToken({
       sub: user.id,
       email: user.email,
       name: user.name,
@@ -118,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 
-  const token = signToken({
+  const token = await signToken({
     sub: user.id,
     email: user.email,
     name: user.name,

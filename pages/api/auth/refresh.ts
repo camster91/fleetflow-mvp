@@ -17,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { user } = session
-  const token = signToken({
+  const token = await signToken({
     sub: user.id,
     email: user.email,
     name: user.name,
