@@ -8,14 +8,28 @@
  */
 const os = require('os')
 const path = require('path')
-const { main, npx, parseFlags, removeContainers, removeTempDir, run, startNpm, startPostgres, stopProcessTree, waitForHttp, waitPostgres } = require('./qa-harness-lib.cjs')
+const {
+  main,
+  npx,
+  parseFlags,
+  removeContainers,
+  removeTempDir,
+  run,
+  startNpm,
+  startPostgres,
+  stopProcessTree,
+  waitForHttp,
+  waitPostgres,
+} = require('./qa-harness-lib.cjs')
 
 main(async () => {
   const flags = parseFlags(process.argv.slice(2), {
     defaults: { focused: false, 'audit-only': false, 'real-only': false },
     types: { focused: 'boolean', 'audit-only': 'boolean', 'real-only': 'boolean' },
   })
-  const focused = flags.focused, auditOnly = flags['audit-only'], realOnly = flags['real-only']
+  const focused = flags.focused,
+    auditOnly = flags['audit-only'],
+    realOnly = flags['real-only']
   const containerName = `fleetvera-task16-${process.pid}`
   const documentPrefix = 'fleetvera-task16-documents-'
   const documentStorage = path.join(os.tmpdir(), `${documentPrefix}${process.pid}`)
@@ -49,9 +63,12 @@ main(async () => {
 
   const startApp = async (development) => {
     serverProcess = startNpm(development ? ['run', 'dev', '--', '-p', '3116'] : ['start', '--', '-p', '3116'], env)
-    if (!await waitForHttp(env.NEXTAUTH_URL, 90)) throw new Error('Fleetvera test server did not become ready')
+    if (!(await waitForHttp(env.NEXTAUTH_URL, 90))) throw new Error('Fleetvera test server did not become ready')
   }
-  const stopApp = () => { stopProcessTree(serverProcess); serverProcess = null }
+  const stopApp = () => {
+    stopProcessTree(serverProcess)
+    serverProcess = null
+  }
   const playwright = (args) => run('npx', ['playwright', 'test', ...args], { env }).status
   const npmRun = (args) => run('npm', ['run', ...args], { env }).status
 
@@ -71,9 +88,21 @@ main(async () => {
     if (realOnly) {
       status = npmRun(['test:e2e:release:real', '--', '--reporter=line'])
     } else if (auditOnly) {
-      status = playwright(['e2e/ai-health.spec.ts', 'e2e/documents.spec.ts', 'e2e/intelligence-brief.spec.ts', 'e2e/maintenance-risk.spec.ts', 'e2e/release-audit.spec.ts', ...browsers])
+      status = playwright([
+        'e2e/ai-health.spec.ts',
+        'e2e/documents.spec.ts',
+        'e2e/intelligence-brief.spec.ts',
+        'e2e/maintenance-risk.spec.ts',
+        'e2e/release-audit.spec.ts',
+        ...browsers,
+      ])
     } else if (focused) {
-      status = playwright(['e2e/assistant-actions.spec.ts', 'e2e/documents.spec.ts', 'e2e/intelligence-brief.spec.ts', ...browsers])
+      status = playwright([
+        'e2e/assistant-actions.spec.ts',
+        'e2e/documents.spec.ts',
+        'e2e/intelligence-brief.spec.ts',
+        ...browsers,
+      ])
     } else {
       status = npmRun(['test:e2e:release:mock', '--', '--reporter=line'])
     }

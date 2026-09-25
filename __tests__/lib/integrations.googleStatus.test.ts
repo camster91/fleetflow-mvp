@@ -14,6 +14,9 @@ describe('Google geocode status policy', () => {
 
   it('applies only bounded coordinates from an OK response', () => {
     expect(classifyGoogleGeocode('OK', { lat: 43.65, lng: -79.38 })).toEqual({ kind: 'APPLY' })
-    expect(classifyGoogleGeocode('OK', { lat: 91, lng: 0 })).toEqual({ kind: 'DEAD_LETTER', errorCode: 'INVALID_COORDINATES' })
+    expect(classifyGoogleGeocode('OK', { lat: 91, lng: 0 })).toEqual({
+      kind: 'DEAD_LETTER',
+      errorCode: 'INVALID_COORDINATES',
+    })
   })
 })

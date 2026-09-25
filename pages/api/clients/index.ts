@@ -37,7 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.client.count({ where }),
       parsed.value.summary ? clientSummary(tenant.resourceWhere) : undefined,
     ])
-    return res.json({ data: clients.map(dbToClient), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
+    return res.json({
+      data: clients.map(dbToClient),
+      total,
+      page,
+      limit,
+      hasMore: skip + limit < total,
+      ...(summary ? { summary } : {}),
+    })
   }
 
   if (req.method === 'POST') {
@@ -51,19 +58,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ownerId: tenant.ownerId,
       teamId: tenant.teamId,
     }
-    const client = await prisma.$transaction(async (tx) => {
-      const created = await tx.client.create({ data })
-      await logActivity(tx, {
-        userId,
-        teamId: tenant.teamId,
-        userName: session.user.name, userRole: tenant.role,
-        action: 'created', entityType: 'client',
-        entityId: created.id, entityName: created.name,
-        description: `Client "${created.name}" was added`,
+    const client = await prisma
+      .$transaction(async (tx) => {
+        const created = await tx.client.create({ data })
+        await logActivity(tx, {
+          userId,
+          teamId: tenant.teamId,
+          userName: session.user.name,
+          userRole: tenant.role,
+          action: 'created',
+          entityType: 'client',
+          entityId: created.id,
+          entityName: created.name,
+          description: `Client "${created.name}" was added`,
+        })
+        await idempotency.store(tx, 201, dbToClient(created))
+        return created
       })
-      await idempotency.store(tx, 201, dbToClient(created))
-      return created
-    }).catch(idempotency.replayOnConflict)
+      .catch(idempotency.replayOnConflict)
     if (!client) return
     return res.status(201).json(dbToClient(client))
   }

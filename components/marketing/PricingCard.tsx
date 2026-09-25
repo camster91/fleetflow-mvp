@@ -1,20 +1,20 @@
-import { Check, Sparkles } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Check, Sparkles } from 'lucide-react'
+import { Button } from '../ui/Button'
 
 interface PricingFeature {
-  text: string;
-  included: boolean;
+  text: string
+  included: boolean
 }
 
 interface PricingCardProps {
-  name: string;
-  description: string;
-  price: number;
-  period: 'monthly' | 'annual';
-  features: PricingFeature[];
-  isPopular?: boolean;
-  ctaText?: string;
-  onCtaClick?: () => void;
+  name: string
+  description: string
+  price: number
+  period: 'monthly' | 'annual'
+  features: PricingFeature[]
+  isPopular?: boolean
+  ctaText?: string
+  onCtaClick?: () => void
 }
 
 export function PricingCard({
@@ -45,35 +45,23 @@ export function PricingCard({
       )}
 
       <div className="text-center mb-6">
-        <h3 className={`text-xl font-bold mb-2 ${isPopular ? 'text-white' : 'text-slate-900'}`}>
-          {name}
-        </h3>
-        <p className={`text-sm ${isPopular ? 'text-blue-200' : 'text-slate-500'}`}>
-          {description}
-        </p>
+        <h3 className={`text-xl font-bold mb-2 ${isPopular ? 'text-white' : 'text-slate-900'}`}>{name}</h3>
+        <p className={`text-sm ${isPopular ? 'text-blue-200' : 'text-slate-500'}`}>{description}</p>
       </div>
 
       <div className="text-center mb-6">
         <div className="flex items-baseline justify-center">
-          <span className={`text-4xl font-bold ${isPopular ? 'text-white' : 'text-slate-900'}`}>
-            ${price}
-          </span>
+          <span className={`text-4xl font-bold ${isPopular ? 'text-white' : 'text-slate-900'}`}>${price}</span>
           <span className={`ml-2 ${isPopular ? 'text-blue-200' : 'text-slate-500'}`}>
             /{period === 'monthly' ? 'mo' : 'yr'}
           </span>
         </div>
         {period === 'annual' && (
-          <p className={`text-sm mt-1 ${isPopular ? 'text-blue-300' : 'text-emerald-600'}`}>
-            Save 20%
-          </p>
+          <p className={`text-sm mt-1 ${isPopular ? 'text-blue-300' : 'text-emerald-600'}`}>Save 20%</p>
         )}
       </div>
 
-      <Button
-        variant={isPopular ? 'secondary' : 'primary'}
-        className="w-full mb-6"
-        onClick={onCtaClick}
-      >
+      <Button variant={isPopular ? 'secondary' : 'primary'} className="w-full mb-6" onClick={onCtaClick}>
         {ctaText}
       </Button>
 
@@ -82,20 +70,12 @@ export function PricingCard({
           <li key={index} className="flex items-start space-x-3">
             <Check
               className={`h-5 w-5 flex-shrink-0 ${
-                feature.included
-                  ? isPopular
-                    ? 'text-blue-300'
-                    : 'text-emerald-500'
-                  : 'text-slate-300'
+                feature.included ? (isPopular ? 'text-blue-300' : 'text-emerald-500') : 'text-slate-300'
               }`}
             />
             <span
               className={`text-sm ${
-                feature.included
-                  ? isPopular
-                    ? 'text-white'
-                    : 'text-slate-700'
-                  : 'text-slate-400 line-through'
+                feature.included ? (isPopular ? 'text-white' : 'text-slate-700') : 'text-slate-400 line-through'
               }`}
             >
               {feature.text}
@@ -104,5 +84,5 @@ export function PricingCard({
         ))}
       </ul>
     </div>
-  );
+  )
 }

@@ -54,7 +54,10 @@ function startPostgres({ name, port, bindHost = '127.0.0.1', user, database }) {
   const envArgs = []
   if (user) envArgs.push('-e', `POSTGRES_USER=${user}`)
   envArgs.push('-e', 'POSTGRES_HOST_AUTH_METHOD=trust', '-e', `POSTGRES_DB=${database}`)
-  const result = container(['run', '--name', name, ...envArgs, '-p', `${bindHost}:${port}:5432`, '-d', 'postgres:16-alpine'], { capture: true })
+  const result = container(
+    ['run', '--name', name, ...envArgs, '-p', `${bindHost}:${port}:5432`, '-d', 'postgres:16-alpine'],
+    { capture: true }
+  )
   if (result.status !== 0) throw new Error(`Could not start disposable PostgreSQL ${name}: ${result.stderr.trim()}`)
 }
 
@@ -68,7 +71,10 @@ function waitPostgres(name, { user, database, attempts }) {
 
 /** Pipe SQL into psql inside the container and return stdout. */
 function psql(name, { user, database, sql, extraArgs = [] }) {
-  const result = container(['exec', '-i', name, 'psql', '-U', user, '-d', database, ...extraArgs], { input: sql, capture: true })
+  const result = container(['exec', '-i', name, 'psql', '-U', user, '-d', database, ...extraArgs], {
+    input: sql,
+    capture: true,
+  })
   if (result.stderr.trim()) process.stderr.write(result.stderr)
   return result
 }
@@ -95,7 +101,11 @@ function stopProcessTree(child) {
     spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
     return
   }
-  try { process.kill(-child.pid, 'SIGKILL') } catch { /* already exited */ }
+  try {
+    process.kill(-child.pid, 'SIGKILL')
+  } catch {
+    /* already exited */
+  }
 }
 
 /** Poll a URL until it returns a 2xx response (like Invoke-WebRequest). Returns false if it never did. */
@@ -104,8 +114,10 @@ async function waitForHttp(url, attempts) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2000) })
       if (response.ok) return true
-    } catch { /* not ready */ }
-    await new Promise(resolve => setTimeout(resolve, 500))
+    } catch {
+      /* not ready */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500))
   }
   return false
 }
@@ -138,7 +150,7 @@ function parseFlags(argv, spec) {
 }
 
 function main(fn) {
-  fn().catch(error => {
+  fn().catch((error) => {
     console.error(error instanceof Error ? error.message : error)
     process.exitCode = 1
   })

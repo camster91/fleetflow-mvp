@@ -32,7 +32,10 @@ const tenant = { ownerId: 'owner-1', teamId: null, role: 'OWNER', resourceWhere:
 
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(requireTenantContext as jest.Mock).mockResolvedValue({ session: { user: { id: 'owner-1', name: 'Owner' } }, tenant })
+  ;(requireTenantContext as jest.Mock).mockResolvedValue({
+    session: { user: { id: 'owner-1', name: 'Owner' } },
+    tenant,
+  })
 })
 
 describe('POST /api/deliveries notifications', () => {
@@ -63,14 +66,19 @@ describe('GET /api/deliveries ordering', () => {
   it('uses a unique id tie-breaker so offset paging is stable', async () => {
     ;(prisma.delivery.findMany as jest.Mock).mockResolvedValue([])
     ;(prisma.delivery.count as jest.Mock).mockResolvedValue(0)
-    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({ method: 'GET', query: { page: '2', limit: '200' } })
+    const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
+      method: 'GET',
+      query: { page: '2', limit: '200' },
+    })
     await handler(req, res)
 
     expect(res._getStatusCode()).toBe(200)
-    expect(prisma.delivery.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      skip: 200,
-      take: 200,
-    }))
+    expect(prisma.delivery.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: 200,
+        take: 200,
+      })
+    )
   })
 })

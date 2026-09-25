@@ -1,4 +1,4 @@
-import Layout from '../components/layouts/DashboardLayout';
+import Layout from '../components/layouts/DashboardLayout'
 
 export default function RoutesPage() {
   return (
@@ -9,10 +9,11 @@ export default function RoutesPage() {
           <div className="text-gray-400 mb-4">📍</div>
           <h2 className="text-lg font-medium text-gray-900 mb-2">AI Routing Coming Soon</h2>
           <p className="text-gray-500 max-w-md">
-            We are integrating advanced AI route optimization to save you fuel and time. Check back soon for the v1 release.
+            We are integrating advanced AI route optimization to save you fuel and time. Check back soon for the v1
+            release.
           </p>
         </div>
       </div>
     </Layout>
-  );
+  )
 }

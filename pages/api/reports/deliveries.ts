@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { tenant, session } = context
   if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-  if (!await rateLimitMiddleware(req, res, 'api', `reports:${session.user.id}`)) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `reports:${session.user.id}`))) return
 
   const range = parseReportDateRange(req.query.startDate, req.query.endDate)
   if (!range.ok) return res.status(400).json({ error: range.error })
@@ -33,14 +33,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     const statusBreakdown = Object.entries(statusCounts).map(([status, count]) => ({ status, count }))
 
-    const completed = deliveries.filter(delivery => delivery.status === 'delivered')
-    const onTime = completed.filter(delivery => {
+    const completed = deliveries.filter((delivery) => delivery.status === 'delivered')
+    const onTime = completed.filter((delivery) => {
       if (!delivery.scheduledTime || !delivery.completedTime) return true
       return new Date(delivery.completedTime) <= new Date(delivery.scheduledTime)
     })
-    const onTimeRate = completed.length > 0
-      ? Math.round((onTime.length / completed.length) * 100)
-      : 0
+    const onTimeRate = completed.length > 0 ? Math.round((onTime.length / completed.length) * 100) : 0
 
     const driverCounts: Record<string, number> = {}
     for (const delivery of deliveries) {
@@ -54,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map(([driver, count]) => ({ driver, deliveries: count }))
 
     let avgDeliveryTime = 0
-    const withTimes = completed.filter(delivery => delivery.createdAt && delivery.completedTime)
+    const withTimes = completed.filter((delivery) => delivery.createdAt && delivery.completedTime)
     if (withTimes.length > 0) {
       const totalHours = withTimes.reduce((sum, delivery) => {
         const hours = (new Date(delivery.completedTime!).getTime() - delivery.createdAt.getTime()) / 3_600_000

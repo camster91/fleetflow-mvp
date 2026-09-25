@@ -51,13 +51,14 @@ export const LIST_MAX_SEARCH_LENGTH = 100
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; error: string }
 
-const single = (raw: string | string[] | undefined): string | undefined | null =>
-  Array.isArray(raw) ? null : raw
+const single = (raw: string | string[] | undefined): string | undefined | null => (Array.isArray(raw) ? null : raw)
 
 /** Case-insensitive `contains` condition for a string column. */
-export const containsInsensitive = (field: string) => (q: string): Where => ({
-  [field]: { contains: q, mode: 'insensitive' },
-})
+export const containsInsensitive =
+  (field: string) =>
+  (q: string): Where => ({
+    [field]: { contains: q, mode: 'insensitive' },
+  })
 
 /** Parse a `YYYY-MM-DD` calendar day into UTC midnight, or null. */
 function parseDay(value: string): Date | null {
@@ -100,7 +101,10 @@ export function parseListQuery(query: Query, spec: ListQuerySpec, now: Date = ne
 
   const rawSort = single(query.sort)
   const rawOrder = single(query.order)
-  if (rawSort === null || (rawSort !== undefined && rawSort !== '' && !Object.prototype.hasOwnProperty.call(spec.sorts, rawSort))) {
+  if (
+    rawSort === null ||
+    (rawSort !== undefined && rawSort !== '' && !Object.prototype.hasOwnProperty.call(spec.sorts, rawSort))
+  ) {
     return { ok: false, error: 'Invalid sort' }
   }
   if (rawOrder === null || (rawOrder !== undefined && rawOrder !== '' && rawOrder !== 'asc' && rawOrder !== 'desc')) {
@@ -110,10 +114,7 @@ export function parseListQuery(query: Query, spec: ListQuerySpec, now: Date = ne
   if (rawSort) {
     const sort = spec.sorts[rawSort]
     const order: SortOrder = (rawOrder as SortOrder) || sort.defaultOrder || 'asc'
-    orderBy = [
-      { [sort.field]: sort.nullable ? { sort: order, nulls: 'last' } : order },
-      { id: order },
-    ]
+    orderBy = [{ [sort.field]: sort.nullable ? { sort: order, nulls: 'last' } : order }, { id: order }]
   } else {
     const order: SortOrder = (rawOrder as SortOrder) || spec.defaultSort.order
     orderBy = [{ [spec.defaultSort.field]: order }, { id: order }]
@@ -136,7 +137,16 @@ export const addDays = (date: Date, days: number) => new Date(date.getTime() + d
 
 export const VEHICLE_STATUSES = ['active', 'inactive', 'delayed'] as const
 export const DELIVERY_STATUSES = ['pending', 'in-transit', 'delivered', 'cancelled'] as const
-export const CLIENT_TYPES = ['restaurant', 'hotel', 'office', 'retail', 'warehouse', 'cafe', 'institution', 'other'] as const
+export const CLIENT_TYPES = [
+  'restaurant',
+  'hotel',
+  'office',
+  'retail',
+  'warehouse',
+  'cafe',
+  'institution',
+  'other',
+] as const
 export const MAINTENANCE_STATES = ['overdue', 'upcoming', 'completed'] as const
 export const MAINTENANCE_PRIORITIES = ['high', 'medium', 'low'] as const
 
@@ -182,8 +192,10 @@ export const MAINTENANCE_LIST_SPEC: ListQuerySpec = {
     state: {
       values: MAINTENANCE_STATES,
       where: (state, { today }) =>
-        state === 'completed' ? { completed: true }
-          : state === 'overdue' ? { completed: false, dueDate: { lt: today } }
+        state === 'completed'
+          ? { completed: true }
+          : state === 'overdue'
+            ? { completed: false, dueDate: { lt: today } }
             : { completed: false, dueDate: { gte: today } },
     },
     priority: { values: MAINTENANCE_PRIORITIES, where: (priority) => ({ priority }) },

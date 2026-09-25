@@ -1,6 +1,11 @@
 import {
-  CLIENT_LIST_SPEC, DELIVERY_LIST_SPEC, MAINTENANCE_LIST_SPEC, VEHICLE_LIST_SPEC,
-  parseDueRange, parseListQuery, scopedWhere,
+  CLIENT_LIST_SPEC,
+  DELIVERY_LIST_SPEC,
+  MAINTENANCE_LIST_SPEC,
+  VEHICLE_LIST_SPEC,
+  parseDueRange,
+  parseListQuery,
+  scopedWhere,
 } from '@/lib/listQuery'
 
 const NOW = new Date('2026-09-25T15:30:00Z')
@@ -36,8 +41,13 @@ describe('parseListQuery', () => {
   it('sorts only by allow-listed keys, puts nulls last and always ends with id', () => {
     expect(ok({ sort: 'name', order: 'desc' }).orderBy).toEqual([{ name: 'desc' }, { id: 'desc' }])
     expect(ok({ sort: 'mileage' }).orderBy).toEqual([{ mileage: { sort: 'asc', nulls: 'last' } }, { id: 'asc' }])
-    expect(ok({ sort: 'rating' }, CLIENT_LIST_SPEC).orderBy).toEqual([{ rating: { sort: 'desc', nulls: 'last' } }, { id: 'desc' }])
-    expect(ok({ sort: 'vehicle' }, MAINTENANCE_LIST_SPEC).orderBy[0]).toEqual({ vehicleName: { sort: 'asc', nulls: 'last' } })
+    expect(ok({ sort: 'rating' }, CLIENT_LIST_SPEC).orderBy).toEqual([
+      { rating: { sort: 'desc', nulls: 'last' } },
+      { id: 'desc' },
+    ])
+    expect(ok({ sort: 'vehicle' }, MAINTENANCE_LIST_SPEC).orderBy[0]).toEqual({
+      vehicleName: { sort: 'asc', nulls: 'last' },
+    })
     expect(error({ sort: 'ownerId' })).toBe('Invalid sort')
     expect(error({ sort: '__proto__' })).toBe('Invalid sort')
     expect(error({ sort: 'constructor' })).toBe('Invalid sort')
@@ -47,13 +57,17 @@ describe('parseListQuery', () => {
 
   it('searches case-insensitively over the allow-listed text fields', () => {
     const { conditions } = ok({ q: '  Van 7  ' })
-    expect(conditions).toEqual([{ OR: [
-      { name: { contains: 'Van 7', mode: 'insensitive' } },
-      { driver: { contains: 'Van 7', mode: 'insensitive' } },
-      { location: { contains: 'Van 7', mode: 'insensitive' } },
-      { licensePlate: { contains: 'Van 7', mode: 'insensitive' } },
-      { vehicleType: { contains: 'Van 7', mode: 'insensitive' } },
-    ] }])
+    expect(conditions).toEqual([
+      {
+        OR: [
+          { name: { contains: 'Van 7', mode: 'insensitive' } },
+          { driver: { contains: 'Van 7', mode: 'insensitive' } },
+          { location: { contains: 'Van 7', mode: 'insensitive' } },
+          { licensePlate: { contains: 'Van 7', mode: 'insensitive' } },
+          { vehicleType: { contains: 'Van 7', mode: 'insensitive' } },
+        ],
+      },
+    ])
     const maintenance = ok({ q: 'brake' }, MAINTENANCE_LIST_SPEC).conditions[0] as { OR: unknown[] }
     expect(maintenance.OR).toContainEqual({ vehicle: { is: { name: { contains: 'brake', mode: 'insensitive' } } } })
   })
@@ -83,10 +97,16 @@ describe('parseListQuery', () => {
 
   it('evaluates maintenance states against the caller calendar day', () => {
     const today = new Date('2026-09-20T00:00:00Z')
-    expect(ok({ state: 'overdue', today: '2026-09-20' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([{ completed: false, dueDate: { lt: today } }])
-    expect(ok({ state: 'upcoming', today: '2026-09-20' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([{ completed: false, dueDate: { gte: today } }])
+    expect(ok({ state: 'overdue', today: '2026-09-20' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([
+      { completed: false, dueDate: { lt: today } },
+    ])
+    expect(ok({ state: 'upcoming', today: '2026-09-20' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([
+      { completed: false, dueDate: { gte: today } },
+    ])
     expect(ok({ state: 'completed' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([{ completed: true }])
-    expect(ok({ state: 'overdue' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([{ completed: false, dueDate: { lt: TODAY } }])
+    expect(ok({ state: 'overdue' }, MAINTENANCE_LIST_SPEC).conditions).toEqual([
+      { completed: false, dueDate: { lt: TODAY } },
+    ])
     expect(error({ today: '2026-02-30' }, MAINTENANCE_LIST_SPEC)).toBe('Invalid today')
     expect(error({ today: 'yesterday' }, MAINTENANCE_LIST_SPEC)).toBe('Invalid today')
   })
@@ -101,10 +121,16 @@ describe('parseListQuery', () => {
 describe('parseDueRange', () => {
   it('builds an inclusive calendar-day range', () => {
     expect(parseDueRange({})).toEqual({ ok: true, value: null })
-    expect(parseDueRange({ dueFrom: '2026-09-01', dueTo: '2026-09-30' })).toEqual({ ok: true, value: {
-      dueDate: { gte: new Date('2026-09-01T00:00:00Z'), lt: new Date('2026-10-01T00:00:00Z') },
-    } })
-    expect(parseDueRange({ dueFrom: '2026-09-01' })).toEqual({ ok: true, value: { dueDate: { gte: new Date('2026-09-01T00:00:00Z') } } })
+    expect(parseDueRange({ dueFrom: '2026-09-01', dueTo: '2026-09-30' })).toEqual({
+      ok: true,
+      value: {
+        dueDate: { gte: new Date('2026-09-01T00:00:00Z'), lt: new Date('2026-10-01T00:00:00Z') },
+      },
+    })
+    expect(parseDueRange({ dueFrom: '2026-09-01' })).toEqual({
+      ok: true,
+      value: { dueDate: { gte: new Date('2026-09-01T00:00:00Z') } },
+    })
   })
 
   it('rejects invalid or inverted ranges', () => {

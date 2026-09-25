@@ -38,7 +38,11 @@ function actAs(userId: string, membershipRole: string | null) {
 
 function target(role: string, userId = 'peer-admin') {
   ;(prisma.teamMember.findUnique as jest.Mock).mockResolvedValue({
-    id: 'm-target', teamId: 't1', role, userId, team: { ownerId: 'owner-1' },
+    id: 'm-target',
+    teamId: 't1',
+    role,
+    userId,
+    team: { ownerId: 'owner-1' },
   })
 }
 
@@ -76,7 +80,10 @@ describe('/api/team/members — admins are peers', () => {
     expect(del.res._getStatusCode()).toBe(200)
     expect(prisma.teamMember.delete).toHaveBeenCalled()
     // Removal revokes the removed member's sessions in the same transaction.
-    expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { tokenVersion: { increment: 1 } } })
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'member-1' },
+      data: { tokenVersion: { increment: 1 } },
+    })
   })
 
   it('keeps the sessions of a member who leaves the team themselves', async () => {

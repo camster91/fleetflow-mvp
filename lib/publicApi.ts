@@ -34,7 +34,9 @@ function cursorTenant(where: ApiResourceWhere): string {
 }
 
 export function createPublicApiCursor(endpoint: string, where: ApiResourceWhere, lastId: string): string {
-  const encoded = Buffer.from(JSON.stringify({ v: 1, endpoint, tenant: cursorTenant(where), lastId })).toString('base64url')
+  const encoded = Buffer.from(JSON.stringify({ v: 1, endpoint, tenant: cursorTenant(where), lastId })).toString(
+    'base64url'
+  )
   const signature = crypto.createHmac('sha256', resolveApiCursorSecret()).update(encoded).digest('base64url')
   return `${encoded}.${signature}`
 }
@@ -46,7 +48,14 @@ export function readPublicApiCursor(cursor: string, endpoint: string, where: Api
     const expected = crypto.createHmac('sha256', resolveApiCursorSecret()).update(parts[0]).digest('base64url')
     if (!constantTimeCompare(parts[1], expected)) return null
     const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'))
-    if (payload?.v !== 1 || payload.endpoint !== endpoint || payload.tenant !== cursorTenant(where) || typeof payload.lastId !== 'string' || !payload.lastId) return null
+    if (
+      payload?.v !== 1 ||
+      payload.endpoint !== endpoint ||
+      payload.tenant !== cursorTenant(where) ||
+      typeof payload.lastId !== 'string' ||
+      !payload.lastId
+    )
+      return null
     return payload.lastId
   } catch {
     return null
@@ -108,7 +117,10 @@ export function sendCursorPage<T extends { id: string }>(
   const data = hasMore ? rows.slice(0, limit) : rows
   return res.status(200).json({
     data,
-    pagination: { limit, nextCursor: hasMore ? createPublicApiCursor(endpoint, where, data[data.length - 1].id) : null },
+    pagination: {
+      limit,
+      nextCursor: hasMore ? createPublicApiCursor(endpoint, where, data[data.length - 1].id) : null,
+    },
   })
 }
 

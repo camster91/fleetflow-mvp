@@ -21,19 +21,26 @@ const deliveryFindingId = 'fleet-ops-v1:team%3Ateam-1:delivery-unassigned:delive
 
 function existing(overrides: Record<string, unknown> = {}) {
   return {
-    id: deliveryFindingId, ...scope, type: 'delivery-unassigned', status: 'OPEN',
-    feedback: null, ruleVersion: 'fleet-ops-v1',
-    expiresAt: new Date('2026-08-08T20:00:00Z'), resolvedAt: null,
+    id: deliveryFindingId,
+    ...scope,
+    type: 'delivery-unassigned',
+    status: 'OPEN',
+    feedback: null,
+    ruleVersion: 'fleet-ops-v1',
+    expiresAt: new Date('2026-08-08T20:00:00Z'),
+    resolvedAt: null,
     ...overrides,
   }
 }
 
-function transactionState(options: {
-  deliveries?: unknown[]
-  existing?: unknown[]
-  resolveConflict?: boolean
-  updateConflict?: boolean
-} = {}) {
+function transactionState(
+  options: {
+    deliveries?: unknown[]
+    existing?: unknown[]
+    resolveConflict?: boolean
+    updateConflict?: boolean
+  } = {}
+) {
   return {
     vehicle: { findMany: jest.fn().mockResolvedValue([]) },
     delivery: { findMany: jest.fn().mockResolvedValue(options.deliveries ?? []) },
@@ -57,8 +64,14 @@ function transactionState(options: {
 }
 
 const delivery = {
-  id: 'd-1', status: 'pending', driver: null, vehicleId: null,
-  scheduledTime: null, estimatedArrival: null, contactPerson: null, updatedAt: NOW,
+  id: 'd-1',
+  status: 'pending',
+  driver: null,
+  vehicleId: null,
+  scheduledTime: null,
+  estimatedArrival: null,
+  contactPerson: null,
+  updatedAt: NOW,
 }
 
 describe('finding regeneration serializable interleavings', () => {
@@ -82,9 +95,11 @@ describe('finding regeneration serializable interleavings', () => {
     expect(prisma.$transaction).toHaveBeenCalledTimes(2)
     expect(staleA.intelligenceFinding.updateMany).toHaveBeenCalled()
     expect(afterB.delivery.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: resourceWhere }))
-    expect(afterB.intelligenceFinding.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { AND: expect.arrayContaining([scope]) },
-    }))
+    expect(afterB.intelligenceFinding.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { AND: expect.arrayContaining([scope]) },
+      })
+    )
     expect(afterB.intelligenceFinding.updateMany).not.toHaveBeenCalled()
     expect(afterB.$executeRaw).toHaveBeenCalledTimes(1)
     expect((afterB.$executeRaw.mock.calls[0][0] as { values: unknown[] }).values).toContain('OPEN')

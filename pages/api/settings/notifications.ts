@@ -3,10 +3,7 @@ import { getServerSession, authOptions } from '../../../lib/auth'
 import { assertSameOrigin } from '../../../lib/apiAuth'
 import { prisma } from '../../../lib/prisma'
 import { rateLimitMiddleware } from '../../../lib/rateLimit'
-import {
-  notificationUpdateSchema,
-  parseStoredPreferences,
-} from '../../../lib/settingsValidation'
+import { notificationUpdateSchema, parseStoredPreferences } from '../../../lib/settingsValidation'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['GET', 'PUT'].includes(req.method || '')) {
@@ -18,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
   const userId = session.user.id
-  if (!await rateLimitMiddleware(req, res, 'api', `settings:${userId}`)) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `settings:${userId}`))) return
 
   if (req.method === 'GET') {
     const user = await prisma.user.findUnique({
@@ -39,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const notificationSettings = await prisma.$transaction(async tx => {
+    const notificationSettings = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 AS acquired FROM (SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))) AS settings_lock`
       const current = await tx.user.findUnique({
         where: { id: userId },

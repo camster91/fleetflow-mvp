@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { TeamRole } from '../types'
 
-interface WorkspaceSummary { id: string; role?: string | null }
+interface WorkspaceSummary {
+  id: string
+  role?: string | null
+}
 
 const TEAM_ROLES: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER']
 
@@ -13,14 +16,18 @@ const TEAM_ROLES: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'TECH
  * callers hide role-gated controls until the role is known. The APIs remain
  * the authority; this only keeps the UI from offering actions they refuse.
  */
-export function resolveWorkspaceRole(data: { activeTeamId?: string | null; workspaces?: WorkspaceSummary[] } | null): TeamRole | null {
+export function resolveWorkspaceRole(
+  data: { activeTeamId?: string | null; workspaces?: WorkspaceSummary[] } | null
+): TeamRole | null {
   if (!data || !Array.isArray(data.workspaces)) return null
   if (data.workspaces.length === 0) return 'OWNER'
   const active = data.activeTeamId
     ? data.workspaces.find((workspace) => workspace.id === data.activeTeamId)
-    : data.workspaces.length === 1 ? data.workspaces[0] : undefined
+    : data.workspaces.length === 1
+      ? data.workspaces[0]
+      : undefined
   const role = active?.role
-  return role && (TEAM_ROLES as string[]).includes(role) ? role as TeamRole : null
+  return role && (TEAM_ROLES as string[]).includes(role) ? (role as TeamRole) : null
 }
 
 export function useWorkspaceRole(): { role: TeamRole | null; loading: boolean } {
@@ -32,10 +39,18 @@ export function useWorkspaceRole(): { role: TeamRole | null; loading: boolean } 
     Promise.resolve()
       .then(() => fetch('/api/team/workspaces'))
       .then(async (response) => (response && response.ok ? response.json() : null))
-      .then((data) => { if (active) setRole(resolveWorkspaceRole(data)) })
-      .catch(() => { if (active) setRole(null) })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
+      .then((data) => {
+        if (active) setRole(resolveWorkspaceRole(data))
+      })
+      .catch(() => {
+        if (active) setRole(null)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   return { role, loading }

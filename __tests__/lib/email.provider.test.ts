@@ -2,7 +2,9 @@ const mockMessagesCreate = jest.fn(async () => ({ id: 'provider-id' }))
 jest.mock('mailgun.js', () => ({
   __esModule: true,
   default: class MailgunMock {
-    client() { return { messages: { create: mockMessagesCreate } } }
+    client() {
+      return { messages: { create: mockMessagesCreate } }
+    }
   },
 }))
 
@@ -21,25 +23,34 @@ describe('Mailgun adapter', () => {
     }
   })
 
-  afterAll(() => { process.env = previousEnv })
+  afterAll(() => {
+    process.env = previousEnv
+  })
   beforeEach(() => mockMessagesCreate.mockClear())
 
   it('passes correlation metadata and compatibility fields to Mailgun', async () => {
     const { sendEmail } = await import('@/lib/email')
     const result = await sendEmail({
-      to: 'recipient@example.com', subject: 'subject', html: '<p>body</p>',
-      cc: 'cc@example.com', bcc: ['bcc@example.com'], replyTo: 'reply@example.com',
+      to: 'recipient@example.com',
+      subject: 'subject',
+      html: '<p>body</p>',
+      cc: 'cc@example.com',
+      bcc: ['bcc@example.com'],
+      replyTo: 'reply@example.com',
       attachments: [{ filename: 'note.txt', data: 'content', contentType: 'text/plain' }],
       metadata: { correlationId: '67c1a311-ce67-4ed6-b096-14c3427558d5' },
     })
 
-    expect(mockMessagesCreate).toHaveBeenCalledWith('mg.example.com', expect.objectContaining({
-      cc: 'cc@example.com',
-      bcc: ['bcc@example.com'],
-      'h:Reply-To': 'reply@example.com',
-      'v:correlation-id': '67c1a311-ce67-4ed6-b096-14c3427558d5',
-      attachment: [expect.objectContaining({ filename: 'note.txt' })],
-    }))
+    expect(mockMessagesCreate).toHaveBeenCalledWith(
+      'mg.example.com',
+      expect.objectContaining({
+        cc: 'cc@example.com',
+        bcc: ['bcc@example.com'],
+        'h:Reply-To': 'reply@example.com',
+        'v:correlation-id': '67c1a311-ce67-4ed6-b096-14c3427558d5',
+        attachment: [expect.objectContaining({ filename: 'note.txt' })],
+      })
+    )
     expect(result).toEqual({ success: true, messageId: 'provider-id' })
   })
 
@@ -48,10 +59,14 @@ describe('Mailgun adapter', () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
     const { sendEmail } = await import('@/lib/email')
     const result = await sendEmail({
-      to: 'recipient@example.com', subject: 'secret subject', html: '<p>secret body</p>',
+      to: 'recipient@example.com',
+      subject: 'secret subject',
+      html: '<p>secret body</p>',
     })
     expect(result).toEqual({
-      success: false, errorCode: 'provider_unavailable', error: 'provider_unavailable',
+      success: false,
+      errorCode: 'provider_unavailable',
+      error: 'provider_unavailable',
     })
     expect(consoleSpy).not.toHaveBeenCalled()
     consoleSpy.mockRestore()
@@ -67,7 +82,9 @@ describe('Mailgun adapter', () => {
       'invite-1'
     )
 
-    const sent = (mockMessagesCreate.mock.calls as unknown as Array<[string, { html: string; subject: string }]>).at(-1)?.[1]
+    const sent = (mockMessagesCreate.mock.calls as unknown as Array<[string, { html: string; subject: string }]>).at(
+      -1
+    )?.[1]
     if (!sent) throw new Error('Mailgun was not called')
     expect(sent.html).toContain('&lt;a href=&quot;https://evil.example&quot;&gt;Attacker&lt;/a&gt;')
     expect(sent.html).toContain('&lt;img src=x onerror=alert(1)&gt;')

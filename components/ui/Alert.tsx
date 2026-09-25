@@ -1,9 +1,9 @@
 /**
  * Alert Component
- * 
+ *
  * Alert and notification banners for displaying important messages.
  * Supports success, warning, error, and info types with icons.
- * 
+ *
  * @example
  * ```tsx
  * <Alert type="success">
@@ -15,20 +15,14 @@
  * ```
  */
 
-import React from 'react';
-import { 
-  CheckCircle, 
-  AlertTriangle, 
-  XCircle, 
-  Info, 
-  X 
-} from 'lucide-react';
-import { Button } from './Button';
+import React from 'react'
+import { CheckCircle, AlertTriangle, XCircle, Info, X } from 'lucide-react'
+import { Button } from './Button'
 
 /**
  * Alert type variants
  */
-type AlertType = 'success' | 'warning' | 'error' | 'info';
+type AlertType = 'success' | 'warning' | 'error' | 'info'
 
 /**
  * Alert style configurations
@@ -58,7 +52,7 @@ const alertStyles: Record<AlertType, { bg: string; border: string; text: string;
     text: 'text-slate-800 dark:text-slate-100',
     icon: 'text-emerald-700 dark:text-emerald-400',
   },
-} as const;
+} as const
 
 /**
  * Alert icons mapping
@@ -68,65 +62,68 @@ const alertIcons: Record<AlertType, React.ReactNode> = {
   warning: <AlertTriangle size={20} aria-hidden="true" />,
   error: <XCircle size={20} aria-hidden="true" />,
   info: <Info size={20} aria-hidden="true" />,
-} as const;
+} as const
 
 /**
  * Alert component props
  */
 export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Type of alert determining color scheme */
-  type?: AlertType;
+  type?: AlertType
   /** Alert title */
-  title?: string;
+  title?: string
   /** Alert message content */
-  children: React.ReactNode;
+  children: React.ReactNode
   /** Whether the alert can be dismissed */
-  dismissible?: boolean;
+  dismissible?: boolean
   /** Callback when dismiss button is clicked */
-  onDismiss?: () => void;
+  onDismiss?: () => void
   /** Custom icon (overrides default) */
-  icon?: React.ReactNode;
+  icon?: React.ReactNode
   /** Visual style variant */
-  variant?: 'default' | 'outlined' | 'solid';
+  variant?: 'default' | 'outlined' | 'solid'
 }
 
 /**
  * Alert component for notifications and messages
- * 
+ *
  * @param props - Alert props
  * @returns React component
  */
 export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
-  ({ 
-    type = 'info',
-    title,
-    children,
-    dismissible = false,
-    onDismiss,
-    icon,
-    variant = 'default',
-    className = '',
-    role = 'alert',
-    ...props 
-  }, ref) => {
-    const [isVisible, setIsVisible] = React.useState(true);
-    const styles = alertStyles[type];
-    const defaultIcon = alertIcons[type];
+  (
+    {
+      type = 'info',
+      title,
+      children,
+      dismissible = false,
+      onDismiss,
+      icon,
+      variant = 'default',
+      className = '',
+      role = 'alert',
+      ...props
+    },
+    ref
+  ) => {
+    const [isVisible, setIsVisible] = React.useState(true)
+    const styles = alertStyles[type]
+    const defaultIcon = alertIcons[type]
 
     const handleDismiss = () => {
-      setIsVisible(false);
-      onDismiss?.();
-    };
+      setIsVisible(false)
+      onDismiss?.()
+    }
 
-    if (!isVisible) return null;
+    if (!isVisible) return null
 
     const variantClasses = {
       default: `${styles.bg} ${styles.border} ${styles.text}`,
       outlined: `bg-white dark:bg-slate-900 ${styles.border} ${styles.text}`,
       solid: `${type === 'success' ? 'bg-emerald-600' : type === 'warning' ? 'bg-amber-600' : type === 'error' ? 'bg-red-600' : 'bg-slate-700'} text-white border-transparent`,
-    };
+    }
 
-    const iconColorClass = variant === 'solid' ? 'text-white' : styles.icon;
+    const iconColorClass = variant === 'solid' ? 'text-white' : styles.icon
 
     return (
       <div
@@ -142,22 +139,12 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
       >
         <div className="flex gap-3">
           {/* Icon */}
-          {(icon || defaultIcon) && (
-            <div className={`shrink-0 mt-0.5 ${iconColorClass}`}>
-              {icon || defaultIcon}
-            </div>
-          )}
-          
+          {(icon || defaultIcon) && <div className={`shrink-0 mt-0.5 ${iconColorClass}`}>{icon || defaultIcon}</div>}
+
           {/* Content */}
           <div className="flex-1 min-w-0">
-            {title && (
-              <h4 className="text-sm font-semibold mb-1">
-                {title}
-              </h4>
-            )}
-            <div className="text-sm leading-relaxed">
-              {children}
-            </div>
+            {title && <h4 className="text-sm font-semibold mb-1">{title}</h4>}
+            <div className="text-sm leading-relaxed">{children}</div>
           </div>
 
           {/* Dismiss button */}
@@ -177,53 +164,45 @@ export const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
           )}
         </div>
       </div>
-    );
+    )
   }
-);
+)
 
-Alert.displayName = 'Alert';
+Alert.displayName = 'Alert'
 
 /**
  * Alert group for stacking multiple alerts
  */
 export interface AlertGroupProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+  children: React.ReactNode
   /** Spacing between alerts */
-  spacing?: 'tight' | 'normal' | 'loose';
+  spacing?: 'tight' | 'normal' | 'loose'
 }
 
 const spacingStyles = {
   tight: 'gap-2',
   normal: 'gap-3',
   loose: 'gap-4',
-} as const;
+} as const
 
-export const AlertGroup: React.FC<AlertGroupProps> = ({ 
-  children,
-  spacing = 'normal',
-  className = '',
-  ...props 
-}) => (
-  <div 
-    className={`flex flex-col ${spacingStyles[spacing]} ${className}`}
-    {...props}
-  >
+export const AlertGroup: React.FC<AlertGroupProps> = ({ children, spacing = 'normal', className = '', ...props }) => (
+  <div className={`flex flex-col ${spacingStyles[spacing]} ${className}`} {...props}>
     {children}
   </div>
-);
+)
 
 /**
  * Inline alert for form field errors
  */
 export interface InlineAlertProps extends React.HTMLAttributes<HTMLSpanElement> {
-  children: React.ReactNode;
+  children: React.ReactNode
   /** Optional typed banner style for page-level fetch errors */
-  type?: AlertType;
-  dismissible?: boolean;
-  onDismiss?: () => void;
-  title?: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  type?: AlertType
+  dismissible?: boolean
+  onDismiss?: () => void
+  title?: string
+  actionLabel?: string
+  onAction?: () => void
 }
 
 export const InlineAlert: React.FC<InlineAlertProps> = ({
@@ -257,7 +236,7 @@ export const InlineAlert: React.FC<InlineAlertProps> = ({
           )}
         </div>
       </Alert>
-    );
+    )
   }
 
   return (
@@ -269,7 +248,7 @@ export const InlineAlert: React.FC<InlineAlertProps> = ({
       <XCircle size={14} aria-hidden="true" />
       {children}
     </span>
-  );
-};
+  )
+}
 
-export default Alert;
+export default Alert

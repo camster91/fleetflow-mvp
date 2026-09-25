@@ -3,11 +3,7 @@ import { getServerSession, authOptions } from '../../../lib/auth'
 import { assertSameOrigin } from '../../../lib/apiAuth'
 import { prisma } from '../../../lib/prisma'
 import { rateLimitMiddleware } from '../../../lib/rateLimit'
-import {
-  parseStoredPreferences,
-  profileUpdateSchema,
-  type StoredPreferences,
-} from '../../../lib/settingsValidation'
+import { parseStoredPreferences, profileUpdateSchema, type StoredPreferences } from '../../../lib/settingsValidation'
 
 type ProfileRow = {
   id: string
@@ -38,7 +34,7 @@ function mergePreferences(
     bio?: string
     notificationSettings?: StoredPreferences['notificationSettings']
     preferences?: StoredPreferences['preferences']
-  },
+  }
 ): StoredPreferences {
   return {
     ...existing,
@@ -69,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
   const userId = session.user.id
-  if (!await rateLimitMiddleware(req, res, 'api', `settings:${userId}`)) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `settings:${userId}`))) return
 
   if (req.method === 'GET') {
     const user = await prisma.user.findUnique({
@@ -92,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!parsed.success) return res.status(400).json({ error: 'Invalid profile settings' })
 
   try {
-    const updated = await prisma.$transaction(async tx => {
+    const updated = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 AS acquired FROM (SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))) AS settings_lock`
       const current = await tx.user.findUnique({
         where: { id: userId },

@@ -43,7 +43,10 @@ describe('/api/settings/workspace', () => {
     const { status, body } = await call('PATCH', { timeZone: 'america/vancouver' })
     expect(status).toBe(200)
     expect(body).toEqual({ timeZone: 'America/Vancouver' })
-    expect(prisma.team.update).toHaveBeenCalledWith({ where: { id: 'team-1' }, data: { timeZone: 'America/Vancouver' } })
+    expect(prisma.team.update).toHaveBeenCalledWith({
+      where: { id: 'team-1' },
+      data: { timeZone: 'America/Vancouver' },
+    })
   })
 
   it('stores a personal workspace zone on the owner user', async () => {

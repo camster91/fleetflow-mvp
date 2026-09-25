@@ -27,12 +27,7 @@ export async function notifyMaintenanceDue(
 ) {
   const { html, text } = templates.maintenanceDueEmail(vehicle, tasks)
 
-  return sendBulkEmail(
-    recipientEmails,
-    `🔧 Maintenance Due: ${vehicle.name}`,
-    html,
-    text
-  )
+  return sendBulkEmail(recipientEmails, `🔧 Maintenance Due: ${vehicle.name}`, html, text)
 }
 
 // Helper to send delivery assignment
@@ -48,7 +43,7 @@ export async function notifyDeliveryAssigned(
     to: driverEmail,
     subject: `New Delivery Assignment: ${delivery.customer}`,
     html,
-    text
+    text,
   })
 }
 
@@ -60,24 +55,19 @@ export async function notifyDeliveryStatus(
 ) {
   const { html, text } = templates.deliveryStatusUpdateEmail(delivery, recipientType)
 
-  return sendBulkEmail(
-    recipientEmails,
-    `Delivery Update: ${delivery.customer} - ${delivery.status}`,
-    html,
-    text
-  )
+  return sendBulkEmail(recipientEmails, `Delivery Update: ${delivery.customer} - ${delivery.status}`, html, text)
 }
 
 // Helper to send daily reports
 export async function sendDailyReport(
   report: {
-    date: string;
-    totalDeliveries: number;
-    completedDeliveries: number;
-    pendingDeliveries: number;
-    activeVehicles: number;
-    maintenanceTasks: number;
-    alerts: string[];
+    date: string
+    totalDeliveries: number
+    completedDeliveries: number
+    pendingDeliveries: number
+    activeVehicles: number
+    maintenanceTasks: number
+    alerts: string[]
   },
   recipientEmails: string[]
 ) {
@@ -97,35 +87,30 @@ export async function sendAnnouncement(
   recipientEmails: string[]
 ) {
   const { html, text } = templates.announcementEmail(announcement)
-  
-  return sendBulkEmail(
-    recipientEmails,
-    `Fleet Announcement - ${announcement.priority.toUpperCase()}`,
-    html,
-    text
-  )
+
+  return sendBulkEmail(recipientEmails, `Fleet Announcement - ${announcement.priority.toUpperCase()}`, html, text)
 }
 
 // Helper to send welcome email
 export async function sendWelcomeEmail(userName: string, userEmail: string, loginUrl: string) {
   const { html, text } = templates.welcomeEmail(userName, loginUrl)
-  
+
   return sendEmail({
     to: userEmail,
     subject: 'Welcome to Fleetvera!',
     html,
-    text
+    text,
   })
 }
 
 // Helper to send password reset
 export async function sendPasswordReset(email: string, resetUrl: string) {
   const { html, text } = templates.passwordResetEmail(resetUrl)
-  
+
   return sendEmail({
     to: email,
     subject: 'Password Reset Request',
     html,
-    text
+    text,
   })
 }

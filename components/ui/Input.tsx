@@ -1,9 +1,9 @@
 /**
  * Input Component
- * 
+ *
  * A comprehensive form input system supporting multiple types, states,
  * and icon placements. Includes label and error message handling.
- * 
+ *
  * @example
  * ```tsx
  * <Input
@@ -16,13 +16,13 @@
  * ```
  */
 
-import React from 'react';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import React from 'react'
+import { Eye, EyeOff, AlertCircle } from 'lucide-react'
 
 /**
  * Supported input types
  */
-type InputType = 'text' | 'email' | 'password' | 'number' | 'search' | 'tel' | 'url' | 'date';
+type InputType = 'text' | 'email' | 'password' | 'number' | 'search' | 'tel' | 'url' | 'date'
 
 /**
  * Input size variants
@@ -31,7 +31,7 @@ const sizeStyles = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2.5 text-base',
   lg: 'px-5 py-3 text-lg',
-} as const;
+} as const
 
 /**
  * Icon size mapping based on input size
@@ -40,97 +40,99 @@ const iconSizes = {
   sm: 14,
   md: 18,
   lg: 22,
-} as const;
+} as const
 
 /**
  * Input component props
  */
 export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** Input type */
-  type?: InputType;
+  type?: InputType
   /** Label text */
-  label?: string;
+  label?: string
   /** Helper text displayed below input */
-  helperText?: string;
+  helperText?: string
   /** Error message */
-  error?: string;
+  error?: string
   /** Icon to display on the left (alias: leftIcon for backward compatibility) */
-  iconLeft?: React.ReactNode;
+  iconLeft?: React.ReactNode
   /** Icon to display on the right (alias: rightIcon for backward compatibility) */
-  iconRight?: React.ReactNode;
+  iconRight?: React.ReactNode
   /** @deprecated Use iconLeft instead */
-  leftIcon?: React.ReactNode;
+  leftIcon?: React.ReactNode
   /** @deprecated Use iconRight instead */
-  rightIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode
   /** Input size */
-  size?: keyof typeof sizeStyles;
+  size?: keyof typeof sizeStyles
   /** Full width input */
-  fullWidth?: boolean;
+  fullWidth?: boolean
   /** Reference to the input element */
-  inputRef?: React.Ref<HTMLInputElement>;
+  inputRef?: React.Ref<HTMLInputElement>
 }
 
 /**
  * Input component for form fields
- * 
+ *
  * @param props - Input props
  * @returns React component
  */
 export const Input = React.forwardRef<HTMLDivElement, InputProps>(
-  ({ 
-    type = 'text',
-    label,
-    helperText,
-    error,
-    iconLeft,
-    iconRight,
-    leftIcon,
-    rightIcon,
-    size = 'md',
-    fullWidth = false,
-    disabled = false,
-    required = false,
-    className = '',
-    inputRef,
-    id,
-    ...props 
-  }, ref) => {
-    const [showPassword, setShowPassword] = React.useState(false);
-    const generatedId = React.useId();
-    const inputId = id || generatedId;
-    const hasError = !!error;
-    const isPassword = type === 'password';
+  (
+    {
+      type = 'text',
+      label,
+      helperText,
+      error,
+      iconLeft,
+      iconRight,
+      leftIcon,
+      rightIcon,
+      size = 'md',
+      fullWidth = false,
+      disabled = false,
+      required = false,
+      className = '',
+      inputRef,
+      id,
+      ...props
+    },
+    ref
+  ) => {
+    const [showPassword, setShowPassword] = React.useState(false)
+    const generatedId = React.useId()
+    const inputId = id || generatedId
+    const hasError = !!error
+    const isPassword = type === 'password'
     // Support both iconLeft/leftIcon for backward compatibility
-    const leftIconToUse = iconLeft ?? leftIcon;
-    const rightIconToUse = iconRight ?? rightIcon;
-    const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+    const leftIconToUse = iconLeft ?? leftIcon
+    const rightIconToUse = iconRight ?? rightIcon
+    const inputType = isPassword ? (showPassword ? 'text' : 'password') : type
 
-    const handleTogglePassword = () => setShowPassword(!showPassword);
+    const handleTogglePassword = () => setShowPassword(!showPassword)
 
     return (
       <div ref={ref} className={`${fullWidth ? 'w-full' : ''} ${className}`}>
         {label && (
-          <label 
-            htmlFor={inputId}
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
+          <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 mb-1.5">
             {label}
             {required && (
-              <span className="text-red-500 ml-1" aria-hidden="true">*</span>
+              <span className="text-red-500 ml-1" aria-hidden="true">
+                *
+              </span>
             )}
           </label>
         )}
-        
+
         <div className="relative">
           {leftIconToUse && (
-            <div 
+            <div
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
               aria-hidden="true"
             >
               {leftIconToUse}
             </div>
           )}
-          
+
           <input
             ref={inputRef}
             id={inputId}
@@ -149,9 +151,10 @@ export const Input = React.forwardRef<HTMLDivElement, InputProps>(
               ${leftIconToUse ? 'pl-10' : ''}
               ${rightIconToUse || isPassword ? 'pr-10' : ''}
               ${fullWidth ? 'w-full' : ''}
-              ${hasError 
-                ? 'border-red-300 text-red-900 placeholder:text-red-300 focus:border-red-500 focus:ring-red-500' 
-                : 'border-slate-300 text-slate-900 focus:border-blue-500 focus:ring-blue-500'
+              ${
+                hasError
+                  ? 'border-red-300 text-red-900 placeholder:text-red-300 focus:border-red-500 focus:ring-red-500'
+                  : 'border-slate-300 text-slate-900 focus:border-blue-500 focus:ring-blue-500'
               }
             `}
             {...props}
@@ -165,16 +168,12 @@ export const Input = React.forwardRef<HTMLDivElement, InputProps>(
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
-              {showPassword ? (
-                <EyeOff size={iconSizes[size]} />
-              ) : (
-                <Eye size={iconSizes[size]} />
-              )}
+              {showPassword ? <EyeOff size={iconSizes[size]} /> : <Eye size={iconSizes[size]} />}
             </button>
           )}
-          
+
           {rightIconToUse && !isPassword && (
-            <div 
+            <div
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
               aria-hidden="true"
             >
@@ -184,87 +183,82 @@ export const Input = React.forwardRef<HTMLDivElement, InputProps>(
         </div>
 
         {helperText && !hasError && (
-          <p 
-            id={`${inputId}-helper`}
-            className="mt-1.5 text-sm text-slate-500"
-          >
+          <p id={`${inputId}-helper`} className="mt-1.5 text-sm text-slate-500">
             {helperText}
           </p>
         )}
-        
+
         {hasError && (
-          <p 
-            id={`${inputId}-error`}
-            className="mt-1.5 text-sm text-red-600 flex items-center gap-1"
-            role="alert"
-          >
+          <p id={`${inputId}-error`} className="mt-1.5 text-sm text-red-600 flex items-center gap-1" role="alert">
             <AlertCircle size={14} aria-hidden="true" />
             {error}
           </p>
         )}
       </div>
-    );
+    )
   }
-);
+)
 
-Input.displayName = 'Input';
+Input.displayName = 'Input'
 
 /**
  * Textarea component props
  */
 export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   /** Label text */
-  label?: string;
+  label?: string
   /** Helper text displayed below textarea */
-  helperText?: string;
+  helperText?: string
   /** Error message */
-  error?: string;
+  error?: string
   /** Input size */
-  size?: keyof typeof sizeStyles;
+  size?: keyof typeof sizeStyles
   /** Full width textarea */
-  fullWidth?: boolean;
+  fullWidth?: boolean
   /** Number of rows */
-  rows?: number;
+  rows?: number
 }
 
 /**
  * Textarea component for multi-line text input
- * 
+ *
  * @param props - TextArea props
  * @returns React component
  */
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ 
-    label,
-    helperText,
-    error,
-    size = 'md',
-    fullWidth = false,
-    disabled = false,
-    required = false,
-    rows = 4,
-    className = '',
-    id,
-    ...props 
-  }, ref) => {
-    const generatedId = React.useId();
-    const textareaId = id || generatedId;
-    const hasError = !!error;
+  (
+    {
+      label,
+      helperText,
+      error,
+      size = 'md',
+      fullWidth = false,
+      disabled = false,
+      required = false,
+      rows = 4,
+      className = '',
+      id,
+      ...props
+    },
+    ref
+  ) => {
+    const generatedId = React.useId()
+    const textareaId = id || generatedId
+    const hasError = !!error
 
     return (
       <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
         {label && (
-          <label 
-            htmlFor={textareaId}
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
+          <label htmlFor={textareaId} className="block text-sm font-medium text-slate-700 mb-1.5">
             {label}
             {required && (
-              <span className="text-red-500 ml-1" aria-hidden="true">*</span>
+              <span className="text-red-500 ml-1" aria-hidden="true">
+                *
+              </span>
             )}
           </label>
         )}
-        
+
         <textarea
           ref={ref}
           id={textareaId}
@@ -281,97 +275,93 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
             disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
             ${sizeStyles[size]}
             ${fullWidth ? 'w-full' : ''}
-            ${hasError 
-              ? 'border-red-300 text-red-900 placeholder:text-red-300 focus:border-red-500 focus:ring-red-500' 
-              : 'border-slate-300 text-slate-900 focus:border-blue-500 focus:ring-blue-500'
+            ${
+              hasError
+                ? 'border-red-300 text-red-900 placeholder:text-red-300 focus:border-red-500 focus:ring-red-500'
+                : 'border-slate-300 text-slate-900 focus:border-blue-500 focus:ring-blue-500'
             }
           `}
           {...props}
         />
 
         {helperText && !hasError && (
-          <p 
-            id={`${textareaId}-helper`}
-            className="mt-1.5 text-sm text-slate-500"
-          >
+          <p id={`${textareaId}-helper`} className="mt-1.5 text-sm text-slate-500">
             {helperText}
           </p>
         )}
-        
+
         {hasError && (
-          <p 
-            id={`${textareaId}-error`}
-            className="mt-1.5 text-sm text-red-600 flex items-center gap-1"
-            role="alert"
-          >
+          <p id={`${textareaId}-error`} className="mt-1.5 text-sm text-red-600 flex items-center gap-1" role="alert">
             <AlertCircle size={14} aria-hidden="true" />
             {error}
           </p>
         )}
       </div>
-    );
+    )
   }
-);
+)
 
-TextArea.displayName = 'TextArea';
+TextArea.displayName = 'TextArea'
 
 // Alias for backward compatibility
-export const Textarea = TextArea;
+export const Textarea = TextArea
 
 /**
  * Select component props (for backward compatibility)
  */
 export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   /** Label text */
-  label?: string;
+  label?: string
   /** Helper text displayed below select */
-  helperText?: string;
+  helperText?: string
   /** Error message */
-  error?: string;
+  error?: string
   /** Select size */
-  size?: keyof typeof sizeStyles;
+  size?: keyof typeof sizeStyles
   /** Full width select */
-  fullWidth?: boolean;
+  fullWidth?: boolean
   /** Options for the select */
-  options?: Array<{ value: string; label: string; disabled?: boolean }>;
+  options?: Array<{ value: string; label: string; disabled?: boolean }>
 }
 
 /**
  * Select component for dropdown selection (backward compatible)
  */
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ 
-    label,
-    helperText,
-    error,
-    size = 'md',
-    fullWidth = false,
-    disabled = false,
-    required = false,
-    options,
-    children,
-    className = '',
-    id,
-    ...props 
-  }, ref) => {
-    const generatedId = React.useId();
-    const selectId = id || generatedId;
-    const hasError = !!error;
+  (
+    {
+      label,
+      helperText,
+      error,
+      size = 'md',
+      fullWidth = false,
+      disabled = false,
+      required = false,
+      options,
+      children,
+      className = '',
+      id,
+      ...props
+    },
+    ref
+  ) => {
+    const generatedId = React.useId()
+    const selectId = id || generatedId
+    const hasError = !!error
 
     return (
       <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
         {label && (
-          <label 
-            htmlFor={selectId}
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
+          <label htmlFor={selectId} className="block text-sm font-medium text-slate-700 mb-1.5">
             {label}
             {required && (
-              <span className="text-red-500 ml-1" aria-hidden="true">*</span>
+              <span className="text-red-500 ml-1" aria-hidden="true">
+                *
+              </span>
             )}
           </label>
         )}
-        
+
         <select
           ref={ref}
           id={selectId}
@@ -386,44 +376,40 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
             ${sizeStyles[size]}
             ${fullWidth ? 'w-full' : ''}
-            ${hasError 
-              ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500' 
-              : 'border-slate-300 text-slate-900 focus:border-blue-500 focus:ring-blue-500'
+            ${
+              hasError
+                ? 'border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500'
+                : 'border-slate-300 text-slate-900 focus:border-blue-500 focus:ring-blue-500'
             }
           `}
           {...props}
         >
-          {options ? options.map(opt => (
-            <option key={opt.value} value={opt.value} disabled={opt.disabled}>
-              {opt.label}
-            </option>
-          )) : children}
+          {options
+            ? options.map((opt) => (
+                <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+                  {opt.label}
+                </option>
+              ))
+            : children}
         </select>
 
         {helperText && !hasError && (
-          <p 
-            id={`${selectId}-helper`}
-            className="mt-1.5 text-sm text-slate-500"
-          >
+          <p id={`${selectId}-helper`} className="mt-1.5 text-sm text-slate-500">
             {helperText}
           </p>
         )}
-        
+
         {hasError && (
-          <p 
-            id={`${selectId}-error`}
-            className="mt-1.5 text-sm text-red-600 flex items-center gap-1"
-            role="alert"
-          >
+          <p id={`${selectId}-error`} className="mt-1.5 text-sm text-red-600 flex items-center gap-1" role="alert">
             <AlertCircle size={14} aria-hidden="true" />
             {error}
           </p>
         )}
       </div>
-    );
+    )
   }
-);
+)
 
-Select.displayName = 'Select';
+Select.displayName = 'Select'
 
-export default Input;
+export default Input

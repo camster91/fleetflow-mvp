@@ -2,16 +2,10 @@
  * Notification utilities for creating and managing notifications
  */
 
-import { prisma } from './prisma';
-import type { Prisma } from '@prisma/client';
+import { prisma } from './prisma'
+import type { Prisma } from '@prisma/client'
 // Notification types (stored as String in DB)
-export type NotificationType = 
-  | 'MAINTENANCE_DUE' 
-  | 'VEHICLE_ALERT' 
-  | 'TEAM_INVITE' 
-  | 'BILLING' 
-  | 'SYSTEM' 
-  | 'SECURITY';
+export type NotificationType = 'MAINTENANCE_DUE' | 'VEHICLE_ALERT' | 'TEAM_INVITE' | 'BILLING' | 'SYSTEM' | 'SECURITY'
 
 export const NotificationType = {
   MAINTENANCE_DUE: 'MAINTENANCE_DUE' as const,
@@ -20,7 +14,7 @@ export const NotificationType = {
   BILLING: 'BILLING' as const,
   SYSTEM: 'SYSTEM' as const,
   SECURITY: 'SECURITY' as const,
-};
+}
 
 // Constants for notification types (for use as values)
 export const NotificationTypes = {
@@ -30,26 +24,20 @@ export const NotificationTypes = {
   BILLING: 'BILLING' as NotificationType,
   SYSTEM: 'SYSTEM' as NotificationType,
   SECURITY: 'SECURITY' as NotificationType,
-};
+}
 
 export interface CreateNotificationInput {
-  userId: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  data?: Record<string, unknown>;
+  userId: string
+  type: NotificationType
+  title: string
+  message: string
+  data?: Record<string, unknown>
 }
 
 /**
  * Create a new notification for a user
  */
-export async function createNotification({
-  userId,
-  type,
-  title,
-  message,
-  data,
-}: CreateNotificationInput) {
+export async function createNotification({ userId, type, title, message, data }: CreateNotificationInput) {
   try {
     const notification = await prisma.notification.create({
       data: {
@@ -59,11 +47,11 @@ export async function createNotification({
         message,
         data: data ? JSON.stringify(data) : '{}',
       },
-    });
-    return notification;
+    })
+    return notification
   } catch (error) {
-    console.error('Failed to create notification:', error);
-    throw error;
+    console.error('Failed to create notification:', error)
+    throw error
   }
 }
 
@@ -86,11 +74,11 @@ export async function createBulkNotifications({
         message,
         data: data ? JSON.stringify(data) : '{}',
       })),
-    });
-    return notifications;
+    })
+    return notifications
   } catch (error) {
-    console.error('Failed to create bulk notifications:', error);
-    throw error;
+    console.error('Failed to create bulk notifications:', error)
+    throw error
   }
 }
 
@@ -104,11 +92,11 @@ export async function getUnreadCount(userId: string): Promise<number> {
         userId,
         read: false,
       },
-    });
-    return count;
+    })
+    return count
   } catch (error) {
-    console.error('Failed to get unread count:', error);
-    return 0;
+    console.error('Failed to get unread count:', error)
+    return 0
   }
 }
 
@@ -126,11 +114,11 @@ export async function markAsRead(notificationId: string, userId: string) {
         read: true,
         readAt: new Date(),
       },
-    });
-    return notification;
+    })
+    return notification
   } catch (error) {
-    console.error('Failed to mark notification as read:', error);
-    throw error;
+    console.error('Failed to mark notification as read:', error)
+    throw error
   }
 }
 
@@ -148,11 +136,11 @@ export async function markAllAsRead(userId: string) {
         read: true,
         readAt: new Date(),
       },
-    });
-    return result;
+    })
+    return result
   } catch (error) {
-    console.error('Failed to mark all notifications as read:', error);
-    throw error;
+    console.error('Failed to mark all notifications as read:', error)
+    throw error
   }
 }
 
@@ -166,11 +154,11 @@ export async function deleteNotification(notificationId: string, userId: string)
         id: notificationId,
         userId,
       },
-    });
-    return true;
+    })
+    return true
   } catch (error) {
-    console.error('Failed to delete notification:', error);
-    throw error;
+    console.error('Failed to delete notification:', error)
+    throw error
   }
 }
 
@@ -180,19 +168,19 @@ export async function deleteNotification(notificationId: string, userId: string)
 export async function getNotifications(
   userId: string,
   options: {
-    page?: number;
-    limit?: number;
-    type?: NotificationType;
-    unreadOnly?: boolean;
+    page?: number
+    limit?: number
+    type?: NotificationType
+    unreadOnly?: boolean
   } = {}
 ) {
-  const { page = 1, limit = 20, type, unreadOnly } = options;
-  const skip = (page - 1) * limit;
+  const { page = 1, limit = 20, type, unreadOnly } = options
+  const skip = (page - 1) * limit
 
   try {
-    const where: Prisma.NotificationWhereInput = { userId };
-    if (type) where.type = type;
-    if (unreadOnly) where.read = false;
+    const where: Prisma.NotificationWhereInput = { userId }
+    if (type) where.type = type
+    if (unreadOnly) where.read = false
 
     const [notifications, total] = await Promise.all([
       prisma.notification.findMany({
@@ -203,17 +191,17 @@ export async function getNotifications(
         take: limit,
       }),
       prisma.notification.count({ where }),
-    ]);
+    ])
 
     return {
       notifications,
       total,
       pages: Math.ceil(total / limit),
       currentPage: page,
-    };
+    }
   } catch (error) {
-    console.error('Failed to get notifications:', error);
-    throw error;
+    console.error('Failed to get notifications:', error)
+    throw error
   }
 }
 
@@ -234,7 +222,7 @@ export async function notifyMaintenanceDue(
     title: 'Maintenance Due',
     message: `${vehicleName} is due for ${maintenanceType} on ${dueDate.toLocaleDateString()}`,
     data: { vehicleName, maintenanceType, dueDate },
-  });
+  })
 }
 
 /**
@@ -252,41 +240,33 @@ export async function notifyVehicleAlert(
     title: `Vehicle Alert: ${alertType}`,
     message: `${vehicleName} has triggered a ${severity} severity alert: ${alertType}`,
     data: { vehicleName, alertType, severity },
-  });
+  })
 }
 
 /**
  * Create a team invite notification
  */
-export async function notifyTeamInvite(
-  userId: string,
-  teamName: string,
-  invitedBy: string
-) {
+export async function notifyTeamInvite(userId: string, teamName: string, invitedBy: string) {
   return createNotification({
     userId,
     type: NotificationTypes.TEAM_INVITE,
     title: 'Team Invitation',
     message: `${invitedBy} has invited you to join ${teamName}`,
     data: { teamName, invitedBy },
-  });
+  })
 }
 
 /**
  * Create a billing notification
  */
-export async function notifyBilling(
-  userId: string,
-  event: string,
-  details: Record<string, unknown>
-) {
+export async function notifyBilling(userId: string, event: string, details: Record<string, unknown>) {
   const titles: Record<string, string> = {
     payment_success: 'Payment Successful',
     payment_failed: 'Payment Failed',
     subscription_canceled: 'Subscription Canceled',
     subscription_renewed: 'Subscription Renewed',
     trial_ending: 'Trial Ending Soon',
-  };
+  }
 
   return createNotification({
     userId,
@@ -294,50 +274,42 @@ export async function notifyBilling(
     title: titles[event] || 'Billing Update',
     message: typeof details.message === 'string' ? details.message : 'There is an update regarding your billing.',
     data: { event, ...details },
-  });
+  })
 }
 
 /**
  * Create a security alert notification
  */
-export async function notifySecurityAlert(
-  userId: string,
-  event: string,
-  details: Record<string, unknown>
-) {
+export async function notifySecurityAlert(userId: string, event: string, details: Record<string, unknown>) {
   const titles: Record<string, string> = {
     new_login: 'New Login Detected',
     password_changed: 'Password Changed',
     two_factor_enabled: 'Two-Factor Authentication Enabled',
     two_factor_disabled: 'Two-Factor Authentication Disabled',
     suspicious_activity: 'Suspicious Activity Detected',
-  };
+  }
 
   return createNotification({
     userId,
     type: NotificationTypes.SECURITY,
     title: titles[event] || 'Security Alert',
-    message: typeof details.message === 'string' ? details.message : 'A security-related event has occurred on your account.',
+    message:
+      typeof details.message === 'string' ? details.message : 'A security-related event has occurred on your account.',
     data: { event, ...details },
-  });
+  })
 }
 
 /**
  * Create a system notification
  */
-export async function notifySystem(
-  userId: string,
-  title: string,
-  message: string,
-  data?: Record<string, unknown>
-) {
+export async function notifySystem(userId: string, title: string, message: string, data?: Record<string, unknown>) {
   return createNotification({
     userId,
     type: NotificationTypes.SYSTEM,
     title,
     message,
     data,
-  });
+  })
 }
 
 /**
@@ -375,7 +347,7 @@ export function getNotificationMeta(type: NotificationType) {
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
     },
-  };
+  }
 
-  return meta[type] || meta.SYSTEM;
+  return meta[type] || meta.SYSTEM
 }

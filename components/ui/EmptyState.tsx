@@ -1,19 +1,19 @@
-import React from 'react';
-import { Package, Search, FileX, Inbox } from 'lucide-react';
-import { Button } from './Button';
+import React from 'react'
+import { Package, Search, FileX, Inbox } from 'lucide-react'
+import { Button } from './Button'
 
-type EmptyStateType = 'default' | 'search' | 'data' | 'error';
+type EmptyStateType = 'default' | 'search' | 'data' | 'error'
 
 interface EmptyStateProps {
-  type?: EmptyStateType;
-  title?: string;
-  description?: string;
-  icon?: React.ReactNode;
-  actionLabel?: string;
-  onAction?: () => void;
-  secondaryLabel?: string;
-  onSecondary?: () => void;
-  className?: string;
+  type?: EmptyStateType
+  title?: string
+  description?: string
+  icon?: React.ReactNode
+  actionLabel?: string
+  onAction?: () => void
+  secondaryLabel?: string
+  onSecondary?: () => void
+  className?: string
 }
 
 const defaultContent: Record<EmptyStateType, { icon: React.ReactNode; title: string; description: string }> = {
@@ -37,7 +37,7 @@ const defaultContent: Record<EmptyStateType, { icon: React.ReactNode; title: str
     title: 'Could not load this view',
     description: 'Something went wrong. Try again in a moment.',
   },
-};
+}
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   type = 'default',
@@ -50,13 +50,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onSecondary,
   className = '',
 }) => {
-  const content = defaultContent[type];
+  const content = defaultContent[type]
 
   return (
-    <div
-      className={`flex flex-col items-center justify-center px-4 py-14 text-center ${className}`}
-      role="status"
-    >
+    <div className={`flex flex-col items-center justify-center px-4 py-14 text-center ${className}`} role="status">
       <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
         {icon || content.icon}
       </div>
@@ -81,7 +78,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </div>
       ) : null}
     </div>
-  );
-};
+  )
+}
 
-export default EmptyState;
+export default EmptyState

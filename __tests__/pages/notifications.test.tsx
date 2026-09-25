@@ -16,24 +16,48 @@ jest.mock('@/components/ui/EmptyState', () => ({
   EmptyState: ({ title }: { title: string }) => <div>{title}</div>,
 }))
 
-const response = (body: unknown) => Promise.resolve({
-  ok: true,
-  json: async () => body,
-})
+const response = (body: unknown) =>
+  Promise.resolve({
+    ok: true,
+    json: async () => body,
+  })
 
 describe('notifications pagination', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    global.fetch = jest.fn()
-      .mockImplementationOnce(() => response({
-        notifications: [{ id: 'n1', type: 'SYSTEM', title: 'First', message: 'One', createdAt: new Date().toISOString(), read: false }],
-        hasMore: true,
-        nextCursor: 'cursor-1',
-      }))
-      .mockImplementationOnce(() => response({
-        notifications: [{ id: 'n2', type: 'SYSTEM', title: 'Second', message: 'Two', createdAt: new Date().toISOString(), read: true }],
-        hasMore: false,
-      }))
+    global.fetch = jest
+      .fn()
+      .mockImplementationOnce(() =>
+        response({
+          notifications: [
+            {
+              id: 'n1',
+              type: 'SYSTEM',
+              title: 'First',
+              message: 'One',
+              createdAt: new Date().toISOString(),
+              read: false,
+            },
+          ],
+          hasMore: true,
+          nextCursor: 'cursor-1',
+        })
+      )
+      .mockImplementationOnce(() =>
+        response({
+          notifications: [
+            {
+              id: 'n2',
+              type: 'SYSTEM',
+              title: 'Second',
+              message: 'Two',
+              createdAt: new Date().toISOString(),
+              read: true,
+            },
+          ],
+          hasMore: false,
+        })
+      )
       .mockImplementationOnce(() => response({ notifications: [], hasMore: false })) as jest.Mock
   })
 
@@ -43,10 +67,7 @@ describe('notifications pagination', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Load more' }))
     expect(await screen.findByText('Second')).toBeInTheDocument()
-    expect(global.fetch).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('cursor=cursor-1')
-    )
+    expect(global.fetch).toHaveBeenNthCalledWith(2, expect.stringContaining('cursor=cursor-1'))
 
     await userEvent.click(screen.getByRole('button', { name: /Unread/ }))
     await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(3))

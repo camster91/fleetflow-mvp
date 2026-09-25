@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Package, MapPin, User, Calendar, Clock, FileText, Phone, Mail, Building, Camera, Navigation } from 'lucide-react'
+import {
+  Package,
+  MapPin,
+  User,
+  Calendar,
+  Clock,
+  FileText,
+  Phone,
+  Mail,
+  Building,
+  Camera,
+  Navigation,
+} from 'lucide-react'
 import FormModal from './FormModal'
 import * as dataService from '../services/dataServiceWithSync'
 import * as recentItems from '../services/recentItems'
@@ -18,17 +30,24 @@ const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending', color: 'text-yellow-600 bg-yellow-50' },
   { value: 'in-transit', label: 'In Transit', color: 'text-blue-600 bg-blue-50' },
   { value: 'delivered', label: 'Delivered', color: 'text-green-600 bg-green-50' },
-  { value: 'cancelled', label: 'Cancelled', color: 'text-red-600 bg-red-50' }
+  { value: 'cancelled', label: 'Cancelled', color: 'text-red-600 bg-red-50' },
 ]
 
-export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery, clients = [], vehicles = [] }: DeliveryFormModalProps) {
+export default function DeliveryFormModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  delivery,
+  clients = [],
+  vehicles = [],
+}: DeliveryFormModalProps) {
   const isEditing = !!delivery
   const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
-  
+
   useEffect(() => {
-    if (isOpen) setRecents(recentItems.getRecentItems());
-  }, [isOpen]);
-  
+    if (isOpen) setRecents(recentItems.getRecentItems())
+  }, [isOpen])
+
   const [formData, setFormData] = useState<{
     customer: string
     address: string
@@ -66,15 +85,33 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
     dropoffInstructions: '',
     accessCodes: '',
     securityNotes: '',
-    businessHours: ''
+    businessHours: '',
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedClient, setSelectedClient] = useState<dataService.Client | null>(null)
-  const [drivers,setDrivers]=useState<dataService.DriverOption[]>([])
-  const [driversUnavailable,setDriversUnavailable]=useState(false)
-  useEffect(()=>{if(!isOpen)return;let active=true;setDriversUnavailable(false);dataService.getDrivers().then(items=>{if(active)setDrivers(items)}).catch(()=>{if(active){setDrivers([]);setDriversUnavailable(true)}});return()=>{active=false}},[isOpen])
+  const [drivers, setDrivers] = useState<dataService.DriverOption[]>([])
+  const [driversUnavailable, setDriversUnavailable] = useState(false)
+  useEffect(() => {
+    if (!isOpen) return
+    let active = true
+    setDriversUnavailable(false)
+    dataService
+      .getDrivers()
+      .then((items) => {
+        if (active) setDrivers(items)
+      })
+      .catch(() => {
+        if (active) {
+          setDrivers([])
+          setDriversUnavailable(true)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [isOpen])
 
   // Reset form when modal opens/closes or delivery changes
   useEffect(() => {
@@ -98,7 +135,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
           dropoffInstructions: delivery.dropoffInstructions || '',
           accessCodes: delivery.accessCodes?.join(', ') || '',
           securityNotes: delivery.securityNotes || '',
-          businessHours: delivery.businessHours || ''
+          businessHours: delivery.businessHours || '',
         })
       } else {
         setFormData({
@@ -119,7 +156,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
           dropoffInstructions: '',
           accessCodes: '',
           securityNotes: '',
-          businessHours: ''
+          businessHours: '',
         })
       }
       setErrors({})
@@ -133,11 +170,11 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
       setSelectedClient(null)
       return
     }
-    
-    const client = clients.find(c => c.id.toString() === clientId)
+
+    const client = clients.find((c) => c.id.toString() === clientId)
     if (client) {
       setSelectedClient(client)
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         customer: client.businessName || client.name,
         address: client.address,
@@ -148,7 +185,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
         dropoffInstructions: client.dropoffInstructions || '',
         accessCodes: client.accessCodes?.join(', ') || '',
         securityNotes: client.securityNotes || '',
-        businessHours: client.businessHours || ''
+        businessHours: client.businessHours || '',
       }))
     }
   }
@@ -182,11 +219,11 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     setIsSubmitting(true)
-    
+
     try {
       const deliveryData = {
         customer: formData.customer,
@@ -199,20 +236,27 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
         notes: formData.notes,
         scheduledTime: formData.scheduledTime,
         estimatedArrival: formData.estimatedArrival,
-        contactPerson: formData.contactName ? {
-          name: formData.contactName,
-          phone: formData.contactPhone,
-          email: formData.contactEmail
-        } : undefined,
+        contactPerson: formData.contactName
+          ? {
+              name: formData.contactName,
+              phone: formData.contactPhone,
+              email: formData.contactEmail,
+            }
+          : undefined,
         parkingInstructions: formData.parkingInstructions,
         dropoffInstructions: formData.dropoffInstructions,
-        accessCodes: formData.accessCodes ? formData.accessCodes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        accessCodes: formData.accessCodes
+          ? formData.accessCodes
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
         securityNotes: formData.securityNotes,
-        businessHours: formData.businessHours
+        businessHours: formData.businessHours,
       }
-      
+
       let result: dataService.Delivery
-      
+
       if (isEditing && delivery) {
         const updated = await dataService.updateDelivery(delivery.id, deliveryData)
         if (!updated) throw new Error('Failed to update delivery')
@@ -220,16 +264,16 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
       } else {
         result = await dataService.addDelivery(deliveryData)
       }
-      
+
       // Save to recent items for autofill
       recentItems.addRecentDelivery({
         customer: formData.customer,
         address: formData.address,
         contactName: formData.contactName,
         contactPhone: formData.contactPhone,
-        contactEmail: formData.contactEmail
+        contactEmail: formData.contactEmail,
       })
-      
+
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -240,31 +284,26 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
   }
 
   const handleChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
   }
 
   const handleProgressChange = (value: number) => {
-    setFormData(prev => ({ ...prev, progress: value }))
+    setFormData((prev) => ({ ...prev, progress: value }))
     // Auto-update status based on progress
     if (value === 0 && formData.status !== 'pending') {
-      setFormData(prev => ({ ...prev, progress: value, status: 'pending' }))
+      setFormData((prev) => ({ ...prev, progress: value, status: 'pending' }))
     } else if (value > 0 && value < 100 && formData.status !== 'in-transit') {
-      setFormData(prev => ({ ...prev, progress: value, status: 'in-transit' }))
+      setFormData((prev) => ({ ...prev, progress: value, status: 'in-transit' }))
     } else if (value === 100 && formData.status !== 'delivered') {
-      setFormData(prev => ({ ...prev, progress: value, status: 'delivered' }))
+      setFormData((prev) => ({ ...prev, progress: value, status: 'delivered' }))
     }
   }
 
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Delivery' : 'Add New Delivery'}
-      size="xl"
-    >
+    <FormModal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit Delivery' : 'Add New Delivery'} size="xl">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Client Selection (for new deliveries) */}
         {!isEditing && clients.length > 0 && (
@@ -273,25 +312,21 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
               <Building className="h-4 w-4" />
               Quick Fill from Client
             </h4>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Existing Client (Optional)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Existing Client (Optional)</label>
               <select
                 onChange={(e) => handleClientSelect(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
               >
                 <option value="">-- Select a client --</option>
-                {clients.map(client => (
+                {clients.map((client) => (
                   <option key={client.id} value={client.id}>
                     {client.businessName || client.name} - {client.address}
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-sm text-gray-500">
-                Selecting a client will auto-fill their information
-              </p>
+              <p className="mt-1 text-sm text-gray-500">Selecting a client will auto-fill their information</p>
             </div>
           </div>
         )}
@@ -302,7 +337,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
             <Package className="h-4 w-4" />
             Basic Information
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Customer Name */}
             <div>
@@ -362,13 +397,11 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
             <User className="h-4 w-4" />
             Assignment & Scheduling
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Driver */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assigned Driver
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Driver</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <select
@@ -379,19 +412,25 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
                   className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition appearance-none bg-white"
                 >
                   <option value="">Unassigned</option>
-                  {drivers.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+                  {drivers.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
                 </select>
               </div>
-              {driversUnavailable&&<p role="alert" className="mt-1 text-sm text-red-600">Driver list unavailable. Try reopening this form.</p>}
+              {driversUnavailable && (
+                <p role="alert" className="mt-1 text-sm text-red-600">
+                  Driver list unavailable. Try reopening this form.
+                </p>
+              )}
             </div>
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Delivery Status
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
               <div className="flex flex-wrap gap-2">
-                {STATUS_OPTIONS.map(status => (
+                {STATUS_OPTIONS.map((status) => (
                   <button
                     key={status.value}
                     type="button"
@@ -410,9 +449,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Scheduled Time */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Scheduled Date/Time
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date/Time</label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -426,9 +463,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Estimated Arrival */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estimated Arrival
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Arrival</label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -448,20 +483,20 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
             <Navigation className="h-4 w-4" />
             Delivery Progress
           </h4>
-          
+
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">
-                Progress: {formData.progress}%
-              </label>
-              <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                formData.progress === 0 ? 'bg-yellow-100 text-yellow-700' :
-                formData.progress === 100 ? 'bg-green-100 text-green-700' :
-                'bg-blue-100 text-blue-700'
-              }`}>
-                {formData.progress === 0 ? 'Not Started' :
-                 formData.progress === 100 ? 'Complete' :
-                 'In Progress'}
+              <label className="text-sm font-medium text-gray-700">Progress: {formData.progress}%</label>
+              <span
+                className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  formData.progress === 0
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : formData.progress === 100
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-blue-100 text-blue-700'
+                }`}
+              >
+                {formData.progress === 0 ? 'Not Started' : formData.progress === 100 ? 'Complete' : 'In Progress'}
               </span>
             </div>
             <input
@@ -487,13 +522,11 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
             <Phone className="h-4 w-4" />
             Contact Information
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Contact Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -508,9 +541,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Contact Phone */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone Number
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
               <div className="relative">
                 <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -525,9 +556,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Contact Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -551,13 +580,11 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
             <Navigation className="h-4 w-4" />
             Delivery Instructions
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Parking Instructions */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Parking Instructions
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Parking Instructions</label>
               <textarea
                 value={formData.parkingInstructions}
                 onChange={(e) => handleChange('parkingInstructions', e.target.value)}
@@ -569,9 +596,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Dropoff Instructions */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Dropoff Instructions
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Instructions</label>
               <textarea
                 value={formData.dropoffInstructions}
                 onChange={(e) => handleChange('dropoffInstructions', e.target.value)}
@@ -583,9 +608,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Access Codes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Access Codes
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Access Codes</label>
               <input
                 type="text"
                 value={formData.accessCodes}
@@ -598,9 +621,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
             {/* Business Hours */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Business Hours
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Hours</label>
               <input
                 type="text"
                 value={formData.businessHours}
@@ -613,9 +634,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
 
           {/* Security Notes */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Security Notes
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Security Notes</label>
             <textarea
               value={formData.securityNotes}
               onChange={(e) => handleChange('securityNotes', e.target.value)}
@@ -632,7 +651,7 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
             <FileText className="h-4 w-4" />
             Additional Notes
           </h4>
-          
+
           <textarea
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
@@ -668,8 +687,10 @@ export default function DeliveryFormModal({ isOpen, onClose, onSubmit, delivery,
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {isEditing ? 'Saving...' : 'Adding...'}
               </>
+            ) : isEditing ? (
+              'Save Changes'
             ) : (
-              isEditing ? 'Save Changes' : 'Add Delivery'
+              'Add Delivery'
             )}
           </button>
         </div>

@@ -33,7 +33,8 @@ describe('POST /api/auth/complete-onboarding', () => {
     await handler(req, res)
     expect(res._getStatusCode()).toBe(200)
     expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'u1' }, data: { onboardingCompleted: true },
+      where: { id: 'u1' },
+      data: { onboardingCompleted: true },
     })
     expect(res.getHeader('Cache-Control')).toBe('private, no-store')
   })

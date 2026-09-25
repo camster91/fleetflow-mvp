@@ -1,12 +1,17 @@
 import { createMocks } from 'node-mocks-http'
 
 jest.mock('@/lib/auth', () => ({
-  getServerSession: jest.fn(async () => ({ user: { id: 'user-1' } })), authOptions: {},
+  getServerSession: jest.fn(async () => ({ user: { id: 'user-1' } })),
+  authOptions: {},
 }))
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     notification: {
-      findMany: jest.fn(), findFirst: jest.fn(), count: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
+      updateMany: jest.fn(),
+      deleteMany: jest.fn(),
     },
   },
 }))
@@ -29,26 +34,31 @@ describe('notifications API contracts', () => {
   })
 
   it('returns cursor metadata without exposing another user', async () => {
-    ;(prisma.notification.findMany as jest.Mock).mockResolvedValue([
-      { id: 'n1' }, { id: 'n2' }, { id: 'n3' },
-    ])
+    ;(prisma.notification.findMany as jest.Mock).mockResolvedValue([{ id: 'n1' }, { id: 'n2' }, { id: 'n3' }])
     ;(prisma.notification.count as jest.Mock).mockResolvedValue(3)
     const { req, res } = createMocks({ method: 'GET', query: { limit: '2' } })
 
     await handler(req as never, res as never)
 
     expect(res._getJSONData()).toMatchObject({
-      notifications: [{ id: 'n1' }, { id: 'n2' }], hasMore: true, nextCursor: 'n2',
+      notifications: [{ id: 'n1' }, { id: 'n2' }],
+      hasMore: true,
+      nextCursor: 'n2',
     })
-    expect(prisma.notification.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { userId: 'user-1' }, take: 3,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-    }))
+    expect(prisma.notification.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user-1' },
+        take: 3,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      })
+    )
   })
 
   it('deletes a bounded body selection for the authenticated user', async () => {
     const { req, res } = createMocks({
-      method: 'DELETE', headers: { host: 'fleetflow.test' }, body: { notificationIds: ['n1', 'n2'] },
+      method: 'DELETE',
+      headers: { host: 'fleetflow.test' },
+      body: { notificationIds: ['n1', 'n2'] },
     })
 
     await handler(req as never, res as never)

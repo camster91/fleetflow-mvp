@@ -1,6 +1,6 @@
-import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import reactHooks from 'eslint-plugin-react-hooks';
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
+import tseslint from '@typescript-eslint/eslint-plugin'
+import reactHooks from 'eslint-plugin-react-hooks'
 
 const config = [
   ...nextCoreWebVitals,
@@ -36,6 +36,6 @@ const config = [
       'react/display-name': 'off',
     },
   },
-];
+]
 
-export default config;
+export default config

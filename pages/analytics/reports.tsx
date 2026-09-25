@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { PageHeader } from '../../components/PageHeader';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { Input } from '../../components/ui/Input';
-import { Modal } from '../../components/ui/Modal';
+import React, { useState } from 'react'
+import { DashboardLayout } from '../../components/layouts/DashboardLayout'
+import { PageHeader } from '../../components/PageHeader'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Badge } from '../../components/ui/Badge'
+import { Input } from '../../components/ui/Input'
+import { Modal } from '../../components/ui/Modal'
 import {
   FileText,
   Download,
@@ -20,28 +20,48 @@ import {
   Trash2,
   Edit,
   Play,
-} from 'lucide-react';
-import { notify, confirmAction } from '../../services/notifications';
-import { format } from 'date-fns';
+} from 'lucide-react'
+import { notify, confirmAction } from '../../services/notifications'
+import { format } from 'date-fns'
 
 interface Report {
-  id: string;
-  name: string;
-  type: 'fleet' | 'maintenance' | 'fuel' | 'driver' | 'custom';
-  schedule: 'once' | 'daily' | 'weekly' | 'monthly' | null;
-  lastRun: string | null;
-  nextRun: string | null;
-  format: 'pdf' | 'excel' | 'csv';
-  emailRecipients: string[];
+  id: string
+  name: string
+  type: 'fleet' | 'maintenance' | 'fuel' | 'driver' | 'custom'
+  schedule: 'once' | 'daily' | 'weekly' | 'monthly' | null
+  lastRun: string | null
+  nextRun: string | null
+  format: 'pdf' | 'excel' | 'csv'
+  emailRecipients: string[]
 }
 
 const reportTemplates = [
-  { id: 'fleet-summary', name: 'Fleet Summary Report', type: 'fleet', description: 'Overview of all vehicles and their status' },
-  { id: 'maintenance-log', name: 'Maintenance History', type: 'maintenance', description: 'Detailed maintenance records' },
-  { id: 'fuel-analysis', name: 'Fuel Consumption Analysis', type: 'fuel', description: 'Fuel efficiency and cost analysis' },
-  { id: 'driver-performance', name: 'Driver Performance Report', type: 'driver', description: 'Driver scores and incidents' },
+  {
+    id: 'fleet-summary',
+    name: 'Fleet Summary Report',
+    type: 'fleet',
+    description: 'Overview of all vehicles and their status',
+  },
+  {
+    id: 'maintenance-log',
+    name: 'Maintenance History',
+    type: 'maintenance',
+    description: 'Detailed maintenance records',
+  },
+  {
+    id: 'fuel-analysis',
+    name: 'Fuel Consumption Analysis',
+    type: 'fuel',
+    description: 'Fuel efficiency and cost analysis',
+  },
+  {
+    id: 'driver-performance',
+    name: 'Driver Performance Report',
+    type: 'driver',
+    description: 'Driver scores and incidents',
+  },
   { id: 'cost-breakdown', name: 'Cost Breakdown', type: 'fleet', description: 'Total cost of ownership analysis' },
-];
+]
 
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([
@@ -65,43 +85,45 @@ export default function ReportsPage() {
       format: 'excel',
       emailRecipients: [],
     },
-  ]);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  ])
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleDeleteReport = async (id: string) => {
-    const ok = await confirmAction('This report will be removed from your list.', 'Delete report');
-    if (!ok) return;
-    setReports(reports.filter(r => r.id !== id));
-    notify.success('Report deleted');
-  };
+    const ok = await confirmAction('This report will be removed from your list.', 'Delete report')
+    if (!ok) return
+    setReports(reports.filter((r) => r.id !== id))
+    notify.success('Report deleted')
+  }
 
   const handleRunReport = (report: Report) => {
-    notify.success(`Running ${report.name}...`);
+    notify.success(`Running ${report.name}...`)
     // Simulate report generation
     setTimeout(() => {
-      notify.success(`${report.name} generated successfully`);
-    }, 2000);
-  };
+      notify.success(`${report.name} generated successfully`)
+    }, 2000)
+  }
 
-  const filteredReports = reports.filter(r =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredReports = reports.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   const getScheduleLabel = (schedule: string | null) => {
-    if (!schedule) return 'On-demand';
-    return schedule.charAt(0).toUpperCase() + schedule.slice(1);
-  };
+    if (!schedule) return 'On-demand'
+    return schedule.charAt(0).toUpperCase() + schedule.slice(1)
+  }
 
   const getFormatIcon = (format: string) => {
     switch (format) {
-      case 'pdf': return <FilePdf className="h-4 w-4 text-red-500" />;
-      case 'excel': return <FileSpreadsheet className="h-4 w-4 text-emerald-500" />;
-      case 'csv': return <FileText className="h-4 w-4 text-blue-500" />;
-      default: return <FileText className="h-4 w-4" />;
+      case 'pdf':
+        return <FilePdf className="h-4 w-4 text-red-500" />
+      case 'excel':
+        return <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+      case 'csv':
+        return <FileText className="h-4 w-4 text-blue-500" />
+      default:
+        return <FileText className="h-4 w-4" />
     }
-  };
+  }
 
   return (
     <DashboardLayout
@@ -115,11 +137,7 @@ export default function ReportsPage() {
         title="Reports"
         subtitle="Generate and schedule custom reports"
         actions={
-          <Button
-            variant="primary"
-            disabled
-            iconLeft={<Plus className="h-4 w-4" />}
-          >
+          <Button variant="primary" disabled iconLeft={<Plus className="h-4 w-4" />}>
             Create Report
           </Button>
         }
@@ -206,17 +224,10 @@ export default function ReportsPage() {
       </div>
 
       {/* Create Report Modal */}
-      <Modal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        title="Create New Report"
-        size="lg"
-      >
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Report" size="lg">
         <div className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              Choose a Template
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-3">Choose a Template</label>
             <div className="space-y-3">
               {reportTemplates.map((template) => (
                 <button
@@ -224,23 +235,21 @@ export default function ReportsPage() {
                   onClick={() => setSelectedTemplate(template.id)}
                   className={`
                     w-full p-4 rounded-lg border text-left transition-all
-                    ${selectedTemplate === template.id
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    ${
+                      selectedTemplate === template.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`
+                    <div
+                      className={`
                       w-5 h-5 rounded-full border flex items-center justify-center
-                      ${selectedTemplate === template.id
-                        ? 'border-blue-500 bg-blue-500'
-                        : 'border-slate-300'
-                      }
-                    `}>
-                      {selectedTemplate === template.id && (
-                        <div className="w-2 h-2 bg-white rounded-full" />
-                      )}
+                      ${selectedTemplate === template.id ? 'border-blue-500 bg-blue-500' : 'border-slate-300'}
+                    `}
+                    >
+                      {selectedTemplate === template.id && <div className="w-2 h-2 bg-white rounded-full" />}
                     </div>
                     <div>
                       <h4 className="font-medium text-slate-900">{template.name}</h4>
@@ -260,8 +269,8 @@ export default function ReportsPage() {
               variant="primary"
               disabled={!selectedTemplate}
               onClick={() => {
-                notify.success('Report created successfully');
-                setIsCreateModalOpen(false);
+                notify.success('Report created successfully')
+                setIsCreateModalOpen(false)
               }}
             >
               Create Report
@@ -270,5 +279,5 @@ export default function ReportsPage() {
         </div>
       </Modal>
     </DashboardLayout>
-  );
+  )
 }

@@ -19,10 +19,13 @@ describe('durable public API quota', () => {
     )
     expect(results.filter((result) => result.allowed)).toHaveLength(100)
     expect(results[100]).toMatchObject({ allowed: false, count: 101, remaining: 0, retryAfter: 15 })
-    expect(client.apiRateLimit.upsert).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      where: { keyId_bucketStart: { keyId: 'key-1', bucketStart: new Date('2026-08-08T12:34:00.000Z') } },
-      create: { keyId: 'key-1', bucketStart: new Date('2026-08-08T12:34:00.000Z'), count: 1 },
-    }))
+    expect(client.apiRateLimit.upsert).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { keyId_bucketStart: { keyId: 'key-1', bucketStart: new Date('2026-08-08T12:34:00.000Z') } },
+        create: { keyId: 'key-1', bucketStart: new Date('2026-08-08T12:34:00.000Z'), count: 1 },
+      })
+    )
   })
 
   it('normalizes all timestamps in a minute to the same UTC bucket', () => {

@@ -42,14 +42,18 @@ describe('POST /api/stripe/checkout-session', () => {
     jest.clearAllMocks()
     ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'owner-1' } })
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([])
-    ;(prisma.$transaction as jest.Mock).mockImplementation(async callback => callback(prisma))
+    ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(prisma))
     ;(prisma.$queryRaw as jest.Mock).mockResolvedValue([{ acquired: 1 }])
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'owner-1', email: 'owner@example.com', name: 'Owner',
+      id: 'owner-1',
+      email: 'owner@example.com',
+      name: 'Owner',
       subscription: { stripeCustomerId: 'cus_1', stripeSubscriptionId: null, status: 'TRIAL' },
     })
     stripe.getBillingAvailability.mockReturnValue({ available: true, missing: [] })
-    stripe.getConfiguredPrice.mockImplementation((interval: string) => interval === 'yearly' ? 'price_yearly' : 'price_monthly')
+    stripe.getConfiguredPrice.mockImplementation((interval: string) =>
+      interval === 'yearly' ? 'price_yearly' : 'price_monthly'
+    )
     stripe.getCanonicalAppUrl.mockReturnValue('https://fleetvera.example')
     stripe.findOpenCheckoutSessions.mockResolvedValue([])
     stripe.createCheckoutSession.mockResolvedValue({ id: 'cs_1', url: 'https://checkout.stripe.test/session' })
@@ -62,27 +66,35 @@ describe('POST /api/stripe/checkout-session', () => {
     expect(res._getStatusCode()).toBe(200)
     expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 5000, timeout: 30000 })
     expect(prisma.$queryRaw).toHaveBeenCalled()
-    expect(stripe.createCheckoutSession).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 'owner-1',
-      successUrl: 'https://fleetvera.example/dashboard?subscribed=true',
-      cancelUrl: 'https://fleetvera.example/billing',
-      idempotencyKey: expect.stringMatching(/^fleetvera-checkout-owner-1-/),
-    }))
+    expect(stripe.createCheckoutSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'owner-1',
+        successUrl: 'https://fleetvera.example/dashboard?subscribed=true',
+        cancelUrl: 'https://fleetvera.example/billing',
+        idempotencyKey: expect.stringMatching(/^fleetvera-checkout-owner-1-/),
+      })
+    )
     expect(res.getHeader('Cache-Control')).toBe('private, no-store')
   })
 
   it('creates a missing Stripe customer with a deterministic idempotency key', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'owner-1', email: 'owner@example.com', name: 'Owner', subscription: null,
+      id: 'owner-1',
+      email: 'owner@example.com',
+      name: 'Owner',
+      subscription: null,
     })
     stripe.createStripeCustomer.mockResolvedValue({ id: 'cus_new' })
     const { req, res } = request()
     await handler(req, res)
 
     expect(res._getStatusCode()).toBe(200)
-    expect(stripe.createStripeCustomer).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 'owner-1', idempotencyKey: 'fleetvera-customer-owner-1',
-    }))
+    expect(stripe.createStripeCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'owner-1',
+        idempotencyKey: 'fleetvera-customer-owner-1',
+      })
+    )
     expect(prisma.subscription.upsert).toHaveBeenCalled()
   })
 
@@ -112,7 +124,8 @@ describe('POST /api/stripe/checkout-session', () => {
 
   it('rejects a second non-cancelled subscription', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'owner-1', email: 'owner@example.com',
+      id: 'owner-1',
+      email: 'owner@example.com',
       subscription: { stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1', status: 'ACTIVE' },
     })
     const { req, res } = request()
@@ -181,7 +194,11 @@ describe('GET /api/stripe/availability', () => {
   })
 
   it('does not expose missing keys or secrets', () => {
-    stripe.getBillingAvailability.mockReturnValue({ available: false, missing: ['STRIPE_SECRET_KEY'], secret: 'sk_test_secret' })
+    stripe.getBillingAvailability.mockReturnValue({
+      available: false,
+      missing: ['STRIPE_SECRET_KEY'],
+      secret: 'sk_test_secret',
+    })
     const { req, res } = createMocks<NextApiRequest, NextApiResponse>({ method: 'GET' })
     availabilityHandler(req, res)
     expect(res._getStatusCode()).toBe(200)

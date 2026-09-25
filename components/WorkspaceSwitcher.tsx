@@ -17,14 +17,16 @@ export function WorkspaceSwitcher() {
   useEffect(() => {
     let active = true
     fetch('/api/team/workspaces')
-      .then(async (response) => response.ok ? response.json() : null)
+      .then(async (response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (!active || !data) return
         setWorkspaces(data.workspaces || [])
         setActiveTeamId(data.activeTeamId || (data.workspaces?.length === 1 ? data.workspaces[0].id : ''))
       })
       .finally(() => active && setLoading(false))
-    return () => { active = false }
+    return () => {
+      active = false
+    }
   }, [])
 
   const selectWorkspace = async (teamId: string) => {

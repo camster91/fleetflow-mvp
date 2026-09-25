@@ -13,5 +13,7 @@ export function safeFindingActionUrl(value: unknown): string | null {
     const keys = [...parsed.searchParams.keys()]
     const record = parsed.searchParams.get('record')
     return keys.length === 1 && keys[0] === 'record' && record && record.length <= 128 ? value : null
-  } catch { return null }
+  } catch {
+    return null
+  }
 }

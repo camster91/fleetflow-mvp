@@ -6,7 +6,10 @@ jest.mock('@/lib/prisma', () => {
   return {
     prisma: {
       team: { findMany: jest.fn() },
-      vehicle: model(), delivery: model(), maintenanceTask: model(), client: model(),
+      vehicle: model(),
+      delivery: model(),
+      maintenanceTask: model(),
+      client: model(),
     },
   }
 })
@@ -19,7 +22,9 @@ import { getServerSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 type Model = { findMany: jest.Mock; count: jest.Mock; aggregate: jest.Mock }
-const db = prisma as unknown as Record<'vehicle' | 'delivery' | 'maintenanceTask' | 'client', Model> & { team: { findMany: jest.Mock } }
+const db = prisma as unknown as Record<'vehicle' | 'delivery' | 'maintenanceTask' | 'client', Model> & {
+  team: { findMany: jest.Mock }
+}
 
 const TEAM = { teamId: 'team-1' }
 
@@ -31,13 +36,33 @@ function signIn(role: string, userId = 'user-1') {
 async function get(handler: (req: never, res: never) => unknown, query: Record<string, string | string[]> = {}) {
   const { req, res } = createMocks({ method: 'GET', query })
   await handler(req as never, res as never)
-  return { status: res._getStatusCode(), body: res._getStatusCode() === 200 || res._getStatusCode() === 400 ? res._getJSONData() : null }
+  return {
+    status: res._getStatusCode(),
+    body: res._getStatusCode() === 200 || res._getStatusCode() === 400 ? res._getJSONData() : null,
+  }
 }
 
 const vehicleRow = (id: string) => ({
-  id, name: `Van ${id}`, status: 'active', driver: 'Pat', assignedDriverId: 'driver-1', location: 'Depot', eta: '',
-  mileage: 10, maintenanceDue: false, vehicleType: null, licensePlate: null, fuelLevel: 80, nextService: null,
-  lastService: null, year: null, ownerId: 'owner-1', teamId: 'team-1', createdAt: new Date(), updatedAt: new Date(), lastUpdated: new Date(),
+  id,
+  name: `Van ${id}`,
+  status: 'active',
+  driver: 'Pat',
+  assignedDriverId: 'driver-1',
+  location: 'Depot',
+  eta: '',
+  mileage: 10,
+  maintenanceDue: false,
+  vehicleType: null,
+  licensePlate: null,
+  fuelLevel: 80,
+  nextService: null,
+  lastService: null,
+  year: null,
+  ownerId: 'owner-1',
+  teamId: 'team-1',
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  lastUpdated: new Date(),
 })
 
 beforeEach(() => {
@@ -60,7 +85,12 @@ describe('GET list routes: search, filters, sort and pagination', () => {
     expect(status).toBe(200)
     expect(Object.keys(body).sort()).toEqual(['data', 'hasMore', 'limit', 'page', 'total'])
     expect(body).toMatchObject({ total: 1, page: 1, limit: 50, hasMore: false })
-    expect(db.vehicle.findMany).toHaveBeenCalledWith({ where: TEAM, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], skip: 0, take: 50 })
+    expect(db.vehicle.findMany).toHaveBeenCalledWith({
+      where: TEAM,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      skip: 0,
+      take: 50,
+    })
     expect(db.vehicle.count).toHaveBeenCalledWith({ where: TEAM })
   })
 
@@ -106,23 +136,34 @@ describe('GET list routes: search, filters, sort and pagination', () => {
     const { status, body } = await get(handler, query as Record<string, string>)
     expect(status).toBe(400)
     expect(body).toEqual({ error: message })
-    for (const model of [db.vehicle, db.delivery, db.maintenanceTask, db.client]) expect(model.findMany).not.toHaveBeenCalled()
+    for (const model of [db.vehicle, db.delivery, db.maintenanceTask, db.client])
+      expect(model.findMany).not.toHaveBeenCalled()
   })
 
   it('treats "all" as no filter', async () => {
     signIn('MANAGER')
     await get(clientsHandler, { type: 'all' })
-    expect(db.client.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: TEAM, orderBy: [{ name: 'asc' }, { id: 'asc' }] }))
+    expect(db.client.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: TEAM, orderBy: [{ name: 'asc' }, { id: 'asc' }] })
+    )
   })
 
   it('filters maintenance by state relative to the caller day and by due range', async () => {
     signIn('MANAGER')
-    await get(maintenanceHandler, { state: 'overdue', today: '2026-09-20', dueFrom: '2026-09-01', dueTo: '2026-09-30', q: 'brake' })
+    await get(maintenanceHandler, {
+      state: 'overdue',
+      today: '2026-09-20',
+      dueFrom: '2026-09-01',
+      dueTo: '2026-09-30',
+      q: 'brake',
+    })
     const { where, include } = db.maintenanceTask.findMany.mock.calls[0][0]
     expect(include).toEqual({ vehicle: { select: { name: true } } })
     expect(where.AND[0]).toEqual(TEAM)
     expect(where.AND).toContainEqual({ completed: false, dueDate: { lt: new Date('2026-09-20T00:00:00Z') } })
-    expect(where.AND).toContainEqual({ dueDate: { gte: new Date('2026-09-01T00:00:00Z'), lt: new Date('2026-10-01T00:00:00Z') } })
+    expect(where.AND).toContainEqual({
+      dueDate: { gte: new Date('2026-09-01T00:00:00Z'), lt: new Date('2026-10-01T00:00:00Z') },
+    })
   })
 })
 
@@ -186,7 +227,9 @@ describe('GET list routes: summary', () => {
 
   it('returns per-status delivery counts', async () => {
     signIn('DISPATCHER')
-    db.delivery.count.mockImplementation(({ where }) => Promise.resolve(where.AND ? (where.AND[1].status === 'pending' ? 4 : 1) : 9))
+    db.delivery.count.mockImplementation(({ where }) =>
+      Promise.resolve(where.AND ? (where.AND[1].status === 'pending' ? 4 : 1) : 9)
+    )
     const { body } = await get(deliveriesHandler, { summary: '1' })
     expect(body.summary).toEqual({ total: 9, byStatus: { pending: 4, 'in-transit': 1, delivered: 1, cancelled: 1 } })
   })
@@ -195,8 +238,12 @@ describe('GET list routes: summary', () => {
     signIn('TECHNICIAN')
     await get(maintenanceHandler, { summary: '1', today: '2026-09-20' })
     const today = new Date('2026-09-20T00:00:00Z')
-    expect(db.maintenanceTask.count).toHaveBeenCalledWith({ where: { AND: [TEAM, { completed: false, dueDate: { lt: today } }] } })
-    expect(db.maintenanceTask.count).toHaveBeenCalledWith({ where: { AND: [TEAM, { completed: false, dueDate: { gte: today, lt: new Date('2026-09-28T00:00:00Z') } }] } })
+    expect(db.maintenanceTask.count).toHaveBeenCalledWith({
+      where: { AND: [TEAM, { completed: false, dueDate: { lt: today } }] },
+    })
+    expect(db.maintenanceTask.count).toHaveBeenCalledWith({
+      where: { AND: [TEAM, { completed: false, dueDate: { gte: today, lt: new Date('2026-09-28T00:00:00Z') } }] },
+    })
   })
 
   it('returns client stat counts', async () => {

@@ -40,7 +40,14 @@ export interface IdempotentRequest {
   replayOnConflict(error: unknown): Promise<null>
 }
 
-type StoredKey = { userId: string; route: string; requestHash: string; statusCode: number; responseBody: Prisma.JsonValue; expiresAt: Date }
+type StoredKey = {
+  userId: string
+  route: string
+  requestHash: string
+  statusCode: number
+  responseBody: Prisma.JsonValue
+  expiresAt: Date
+}
 
 export function idempotencyScopeKey(tenant: { ownerId: string; teamId: string | null }): string {
   return tenant.teamId ? `team:${tenant.teamId}` : `owner:${tenant.ownerId}`
@@ -51,16 +58,19 @@ export function canonicalJson(value: unknown): string {
   if (value === undefined) return 'null'
   if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null'
   if (value instanceof Date) return JSON.stringify(value.toISOString())
-  if (Array.isArray(value)) return `[${value.map(item => (item === undefined ? 'null' : canonicalJson(item))).join(',')}]`
+  if (Array.isArray(value))
+    return `[${value.map((item) => (item === undefined ? 'null' : canonicalJson(item))).join(',')}]`
   const entries = Object.keys(value as Record<string, unknown>)
-    .filter(key => (value as Record<string, unknown>)[key] !== undefined)
+    .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
     .sort()
-    .map(key => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`)
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`)
   return `{${entries.join(',')}}`
 }
 
 export function idempotencyRequestHash(body: unknown): string {
-  return createHash('sha256').update(canonicalJson(body ?? null)).digest('hex')
+  return createHash('sha256')
+    .update(canonicalJson(body ?? null))
+    .digest('hex')
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -70,14 +80,20 @@ function isUniqueViolation(error: unknown): boolean {
 const noop: IdempotentRequest = {
   proceed: true,
   store: async () => undefined,
-  replayOnConflict: async (error: unknown) => { throw error },
+  replayOnConflict: async (error: unknown) => {
+    throw error
+  },
 }
 
 /**
  * Reads and validates the `Idempotency-Key` header, replaying a stored response
  * when one exists. Call after authentication and permission checks.
  */
-export async function beginIdempotentRequest(req: NextApiRequest, res: NextApiResponse, options: IdempotencyScope): Promise<IdempotentRequest> {
+export async function beginIdempotentRequest(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  options: IdempotencyScope
+): Promise<IdempotentRequest> {
   const raw = req.headers[IDEMPOTENCY_HEADER]
   if (raw === undefined) return noop
   const key = Array.isArray(raw) ? (raw.length === 1 ? raw[0] : '') : raw

@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { useSession } from '@/lib/session';
-import { useRouter } from 'next/router';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { PageHeader } from '../../components/PageHeader';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
-import { Input } from '../../components/ui/Input';
-import { RoleBadge } from '../../components/team/RoleBadge';
-import { TeamRole, InvitationStatus } from '../../types';
+import React, { useState, useEffect } from 'react'
+import { useSession } from '@/lib/session'
+import { useRouter } from 'next/router'
+import { DashboardLayout } from '../../components/layouts/DashboardLayout'
+import { PageHeader } from '../../components/PageHeader'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Badge } from '../../components/ui/Badge'
+import { Input } from '../../components/ui/Input'
+import { RoleBadge } from '../../components/team/RoleBadge'
+import { TeamRole, InvitationStatus } from '../../types'
 import {
   Users,
   Plus,
@@ -20,89 +20,109 @@ import {
   RefreshCw,
   Shield,
   ChevronDown,
-} from 'lucide-react';
-import { notify, confirmAction } from '../../services/notifications';
-import { canManageTeam, canViewTeam, getAssignableRoles, getRoleDisplayName } from '../../lib/permissions';
-import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+} from 'lucide-react'
+import { notify, confirmAction } from '../../services/notifications'
+import { canManageTeam, canViewTeam, getAssignableRoles, getRoleDisplayName } from '../../lib/permissions'
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole'
 
 interface TeamMember {
-  id: string;
-  role: TeamRole;
-  status: InvitationStatus;
-  invitedAt: string;
-  joinedAt: string | null;
+  id: string
+  role: TeamRole
+  status: InvitationStatus
+  invitedAt: string
+  joinedAt: string | null
   user: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-  } | null;
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+  } | null
   invitedByUser: {
-    name: string | null;
-    email: string;
-  } | null;
-  isSelf?: boolean;
-  isOwner?: boolean;
+    name: string | null
+    email: string
+  } | null
+  isSelf?: boolean
+  isOwner?: boolean
 }
 
 export default function TeamPage() {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<InvitationStatus | 'all'>('all');
-  const [listForbidden, setListForbidden] = useState(false);
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState<InvitationStatus | 'all'>('all')
+  const [listForbidden, setListForbidden] = useState(false)
 
   // Controls follow the caller's real role in the active workspace; the APIs
   // enforce the same rules. Nothing is offered until the role is known.
-  const { role: currentUserRole, loading: roleLoading } = useWorkspaceRole();
-  const canManage = currentUserRole !== null && canManageTeam(currentUserRole);
-  const assignableRoles = currentUserRole ? getAssignableRoles(currentUserRole) : [];
+  const { role: currentUserRole, loading: roleLoading } = useWorkspaceRole()
+  const canManage = currentUserRole !== null && canManageTeam(currentUserRole)
+  const assignableRoles = currentUserRole ? getAssignableRoles(currentUserRole) : []
   // Ownership needs a dedicated transfer, and admins are peers: only the owner
   // may change or remove an admin.
   const canEditMember = (member: TeamMember) =>
-    canManage && member.role !== 'OWNER' && !member.isOwner && (currentUserRole === 'OWNER' || member.role !== 'ADMIN');
+    canManage && member.role !== 'OWNER' && !member.isOwner && (currentUserRole === 'OWNER' || member.role !== 'ADMIN')
   const roleOptions = (member: TeamMember) =>
-    assignableRoles.includes(member.role) ? assignableRoles : [member.role, ...assignableRoles];
+    assignableRoles.includes(member.role) ? assignableRoles : [member.role, ...assignableRoles]
 
   useEffect(() => {
-    if (roleLoading) return;
+    if (roleLoading) return
     // Roles without team visibility are not sent the member list at all.
-    if (currentUserRole && !canViewTeam(currentUserRole)) { setListForbidden(true); setIsLoading(false); return; }
-    fetchMembers();
-  }, [roleLoading, currentUserRole]);
+    if (currentUserRole && !canViewTeam(currentUserRole)) {
+      setListForbidden(true)
+      setIsLoading(false)
+      return
+    }
+    fetchMembers()
+  }, [roleLoading, currentUserRole])
 
   const fetchMembers = async () => {
     try {
-      const r = await fetch('/api/team');
-      if (r.ok) setMembers(await r.json());
-      else if (r.status === 403) setListForbidden(true);
-      else notify.error('Failed to load team members');
-    } catch { notify.error('Failed to load team members'); }
-    finally { setIsLoading(false); }
-  };
+      const r = await fetch('/api/team')
+      if (r.ok) setMembers(await r.json())
+      else if (r.status === 403) setListForbidden(true)
+      else notify.error('Failed to load team members')
+    } catch {
+      notify.error('Failed to load team members')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleChangeRole = async (memberId: string, newRole: TeamRole) => {
     try {
-      const r = await fetch('/api/team', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberId, role: newRole }) });
-      if (r.ok) { setMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m)); notify.success('Role updated'); }
-      else notify.error('Failed to update role');
-    } catch { notify.error('Failed to update role'); }
-  };
+      const r = await fetch('/api/team', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId, role: newRole }),
+      })
+      if (r.ok) {
+        setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m)))
+        notify.success('Role updated')
+      } else notify.error('Failed to update role')
+    } catch {
+      notify.error('Failed to update role')
+    }
+  }
 
   const handleRemoveMember = async (memberId: string) => {
-    const ok = await confirmAction(
-      'This person will lose access to the team workspace.',
-      'Remove team member'
-    );
-    if (!ok) return;
+    const ok = await confirmAction('This person will lose access to the team workspace.', 'Remove team member')
+    if (!ok) return
     try {
-      const r = await fetch('/api/team', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ memberId }) });
-      if (r.ok) { setMembers(prev => prev.filter(m => m.id !== memberId)); notify.success('Member removed'); }
-      else notify.error('Failed to remove member');
-    } catch { notify.error('Failed to remove member'); }
-  };
+      const r = await fetch('/api/team', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      })
+      if (r.ok) {
+        setMembers((prev) => prev.filter((m) => m.id !== memberId))
+        notify.success('Member removed')
+      } else notify.error('Failed to remove member')
+    } catch {
+      notify.error('Failed to remove member')
+    }
+  }
 
   const handleResendInvite = async (memberId: string) => {
     try {
@@ -110,245 +130,384 @@ export default function TeamPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ memberId }),
-      });
+      })
       if (r.ok) {
-        notify.success('Invitation resent successfully');
+        notify.success('Invitation resent successfully')
       } else {
-        const d = await r.json();
-        notify.error(d.error || 'Failed to resend invitation');
+        const d = await r.json()
+        notify.error(d.error || 'Failed to resend invitation')
       }
     } catch {
-      notify.error('Failed to resend invitation');
+      notify.error('Failed to resend invitation')
     }
-  };
+  }
 
-  const filteredMembers = members.filter(member => {
-    const matchesSearch = !searchQuery ||
+  const filteredMembers = members.filter((member) => {
+    const matchesSearch =
+      !searchQuery ||
       member.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.user?.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || member.status === filterStatus;
-    return matchesSearch && matchesStatus;
-  });
+      member.user?.email.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesStatus = filterStatus === 'all' || member.status === filterStatus
+    return matchesSearch && matchesStatus
+  })
 
   const statusCounts = {
     all: members.length,
-    ACCEPTED: members.filter(m => m.status === 'ACCEPTED').length,
-    PENDING: members.filter(m => m.status === 'PENDING').length,
-  };
+    ACCEPTED: members.filter((m) => m.status === 'ACCEPTED').length,
+    PENDING: members.filter((m) => m.status === 'PENDING').length,
+  }
 
   return (
-    <DashboardLayout
-      breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Team' }]}
-    >
+    <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Team' }]}>
       <PageHeader
         title="Team Management"
         subtitle="Manage your team members and their permissions"
-        actions={canManage && (
-          <Button variant="primary" onClick={() => router.push('/team/invite')} iconLeft={<Plus className="h-4 w-4" />}>
-            Invite Member
-          </Button>
-        )}
+        actions={
+          canManage && (
+            <Button
+              variant="primary"
+              onClick={() => router.push('/team/invite')}
+              iconLeft={<Plus className="h-4 w-4" />}
+            >
+              Invite Member
+            </Button>
+          )
+        }
       />
 
       {listForbidden ? (
         <Card>
           <div role="status" className="flex items-start gap-4">
-            <div className="p-3 bg-slate-100 rounded-lg"><Shield className="h-6 w-6 text-slate-600" /></div>
+            <div className="p-3 bg-slate-100 rounded-lg">
+              <Shield className="h-6 w-6 text-slate-600" />
+            </div>
             <div>
               <h2 className="text-base font-semibold text-slate-900">Team list not available for your role</h2>
               <p className="text-sm text-slate-600 mt-1">
-                {currentUserRole ? `As a ${getRoleDisplayName(currentUserRole)}, you` : 'You'} can’t view team members or their contact details. Ask a workspace owner or admin if you need changes to the team.
+                {currentUserRole ? `As a ${getRoleDisplayName(currentUserRole)}, you` : 'You'} can’t view team members
+                or their contact details. Ask a workspace owner or admin if you need changes to the team.
               </p>
             </div>
           </div>
         </Card>
-      ) : (<>
-      {/* Stats — horizontal scroll on mobile */}
-      <div className="mb-6">
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
-          {[
-            { title: 'Total Members', value: statusCounts.all, icon: <Users className="h-5 w-5 text-blue-600" />, bg: 'bg-blue-50' },
-            { title: 'Active', value: statusCounts.ACCEPTED, icon: <UserCheck className="h-5 w-5 text-emerald-600" />, bg: 'bg-emerald-50' },
-            { title: 'Pending', value: statusCounts.PENDING, icon: <Mail className="h-5 w-5 text-amber-600" />, bg: 'bg-amber-50' },
-          ].map(s => (
-            <div key={s.title} className="snap-start shrink-0 w-36 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-              <div className={`inline-flex p-2 rounded-lg ${s.bg} mb-2`}>{s.icon}</div>
-              <p className="text-xl font-bold text-slate-900">{s.value}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{s.title}</p>
-            </div>
-          ))}
-        </div>
-        <div className="hidden sm:grid sm:grid-cols-3 gap-4">
-          {[
-            { title: 'Total Members', value: statusCounts.all, icon: <Users className="h-6 w-6 text-blue-600" />, bg: 'bg-blue-50' },
-            { title: 'Active Members', value: statusCounts.ACCEPTED, icon: <UserCheck className="h-6 w-6 text-emerald-600" />, bg: 'bg-emerald-50' },
-            { title: 'Pending Invites', value: statusCounts.PENDING, icon: <Mail className="h-6 w-6 text-amber-600" />, bg: 'bg-amber-50' },
-          ].map(s => (
-            <Card key={s.title}>
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-lg ${s.bg}`}>{s.icon}</div>
-                <div><p className="text-2xl font-bold text-slate-900">{s.value}</p><p className="text-sm text-slate-500">{s.title}</p></div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <Card className="mb-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input placeholder="Search members..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10" />
-          </div>
-          <div className="flex gap-2 overflow-x-auto">
-            {(['all', 'ACCEPTED', 'PENDING'] as const).map(s => (
-              <Button key={s} variant={filterStatus === s ? 'primary' : 'ghost'} size="sm" onClick={() => setFilterStatus(s)}>
-                {s === 'all' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
-                <span className="ml-1 opacity-60">({statusCounts[s]})</span>
-              </Button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Members list */}
-      <Card>
-        {isLoading ? (
-          <div className="py-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" /></div>
-        ) : filteredMembers.length === 0 ? (
-          <div className="py-12 text-center">
-            <Users className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-900">No members found</h3>
-            <p className="text-slate-500">{searchQuery ? 'Try adjusting your search' : 'Invite your first team member'}</p>
-          </div>
-        ) : (
-          <>
-            {/* Mobile card list */}
-            <div className="md:hidden space-y-3">
-              {filteredMembers.map(member => (
-                <div key={member.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-200">
-                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                    <span className="text-sm font-medium text-blue-600">
-                      {member.user?.name?.charAt(0) || member.user?.email.charAt(0) || '?'}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{member.user?.name || 'Pending'}</p>
-                        <p className="text-xs text-slate-500 truncate">{member.user?.email || 'No email'}</p>
-                      </div>
-                      <Badge variant={member.status === 'ACCEPTED' ? 'success' : member.status === 'PENDING' ? 'warning' : 'default'} className="shrink-0 text-xs">
-                        {member.status}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex items-center flex-wrap gap-2">
-                      {canEditMember(member) ? (
-                        <div className="relative inline-block">
-                          <select aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`} value={member.role} onChange={e => handleChangeRole(member.id, e.target.value as TeamRole)} className="appearance-none bg-slate-100 pr-6 pl-2 py-1 text-xs font-medium text-slate-700 rounded cursor-pointer">
-                            {roleOptions(member).map(option => <option key={option} value={option}>{getRoleDisplayName(option)}</option>)}
-                          </select>
-                          <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400 pointer-events-none" />
-                        </div>
-                      ) : <RoleBadge role={member.role} />}
-                      <span className="text-xs text-slate-400">
-                        {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'Invited ' + new Date(member.invitedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                  {canManage && (
-                    <div className="flex flex-col gap-1 shrink-0">
-                      {member.status === 'PENDING' && (
-                        <button onClick={() => handleResendInvite(member.id)} className="p-2 min-h-[36px] border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50" title="Resend">
-                          <RefreshCw className="h-4 w-4" />
-                        </button>
-                      )}
-                      {canEditMember(member) && (
-                        <button onClick={() => handleRemoveMember(member.id)} className="p-2 min-h-[36px] border border-red-200 text-red-600 rounded-lg hover:bg-red-50" title="Remove">
-                          <UserX className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
-                  )}
+      ) : (
+        <>
+          {/* Stats — horizontal scroll on mobile */}
+          <div className="mb-6">
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
+              {[
+                {
+                  title: 'Total Members',
+                  value: statusCounts.all,
+                  icon: <Users className="h-5 w-5 text-blue-600" />,
+                  bg: 'bg-blue-50',
+                },
+                {
+                  title: 'Active',
+                  value: statusCounts.ACCEPTED,
+                  icon: <UserCheck className="h-5 w-5 text-emerald-600" />,
+                  bg: 'bg-emerald-50',
+                },
+                {
+                  title: 'Pending',
+                  value: statusCounts.PENDING,
+                  icon: <Mail className="h-5 w-5 text-amber-600" />,
+                  bg: 'bg-amber-50',
+                },
+              ].map((s) => (
+                <div
+                  key={s.title}
+                  className="snap-start shrink-0 w-36 bg-white rounded-xl shadow-sm border border-slate-100 p-4"
+                >
+                  <div className={`inline-flex p-2 rounded-lg ${s.bg} mb-2`}>{s.icon}</div>
+                  <p className="text-xl font-bold text-slate-900">{s.value}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{s.title}</p>
                 </div>
               ))}
             </div>
-
-            {/* Desktop table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Member</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Role</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Status</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Joined</th>
-                    {canManage && <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map(member => (
-                    <tr key={member.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-sm font-medium text-blue-600">{member.user?.name?.charAt(0) || member.user?.email.charAt(0) || '?'}</span>
-                          </div>
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-slate-900">{member.user?.name || 'Pending'}</p>
-                            <p className="text-sm text-slate-500">{member.user?.email || 'No email'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        {canEditMember(member) ? (
-                          <div className="relative inline-block">
-                            <select aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`} value={member.role} onChange={e => handleChangeRole(member.id, e.target.value as TeamRole)} className="appearance-none bg-transparent pr-8 py-1 text-sm font-medium text-slate-700 cursor-pointer">
-                              {roleOptions(member).map(option => <option key={option} value={option}>{getRoleDisplayName(option)}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-                          </div>
-                        ) : <RoleBadge role={member.role} />}
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge variant={member.status === 'ACCEPTED' ? 'success' : member.status === 'PENDING' ? 'warning' : 'default'}>{member.status}</Badge>
-                      </td>
-                      <td className="py-4 px-4">
-                        <p className="text-sm text-slate-600">{member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'Not joined'}</p>
-                        {member.status === 'PENDING' && <p className="text-xs text-slate-500">Invited {new Date(member.invitedAt).toLocaleDateString()}</p>}
-                      </td>
-                      {canManage && (
-                        <td className="py-4 px-4">
-                          <div className="flex items-center justify-end gap-2">
-                            {member.status === 'PENDING' && (
-                              <button onClick={() => handleResendInvite(member.id)} className="p-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50" title="Resend invitation"><RefreshCw className="h-4 w-4" /></button>
-                            )}
-                            {canEditMember(member) && (
-                              <button onClick={() => handleRemoveMember(member.id)} className="p-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50" title="Remove member"><UserX className="h-4 w-4" /></button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="hidden sm:grid sm:grid-cols-3 gap-4">
+              {[
+                {
+                  title: 'Total Members',
+                  value: statusCounts.all,
+                  icon: <Users className="h-6 w-6 text-blue-600" />,
+                  bg: 'bg-blue-50',
+                },
+                {
+                  title: 'Active Members',
+                  value: statusCounts.ACCEPTED,
+                  icon: <UserCheck className="h-6 w-6 text-emerald-600" />,
+                  bg: 'bg-emerald-50',
+                },
+                {
+                  title: 'Pending Invites',
+                  value: statusCounts.PENDING,
+                  icon: <Mail className="h-6 w-6 text-amber-600" />,
+                  bg: 'bg-amber-50',
+                },
+              ].map((s) => (
+                <Card key={s.title}>
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg ${s.bg}`}>{s.icon}</div>
+                    <div>
+                      <p className="text-2xl font-bold text-slate-900">{s.value}</p>
+                      <p className="text-sm text-slate-500">{s.title}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
             </div>
-          </>
-        )}
-      </Card>
+          </div>
 
-      </>)}
+          {/* Filters */}
+          <Card className="mb-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search members..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2 overflow-x-auto">
+                {(['all', 'ACCEPTED', 'PENDING'] as const).map((s) => (
+                  <Button
+                    key={s}
+                    variant={filterStatus === s ? 'primary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilterStatus(s)}
+                  >
+                    {s === 'all' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
+                    <span className="ml-1 opacity-60">({statusCounts[s]})</span>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Members list */}
+          <Card>
+            {isLoading ? (
+              <div className="py-12 flex justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              </div>
+            ) : filteredMembers.length === 0 ? (
+              <div className="py-12 text-center">
+                <Users className="h-12 w-12 mx-auto text-slate-300 mb-4" />
+                <h3 className="text-lg font-medium text-slate-900">No members found</h3>
+                <p className="text-slate-500">
+                  {searchQuery ? 'Try adjusting your search' : 'Invite your first team member'}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Mobile card list */}
+                <div className="md:hidden space-y-3">
+                  {filteredMembers.map((member) => (
+                    <div key={member.id} className="flex items-start gap-3 p-3 rounded-lg border border-slate-200">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                        <span className="text-sm font-medium text-blue-600">
+                          {member.user?.name?.charAt(0) || member.user?.email.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {member.user?.name || 'Pending'}
+                            </p>
+                            <p className="text-xs text-slate-500 truncate">{member.user?.email || 'No email'}</p>
+                          </div>
+                          <Badge
+                            variant={
+                              member.status === 'ACCEPTED'
+                                ? 'success'
+                                : member.status === 'PENDING'
+                                  ? 'warning'
+                                  : 'default'
+                            }
+                            className="shrink-0 text-xs"
+                          >
+                            {member.status}
+                          </Badge>
+                        </div>
+                        <div className="mt-2 flex items-center flex-wrap gap-2">
+                          {canEditMember(member) ? (
+                            <div className="relative inline-block">
+                              <select
+                                aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`}
+                                value={member.role}
+                                onChange={(e) => handleChangeRole(member.id, e.target.value as TeamRole)}
+                                className="appearance-none bg-slate-100 pr-6 pl-2 py-1 text-xs font-medium text-slate-700 rounded cursor-pointer"
+                              >
+                                {roleOptions(member).map((option) => (
+                                  <option key={option} value={option}>
+                                    {getRoleDisplayName(option)}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400 pointer-events-none" />
+                            </div>
+                          ) : (
+                            <RoleBadge role={member.role} />
+                          )}
+                          <span className="text-xs text-slate-400">
+                            {member.joinedAt
+                              ? new Date(member.joinedAt).toLocaleDateString()
+                              : 'Invited ' + new Date(member.invitedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                      {canManage && (
+                        <div className="flex flex-col gap-1 shrink-0">
+                          {member.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleResendInvite(member.id)}
+                              className="p-2 min-h-[36px] border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
+                              title="Resend"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </button>
+                          )}
+                          {canEditMember(member) && (
+                            <button
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="p-2 min-h-[36px] border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                              title="Remove"
+                            >
+                              <UserX className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Member</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Role</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-600">Joined</th>
+                        {canManage && (
+                          <th className="text-right py-3 px-4 text-sm font-medium text-slate-600">Actions</th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map((member) => (
+                        <tr key={member.id} className="border-b border-slate-100 hover:bg-slate-50">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center">
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <span className="text-sm font-medium text-blue-600">
+                                  {member.user?.name?.charAt(0) || member.user?.email.charAt(0) || '?'}
+                                </span>
+                              </div>
+                              <div className="ml-3">
+                                <p className="text-sm font-medium text-slate-900">{member.user?.name || 'Pending'}</p>
+                                <p className="text-sm text-slate-500">{member.user?.email || 'No email'}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            {canEditMember(member) ? (
+                              <div className="relative inline-block">
+                                <select
+                                  aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`}
+                                  value={member.role}
+                                  onChange={(e) => handleChangeRole(member.id, e.target.value as TeamRole)}
+                                  className="appearance-none bg-transparent pr-8 py-1 text-sm font-medium text-slate-700 cursor-pointer"
+                                >
+                                  {roleOptions(member).map((option) => (
+                                    <option key={option} value={option}>
+                                      {getRoleDisplayName(option)}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                              </div>
+                            ) : (
+                              <RoleBadge role={member.role} />
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge
+                              variant={
+                                member.status === 'ACCEPTED'
+                                  ? 'success'
+                                  : member.status === 'PENDING'
+                                    ? 'warning'
+                                    : 'default'
+                              }
+                            >
+                              {member.status}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4">
+                            <p className="text-sm text-slate-600">
+                              {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : 'Not joined'}
+                            </p>
+                            {member.status === 'PENDING' && (
+                              <p className="text-xs text-slate-500">
+                                Invited {new Date(member.invitedAt).toLocaleDateString()}
+                              </p>
+                            )}
+                          </td>
+                          {canManage && (
+                            <td className="py-4 px-4">
+                              <div className="flex items-center justify-end gap-2">
+                                {member.status === 'PENDING' && (
+                                  <button
+                                    onClick={() => handleResendInvite(member.id)}
+                                    className="p-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50"
+                                    title="Resend invitation"
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                  </button>
+                                )}
+                                {canEditMember(member) && (
+                                  <button
+                                    onClick={() => handleRemoveMember(member.id)}
+                                    className="p-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                                    title="Remove member"
+                                  >
+                                    <UserX className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </Card>
+        </>
+      )}
 
       {/* Permissions info card */}
       {canManage && (
         <Card className="mt-6 bg-blue-50 border-blue-200">
           <div className="flex items-start gap-4">
-            <div className="p-3 bg-blue-100 rounded-lg"><Shield className="h-6 w-6 text-blue-600" /></div>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Shield className="h-6 w-6 text-blue-600" />
+            </div>
             <div>
               <h3 className="text-sm font-semibold text-blue-900 mb-1">Team Permissions</h3>
-              <p className="text-sm text-blue-700">Owners and Admins can manage team members. Managers can view and manage operations. Drivers have limited access to their assigned tasks.</p>
+              <p className="text-sm text-blue-700">
+                Owners and Admins can manage team members. Managers can view and manage operations. Drivers have limited
+                access to their assigned tasks.
+              </p>
             </div>
           </div>
         </Card>
@@ -356,10 +515,15 @@ export default function TeamPage() {
 
       {/* FAB — mobile only */}
       {canManage && (
-        <button onClick={() => router.push('/team/invite')} className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="Invite member" style={{ touchAction: 'manipulation' }}>
+        <button
+          onClick={() => router.push('/team/invite')}
+          className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
+          aria-label="Invite member"
+          style={{ touchAction: 'manipulation' }}
+        >
           <Plus className="h-6 w-6" />
         </button>
       )}
     </DashboardLayout>
-  );
+  )
 }

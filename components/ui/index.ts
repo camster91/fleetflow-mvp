@@ -1,13 +1,13 @@
 /**
  * FleetFlow UI Component Library
- * 
+ *
  * A comprehensive set of reusable UI components for the FleetFlow
  * fleet management application.
- * 
+ *
  * @example
  * ```tsx
  * import { Button, Card, Badge, Modal } from '@/components/ui';
- * 
+ *
  * export default function MyComponent() {
  *   return (
  *     <Card title="Vehicle Status">
@@ -20,13 +20,13 @@
  */
 
 // Button Component
-export { Button, type ButtonProps } from './Button';
+export { Button, type ButtonProps } from './Button'
 
 // Card Component
-export { 
-  Card, 
-  CardHeader, 
-  CardContent, 
+export {
+  Card,
+  CardHeader,
+  CardContent,
   CardFooter,
   StatCard,
   type CardProps,
@@ -34,54 +34,26 @@ export {
   type CardContentProps,
   type CardFooterProps,
   type StatCardProps,
-} from './Card';
+} from './Card'
 
 // Input Component
-export { 
-  Input, 
-  TextArea,
-  Textarea,
-  Select,
-  type InputProps,
-  type TextAreaProps,
-  type SelectProps,
-} from './Input';
+export { Input, TextArea, Textarea, Select, type InputProps, type TextAreaProps, type SelectProps } from './Input'
 
 // Badge Component
-export { 
-  Badge, 
-  StatusBadge,
-  type BadgeProps,
-  type StatusBadgeProps,
-} from './Badge';
+export { Badge, StatusBadge, type BadgeProps, type StatusBadgeProps } from './Badge'
 
 // Modal Component
-export { 
-  Modal, 
-  type ModalProps,
-} from './Modal';
+export { Modal, type ModalProps } from './Modal'
 
 // Alert Component
-export { 
-  Alert, 
-  AlertGroup,
-  InlineAlert,
-  type AlertProps,
-  type AlertGroupProps,
-  type InlineAlertProps,
-} from './Alert';
+export { Alert, AlertGroup, InlineAlert, type AlertProps, type AlertGroupProps, type InlineAlertProps } from './Alert'
 
 // Avatar Component
-export { 
-  Avatar, 
-  AvatarGroup,
-  type AvatarProps,
-  type AvatarGroupProps,
-} from './Avatar';
+export { Avatar, AvatarGroup, type AvatarProps, type AvatarGroupProps } from './Avatar'
 
 // Skeleton Component
-export { 
-  Skeleton, 
+export {
+  Skeleton,
   SkeletonCard,
   SkeletonTable,
   SkeletonAvatar,
@@ -93,10 +65,10 @@ export {
   type SkeletonTextProps,
   type SkeletonVariant,
   type SkeletonAnimation,
-} from './Skeleton';
+} from './Skeleton'
 
 // Toast Component
-export { 
+export {
   Toast,
   ToastContainer,
   ToastProvider,
@@ -108,13 +80,13 @@ export {
   type ToastData,
   type ToastType,
   type ToastPosition,
-} from './Toast';
+} from './Toast'
 
 // Empty states
-export { EmptyState } from './EmptyState';
+export { EmptyState } from './EmptyState'
 
 // Motion
-export { FadeIn, type FadeInProps } from './FadeIn';
+export { FadeIn, type FadeInProps } from './FadeIn'
 
 // Confirm / prompt dialogs
 export {
@@ -123,4 +95,4 @@ export {
   getConfirmDialogBridge,
   type ConfirmDialogRequest,
   type ConfirmDialogVariant,
-} from './ConfirmDialog';
+} from './ConfirmDialog'

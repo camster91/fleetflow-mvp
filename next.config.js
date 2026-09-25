@@ -45,25 +45,25 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
-  
+
   // Ensure static files in public are served
   poweredByHeader: false,
-  
+
   // Performance optimizations
   images: {
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
   },
-  
+
   // Compression
   compress: true,
-  
+
   // Experimental features
   experimental: {
     // Optimize package imports
     optimizePackageImports: ['lucide-react'],
   },
-  
+
   async headers() {
     return [
       {
@@ -74,12 +74,16 @@ const nextConfig = {
   },
 }
 
-module.exports = withSentryConfig(nextConfig, {
-  silent: true,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-}, {
-  widenClientFileUpload: true,
-  hideSourceMaps: true,
-  disableLogger: true,
-})
+module.exports = withSentryConfig(
+  nextConfig,
+  {
+    silent: true,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+  },
+  {
+    widenClientFileUpload: true,
+    hideSourceMaps: true,
+    disableLogger: true,
+  }
+)

@@ -12,22 +12,22 @@ const mockTransaction = {
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     maintenanceTask: { findFirst: jest.fn() },
-    $transaction: jest.fn((callback: (client: typeof mockTransaction) => unknown) =>
-      callback(mockTransaction)
-    ),
+    $transaction: jest.fn((callback: (client: typeof mockTransaction) => unknown) => callback(mockTransaction)),
   },
 }))
 jest.mock('@/lib/apiAuth', () => ({
   assertSameOrigin: jest.fn(() => true),
-  requireTenantContext: jest.fn(() => Promise.resolve({
-    session: { user: { id: 'manager-1' } },
-    tenant: {
-      ownerId: 'owner-1',
-      teamId: 'team-1',
-      role: 'MANAGER',
-      resourceWhere: { OR: [{ teamId: 'team-1' }] },
-    },
-  })),
+  requireTenantContext: jest.fn(() =>
+    Promise.resolve({
+      session: { user: { id: 'manager-1' } },
+      tenant: {
+        ownerId: 'owner-1',
+        teamId: 'team-1',
+        role: 'MANAGER',
+        resourceWhere: { OR: [{ teamId: 'team-1' }] },
+      },
+    })
+  ),
 }))
 jest.mock('@/lib/permissions', () => ({ canManageMaintenance: jest.fn(() => true) }))
 

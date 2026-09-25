@@ -1,10 +1,13 @@
-import { useRouter } from 'next/router';
-import { AlertCircle, XCircle, Mail, Shield, Lock } from 'lucide-react';
-import Link from 'next/link';
-import { AuthLayout } from '../../components/layouts/AuthLayout';
-import { Button } from '../../components/ui/Button';
+import { useRouter } from 'next/router'
+import { AlertCircle, XCircle, Mail, Shield, Lock } from 'lucide-react'
+import Link from 'next/link'
+import { AuthLayout } from '../../components/layouts/AuthLayout'
+import { Button } from '../../components/ui/Button'
 
-const errorMessages: Record<string, { title: string; message: string; icon: React.ReactNode; action?: string; actionHref?: string }> = {
+const errorMessages: Record<
+  string,
+  { title: string; message: string; icon: React.ReactNode; action?: string; actionHref?: string }
+> = {
   default: {
     title: 'Authentication Error',
     message: 'An error occurred during authentication. Please try again.',
@@ -83,32 +86,25 @@ const errorMessages: Record<string, { title: string; message: string; icon: Reac
     message: 'Error sending the email. Please try again.',
     icon: <Mail className="h-8 w-8 text-red-600" />,
   },
-};
+}
 
 export default function AuthErrorPage() {
-  const router = useRouter();
-  const { error } = router.query;
+  const router = useRouter()
+  const { error } = router.query
 
-  const errorKey = typeof error === 'string' && errorMessages[error] ? error : 'default';
-  const errorData = errorMessages[errorKey];
+  const errorKey = typeof error === 'string' && errorMessages[error] ? error : 'default'
+  const errorData = errorMessages[errorKey]
 
   return (
-    <AuthLayout
-      title={errorData.title}
-      subtitle="Authentication Error"
-    >
+    <AuthLayout title={errorData.title} subtitle="Authentication Error">
       <div className="text-center py-8">
         <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
           {errorData.icon}
         </div>
-        
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">
-          {errorData.title}
-        </h2>
-        
-        <p className="text-slate-600 mb-6">
-          {errorData.message}
-        </p>
+
+        <h2 className="text-xl font-semibold text-slate-900 mb-2">{errorData.title}</h2>
+
+        <p className="text-slate-600 mb-6">{errorData.message}</p>
 
         <div className="space-y-3">
           {errorData.action && errorData.actionHref && (
@@ -118,7 +114,7 @@ export default function AuthErrorPage() {
               </Button>
             </Link>
           )}
-          
+
           <Link href="/auth/login">
             <Button variant="outline" fullWidth>
               Back to Login
@@ -134,5 +130,5 @@ export default function AuthErrorPage() {
         </p>
       </div>
     </AuthLayout>
-  );
+  )
 }

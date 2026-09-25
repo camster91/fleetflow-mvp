@@ -14,24 +14,19 @@ const ICON_OPTIONS = [
   { value: 'FileText', label: 'Document', icon: FileText },
   { value: 'BookOpen', label: 'Manual', icon: BookOpen },
   { value: 'Hash', label: 'List', icon: Hash },
-  { value: 'AlignLeft', label: 'Notes', icon: AlignLeft }
+  { value: 'AlignLeft', label: 'Notes', icon: AlignLeft },
 ]
 
-export default function SOPCategoryFormModal({
-  isOpen,
-  onClose,
-  onSubmit,
-  category
-}: SOPCategoryFormModalProps) {
+export default function SOPCategoryFormModal({ isOpen, onClose, onSubmit, category }: SOPCategoryFormModalProps) {
   const isEditing = !!category
-  
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     count: 0,
-    iconName: 'FileText'
+    iconName: 'FileText',
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -42,14 +37,14 @@ export default function SOPCategoryFormModal({
           name: category.name,
           description: category.description || '',
           count: category.count,
-          iconName: 'FileText'
+          iconName: 'FileText',
         })
       } else {
         setFormData({
           name: '',
           description: '',
           count: 0,
-          iconName: 'FileText'
+          iconName: 'FileText',
         })
       }
       setErrors({})
@@ -59,34 +54,34 @@ export default function SOPCategoryFormModal({
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Category name is required'
     }
-    
+
     if (formData.count < 0) {
       newErrors.count = 'Count cannot be negative'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     setIsSubmitting(true)
-    
+
     try {
       let result: dataService.SOPCategory
-      
+
       if (isEditing && category) {
         const updated = await dataService.updateSOPCategory(category.id, {
           name: formData.name,
           description: formData.description,
-          count: formData.count
+          count: formData.count,
         })
         if (!updated) throw new Error('Failed to update category')
         result = updated
@@ -94,10 +89,10 @@ export default function SOPCategoryFormModal({
         result = await dataService.addSOPCategory({
           name: formData.name,
           description: formData.description,
-          count: formData.count
+          count: formData.count,
         })
       }
-      
+
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -108,19 +103,14 @@ export default function SOPCategoryFormModal({
   }
 
   const handleChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
   }
 
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit SOP Category' : 'Add SOP Category'}
-      size="md"
-    >
+    <FormModal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit SOP Category' : 'Add SOP Category'} size="md">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Category Name */}
         <div>
@@ -144,9 +134,7 @@ export default function SOPCategoryFormModal({
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
           <div className="relative">
             <AlignLeft className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <textarea
@@ -161,9 +149,7 @@ export default function SOPCategoryFormModal({
 
         {/* Initial Document Count */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Number of SOP Documents
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Number of SOP Documents</label>
           <div className="relative">
             <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -178,18 +164,14 @@ export default function SOPCategoryFormModal({
             />
           </div>
           {errors.count && <p className="mt-1 text-sm text-red-600">{errors.count}</p>}
-          <p className="mt-1 text-xs text-gray-500">
-            You can add individual SOP documents after creating the category
-          </p>
+          <p className="mt-1 text-xs text-gray-500">You can add individual SOP documents after creating the category</p>
         </div>
 
         {/* Icon Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category Icon
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Category Icon</label>
           <div className="grid grid-cols-4 gap-3">
-            {ICON_OPTIONS.map(option => {
+            {ICON_OPTIONS.map((option) => {
               const Icon = option.icon
               return (
                 <button
@@ -212,20 +194,17 @@ export default function SOPCategoryFormModal({
 
         {/* Preview */}
         <div className="p-4 bg-gray-50 rounded-lg">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Preview
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
           <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
             <div className="p-2 bg-primary-100 rounded-lg">
               <FileText className="h-5 w-5 text-primary-600" />
             </div>
             <div>
-              <h4 className="font-medium text-gray-900">
-                {formData.name || 'Category Name'}
-              </h4>
+              <h4 className="font-medium text-gray-900">{formData.name || 'Category Name'}</h4>
               <p className="text-sm text-gray-500">
                 {formData.count} SOP{formData.count !== 1 ? 's' : ''}
-                {formData.description && ` • ${formData.description.slice(0, 50)}${formData.description.length > 50 ? '...' : ''}`}
+                {formData.description &&
+                  ` • ${formData.description.slice(0, 50)}${formData.description.length > 50 ? '...' : ''}`}
               </p>
             </div>
           </div>
@@ -257,8 +236,10 @@ export default function SOPCategoryFormModal({
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {isEditing ? 'Saving...' : 'Adding...'}
               </>
+            ) : isEditing ? (
+              'Save Changes'
             ) : (
-              isEditing ? 'Save Changes' : 'Add Category'
+              'Add Category'
             )}
           </button>
         </div>

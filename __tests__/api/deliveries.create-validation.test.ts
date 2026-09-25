@@ -21,12 +21,21 @@ import { prisma } from '@/lib/prisma'
 import { deliveryCreateSchema, deliveryUpdateSchema, DELIVERY_STATUSES } from '@/lib/deliveryTransitions'
 
 const tenant = { ownerId: 'owner-1', teamId: null, role: 'OWNER', resourceWhere: { ownerId: 'owner-1', teamId: null } }
-const tx: { delivery: { create: jest.Mock } } = { delivery: { create: jest.fn(async ({ data }: any) => ({ id: 'd-new', createdAt: new Date(), updatedAt: new Date(), ...data })) } }
+const tx: { delivery: { create: jest.Mock } } = {
+  delivery: {
+    create: jest.fn(async ({ data }: any) => ({ id: 'd-new', createdAt: new Date(), updatedAt: new Date(), ...data })),
+  },
+}
 
 beforeEach(() => {
   jest.clearAllMocks()
-  ;(requireTenantContext as jest.Mock).mockResolvedValue({ session: { user: { id: 'owner-1', name: 'Owner' } }, tenant })
-  ;(prisma.$transaction as jest.Mock).mockImplementation(async (fn: any) => fn({ ...tx, activityLog: { create: jest.fn() } }))
+  ;(requireTenantContext as jest.Mock).mockResolvedValue({
+    session: { user: { id: 'owner-1', name: 'Owner' } },
+    tenant,
+  })
+  ;(prisma.$transaction as jest.Mock).mockImplementation(async (fn: any) =>
+    fn({ ...tx, activityLog: { create: jest.fn() } })
+  )
   ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({ id: 'owner-1', name: 'Owner', email: null })
 })
 
@@ -38,19 +47,38 @@ async function post(body: unknown) {
 
 // Mirrors the payload DeliveryFormModal sends for a new delivery.
 const formPayload = {
-  customer: 'Acme', address: '1 Main St', status: 'pending', driver: '', assignedDriverId: null,
-  items: 3, progress: 0, notes: '', scheduledTime: '2026-09-26T09:00', estimatedArrival: '',
+  customer: 'Acme',
+  address: '1 Main St',
+  status: 'pending',
+  driver: '',
+  assignedDriverId: null,
+  items: 3,
+  progress: 0,
+  notes: '',
+  scheduledTime: '2026-09-26T09:00',
+  estimatedArrival: '',
   contactPerson: { name: 'Jo', phone: '', email: '' },
-  parkingInstructions: '', dropoffInstructions: '', accessCodes: ['1234'], securityNotes: '', businessHours: '',
+  parkingInstructions: '',
+  dropoffInstructions: '',
+  accessCodes: ['1234'],
+  securityNotes: '',
+  businessHours: '',
 }
 
 describe('POST /api/deliveries validation', () => {
   it('accepts the payload sent by the new-delivery form', async () => {
     const res = await post(formPayload)
     expect(res._getStatusCode()).toBe(201)
-    expect(tx.delivery.create).toHaveBeenCalledWith({ data: expect.objectContaining({
-      customer: 'Acme', address: '1 Main St', items: 3, ownerId: 'owner-1', teamId: null, assignedDriverId: null,
-    }) })
+    expect(tx.delivery.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        customer: 'Acme',
+        address: '1 Main St',
+        items: 3,
+        ownerId: 'owner-1',
+        teamId: null,
+        assignedDriverId: null,
+      }),
+    })
   })
 
   it.each([

@@ -88,7 +88,8 @@ function hasContactPerson(value: string | null): boolean {
   try {
     const parsed: unknown = JSON.parse(value as string)
     return Boolean(
-      parsed && typeof parsed === 'object' &&
+      parsed &&
+      typeof parsed === 'object' &&
       Object.values(parsed as Record<string, unknown>).some(
         (field) => typeof field === 'string' && field.trim().length > 0
       )
@@ -109,11 +110,7 @@ function stale(date: Date, now: Date, thresholdMs: number): boolean {
 function recordUrl(entityType: DataQualityEntityType, entityId: string): string {
   const id = encodeURIComponent(entityId)
   if (entityType === 'client') return `/clients/${id}`
-  const collection = entityType === 'vehicle'
-    ? 'vehicles'
-    : entityType === 'delivery'
-      ? 'deliveries'
-      : 'maintenance'
+  const collection = entityType === 'vehicle' ? 'vehicles' : entityType === 'delivery' ? 'deliveries' : 'maintenance'
   return `/${collection}?record=${id}`
 }
 
@@ -122,7 +119,7 @@ function issue(
   entityId: string,
   severity: DataQualitySeverity,
   field: string,
-  message: string,
+  message: string
 ): DataQualityIssue {
   return {
     id: `${entityType}:${entityId}:${field}`,
@@ -143,8 +140,8 @@ export function assessDataQuality(records: DataQualityRecords, now = new Date())
     if (vehicle.status !== 'active') continue
     const mileageMissing = vehicle.mileage === null || vehicle.mileage === undefined
     const mileageInvalid = typeof vehicle.mileage === 'number' && vehicle.mileage < 0
-    const zeroLikelyDefault = vehicle.mileage === 0 &&
-      stale(vehicle.createdAt, now, DATA_QUALITY_THRESHOLDS.zeroMileageGraceMs)
+    const zeroLikelyDefault =
+      vehicle.mileage === 0 && stale(vehicle.createdAt, now, DATA_QUALITY_THRESHOLDS.zeroMileageGraceMs)
     if (mileageMissing || mileageInvalid || zeroLikelyDefault) {
       issues.push(issue('vehicle', vehicle.id, 'high', 'mileage', 'Active vehicle needs a positive mileage reading.'))
     }
@@ -158,38 +155,73 @@ export function assessDataQuality(records: DataQualityRecords, now = new Date())
       issues.push(issue('vehicle', vehicle.id, 'medium', 'nextService', 'Schedule the vehicle’s next service date.'))
     }
     if (stale(vehicle.lastUpdated || vehicle.updatedAt, now, DATA_QUALITY_THRESHOLDS.activeVehicleStaleMs)) {
-      issues.push(issue('vehicle', vehicle.id, 'medium', 'lastUpdated', 'Active vehicle data has not been updated in 7 days.'))
+      issues.push(
+        issue('vehicle', vehicle.id, 'medium', 'lastUpdated', 'Active vehicle data has not been updated in 7 days.')
+      )
     }
   }
 
   for (const delivery of records.deliveries) {
-    const active = delivery.status === 'pending' || delivery.status === 'picked-up' || delivery.status === 'in-transit' || delivery.status === 'delayed'
+    const active =
+      delivery.status === 'pending' ||
+      delivery.status === 'picked-up' ||
+      delivery.status === 'in-transit' ||
+      delivery.status === 'delayed'
     if (!active) continue
     const urgent = delivery.status === 'picked-up' || delivery.status === 'in-transit' || delivery.status === 'delayed'
     const assignmentSeverity: DataQualitySeverity = urgent ? 'high' : 'medium'
     if (!delivery.vehicleId) {
-      issues.push(issue('delivery', delivery.id, assignmentSeverity, 'vehicleId', 'Active delivery needs an assigned vehicle.'))
+      issues.push(
+        issue('delivery', delivery.id, assignmentSeverity, 'vehicleId', 'Active delivery needs an assigned vehicle.')
+      )
     }
     if (!hasText(delivery.driver)) {
-      issues.push(issue('delivery', delivery.id, assignmentSeverity, 'driver', `${urgent ? 'In-transit' : 'Pending'} delivery needs an assigned driver.`))
+      issues.push(
+        issue(
+          'delivery',
+          delivery.id,
+          assignmentSeverity,
+          'driver',
+          `${urgent ? 'In-transit' : 'Pending'} delivery needs an assigned driver.`
+        )
+      )
     }
     if (!delivery.scheduledTime) {
-      issues.push(issue('delivery', delivery.id, assignmentSeverity, 'scheduledTime', 'Active delivery needs a scheduled time.'))
+      issues.push(
+        issue('delivery', delivery.id, assignmentSeverity, 'scheduledTime', 'Active delivery needs a scheduled time.')
+      )
     }
     if (urgent && !delivery.estimatedArrival) {
-      issues.push(issue('delivery', delivery.id, 'high', 'estimatedArrival', 'In-transit delivery needs an estimated arrival time.'))
+      issues.push(
+        issue(
+          'delivery',
+          delivery.id,
+          'high',
+          'estimatedArrival',
+          'In-transit delivery needs an estimated arrival time.'
+        )
+      )
     }
     if (!hasContactPerson(delivery.contactPerson)) {
-      issues.push(issue('delivery', delivery.id, 'low', 'contactPerson', 'Add a contact person for this active delivery.'))
+      issues.push(
+        issue('delivery', delivery.id, 'low', 'contactPerson', 'Add a contact person for this active delivery.')
+      )
     }
     const threshold = urgent
       ? DATA_QUALITY_THRESHOLDS.inTransitDeliveryStaleMs
       : DATA_QUALITY_THRESHOLDS.pendingDeliveryStaleMs
     if (stale(delivery.updatedAt, now, threshold)) {
-      issues.push(issue(
-        'delivery', delivery.id, urgent ? 'high' : 'medium', 'updatedAt',
-        urgent ? 'Active delivery has not been updated in 24 hours.' : 'Pending delivery has not been updated in 7 days.',
-      ))
+      issues.push(
+        issue(
+          'delivery',
+          delivery.id,
+          urgent ? 'high' : 'medium',
+          'updatedAt',
+          urgent
+            ? 'Active delivery has not been updated in 24 hours.'
+            : 'Pending delivery has not been updated in 7 days.'
+        )
+      )
     }
   }
 
@@ -199,25 +231,31 @@ export function assessDataQuality(records: DataQualityRecords, now = new Date())
     }
     if (task.completed) {
       if (task.actualCost === null) {
-        issues.push(issue('maintenance', task.id, 'medium', 'actualCost', 'Completed maintenance needs its actual cost recorded.'))
+        issues.push(
+          issue('maintenance', task.id, 'medium', 'actualCost', 'Completed maintenance needs its actual cost recorded.')
+        )
       }
       continue
     }
     if (task.costEstimate === null) {
-      issues.push(issue('maintenance', task.id, 'low', 'costEstimate', 'Add an estimated cost for this maintenance task.'))
+      issues.push(
+        issue('maintenance', task.id, 'low', 'costEstimate', 'Add an estimated cost for this maintenance task.')
+      )
     }
     if (stale(task.updatedAt, now, DATA_QUALITY_THRESHOLDS.openMaintenanceStaleMs)) {
-      issues.push(issue('maintenance', task.id, 'medium', 'updatedAt', 'Open maintenance task has not been updated in 30 days.'))
+      issues.push(
+        issue('maintenance', task.id, 'medium', 'updatedAt', 'Open maintenance task has not been updated in 30 days.')
+      )
     }
   }
 
   for (const client of records.clients) {
     if (!hasText(client.phone) && !hasText(client.email) && !hasContactPerson(client.contactPerson)) {
-      issues.push(issue('client', client.id, 'medium', 'contact', 'Client needs a phone number, email, or contact person.'))
+      issues.push(
+        issue('client', client.id, 'medium', 'contact', 'Client needs a phone number, email, or contact person.')
+      )
     }
   }
 
-  return issues.sort((a, b) =>
-    severityRank[a.severity] - severityRank[b.severity] || a.id.localeCompare(b.id)
-  )
+  return issues.sort((a, b) => severityRank[a.severity] - severityRank[b.severity] || a.id.localeCompare(b.id))
 }

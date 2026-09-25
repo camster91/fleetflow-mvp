@@ -61,7 +61,7 @@ export function sendPrismaError(res: NextApiResponse, error: unknown, messages?:
  */
 export function withPrismaErrors<T extends NextApiResponse>(
   handler: (req: NextApiRequest, res: T) => unknown | Promise<unknown>,
-  messages?: PrismaErrorMessages,
+  messages?: PrismaErrorMessages
 ) {
   return async function prismaErrorHandler(req: NextApiRequest, res: T) {
     try {

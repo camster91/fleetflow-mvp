@@ -38,8 +38,24 @@ test.describe('feature access by role', () => {
   let machine: { id: string; name: string }
   test.beforeAll(async () => {
     const id = runId()
-    sop = await matrixDb.sOPCategory.create({ data: { name: `E2E SOP ${id}`, description: 'Synthetic procedure', ownerId: matrixUser('OWNER').id, teamId: MATRIX_TEAM.id }, select: { id: true, name: true } })
-    machine = await matrixDb.vendingMachine.create({ data: { name: `E2E Machine ${id}`, location: 'E2E Depot lobby', ownerId: matrixUser('OWNER').id, teamId: MATRIX_TEAM.id }, select: { id: true, name: true } })
+    sop = await matrixDb.sOPCategory.create({
+      data: {
+        name: `E2E SOP ${id}`,
+        description: 'Synthetic procedure',
+        ownerId: matrixUser('OWNER').id,
+        teamId: MATRIX_TEAM.id,
+      },
+      select: { id: true, name: true },
+    })
+    machine = await matrixDb.vendingMachine.create({
+      data: {
+        name: `E2E Machine ${id}`,
+        location: 'E2E Depot lobby',
+        ownerId: matrixUser('OWNER').id,
+        teamId: MATRIX_TEAM.id,
+      },
+      select: { id: true, name: true },
+    })
   })
   test.afterAll(async () => {
     await matrixDb.sOPCategory.deleteMany({ where: { id: sop.id } })
@@ -54,21 +70,35 @@ test.describe('feature access by role', () => {
       // SOPs
       const sops = await client.get('/api/sop?limit=200')
       await expectStatus(sops, FEATURES.sopView.has(role) ? 200 : 403)
-      if (FEATURES.sopView.has(role)) expect((await sops.json()).data.map((row: { id: string }) => row.id)).toContain(sop.id)
-      await expectStatus(await client.post('/api/sop', { name: `E2E SOP forbidden ${runId()}` }).then(async (created) => {
-        if (created.status() === 201) await client.delete(`/api/sop/${(await created.json()).id}`)
-        return created
-      }), FEATURES.sopManage.has(role) ? 201 : 403)
+      if (FEATURES.sopView.has(role))
+        expect((await sops.json()).data.map((row: { id: string }) => row.id)).toContain(sop.id)
+      await expectStatus(
+        await client.post('/api/sop', { name: `E2E SOP forbidden ${runId()}` }).then(async (created) => {
+          if (created.status() === 201) await client.delete(`/api/sop/${(await created.json()).id}`)
+          return created
+        }),
+        FEATURES.sopManage.has(role) ? 201 : 403
+      )
       await expectHeading(page, '/sop', 'SOPs & Procedures')
       if (FEATURES.sopView.has(role)) await expect(page.getByText(sop.name).first()).toBeVisible()
       else await expect(page.getByText(sop.name)).toHaveCount(0)
-      await expect(page.getByRole('button', { name: `Edit ${sop.name}` })).toHaveCount(FEATURES.sopManage.has(role) ? 1 : 0)
+      await expect(page.getByRole('button', { name: `Edit ${sop.name}` })).toHaveCount(
+        FEATURES.sopManage.has(role) ? 1 : 0
+      )
 
       // Vending machines
       const machines = await client.get('/api/vending-machines?limit=200')
       await expectStatus(machines, FEATURES.vendingView.has(role) ? 200 : 403)
-      if (FEATURES.vendingView.has(role)) expect((await machines.json()).data.map((row: { id: string }) => row.id)).toContain(machine.id)
-      await expectStatus(await client.put(`/api/vending-machines/${machine.id}`, { name: machine.name, location: 'E2E Depot lobby', notes: 'role check' }), FEATURES.vendingManage.has(role) ? 200 : 403)
+      if (FEATURES.vendingView.has(role))
+        expect((await machines.json()).data.map((row: { id: string }) => row.id)).toContain(machine.id)
+      await expectStatus(
+        await client.put(`/api/vending-machines/${machine.id}`, {
+          name: machine.name,
+          location: 'E2E Depot lobby',
+          notes: 'role check',
+        }),
+        FEATURES.vendingManage.has(role) ? 200 : 403
+      )
       await expectHeading(page, '/vending-machines', 'Vending Machines')
       if (FEATURES.vendingView.has(role)) await expect(page.getByText(machine.name).first()).toBeVisible()
       else await expect(page.getByText(machine.name)).toHaveCount(0)
@@ -88,11 +118,17 @@ test.describe('feature access by role', () => {
       await expectStatus(workspace, 200)
       const { timeZone, canEdit } = await workspace.json()
       expect(canEdit).toBe(FEATURES.workspaceSettings.has(role))
-      const patch = await page.request.patch('/api/settings/workspace', { data: { timeZone }, headers: sameOrigin(baseURL!) })
+      const patch = await page.request.patch('/api/settings/workspace', {
+        data: { timeZone },
+        headers: sameOrigin(baseURL!),
+      })
       await expectStatus(patch, FEATURES.workspaceSettings.has(role) ? 200 : 403)
 
       // Checkout is never offered during the free beta: billing roles get "unavailable", others are forbidden.
-      await expectStatus(await client.post('/api/stripe/checkout-session', { interval: 'monthly' }), FEATURES.checkout.has(role) ? 503 : 403)
+      await expectStatus(
+        await client.post('/api/stripe/checkout-session', { interval: 'monthly' }),
+        FEATURES.checkout.has(role) ? 503 : 403
+      )
     })
   }
 })
@@ -131,7 +167,12 @@ test.describe('OWNER workflows', () => {
     await expectStatus(created, 201)
     const { id } = await created.json()
 
-    const updated = await client.put(`/api/vending-machines/${id}`, { name, location: 'E2E Break room', type: 'snacks', status: 'maintenance' })
+    const updated = await client.put(`/api/vending-machines/${id}`, {
+      name,
+      location: 'E2E Break room',
+      type: 'snacks',
+      status: 'maintenance',
+    })
     await expectStatus(updated, 200)
     expect((await updated.json()).status).toBe('maintenance')
 
@@ -144,7 +185,9 @@ test.describe('OWNER workflows', () => {
   })
 
   test('workspace time zone: owner changes it in settings; an invalid zone is rejected', async ({ page, baseURL }) => {
-    const original = (await matrixDb.team.findUniqueOrThrow({ where: { id: MATRIX_TEAM.id }, select: { timeZone: true } })).timeZone
+    const original = (
+      await matrixDb.team.findUniqueOrThrow({ where: { id: MATRIX_TEAM.id }, select: { timeZone: true } })
+    ).timeZone
     const target = original === 'America/Vancouver' ? 'America/Halifax' : 'America/Vancouver'
     try {
       await expectHeading(page, '/settings/company', 'Company Settings')
@@ -153,9 +196,14 @@ test.describe('OWNER workflows', () => {
       await select.selectOption(target)
       await page.getByRole('button', { name: 'Save time zone' }).click()
       await expect(page.getByRole('button', { name: 'Save time zone' })).toBeDisabled()
-      await expect.poll(async () => (await matrixDb.team.findUniqueOrThrow({ where: { id: MATRIX_TEAM.id } })).timeZone).toBe(target)
+      await expect
+        .poll(async () => (await matrixDb.team.findUniqueOrThrow({ where: { id: MATRIX_TEAM.id } })).timeZone)
+        .toBe(target)
 
-      const invalid = await page.request.patch('/api/settings/workspace', { data: { timeZone: 'Mars/Olympus_Mons' }, headers: sameOrigin(baseURL!) })
+      const invalid = await page.request.patch('/api/settings/workspace', {
+        data: { timeZone: 'Mars/Olympus_Mons' },
+        headers: sameOrigin(baseURL!),
+      })
       await expectStatus(invalid, 400)
       expect((await invalid.json()).error).toMatch(/valid IANA time zone/)
       expect((await matrixDb.team.findUniqueOrThrow({ where: { id: MATRIX_TEAM.id } })).timeZone).toBe(target)
@@ -167,10 +215,11 @@ test.describe('OWNER workflows', () => {
   test('deliveries: the same Idempotency-Key twice creates one delivery', async ({ page, baseURL }) => {
     const customer = `E2E Idempotent Customer ${runId()}`
     const key = `e2e-matrix-${runId()}`
-    const post = () => page.request.post('/api/deliveries', {
-      data: { customer, address: '500 Example Road, Testville' },
-      headers: { ...sameOrigin(baseURL!), 'Idempotency-Key': key },
-    })
+    const post = () =>
+      page.request.post('/api/deliveries', {
+        data: { customer, address: '500 Example Road, Testville' },
+        headers: { ...sameOrigin(baseURL!), 'Idempotency-Key': key },
+      })
     try {
       const first = await post()
       await expectStatus(first, 201)
@@ -194,12 +243,21 @@ test.describe('OWNER workflows', () => {
 
   test('notifications: a new notification is listed and can be marked read', async ({ page, baseURL }) => {
     const title = `E2E notification ${runId()}`
-    const row = await matrixDb.notification.create({ data: { userId: matrixUser('OWNER').id, type: 'system', title, message: 'Synthetic notification for the E2E matrix' } })
+    const row = await matrixDb.notification.create({
+      data: {
+        userId: matrixUser('OWNER').id,
+        type: 'system',
+        title,
+        message: 'Synthetic notification for the E2E matrix',
+      },
+    })
     try {
       await expectHeading(page, '/notifications', 'Notifications')
       await expect(page.getByText(title)).toBeVisible()
       await page.getByRole('button', { name: 'Mark as read' }).first().click()
-      await expect.poll(async () => (await matrixDb.notification.findUniqueOrThrow({ where: { id: row.id } })).read).toBe(true)
+      await expect
+        .poll(async () => (await matrixDb.notification.findUniqueOrThrow({ where: { id: row.id } })).read)
+        .toBe(true)
 
       // Notifications are per user: another member never sees them.
       const other = await page.context().browser()!.newContext()
@@ -215,7 +273,10 @@ test.describe('OWNER workflows', () => {
   })
 })
 
-test('documents: an empty workspace shows the empty state and uploads fail closed without storage', async ({ page, baseURL }) => {
+test('documents: an empty workspace shows the empty state and uploads fail closed without storage', async ({
+  page,
+  baseURL,
+}) => {
   const user = await createSyntheticUser('documents')
   try {
     await signInUser(page, user.id, baseURL!)

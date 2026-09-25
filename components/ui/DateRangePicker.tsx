@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
-import { Button } from './Button';
-import { Calendar, ChevronDown } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import React, { useState } from 'react'
+import { Button } from './Button'
+import { Calendar, ChevronDown } from 'lucide-react'
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays } from 'date-fns'
 
 interface DateRange {
-  from: Date;
-  to: Date;
-  label: string;
+  from: Date
+  to: Date
+  label: string
 }
 
 interface DateRangePickerProps {
-  value: DateRange;
-  onChange: (range: DateRange) => void;
-  className?: string;
+  value: DateRange
+  onChange: (range: DateRange) => void
+  className?: string
 }
 
 const presetRanges = [
@@ -48,19 +48,15 @@ const presetRanges = [
       label: 'This month',
     }),
   },
-];
+]
 
-export const DateRangePicker: React.FC<DateRangePickerProps> = ({
-  value,
-  onChange,
-  className = '',
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChange, className = '' }) => {
+  const [isOpen, setIsOpen] = useState(false)
 
   const handleSelect = (range: DateRange) => {
-    onChange(range);
-    setIsOpen(false);
-  };
+    onChange(range)
+    setIsOpen(false)
+  }
 
   return (
     <div className={`relative ${className}`}>
@@ -75,10 +71,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
 
       {isOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50 py-1">
             {presetRanges.map((preset) => (
               <button
@@ -126,7 +119,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         </>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default DateRangePicker;
+export default DateRangePicker

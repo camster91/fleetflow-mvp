@@ -10,8 +10,13 @@ export type MatrixRole = (typeof MATRIX_ROLES)[number]
 
 // Legacy global User.role for each workspace role. Never 'admin', which is the platform-admin role.
 const LEGACY_ROLE: Record<MatrixRole, string> = {
-  OWNER: 'fleet_manager', ADMIN: 'fleet_manager', MANAGER: 'fleet_manager',
-  DISPATCHER: 'dispatch', TECHNICIAN: 'maintenance', DRIVER: 'driver', VIEWER: 'viewer',
+  OWNER: 'fleet_manager',
+  ADMIN: 'fleet_manager',
+  MANAGER: 'fleet_manager',
+  DISPATCHER: 'dispatch',
+  TECHNICIAN: 'maintenance',
+  DRIVER: 'driver',
+  VIEWER: 'viewer',
 }
 
 export const MATRIX_TEAM = { id: 'e2e-matrix-team', name: 'Matrix Test Fleet (synthetic)' }
@@ -31,19 +36,64 @@ const DRIVER_ID = matrixUser('DRIVER').id
 const DRIVER_NAME = matrixUser('DRIVER').name
 
 export const MATRIX_VEHICLES = [
-  { id: 'e2e-matrix-vehicle-alpha', name: 'E2E Van Alpha', licensePlate: 'TEST-001', assignedDriverId: DRIVER_ID, driver: DRIVER_NAME },
-  { id: 'e2e-matrix-vehicle-bravo', name: 'E2E Van Bravo', licensePlate: 'TEST-002', assignedDriverId: null, driver: null },
+  {
+    id: 'e2e-matrix-vehicle-alpha',
+    name: 'E2E Van Alpha',
+    licensePlate: 'TEST-001',
+    assignedDriverId: DRIVER_ID,
+    driver: DRIVER_NAME,
+  },
+  {
+    id: 'e2e-matrix-vehicle-bravo',
+    name: 'E2E Van Bravo',
+    licensePlate: 'TEST-002',
+    assignedDriverId: null,
+    driver: null,
+  },
 ]
 
 export const MATRIX_DELIVERIES = [
-  { id: 'e2e-matrix-delivery-assigned', customer: 'E2E Customer Assigned', status: 'pending', assignedDriverId: DRIVER_ID, driver: DRIVER_NAME, vehicleId: 'e2e-matrix-vehicle-alpha' },
-  { id: 'e2e-matrix-delivery-unassigned', customer: 'E2E Customer Unassigned', status: 'pending', assignedDriverId: null, driver: null, vehicleId: null },
-  { id: 'e2e-matrix-delivery-delivered', customer: 'E2E Customer Delivered', status: 'delivered', assignedDriverId: null, driver: null, vehicleId: 'e2e-matrix-vehicle-bravo' },
+  {
+    id: 'e2e-matrix-delivery-assigned',
+    customer: 'E2E Customer Assigned',
+    status: 'pending',
+    assignedDriverId: DRIVER_ID,
+    driver: DRIVER_NAME,
+    vehicleId: 'e2e-matrix-vehicle-alpha',
+  },
+  {
+    id: 'e2e-matrix-delivery-unassigned',
+    customer: 'E2E Customer Unassigned',
+    status: 'pending',
+    assignedDriverId: null,
+    driver: null,
+    vehicleId: null,
+  },
+  {
+    id: 'e2e-matrix-delivery-delivered',
+    customer: 'E2E Customer Delivered',
+    status: 'delivered',
+    assignedDriverId: null,
+    driver: null,
+    vehicleId: 'e2e-matrix-vehicle-bravo',
+  },
 ]
 
 export const MATRIX_MAINTENANCE = [
-  { id: 'e2e-matrix-maintenance-alpha', title: 'E2E Brake inspection', vehicleId: 'e2e-matrix-vehicle-alpha', vehicleName: 'E2E Van Alpha', priority: 'high' },
-  { id: 'e2e-matrix-maintenance-bravo', title: 'E2E Tire rotation', vehicleId: 'e2e-matrix-vehicle-bravo', vehicleName: 'E2E Van Bravo', priority: 'medium' },
+  {
+    id: 'e2e-matrix-maintenance-alpha',
+    title: 'E2E Brake inspection',
+    vehicleId: 'e2e-matrix-vehicle-alpha',
+    vehicleName: 'E2E Van Alpha',
+    priority: 'high',
+  },
+  {
+    id: 'e2e-matrix-maintenance-bravo',
+    title: 'E2E Tire rotation',
+    vehicleId: 'e2e-matrix-vehicle-bravo',
+    vehicleName: 'E2E Van Bravo',
+    priority: 'medium',
+  },
 ]
 
 export const MATRIX_CLIENTS = [

@@ -1,7 +1,19 @@
 import { useState, useEffect } from 'react'
-import { 
-  Users, Shield, Edit2, Trash2, Search, AlertTriangle, CheckCircle, X,
-  Crown, User, Truck, Wrench, DollarSign, EyeIcon
+import {
+  Users,
+  Shield,
+  Edit2,
+  Trash2,
+  Search,
+  AlertTriangle,
+  CheckCircle,
+  X,
+  Crown,
+  User,
+  Truck,
+  Wrench,
+  DollarSign,
+  EyeIcon,
 } from 'lucide-react'
 import FormModal from './FormModal'
 import { useConfirmDialog } from './ui/ConfirmDialog'
@@ -24,7 +36,7 @@ const ROLE_OPTIONS = [
   { value: 'maintenance', label: 'Maintenance', icon: Wrench, color: 'text-red-600 bg-red-50' },
   { value: 'safety_officer', label: 'Safety Officer', icon: Shield, color: 'text-yellow-600 bg-yellow-50' },
   { value: 'finance', label: 'Finance', icon: DollarSign, color: 'text-emerald-600 bg-emerald-50' },
-  { value: 'viewer', label: 'Viewer', icon: EyeIcon, color: 'text-gray-600 bg-gray-50' }
+  { value: 'viewer', label: 'Viewer', icon: EyeIcon, color: 'text-gray-600 bg-gray-50' },
 ]
 
 export default function AdminUserManagement() {
@@ -58,14 +70,14 @@ export default function AdminUserManagement() {
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole })
+        body: JSON.stringify({ userId, role: newRole }),
       })
-      
+
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to update role')
       }
-      
+
       await fetchUsers()
       setIsRoleModalOpen(false)
       setSelectedUser(null)
@@ -79,14 +91,14 @@ export default function AdminUserManagement() {
       const response = await fetch('/api/admin/users', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId }),
       })
-      
+
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to delete user')
       }
-      
+
       await fetchUsers()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user')
@@ -105,13 +117,14 @@ export default function AdminUserManagement() {
     })
   }
 
-  const filteredUsers = users.filter(user =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUsers = users.filter(
+    (user) =>
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const getRoleOption = (role: string) => ROLE_OPTIONS.find(r => r.value === role) || ROLE_OPTIONS[7]
+  const getRoleOption = (role: string) => ROLE_OPTIONS.find((r) => r.value === role) || ROLE_OPTIONS[7]
 
   if (isLoading) {
     return (
@@ -161,75 +174,83 @@ export default function AdminUserManagement() {
       {/* Users Table */}
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px]">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredUsers.map((user) => {
-              const roleOption = getRoleOption(user.role)
-              const RoleIcon = roleOption.icon
-              
-              return (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                        <span className="text-primary-700 font-medium">
-                          {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
-                        </span>
+          <table className="w-full min-w-[640px]">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Company
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Joined
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredUsers.map((user) => {
+                const roleOption = getRoleOption(user.role)
+                const RoleIcon = roleOption.icon
+
+                return (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                          <span className="text-primary-700 font-medium">
+                            {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{user.name || 'No name'}</div>
+                          <div className="text-sm text-gray-500">{user.email}</div>
+                        </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name || 'No name'}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${roleOption.color}`}
+                      >
+                        <RoleIcon className="h-3.5 w-3.5" />
+                        {roleOption.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{user.company || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(user.createdAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Edit role button */}
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user)
+                            setIsRoleModalOpen(true)
+                          }}
+                          className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
+                          title="Change role"
+                          aria-label="Change role"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+
+                        {/* Delete button */}
+                        <button
+                          onClick={() => confirmDeleteUser(user)}
+                          className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
+                          title="Delete user"
+                          aria-label="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${roleOption.color}`}>
-                      <RoleIcon className="h-3.5 w-3.5" />
-                      {roleOption.label}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">{user.company || '-'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {/* Edit role button */}
-                      <button
-                        onClick={() => {
-                          setSelectedUser(user)
-                          setIsRoleModalOpen(true)
-                        }}
-                        className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition"
-                        title="Change role" aria-label="Change role"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      
-                      {/* Delete button */}
-                      <button
-                        onClick={() => confirmDeleteUser(user)}
-                        className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition"
-                        title="Delete user" aria-label="Delete user"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
 
         {filteredUsers.length === 0 && (
@@ -254,20 +275,18 @@ export default function AdminUserManagement() {
           <p className="text-sm text-gray-600">
             Select a new role for this user. This will change their permissions immediately.
           </p>
-          
+
           <div className="grid grid-cols-1 gap-2">
             {ROLE_OPTIONS.map((role) => {
               const RoleIcon = role.icon
               const isSelected = selectedUser?.role === role.value
-              
+
               return (
                 <button
                   key={role.value}
                   onClick={() => selectedUser && handleUpdateRole(selectedUser.id, role.value)}
                   className={`flex items-center gap-3 p-3 rounded-lg border-2 transition text-left ${
-                    isSelected
-                      ? 'border-primary-500 bg-primary-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                    isSelected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <div className={`p-2 rounded-lg ${role.color}`}>
@@ -286,14 +305,12 @@ export default function AdminUserManagement() {
                       {role.value === 'viewer' && 'Read-only access'}
                     </div>
                   </div>
-                  {isSelected && (
-                    <CheckCircle className="h-5 w-5 text-primary-600" />
-                  )}
+                  {isSelected && <CheckCircle className="h-5 w-5 text-primary-600" />}
                 </button>
               )
             })}
           </div>
-          
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               onClick={() => {

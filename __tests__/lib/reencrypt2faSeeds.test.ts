@@ -8,7 +8,12 @@ const tool = require('../../scripts/reencrypt-2fa-seeds.cjs') as {
 
 const ENV_KEYS = ['TOKEN_ENCRYPTION_KEY', 'TOKEN_ENCRYPTION_KEY_PREVIOUS', 'JWT_SECRET', 'NEXTAUTH_SECRET'] as const
 const saved: Record<string, string | undefined> = {}
-beforeEach(() => { for (const key of ENV_KEYS) { saved[key] = process.env[key]; delete process.env[key] } })
+beforeEach(() => {
+  for (const key of ENV_KEYS) {
+    saved[key] = process.env[key]
+    delete process.env[key]
+  }
+})
 afterEach(() => {
   for (const key of ENV_KEYS) {
     if (saved[key] === undefined) delete process.env[key]

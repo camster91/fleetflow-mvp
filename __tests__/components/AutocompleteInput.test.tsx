@@ -4,15 +4,7 @@ import AutocompleteInput, { highlightMatches } from '../../components/Autocomple
 const payload = '<img src=x onerror=alert(1)>'
 
 function renderInput(props: Partial<React.ComponentProps<typeof AutocompleteInput>> = {}) {
-  return render(
-    <AutocompleteInput
-      value=""
-      onChange={() => {}}
-      recentItems={[]}
-      label="Vehicle"
-      {...props}
-    />
-  )
+  return render(<AutocompleteInput value="" onChange={() => {}} recentItems={[]} label="Vehicle" {...props} />)
 }
 
 describe('AutocompleteInput highlighting', () => {

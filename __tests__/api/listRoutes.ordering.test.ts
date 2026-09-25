@@ -1,7 +1,11 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import {
-  CLIENT_LIST_SPEC, DELIVERY_LIST_SPEC, MAINTENANCE_LIST_SPEC, VEHICLE_LIST_SPEC, parseListQuery,
+  CLIENT_LIST_SPEC,
+  DELIVERY_LIST_SPEC,
+  MAINTENANCE_LIST_SPEC,
+  VEHICLE_LIST_SPEC,
+  parseListQuery,
 } from '@/lib/listQuery'
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')

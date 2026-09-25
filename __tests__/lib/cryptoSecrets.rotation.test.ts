@@ -4,7 +4,10 @@ const ENV_KEYS = ['TOKEN_ENCRYPTION_KEY', 'TOKEN_ENCRYPTION_KEY_PREVIOUS', 'JWT_
 const saved: Record<string, string | undefined> = {}
 
 beforeEach(() => {
-  for (const key of ENV_KEYS) { saved[key] = process.env[key]; delete process.env[key] }
+  for (const key of ENV_KEYS) {
+    saved[key] = process.env[key]
+    delete process.env[key]
+  }
 })
 afterEach(() => {
   for (const key of ENV_KEYS) {

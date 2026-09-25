@@ -21,9 +21,12 @@ describe('release quality gates', () => {
       expect(source).not.toMatch(/FleetFlow|Fleet Manager/)
     }
 
-    const manifest = JSON.parse(
-      fs.readFileSync(path.join(root, 'public/manifest.json'), 'utf8')
-    ) as { name?: string; short_name?: string; description?: string; theme_color?: string }
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public/manifest.json'), 'utf8')) as {
+      name?: string
+      short_name?: string
+      description?: string
+      theme_color?: string
+    }
 
     expect(manifest.name).toBe('Fleetvera - Fleet Operations')
     expect(manifest.short_name).toBe('Fleetvera')
@@ -50,9 +53,9 @@ describe('release quality gates', () => {
   })
 
   test('package scripts expose deterministic type and CI checks', () => {
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(root, 'package.json'), 'utf8')
-    ) as { scripts?: Record<string, string> }
+    const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as {
+      scripts?: Record<string, string>
+    }
 
     expect(packageJson.scripts?.typecheck).toBe('tsc --noEmit')
     expect(packageJson.scripts?.['test:ci']).toContain('--runInBand')
@@ -93,10 +96,7 @@ describe('release quality gates', () => {
   })
 
   test('does not ship the non-functional admin impersonation surface', () => {
-    const adminUsers = fs.readFileSync(
-      path.join(root, 'components/AdminUserManagement.tsx'),
-      'utf8'
-    )
+    const adminUsers = fs.readFileSync(path.join(root, 'components/AdminUserManagement.tsx'), 'utf8')
 
     expect(adminUsers).not.toMatch(/impersonat/i)
     expect(fs.existsSync(path.join(root, 'pages/api/admin/impersonate.ts'))).toBe(false)
@@ -113,9 +113,9 @@ describe('release quality gates', () => {
     expect(jestConfig).toContain('modulePathIgnorePatterns')
     expect(jestConfig).toContain("'<rootDir>/.next/'")
     expect(parsedConfig.modulePathIgnorePatterns).toContain('<rootDir>/.next/')
-    expect(parsedConfig.projects?.every((project) =>
-      project.modulePathIgnorePatterns?.includes('<rootDir>/.next/')
-    )).toBe(true)
+    expect(
+      parsedConfig.projects?.every((project) => project.modulePathIgnorePatterns?.includes('<rootDir>/.next/'))
+    ).toBe(true)
   })
 
   test('Docker normalizes the Windows entrypoint before execution', () => {
@@ -157,7 +157,9 @@ describe('release quality gates', () => {
     expect(entrypoint).not.toMatch(/FLEETVERA_RELEASE_MODE[^\n]*:-pilot/)
 
     const compose = fs.readFileSync(path.join(root, 'docker-compose.yml'), 'utf8')
-    expect(compose).toContain('FLEETVERA_RELEASE_MODE=${FLEETVERA_RELEASE_MODE:?Set FLEETVERA_RELEASE_MODE to pilot or public}')
+    expect(compose).toContain(
+      'FLEETVERA_RELEASE_MODE=${FLEETVERA_RELEASE_MODE:?Set FLEETVERA_RELEASE_MODE to pilot or public}'
+    )
 
     const exampleEnv = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
     expect(exampleEnv).toMatch(/^FLEETVERA_RELEASE_MODE=pilot$/m)

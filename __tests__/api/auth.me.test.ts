@@ -25,7 +25,10 @@ describe('GET /api/auth/me', () => {
   })
 
   it('returns the session user and expiry', async () => {
-    const session = { user: { id: 'u1', email: 'u1@example.test', name: 'U1', role: 'user' }, expires: '2030-01-01T00:00:00.000Z' }
+    const session = {
+      user: { id: 'u1', email: 'u1@example.test', name: 'U1', role: 'user' },
+      expires: '2030-01-01T00:00:00.000Z',
+    }
     ;(getUserFromRequest as jest.Mock).mockResolvedValue(session)
     const { req, res } = createMocks({ method: 'GET' })
     await handler(req as never, res as never)

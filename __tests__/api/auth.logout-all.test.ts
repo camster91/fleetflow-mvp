@@ -47,10 +47,18 @@ describe('POST /api/auth/logout-all', () => {
 
   it('revokes every existing session: an old cookie gets 401 afterwards', async () => {
     const otherDevice = await signToken({
-      sub: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager', tv: 0,
+      sub: 'u1',
+      email: 'user@example.com',
+      name: 'User',
+      role: 'fleet_manager',
+      tv: 0,
     })
     const thisDevice = await signToken({
-      sub: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager', tv: 0,
+      sub: 'u1',
+      email: 'user@example.com',
+      name: 'User',
+      role: 'fleet_manager',
+      tv: 0,
     })
 
     const before = post(`token=${otherDevice}`)

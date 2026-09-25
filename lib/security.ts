@@ -12,14 +12,14 @@ const rateLimiters = {
     points: 5,
     duration: 15 * 60, // 15 minutes
   }),
-  
+
   // API endpoints: 100 requests per minute
   api: new RateLimiterMemory({
     keyPrefix: 'api',
     points: 100,
     duration: 60, // 1 minute
   }),
-  
+
   // Admin endpoints: 30 requests per minute
   admin: new RateLimiterMemory({
     keyPrefix: 'admin',
@@ -37,11 +37,11 @@ export async function rateLimit(
   type: 'auth' | 'api' | 'admin' = 'api'
 ): Promise<boolean> {
   const limiter = rateLimiters[type]
-  
+
   // Only trust X-Forwarded-For entries appended by TRUSTED_PROXY_HOPS proxies;
   // the first hop is client-controlled and would let callers rotate buckets.
   const ip = getClientIP(req)
-  
+
   try {
     await limiter.consume(ip)
     return true
@@ -51,7 +51,7 @@ export async function rateLimit(
       res.setHeader('Retry-After', Math.round(rejRes.msBeforeNext / 1000))
       res.status(429).json({
         error: 'Too many requests',
-        retryAfter: Math.round(rejRes.msBeforeNext / 1000)
+        retryAfter: Math.round(rejRes.msBeforeNext / 1000),
       })
     }
     return false
@@ -87,7 +87,7 @@ export function validatePassword(password: string): {
   errors: string[]
 } {
   const errors: string[] = []
-  
+
   if (password.length < 8) {
     errors.push('Password must be at least 8 characters long')
   }
@@ -106,10 +106,10 @@ export function validatePassword(password: string): {
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
     errors.push('Password must contain at least one special character')
   }
-  
+
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   }
 }
 
@@ -172,9 +172,7 @@ export async function auditLog(action: {
       action: action.type,
       entityType: 'user',
       entityId: action.targetId,
-      description: action.targetId
-        ? `${action.type} for user ${action.targetId}`
-        : action.type,
+      description: action.targetId ? `${action.type} for user ${action.targetId}` : action.type,
       metadata: JSON.stringify({
         ...action.details,
         ...(action.ip ? { ip: action.ip } : {}),
@@ -203,11 +201,11 @@ export function validateInput(
   if (rules.required && (value === undefined || value === null || value === '')) {
     return { valid: false, error: 'This field is required' }
   }
-  
+
   if (!value && !rules.required) {
     return { valid: true }
   }
-  
+
   // Type validation
   if (rules.type) {
     switch (rules.type) {
@@ -227,13 +225,16 @@ export function validateInput(
         }
         break
       case 'uuid':
-        if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) {
+        if (
+          typeof value !== 'string' ||
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+        ) {
           return { valid: false, error: 'Invalid UUID format' }
         }
         break
     }
   }
-  
+
   // String length validation
   if (typeof value === 'string') {
     if (rules.minLength && value.length < rules.minLength) {
@@ -243,7 +244,7 @@ export function validateInput(
       return { valid: false, error: `Maximum ${rules.maxLength} characters allowed` }
     }
   }
-  
+
   // Number range validation
   if (typeof value === 'number') {
     if (rules.min !== undefined && value < rules.min) {
@@ -253,12 +254,12 @@ export function validateInput(
       return { valid: false, error: `Maximum value is ${rules.max}` }
     }
   }
-  
+
   // Pattern validation
   if (rules.pattern && !rules.pattern.test(String(value))) {
     return { valid: false, error: 'Invalid format' }
   }
-  
+
   return { valid: true }
 }
 // Deploy cache bust: 2026-02-28 18:53:47

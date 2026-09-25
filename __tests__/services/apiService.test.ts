@@ -1,6 +1,20 @@
-import { getVehicles, getDeliveries, getMaintenanceTasks, getClients, getSOPCategories, getVendingMachines, COLLECTION_MAX_PAGES, addVehicle, addDelivery, addMaintenanceTask, addClient, CREATE_NETWORK_RETRIES } from '@/services/apiService'
+import {
+  getVehicles,
+  getDeliveries,
+  getMaintenanceTasks,
+  getClients,
+  getSOPCategories,
+  getVendingMachines,
+  COLLECTION_MAX_PAGES,
+  addVehicle,
+  addDelivery,
+  addMaintenanceTask,
+  addClient,
+  CREATE_NETWORK_RETRIES,
+} from '@/services/apiService'
 
-const page = (data: unknown[], hasMore: boolean) => ({ ok: true, json: async () => ({ data, total: 0, page: 1, limit: 200, hasMore }) }) as Response
+const page = (data: unknown[], hasMore: boolean) =>
+  ({ ok: true, json: async () => ({ data, total: 0, page: 1, limit: 200, hasMore }) }) as Response
 
 describe('API collection response contracts', () => {
   beforeEach(() => jest.restoreAllMocks())
@@ -23,7 +37,8 @@ describe('API collection response contracts', () => {
 
   it('follows hasMore across pages so lists are not truncated at the first page', async () => {
     const rows = Array.from({ length: 450 }, (_, i) => ({ id: `vehicle-${i}` }))
-    jest.spyOn(global, 'fetch')
+    jest
+      .spyOn(global, 'fetch')
       .mockResolvedValueOnce(page(rows.slice(0, 200), true))
       .mockResolvedValueOnce(page(rows.slice(200, 400), true))
       .mockResolvedValueOnce(page(rows.slice(400), false))
@@ -45,7 +60,8 @@ describe('API collection response contracts', () => {
   })
 
   it('drops rows repeated across page boundaries by concurrent inserts', async () => {
-    jest.spyOn(global, 'fetch')
+    jest
+      .spyOn(global, 'fetch')
       .mockResolvedValueOnce(page([{ id: 'a' }, { id: 'b' }], true))
       .mockResolvedValueOnce(page([{ id: 'b' }, { id: 'c' }], false))
     await expect(getDeliveries()).resolves.toEqual([{ id: 'a' }, { id: 'b' }, { id: 'c' }])
@@ -58,7 +74,8 @@ describe('API collection response contracts', () => {
   })
 
   it('propagates an error from a later page instead of returning a partial list', async () => {
-    jest.spyOn(global, 'fetch')
+    jest
+      .spyOn(global, 'fetch')
       .mockResolvedValueOnce(page([{ id: 'a' }], true))
       .mockResolvedValueOnce({ ok: false, status: 500, statusText: 'err', json: async () => ({}) } as Response)
     await expect(getVehicles()).rejects.toThrow('Something went wrong')
@@ -86,9 +103,7 @@ describe('idempotent create requests', () => {
   })
 
   it('reuses the key when retrying a network failure of the same submit', async () => {
-    jest.spyOn(global, 'fetch')
-      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce(created)
+    jest.spyOn(global, 'fetch').mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(created)
     await expect(addClient({ name: 'Acme' } as never)).resolves.toEqual({ id: 'new-1' })
     const calls = (fetch as jest.Mock).mock.calls
     expect(calls).toHaveLength(2)
@@ -100,7 +115,9 @@ describe('idempotent create requests', () => {
     await expect(addClient({ name: 'Acme' } as never)).rejects.toThrow('Failed to fetch')
     expect(fetch).toHaveBeenCalledTimes(CREATE_NETWORK_RETRIES + 1)
 
-    ;(fetch as jest.Mock).mockReset().mockResolvedValue({ ok: false, status: 500, statusText: 'err', json: async () => ({}) } as Response)
+    ;(fetch as jest.Mock)
+      .mockReset()
+      .mockResolvedValue({ ok: false, status: 500, statusText: 'err', json: async () => ({}) } as Response)
     await expect(addClient({ name: 'Acme' } as never)).rejects.toThrow()
     expect(fetch).toHaveBeenCalledTimes(1)
   })

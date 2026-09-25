@@ -10,16 +10,30 @@ import type { Finding, FindingEvidence } from '@/lib/intelligence/types'
 const NOW = new Date('2026-08-08T16:00:00.000Z')
 
 function item(index: number, value: string | number = index): FindingEvidence {
-  return { entityType: 'vehicle', entityId: `v-${String(index).padStart(3, '0')}`, field: 'mileage', value, timestamp: null }
+  return {
+    entityType: 'vehicle',
+    entityId: `v-${String(index).padStart(3, '0')}`,
+    field: 'mileage',
+    value,
+    timestamp: null,
+  }
 }
 
 function finding(evidence: FindingEvidence[]): Finding {
   return {
-    id: 'stable', type: 'vehicle-stale', severity: 'medium',
-    confidence: { label: 'high', score: 0.9 }, score: 300,
-    ruleVersion: 'fleet-ops-v1', title: 'Title', explanation: 'Explanation',
-    evidence, recommendedAction: 'Review', actionUrl: '/vehicles?record=v',
-    generatedAt: NOW, expiresAt: new Date('2026-08-10T00:00:00Z'),
+    id: 'stable',
+    type: 'vehicle-stale',
+    severity: 'medium',
+    confidence: { label: 'high', score: 0.9 },
+    score: 300,
+    ruleVersion: 'fleet-ops-v1',
+    title: 'Title',
+    explanation: 'Explanation',
+    evidence,
+    recommendedAction: 'Review',
+    actionUrl: '/vehicles?record=v',
+    generatedAt: NOW,
+    expiresAt: new Date('2026-08-10T00:00:00Z'),
   }
 }
 
@@ -29,9 +43,13 @@ describe('finding evidence envelope', () => {
     const packed = packFindingEvidence(evidence)
     expect(Buffer.byteLength(packed, 'utf8')).toBeLessThanOrEqual(FINDING_EVIDENCE_BYTES_MAX)
     const parsed = parseStoredEvidence(packed)
-    expect(parsed).toEqual(expect.objectContaining({
-      valid: true, evidenceTotal: 105, evidenceTruncated: true,
-    }))
+    expect(parsed).toEqual(
+      expect.objectContaining({
+        valid: true,
+        evidenceTotal: 105,
+        evidenceTruncated: true,
+      })
+    )
     expect(parsed.evidence).toHaveLength(FINDING_EVIDENCE_ITEMS_MAX)
     expect(parsed.evidence[0].entityId).toBe('v-000')
     expect(parsed.evidence[99].entityId).toBe('v-099')
@@ -64,8 +82,13 @@ describe('finding lifecycle preparation', () => {
   it('does not extend a protected dismissal original expiry on repeated refreshes', () => {
     const originalExpiry = new Date('2026-08-09T00:00:00Z')
     const existing = {
-      id: 'stable', ownerId: 'owner', teamId: null, status: 'DISMISSED',
-      feedback: 'HELPFUL', ruleVersion: 'fleet-ops-v1', expiresAt: originalExpiry,
+      id: 'stable',
+      ownerId: 'owner',
+      teamId: null,
+      status: 'DISMISSED',
+      feedback: 'HELPFUL',
+      ruleVersion: 'fleet-ops-v1',
+      expiresAt: originalExpiry,
       resolvedAt: null,
     }
     const first = prepareFindingWrite(finding([item(0)]), existing, NOW)
@@ -84,9 +107,14 @@ describe('finding lifecycle preparation', () => {
     const write = prepareFindingWrite(
       { ...finding([item(0)]), expiresAt: nextExpiry },
       {
-        id: 'stable', ownerId: 'owner', teamId: null, status: 'DISMISSED',
-        feedback: 'NOT_HELPFUL', ruleVersion: 'fleet-ops-v1',
-        expiresAt: new Date('2026-08-09T00:00:00Z'), resolvedAt: null,
+        id: 'stable',
+        ownerId: 'owner',
+        teamId: null,
+        status: 'DISMISSED',
+        feedback: 'NOT_HELPFUL',
+        ruleVersion: 'fleet-ops-v1',
+        expiresAt: new Date('2026-08-09T00:00:00Z'),
+        resolvedAt: null,
       },
       new Date('2026-08-09T00:00:00Z')
     )

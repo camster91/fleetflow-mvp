@@ -14,7 +14,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const announcements = await prisma.announcement.findMany({ where: tenant.resourceWhere, orderBy: { createdAt: 'desc' }, take: 50 })
+    const announcements = await prisma.announcement.findMany({
+      where: tenant.resourceWhere,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    })
     return res.json(announcements.map(dbToAnnouncement))
   }
 
@@ -30,8 +34,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ann = await prisma.$transaction(async (tx) => {
       const created = await tx.announcement.create({ data })
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'created', entityType: 'announcement', entityId: created.id,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'created',
+        entityType: 'announcement',
+        entityId: created.id,
         description: `Announcement sent: "${created.message.substring(0, 60)}${created.message.length > 60 ? '...' : ''}"`,
       })
       return created

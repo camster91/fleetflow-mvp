@@ -23,7 +23,11 @@ const routes = [
   ['maintenance', maintenanceHandler],
 ] as const
 
-const call = async (handler: (req: never, res: never) => unknown, method = 'GET', query: Record<string, string> = {}) => {
+const call = async (
+  handler: (req: never, res: never) => unknown,
+  method = 'GET',
+  query: Record<string, string> = {}
+) => {
   const { req, res } = createMocks({ method: method as 'GET', query })
   await handler(req as never, res as never)
   return res
@@ -62,13 +66,39 @@ describe('GET /api/reports/{fleet,deliveries,maintenance}', () => {
 
   it('fleet scopes vehicles to the tenant and summarizes status', async () => {
     ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue([
-      { id: 'v1', name: 'Van', status: 'active', maintenanceDue: false, mileage: 1, lastService: null, nextService: null, vehicleType: 'van', driver: null },
-      { id: 'v2', name: 'Truck', status: 'active', maintenanceDue: true, mileage: 2, lastService: null, nextService: null, vehicleType: 'truck', driver: 'D' },
+      {
+        id: 'v1',
+        name: 'Van',
+        status: 'active',
+        maintenanceDue: false,
+        mileage: 1,
+        lastService: null,
+        nextService: null,
+        vehicleType: 'van',
+        driver: null,
+      },
+      {
+        id: 'v2',
+        name: 'Truck',
+        status: 'active',
+        maintenanceDue: true,
+        mileage: 2,
+        lastService: null,
+        nextService: null,
+        vehicleType: 'truck',
+        driver: 'D',
+      },
     ])
     const res = await call(fleetHandler)
     expect(res._getStatusCode()).toBe(200)
-    expect(prisma.vehicle.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { ownerId: 'owner-1', teamId: null } }))
-    expect(res._getJSONData()).toMatchObject({ totalVehicles: 2, truncated: false, vehiclesNeedingMaintenance: [{ id: 'v2' }] })
+    expect(prisma.vehicle.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { ownerId: 'owner-1', teamId: null } })
+    )
+    expect(res._getJSONData()).toMatchObject({
+      totalVehicles: 2,
+      truncated: false,
+      vehiclesNeedingMaintenance: [{ id: 'v2' }],
+    })
     expect(res.getHeader('Cache-Control')).toBe('private, no-store')
   })
 
@@ -95,7 +125,10 @@ describe('GET /api/reports/{fleet,deliveries,maintenance}', () => {
     ;(prisma.maintenanceTask.findMany as jest.Mock).mockResolvedValue([])
     const res = await call(maintenanceHandler)
     expect(res._getStatusCode()).toBe(200)
-    expect((prisma.maintenanceTask.findMany as jest.Mock).mock.calls[0][0].where.AND[0]).toEqual({ ownerId: 'owner-1', teamId: null })
+    expect((prisma.maintenanceTask.findMany as jest.Mock).mock.calls[0][0].where.AND[0]).toEqual({
+      ownerId: 'owner-1',
+      teamId: null,
+    })
   })
 
   it('returns 500 without leaking internals when the query fails', async () => {

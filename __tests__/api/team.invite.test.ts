@@ -39,10 +39,13 @@ describe('team invitation provisioning', () => {
       user: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' },
     })
     ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({
-      id: 'team-1', name: 'Acme', ownerId: 'owner-1', members: [],
+      id: 'team-1',
+      name: 'Acme',
+      ownerId: 'owner-1',
+      members: [],
     })
-    ;mockTx.user.findMany.mockResolvedValue([])
-    ;mockTx.teamMember.findMany.mockResolvedValue([])
+    mockTx.user.findMany.mockResolvedValue([])
+    mockTx.teamMember.findMany.mockResolvedValue([])
     mockTx.teamMember.count.mockResolvedValue(0)
     mockTx.user.upsert.mockResolvedValue({ id: 'invited-user' })
     mockTx.teamMember.create.mockResolvedValue({ id: 'invite-1' })
@@ -54,17 +57,19 @@ describe('team invitation provisioning', () => {
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(200)
-    expect(mockTx.user.upsert).toHaveBeenCalledWith(expect.objectContaining({
-      where: { email: 'new@example.com' },
-      create: { email: 'new@example.com', role: 'viewer' },
-      update: {},
-    }))
-    expect(mockTx.teamMember.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ userId: 'invited-user', inviteeEmail: 'new@example.com' }),
-    }))
-    expect(sendTeamInvitationEmail).toHaveBeenCalledWith(
-      'new@example.com', 'Owner', 'MEMBER', 'Acme', 'invite-1'
+    expect(mockTx.user.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { email: 'new@example.com' },
+        create: { email: 'new@example.com', role: 'viewer' },
+        update: {},
+      })
     )
+    expect(mockTx.teamMember.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ userId: 'invited-user', inviteeEmail: 'new@example.com' }),
+      })
+    )
+    expect(sendTeamInvitationEmail).toHaveBeenCalledWith('new@example.com', 'Owner', 'MEMBER', 'Acme', 'invite-1')
   })
 
   it('counts pending invitations against the team seat limit', async () => {
@@ -80,8 +85,8 @@ describe('team invitation provisioning', () => {
         status: index === 9 ? 'PENDING' : 'ACCEPTED',
       })),
     })
-    ;mockTx.user.findMany.mockResolvedValue([])
-    ;mockTx.teamMember.findMany.mockResolvedValue([])
+    mockTx.user.findMany.mockResolvedValue([])
+    mockTx.teamMember.findMany.mockResolvedValue([])
     mockTx.teamMember.count.mockResolvedValue(10)
     const { req, res } = createMocks({
       method: 'POST',
@@ -117,11 +122,14 @@ describe('team invitation provisioning', () => {
       user: { id: 'admin-1', email: 'admin@example.com', name: 'Admin' },
     })
     ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({
-      id: 'team-1', name: 'Acme', ownerId: 'owner-1',
+      id: 'team-1',
+      name: 'Acme',
+      ownerId: 'owner-1',
       members: [{ userId: 'admin-1', role: 'ADMIN', status: 'ACCEPTED' }],
     })
     const { req, res } = createMocks({
-      method: 'POST', body: { teamId: 'team-1', emails: ['new@example.com'], role: 'ADMIN' },
+      method: 'POST',
+      body: { teamId: 'team-1', emails: ['new@example.com'], role: 'ADMIN' },
     })
 
     await handler(req as never, res as never)
@@ -135,11 +143,12 @@ describe('team invitation provisioning', () => {
       user: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' },
     })
     ;(prisma.team.findFirst as jest.Mock).mockResolvedValue({
-      id: 'team-1', name: 'Acme', ownerId: 'owner-1', members: [],
+      id: 'team-1',
+      name: 'Acme',
+      ownerId: 'owner-1',
+      members: [],
     })
-    mockTx.user.findMany.mockResolvedValue([
-      { id: 'invited-user', email: 'returning@example.com' },
-    ])
+    mockTx.user.findMany.mockResolvedValue([{ id: 'invited-user', email: 'returning@example.com' }])
     mockTx.teamMember.findMany.mockResolvedValue([
       {
         id: 'invite-old',
@@ -159,11 +168,12 @@ describe('team invitation provisioning', () => {
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(200)
-    expect(mockTx.teamMember.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'invite-old' },
-      data: expect.objectContaining({ status: 'PENDING' }),
-    }))
+    expect(mockTx.teamMember.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'invite-old' },
+        data: expect.objectContaining({ status: 'PENDING' }),
+      })
+    )
     expect(mockTx.teamMember.create).not.toHaveBeenCalled()
   })
-
 })

@@ -32,8 +32,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const updated = await tx.client.findFirst({ where: scopedWhere })
       if (!updated) return null
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'updated', entityType: 'client', entityId: id, entityName: updated.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'updated',
+        entityType: 'client',
+        entityId: id,
+        entityName: updated.name,
         description: `Client "${updated.name}" was updated`,
       })
       return updated
@@ -50,8 +56,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const result = await tx.client.deleteMany({ where: scopedWhere })
       if (result.count === 0) return
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'deleted', entityType: 'client', entityId: id, entityName: client.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'deleted',
+        entityType: 'client',
+        entityId: id,
+        entityName: client.name,
         description: `Client "${client.name}" was deleted`,
       })
     })

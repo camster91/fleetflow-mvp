@@ -19,9 +19,7 @@ export function useNetworkStatus(): { isSlow: boolean; isOnline: boolean } {
     const connection = (navigator as NavigatorWithConnection).connection
     setIsOnline(navigator.onLine)
     const checkSpeed = () => {
-      setIsSlow(
-        connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g'
-      )
+      setIsSlow(connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g')
     }
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)

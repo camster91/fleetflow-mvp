@@ -20,8 +20,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const result = await tx.announcement.deleteMany({ where: { AND: [{ id }, tenant.resourceWhere] } })
       if (result.count === 0) return
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'deleted', entityType: 'announcement', entityId: id,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'deleted',
+        entityType: 'announcement',
+        entityId: id,
         description: `Announcement deleted`,
       })
     })

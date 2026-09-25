@@ -27,7 +27,7 @@ async function main() {
   }
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : 'Administrator bootstrap failed.')
   process.exit(1)
 })

@@ -36,7 +36,7 @@ export function evidenceCompleteness(evidence: readonly FindingEvidence[]): numb
 export function rankFinding(finding: UnrankedFinding): Finding {
   const rawUrgency = Number.isFinite(finding.urgency) ? finding.urgency : 0
   const urgency = Math.max(0, Math.min(100, Math.round(rawUrgency)))
-  const evidence = finding.evidence.map(item => ({
+  const evidence = finding.evidence.map((item) => ({
     ...item,
     value: typeof item.value === 'number' && !Number.isFinite(item.value) ? null : item.value,
   }))
@@ -49,9 +49,7 @@ export function rankFinding(finding: UnrankedFinding): Finding {
 }
 
 export function rankFindings(findings: readonly UnrankedFinding[]): Finding[] {
-  return findings
-    .map(rankFinding)
-    .sort((a, b) => b.score - a.score || compareStable(a.id, b.id))
+  return findings.map(rankFinding).sort((a, b) => b.score - a.score || compareStable(a.id, b.id))
 }
 
 /** Generate reproducible findings from already tenant-scoped records. */
@@ -66,7 +64,7 @@ export function generateFindings(input: GenerateFindingsInput): Finding[] {
     throw new TypeError('records must be provided')
   }
 
-  const generated = FINDING_RULES.flatMap(rule => rule(input))
+  const generated = FINDING_RULES.flatMap((rule) => rule(input))
   const unique = new Map<string, UnrankedFinding>()
   for (const finding of generated) {
     const current = unique.get(finding.id)
@@ -76,7 +74,15 @@ export function generateFindings(input: GenerateFindingsInput): Finding[] {
 }
 
 export type {
-  Finding, FindingConfidence, FindingEvidence, FindingSeverity, FindingType,
-  GenerateFindingsInput, IntelligenceDataQualityIssue, IntelligenceDelivery,
-  IntelligenceMaintenance, IntelligenceRecords, IntelligenceVehicle,
+  Finding,
+  FindingConfidence,
+  FindingEvidence,
+  FindingSeverity,
+  FindingType,
+  GenerateFindingsInput,
+  IntelligenceDataQualityIssue,
+  IntelligenceDelivery,
+  IntelligenceMaintenance,
+  IntelligenceRecords,
+  IntelligenceVehicle,
 } from './types'

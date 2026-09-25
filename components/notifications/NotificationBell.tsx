@@ -1,161 +1,155 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSession } from '@/lib/session';
-import { Bell, Check, Trash2, Settings, Loader2 } from 'lucide-react';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
-import { getNotificationMeta, NotificationType } from '../../lib/notifications';
-import { formatDistanceToNow } from 'date-fns';
-import { useRouter } from 'next/router';
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useSession } from '@/lib/session'
+import { Bell, Check, Trash2, Settings, Loader2 } from 'lucide-react'
+import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
+import { getNotificationMeta, NotificationType } from '../../lib/notifications'
+import { formatDistanceToNow } from 'date-fns'
+import { useRouter } from 'next/router'
 
 interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-  data?: Record<string, unknown>;
+  id: string
+  type: NotificationType
+  title: string
+  message: string
+  read: boolean
+  createdAt: string
+  data?: Record<string, unknown>
 }
 
 export const NotificationBell: React.FC = () => {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const [isOpen, setIsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession()
+  const router = useRouter()
+  const [isOpen, setIsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
-    if (!session?.user) return;
-    
+    if (!session?.user) return
+
     try {
-      const response = await fetch('/api/notifications?limit=5');
+      const response = await fetch('/api/notifications?limit=5')
       if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.notifications.filter((n: Notification) => !n.read).length);
+        const data = await response.json()
+        setNotifications(data.notifications)
+        setUnreadCount(data.notifications.filter((n: Notification) => !n.read).length)
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
+      console.error('Failed to fetch notifications:', error)
     }
-  }, [session?.user]);
+  }, [session?.user])
 
   useEffect(() => {
-    fetchNotifications();
-    
+    fetchNotifications()
+
     // Poll for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setIsOpen(false)
       }
-    };
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleMarkAsRead = async (notificationId: string, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    
+    e?.stopPropagation()
+
     try {
       const response = await fetch('/api/notifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notificationId }),
-      });
+      })
 
       if (response.ok) {
-        setNotifications(prev =>
-          prev.map(n =>
-            n.id === notificationId ? { ...n, read: true } : n
-          )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+        setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)))
+        setUnreadCount((prev) => Math.max(0, prev - 1))
       }
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      console.error('Failed to mark as read:', error)
     }
-  };
+  }
 
   const handleMarkAllAsRead = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       const response = await fetch('/api/notifications', {
         method: 'PUT',
-      });
+      })
 
       if (response.ok) {
-        setNotifications(prev =>
-          prev.map(n => ({ ...n, read: true }))
-        );
-        setUnreadCount(0);
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+        setUnreadCount(0)
       }
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
+      console.error('Failed to mark all as read:', error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleDelete = async (notificationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
+    e.stopPropagation()
+
     try {
       const response = await fetch(`/api/notifications?id=${notificationId}`, {
         method: 'DELETE',
-      });
+      })
 
       if (response.ok) {
-        const deleted = notifications.find(n => n.id === notificationId);
-        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        const deleted = notifications.find((n) => n.id === notificationId)
+        setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
         if (deleted && !deleted.read) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
+          setUnreadCount((prev) => Math.max(0, prev - 1))
         }
       }
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      console.error('Failed to delete notification:', error)
     }
-  };
+  }
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
-      handleMarkAsRead(notification.id);
+      handleMarkAsRead(notification.id)
     }
-    
+
     // Navigate based on notification type
     switch (notification.type) {
       case 'TEAM_INVITE':
-        router.push('/team');
-        break;
+        router.push('/team')
+        break
       case 'MAINTENANCE_DUE':
-        router.push('/maintenance');
-        break;
+        router.push('/maintenance')
+        break
       case 'VEHICLE_ALERT':
-        router.push('/vehicles');
-        break;
+        router.push('/vehicles')
+        break
       case 'BILLING':
-        router.push('/settings/billing');
-        break;
+        router.push('/settings/billing')
+        break
       default:
-        router.push('/notifications');
+        router.push('/notifications')
     }
-    
-    setIsOpen(false);
-  };
+
+    setIsOpen(false)
+  }
 
   const getIconComponent = (type: NotificationType) => {
-    const meta = getNotificationMeta(type);
+    const meta = getNotificationMeta(type)
     // Dynamic import would be better, but for simplicity we'll return the class names
-    return meta;
-  };
+    return meta
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -179,22 +173,11 @@ export const NotificationBell: React.FC = () => {
             <h3 className="font-semibold text-slate-900">Notifications</h3>
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleMarkAllAsRead}
-                  loading={isLoading}
-                  className="text-xs"
-                >
+                <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} loading={isLoading} className="text-xs">
                   Mark all read
                 </Button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/settings/notifications')}
-                className="p-1"
-              >
+              <Button variant="ghost" size="sm" onClick={() => router.push('/settings/notifications')} className="p-1">
                 <Settings className="h-4 w-4" />
               </Button>
             </div>
@@ -210,7 +193,7 @@ export const NotificationBell: React.FC = () => {
             ) : (
               <div className="divide-y divide-slate-100">
                 {notifications.map((notification) => {
-                  const meta = getIconComponent(notification.type);
+                  const meta = getIconComponent(notification.type)
                   return (
                     <div
                       key={notification.id}
@@ -227,16 +210,16 @@ export const NotificationBell: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
-                            <p className={`font-medium text-sm ${!notification.read ? 'text-slate-900' : 'text-slate-700'}`}>
+                            <p
+                              className={`font-medium text-sm ${!notification.read ? 'text-slate-900' : 'text-slate-700'}`}
+                            >
                               {notification.title}
                             </p>
                             <span className="text-xs text-slate-400 whitespace-nowrap">
                               {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                             </span>
                           </div>
-                          <p className="text-sm text-slate-600 line-clamp-2 mt-0.5">
-                            {notification.message}
-                          </p>
+                          <p className="text-sm text-slate-600 line-clamp-2 mt-0.5">{notification.message}</p>
                           {!notification.read && (
                             <div className="flex items-center gap-2 mt-2">
                               <button
@@ -257,7 +240,7 @@ export const NotificationBell: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -270,8 +253,8 @@ export const NotificationBell: React.FC = () => {
               size="sm"
               fullWidth
               onClick={() => {
-                router.push('/notifications');
-                setIsOpen(false);
+                router.push('/notifications')
+                setIsOpen(false)
               }}
             >
               View all notifications
@@ -280,7 +263,7 @@ export const NotificationBell: React.FC = () => {
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default NotificationBell;
+export default NotificationBell

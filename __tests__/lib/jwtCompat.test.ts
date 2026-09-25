@@ -32,10 +32,7 @@ function b64url(value: string | Buffer) {
  * migration: header {"alg":"HS256","typ":"JWT"}, claims in insertion order,
  * iat/exp as integer seconds.
  */
-function legacyJwt(
-  claims: Record<string, unknown>,
-  { secret = SECRET, header = { alg: 'HS256', typ: 'JWT' } } = {}
-) {
+function legacyJwt(claims: Record<string, unknown>, { secret = SECRET, header = { alg: 'HS256', typ: 'JWT' } } = {}) {
   const signingInput = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claims))}`
   const signature = createHmac('sha256', secret).update(signingInput).digest('base64url')
   return `${signingInput}.${signature}`
@@ -85,9 +82,10 @@ beforeEach(() => {
 describe('tokens signed with jose', () => {
   it('keep the jsonwebtoken header and claim shape', async () => {
     const token = await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv: 2 })
-    const [header, payload] = token.split('.').slice(0, 2).map((part) =>
-      JSON.parse(Buffer.from(part, 'base64url').toString())
-    )
+    const [header, payload] = token
+      .split('.')
+      .slice(0, 2)
+      .map((part) => JSON.parse(Buffer.from(part, 'base64url').toString()))
 
     expect(header).toEqual({ alg: 'HS256', typ: 'JWT' })
     expect(payload).toEqual({
@@ -124,9 +122,7 @@ describe('tokens signed with jose', () => {
       '5m'
     )
 
-    await expect(verifyToken(challenge)).resolves.toEqual(
-      expect.objectContaining({ sub: 'u1', purpose: 'two-factor' })
-    )
+    await expect(verifyToken(challenge)).resolves.toEqual(expect.objectContaining({ sub: 'u1', purpose: 'two-factor' }))
     await expect(proxyAllows(challenge)).resolves.toBe(false)
     await expect(getUserFromRequest(apiRequest(challenge))).resolves.toBeNull()
   })
@@ -154,22 +150,34 @@ describe('cookies issued by jsonwebtoken before the migration', () => {
 
 describe('rejected tokens', () => {
   it.each([
-    ['a tampered payload (new signer)', async () =>
-      tamper(await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' }))],
+    [
+      'a tampered payload (new signer)',
+      async () => tamper(await signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager' })),
+    ],
     ['a tampered payload (legacy signer)', async () => tamper(legacyJwt(legacySessionClaims()))],
-    ['a different signing secret', async () =>
-      legacyJwt(legacySessionClaims(), { secret: 'some-other-secret-that-is-also-32-chars-long' })],
-    ['an expired token', async () =>
-      legacyJwt(legacySessionClaims({ iat: nowSeconds() - 7200, exp: nowSeconds() - 3600 }))],
-    ['an unsigned alg=none token', async () => {
-      const header = b64url(JSON.stringify({ alg: 'none', typ: 'JWT' }))
-      return `${header}.${b64url(JSON.stringify(legacySessionClaims()))}.`
-    }],
-    ['a token signed with another HMAC algorithm', async () => {
-      const header = { alg: 'HS512', typ: 'JWT' }
-      const input = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(legacySessionClaims()))}`
-      return `${input}.${createHmac('sha512', SECRET).update(input).digest('base64url')}`
-    }],
+    [
+      'a different signing secret',
+      async () => legacyJwt(legacySessionClaims(), { secret: 'some-other-secret-that-is-also-32-chars-long' }),
+    ],
+    [
+      'an expired token',
+      async () => legacyJwt(legacySessionClaims({ iat: nowSeconds() - 7200, exp: nowSeconds() - 3600 })),
+    ],
+    [
+      'an unsigned alg=none token',
+      async () => {
+        const header = b64url(JSON.stringify({ alg: 'none', typ: 'JWT' }))
+        return `${header}.${b64url(JSON.stringify(legacySessionClaims()))}.`
+      },
+    ],
+    [
+      'a token signed with another HMAC algorithm',
+      async () => {
+        const header = { alg: 'HS512', typ: 'JWT' }
+        const input = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(legacySessionClaims()))}`
+        return `${input}.${createHmac('sha512', SECRET).update(input).digest('base64url')}`
+      },
+    ],
   ])('rejects %s everywhere', async (_label, build) => {
     const token = await build()
 
@@ -205,8 +213,7 @@ describe('token version revocation', () => {
   }
 
   it.each([
-    ['new', async (tv: number) =>
-      signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv })],
+    ['new', async (tv: number) => signToken({ sub: 'u1', email: 'a@b.com', name: 'A', role: 'fleet_manager', tv })],
     ['legacy', async (tv: number) => legacyJwt(legacySessionClaims({ tv }))],
   ])('returns 401 for a %s token behind the user tokenVersion', async (_label, build) => {
     mockUserRow.tokenVersion = 2

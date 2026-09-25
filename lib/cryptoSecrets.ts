@@ -28,7 +28,9 @@ function currentKeyMaterial(): string | null {
   const legacy = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET
   if (legacy && process.env.NODE_ENV === 'production' && !warnedAboutFallback) {
     warnedAboutFallback = true
-    console.warn('TOKEN_ENCRYPTION_KEY is not set; 2FA secrets are encrypted with the session signing secret. Set TOKEN_ENCRYPTION_KEY before rotating JWT_SECRET.')
+    console.warn(
+      'TOKEN_ENCRYPTION_KEY is not set; 2FA secrets are encrypted with the session signing secret. Set TOKEN_ENCRYPTION_KEY before rotating JWT_SECRET.'
+    )
   }
   return legacy || null
 }

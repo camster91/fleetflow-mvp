@@ -26,7 +26,7 @@ describe('POST /api/auth/logout', () => {
     expect(cookies.join(';')).toContain('token=')
     expect(cookies.join(';')).toContain('two_factor_challenge=')
     expect(cookies.join(';')).toContain('fleetflow_team=')
-    expect(cookies.every(cookie => cookie.includes('Max-Age=0'))).toBe(true)
+    expect(cookies.every((cookie) => cookie.includes('Max-Age=0'))).toBe(true)
     expect(res.getHeader('Cache-Control')).toBe('private, no-store')
   })
 

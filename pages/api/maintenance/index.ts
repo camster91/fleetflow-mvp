@@ -14,7 +14,9 @@ async function maintenanceSummary(scope: object, today: Date) {
   const [total, overdue, dueThisWeek, completed] = await Promise.all([
     prisma.maintenanceTask.count({ where: scope }),
     prisma.maintenanceTask.count({ where: scopedWhere(scope, [{ completed: false, dueDate: { lt: today } }]) }),
-    prisma.maintenanceTask.count({ where: scopedWhere(scope, [{ completed: false, dueDate: { gte: today, lt: addDays(today, 8) } }]) }),
+    prisma.maintenanceTask.count({
+      where: scopedWhere(scope, [{ completed: false, dueDate: { gte: today, lt: addDays(today, 8) } }]),
+    }),
     prisma.maintenanceTask.count({ where: scopedWhere(scope, [{ completed: true }]) }),
   ])
   return { total, overdue, dueThisWeek, completed }
@@ -35,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!range.ok) return res.status(400).json({ error: range.error })
     const { page, limit, skip, conditions, orderBy, today } = parsed.value
 
-    const scope=assignedMaintenanceWhere(tenant.resourceWhere,tenant.role,userId)
+    const scope = assignedMaintenanceWhere(tenant.resourceWhere, tenant.role, userId)
     const where = scopedWhere(scope, range.value ? [...conditions, range.value] : conditions)
     const [tasks, total, summary] = await Promise.all([
       prisma.maintenanceTask.findMany({
@@ -48,7 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.maintenanceTask.count({ where }),
       parsed.value.summary ? maintenanceSummary(scope, today) : undefined,
     ])
-    return res.json({ data: tasks.map(task=>isDriverRole(tenant.role)?driverMaintenanceDto(task):dbToMaintenanceTask(task)), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
+    return res.json({
+      data: tasks.map((task) => (isDriverRole(tenant.role) ? driverMaintenanceDto(task) : dbToMaintenanceTask(task))),
+      total,
+      page,
+      limit,
+      hasMore: skip + limit < total,
+      ...(summary ? { summary } : {}),
+    })
   }
 
   if (req.method === 'POST') {
@@ -66,17 +75,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ownerId: tenant.ownerId,
       teamId: tenant.teamId,
     }
-    const task = await prisma.$transaction(async (tx) => {
-      const created = await tx.maintenanceTask.create({ data })
-      await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'created', entityType: 'maintenance',
-        entityId: created.id, entityName: created.title,
-        description: `Maintenance task "${created.title}" scheduled for ${created.vehicleName ?? 'unknown vehicle'}`,
+    const task = await prisma
+      .$transaction(async (tx) => {
+        const created = await tx.maintenanceTask.create({ data })
+        await logActivity(tx, {
+          userId,
+          teamId: tenant.teamId,
+          userName: session.user.name,
+          userRole: tenant.role,
+          action: 'created',
+          entityType: 'maintenance',
+          entityId: created.id,
+          entityName: created.title,
+          description: `Maintenance task "${created.title}" scheduled for ${created.vehicleName ?? 'unknown vehicle'}`,
+        })
+        await idempotency.store(tx, 201, dbToMaintenanceTask(created))
+        return created
       })
-      await idempotency.store(tx, 201, dbToMaintenanceTask(created))
-      return created
-    }).catch(idempotency.replayOnConflict)
+      .catch(idempotency.replayOnConflict)
     if (!task) return
     return res.status(201).json(dbToMaintenanceTask(task))
   }

@@ -92,11 +92,24 @@ export function normalizeTimeZone(value: unknown): string {
 export function supportedTimeZones(): string[] {
   const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }
   const zones = typeof intl.supportedValuesOf === 'function' ? intl.supportedValuesOf('timeZone') : []
-  const list = zones.length ? [...zones] : [
-    'America/St_Johns', 'America/Halifax', 'America/Toronto', 'America/New_York', 'America/Winnipeg',
-    'America/Chicago', 'America/Regina', 'America/Edmonton', 'America/Denver', 'America/Phoenix',
-    'America/Vancouver', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu',
-  ]
+  const list = zones.length
+    ? [...zones]
+    : [
+        'America/St_Johns',
+        'America/Halifax',
+        'America/Toronto',
+        'America/New_York',
+        'America/Winnipeg',
+        'America/Chicago',
+        'America/Regina',
+        'America/Edmonton',
+        'America/Denver',
+        'America/Phoenix',
+        'America/Vancouver',
+        'America/Los_Angeles',
+        'America/Anchorage',
+        'Pacific/Honolulu',
+      ]
   if (!list.includes('UTC')) list.push('UTC')
   if (!list.includes(DEFAULT_TIME_ZONE)) list.push(DEFAULT_TIME_ZONE)
   return list

@@ -6,7 +6,7 @@ import { canManageIntegrations } from '../permissions'
 import { createProviderRegistry } from './types'
 import type { IntegrationConnection } from '@prisma/client'
 
-export const scopeKeyFor = (ownerId: string, teamId: string | null) => teamId ? `team:${teamId}` : `owner:${ownerId}`
+export const scopeKeyFor = (ownerId: string, teamId: string | null) => (teamId ? `team:${teamId}` : `owner:${ownerId}`)
 
 export async function requireIntegrationAdmin(req: NextApiRequest, res: NextApiResponse, mutate = false) {
   const context = await requireTenantContext(req, res)
@@ -45,7 +45,9 @@ function safeStringArray(value: unknown): string[] {
   try {
     const parsed = JSON.parse(typeof value === 'string' ? value : '[]')
     return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 20) : []
-  } catch { return [] }
+  } catch {
+    return []
+  }
 }
 
 export function payloadHash(payload: unknown) {
@@ -56,7 +58,11 @@ export function providerEndpoint(envName: 'QUICKBOOKS_TOKEN_URL' | 'QUICKBOOKS_R
   const configured = process.env[envName]
   if (!configured) return official
   const url = new URL(configured)
-  const loopback = process.env.INTEGRATION_ALLOW_TEST_PROVIDERS === '1' && process.env.NODE_ENV !== 'production' && url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname)
+  const loopback =
+    process.env.INTEGRATION_ALLOW_TEST_PROVIDERS === '1' &&
+    process.env.NODE_ENV !== 'production' &&
+    url.protocol === 'http:' &&
+    ['127.0.0.1', 'localhost'].includes(url.hostname)
   if (!loopback) throw new Error('Provider endpoint override is not allowed')
   return url.toString()
 }

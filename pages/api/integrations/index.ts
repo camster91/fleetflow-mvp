@@ -14,8 +14,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     integrations: registry.list().map((provider) => {
       const connection = byProvider.get(provider.id)
       return connection
-        ? { ...publicConnection(connection, provider.readiness()), name: provider.name, authMode: provider.authMode, capabilities: provider.capabilities }
-        : { provider: provider.id, name: provider.name, authMode: provider.authMode, capabilities: provider.capabilities, status: 'DISCONNECTED', connected: false, needsReconnect: false, readiness: provider.readiness(), scopes: [], tokenExpiresAt: null, lastSyncAt: null, nextSyncAt: null, lastErrorCode: null }
+        ? {
+            ...publicConnection(connection, provider.readiness()),
+            name: provider.name,
+            authMode: provider.authMode,
+            capabilities: provider.capabilities,
+          }
+        : {
+            provider: provider.id,
+            name: provider.name,
+            authMode: provider.authMode,
+            capabilities: provider.capabilities,
+            status: 'DISCONNECTED',
+            connected: false,
+            needsReconnect: false,
+            readiness: provider.readiness(),
+            scopes: [],
+            tokenExpiresAt: null,
+            lastSyncAt: null,
+            nextSyncAt: null,
+            lastErrorCode: null,
+          }
     }),
   })
 }

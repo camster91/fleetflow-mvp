@@ -73,14 +73,24 @@ describe('the toISOString bug the helpers replace', () => {
 })
 
 ;(isChild ? describe.skip : describe)('date-only helpers across time zones', () => {
-  it.each(ZONES)('passes with TZ=%s', (tz) => {
-    const root = path.resolve(__dirname, '../..')
-    const result = spawnSync(
-      process.execPath,
-      [path.join(root, 'node_modules/jest/bin/jest.js'), '--selectProjects', 'unit', '--runTestsByPath', path.join(root, '__tests__/lib/dateOnly.test.ts')],
-      { cwd: root, env: { ...process.env, TZ: tz, DATE_ONLY_TZ_CHILD: '1' }, encoding: 'utf8' },
-    )
-    if (result.status !== 0) throw new Error(`TZ=${tz} failed:\n${result.stderr}`)
-    expect(result.stderr).toMatch(/Tests:\s+\d+ skipped, 7 passed/)
-  }, 60_000)
+  it.each(ZONES)(
+    'passes with TZ=%s',
+    (tz) => {
+      const root = path.resolve(__dirname, '../..')
+      const result = spawnSync(
+        process.execPath,
+        [
+          path.join(root, 'node_modules/jest/bin/jest.js'),
+          '--selectProjects',
+          'unit',
+          '--runTestsByPath',
+          path.join(root, '__tests__/lib/dateOnly.test.ts'),
+        ],
+        { cwd: root, env: { ...process.env, TZ: tz, DATE_ONLY_TZ_CHILD: '1' }, encoding: 'utf8' }
+      )
+      if (result.status !== 0) throw new Error(`TZ=${tz} failed:\n${result.stderr}`)
+      expect(result.stderr).toMatch(/Tests:\s+\d+ skipped, 7 passed/)
+    },
+    60_000
+  )
 })

@@ -6,9 +6,7 @@ jest.mock('@/lib/prisma', () => ({
 }))
 jest.mock('@/lib/cryptoSecrets', () => ({ encryptSecret: jest.fn(() => 'encrypted-secret') }))
 jest.mock('@/lib/tokens', () => ({
-  generateBackupCodes: jest.fn(() => Array.from({ length: 10 }, (_, i) =>
-    `${String(i).padStart(4, '0')}-1111-2222`
-  )),
+  generateBackupCodes: jest.fn(() => Array.from({ length: 10 }, (_, i) => `${String(i).padStart(4, '0')}-1111-2222`)),
 }))
 jest.mock('@/lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }))
 jest.mock('speakeasy', () => ({
@@ -36,7 +34,9 @@ describe('POST /api/auth/2fa/setup', () => {
   it('stores the encrypted seed and server-generated backup-code hashes together', async () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'u1' } })
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'u1', email: 'user@example.com', twoFactorEnabled: false,
+      id: 'u1',
+      email: 'user@example.com',
+      twoFactorEnabled: false,
     })
 
     const { req, res } = createMocks({ method: 'POST' })
@@ -48,9 +48,7 @@ describe('POST /api/auth/2fa/setup', () => {
       data: {
         twoFactorSecret: 'encrypted-secret',
         backupCodes: JSON.stringify(
-          Array.from({ length: 10 }, (_, i) =>
-            `hash(${String(i).padStart(4, '0')}-1111-2222)`
-          )
+          Array.from({ length: 10 }, (_, i) => `hash(${String(i).padStart(4, '0')}-1111-2222)`)
         ),
       },
     })

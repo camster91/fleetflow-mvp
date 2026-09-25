@@ -1,19 +1,42 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from '../../../lib/prisma';
-import { subDays } from 'date-fns';
-import { requireTenantContext } from '../../../lib/apiAuth';
-import { canViewReports } from '../../../lib/permissions';
-import { scoreMaintenanceRisk } from '../../../lib/intelligence/maintenanceRisk';
-import { startOfTodayInZone } from '../../../lib/dateOnly';
-import { getWorkspaceTimeZone } from '../../../lib/workspaceTimeZone';
+import { NextApiRequest, NextApiResponse } from 'next'
+import { prisma } from '../../../lib/prisma'
+import { subDays } from 'date-fns'
+import { requireTenantContext } from '../../../lib/apiAuth'
+import { canViewReports } from '../../../lib/permissions'
+import { scoreMaintenanceRisk } from '../../../lib/intelligence/maintenanceRisk'
+import { startOfTodayInZone } from '../../../lib/dateOnly'
+import { getWorkspaceTimeZone } from '../../../lib/workspaceTimeZone'
 
-export const MAINTENANCE_RISK_VEHICLE_LIMIT = 100;
-export const MAINTENANCE_RISK_TASK_LIMIT = 2000;
+export const MAINTENANCE_RISK_VEHICLE_LIMIT = 100
+export const MAINTENANCE_RISK_TASK_LIMIT = 2000
 
 type RiskDb = {
-  vehicle: { findMany(args: object): Promise<Array<{ id: string; name: string; year: number | null; mileage: number | null; lastService: Date | null; maintenanceDue: boolean }>> };
-  maintenanceTask: { findMany(args: object): Promise<Array<{ id: string; vehicleId: string | null; type: string; dueDate: Date; completed: boolean; completedDate: Date | null; actualCost: number | null }>> };
-};
+  vehicle: {
+    findMany(args: object): Promise<
+      Array<{
+        id: string
+        name: string
+        year: number | null
+        mileage: number | null
+        lastService: Date | null
+        maintenanceDue: boolean
+      }>
+    >
+  }
+  maintenanceTask: {
+    findMany(args: object): Promise<
+      Array<{
+        id: string
+        vehicleId: string | null
+        type: string
+        dueDate: Date
+        completed: boolean
+        completedDate: Date | null
+        actualCost: number | null
+      }>
+    >
+  }
+}
 
 /** Bounded, read-only risk projection. Scope must come from requireTenantContext. */
 export async function buildMaintenanceRisks(db: RiskDb, resourceWhere: object, now: Date, timeZone?: string) {
@@ -22,51 +45,68 @@ export async function buildMaintenanceRisks(db: RiskDb, resourceWhere: object, n
     select: { id: true, name: true, year: true, mileage: true, lastService: true, maintenanceDue: true },
     orderBy: { id: 'asc' },
     take: MAINTENANCE_RISK_VEHICLE_LIMIT + 1,
-  });
-  const vehicles = vehicleRows.slice(0, MAINTENANCE_RISK_VEHICLE_LIMIT);
-  if (!vehicles.length) return { items: [], evaluatedVehicles: 0, coverage: { vehiclesComplete: true, tasksComplete: true } };
+  })
+  const vehicles = vehicleRows.slice(0, MAINTENANCE_RISK_VEHICLE_LIMIT)
+  if (!vehicles.length)
+    return { items: [], evaluatedVehicles: 0, coverage: { vehiclesComplete: true, tasksComplete: true } }
   const taskRows = await db.maintenanceTask.findMany({
-    where: { AND: [resourceWhere, { vehicleId: { in: vehicles.map(vehicle => vehicle.id) } }] },
-    select: { id: true, vehicleId: true, type: true, dueDate: true, completed: true, completedDate: true, actualCost: true },
+    where: { AND: [resourceWhere, { vehicleId: { in: vehicles.map((vehicle) => vehicle.id) } }] },
+    select: {
+      id: true,
+      vehicleId: true,
+      type: true,
+      dueDate: true,
+      completed: true,
+      completedDate: true,
+      actualCost: true,
+    },
     orderBy: [{ vehicleId: 'asc' }, { id: 'asc' }],
     take: MAINTENANCE_RISK_TASK_LIMIT + 1,
-  });
-  const tasks = taskRows.slice(0, MAINTENANCE_RISK_TASK_LIMIT);
-  const tasksComplete = taskRows.length <= MAINTENANCE_RISK_TASK_LIMIT;
-  const currency = process.env.MAINTENANCE_RISK_CURRENCY;
-  const items = vehicles.map(vehicle => scoreMaintenanceRisk({
-    vehicle,
-    tasks: tasks.filter(task => task.vehicleId === vehicle.id),
-    serviceMileage: null, // The current schema does not capture mileage at service; expose this gap instead of inferring it.
-    currency,
-    costUnit: 'major',
-    sourceComplete: tasksComplete,
-  }, { now, timeZone })).sort((a, b) => b.score - a.score || a.vehicleId.localeCompare(b.vehicleId)).slice(0, 10);
+  })
+  const tasks = taskRows.slice(0, MAINTENANCE_RISK_TASK_LIMIT)
+  const tasksComplete = taskRows.length <= MAINTENANCE_RISK_TASK_LIMIT
+  const currency = process.env.MAINTENANCE_RISK_CURRENCY
+  const items = vehicles
+    .map((vehicle) =>
+      scoreMaintenanceRisk(
+        {
+          vehicle,
+          tasks: tasks.filter((task) => task.vehicleId === vehicle.id),
+          serviceMileage: null, // The current schema does not capture mileage at service; expose this gap instead of inferring it.
+          currency,
+          costUnit: 'major',
+          sourceComplete: tasksComplete,
+        },
+        { now, timeZone }
+      )
+    )
+    .sort((a, b) => b.score - a.score || a.vehicleId.localeCompare(b.vehicleId))
+    .slice(0, 10)
   return {
     items,
     evaluatedVehicles: vehicles.length,
     coverage: { vehiclesComplete: vehicleRows.length <= MAINTENANCE_RISK_VEHICLE_LIMIT, tasksComplete },
-  };
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-  const context = await requireTenantContext(req, res);
-  if (!context) return;
-  const { tenant } = context;
-  if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' });
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+  const context = await requireTenantContext(req, res)
+  if (!context) return
+  const { tenant } = context
+  if (!canViewReports(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
   try {
-    const days = Math.max(7, Math.min(365, parseInt(req.query.days as string) || 30));
-    const fromDate = subDays(new Date(), days);
-    const now = new Date();
-    const timeZone = await getWorkspaceTimeZone(tenant);
+    const days = Math.max(7, Math.min(365, parseInt(req.query.days as string) || 30))
+    const fromDate = subDays(new Date(), days)
+    const now = new Date()
+    const timeZone = await getWorkspaceTimeZone(tenant)
     // Due dates are date-only values at UTC midnight; "today" is the
     // workspace's local calendar day in the same representation.
-    const today = startOfTodayInZone(timeZone, now);
-    const twoWeeksFromNow = new Date(today.getTime() + 14 * 86400000);
+    const today = startOfTodayInZone(timeZone, now)
+    const twoWeeksFromNow = new Date(today.getTime() + 14 * 86400000)
 
-    const ownershipFilter = tenant.resourceWhere;
+    const ownershipFilter = tenant.resourceWhere
 
     const [
       // Vehicle counts by status
@@ -107,7 +147,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Maintenance counts
       prisma.maintenanceTask.count({ where: ownershipFilter }),
       prisma.maintenanceTask.count({ where: { ...ownershipFilter, completed: false, dueDate: { lt: today } } }),
-      prisma.maintenanceTask.count({ where: { ...ownershipFilter, completed: false, dueDate: { gte: today, lte: twoWeeksFromNow } } }),
+      prisma.maintenanceTask.count({
+        where: { ...ownershipFilter, completed: false, dueDate: { gte: today, lte: twoWeeksFromNow } },
+      }),
       prisma.maintenanceTask.count({ where: { ...ownershipFilter, completed: true } }),
       prisma.maintenanceTask.aggregate({ where: ownershipFilter, _sum: { costEstimate: true } }),
       // Upcoming tasks (not completed, due in future, limit 3)
@@ -138,32 +180,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { ...ownershipFilter, vehicleId: { not: null } },
         _count: { _all: true },
       }),
-    ]);
+    ])
 
-    const totalMaintCost = maintenanceCostAgg._sum.costEstimate || 0;
-    const fleetUtilization = totalVehicles > 0
-      ? Math.round((activeVehicles / totalVehicles) * 100) : 0;
+    const totalMaintCost = maintenanceCostAgg._sum.costEstimate || 0
+    const fleetUtilization = totalVehicles > 0 ? Math.round((activeVehicles / totalVehicles) * 100) : 0
 
-    const upcomingItems = upcomingTasks.map(t => ({
+    const upcomingItems = upcomingTasks.map((t) => ({
       vehicle: t.vehicleName || 'Unknown',
       task: t.type,
       dueIn: Math.round((new Date(t.dueDate).getTime() - today.getTime()) / 86400000),
-    }));
+    }))
 
     // Build activity-per-day chart data
-    const dayMap: Record<string, { deliveries: number; maintenance: number }> = {};
-    const labelFor = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const dayMap: Record<string, { deliveries: number; maintenance: number }> = {}
+    const labelFor = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     for (let i = 0; i < Math.min(days, 30); i++) {
-      dayMap[labelFor(subDays(new Date(), Math.min(days, 30) - 1 - i))] = { deliveries: 0, maintenance: 0 };
+      dayMap[labelFor(subDays(new Date(), Math.min(days, 30) - 1 - i))] = { deliveries: 0, maintenance: 0 }
     }
     for (const log of activityLogs) {
-      const key = labelFor(new Date(log.createdAt));
+      const key = labelFor(new Date(log.createdAt))
       if (dayMap[key]) {
-        if (log.entityType === 'delivery') dayMap[key].deliveries++;
-        if (log.entityType === 'maintenance') dayMap[key].maintenance++;
+        if (log.entityType === 'delivery') dayMap[key].deliveries++
+        if (log.entityType === 'maintenance') dayMap[key].maintenance++
       }
     }
-    const activityOverTime = Object.entries(dayMap).map(([name, v]) => ({ name, ...v }));
+    const activityOverTime = Object.entries(dayMap).map(([name, v]) => ({ name, ...v }))
 
     // Maintenance by category — use groupBy
     const categoryGroups = await prisma.maintenanceTask.groupBy({
@@ -171,41 +212,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       where: ownershipFilter,
       _count: true,
       _sum: { costEstimate: true },
-    });
+    })
     const maintenanceByCategory = categoryGroups.length
-      ? categoryGroups.map(g => ({ name: g.type || 'General', value: g._count, cost: g._sum.costEstimate || 0 }))
-      : [{ name: 'No tasks yet', value: 1, cost: 0 }];
+      ? categoryGroups.map((g) => ({ name: g.type || 'General', value: g._count, cost: g._sum.costEstimate || 0 }))
+      : [{ name: 'No tasks yet', value: 1, cost: 0 }]
 
-    const maintenanceRisk = await buildMaintenanceRisks(prisma, ownershipFilter, now, timeZone);
+    const maintenanceRisk = await buildMaintenanceRisks(prisma, ownershipFilter, now, timeZone)
 
     // Vehicle utilization from groupBy counts
-    const vehicleNameById = new Map(vehicles.map(v => [v.id, v.name]));
-    const vDeliveries: Record<string, number> = {};
-    for (const v of vehicles) vDeliveries[v.name] = 0;
+    const vehicleNameById = new Map(vehicles.map((v) => [v.id, v.name]))
+    const vDeliveries: Record<string, number> = {}
+    for (const v of vehicles) vDeliveries[v.name] = 0
     for (const row of deliveries) {
-      if (!row.vehicleId) continue;
-      const vehicleName = vehicleNameById.get(row.vehicleId);
+      if (!row.vehicleId) continue
+      const vehicleName = vehicleNameById.get(row.vehicleId)
       if (vehicleName && vDeliveries[vehicleName] !== undefined) {
-        vDeliveries[vehicleName] += row._count._all;
+        vDeliveries[vehicleName] += row._count._all
       }
     }
     const vehicleUtilization = Object.entries(vDeliveries)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
-      .map(([name, count]) => ({ name, deliveries: count }));
+      .map(([name, count]) => ({ name, deliveries: count }))
 
     return res.json({
       stats: {
         fleetUtilization: { current: fleetUtilization, total: totalVehicles, active: activeVehicles },
-        deliveries: { total: totalDeliveries, delivered: deliveredCount, inTransit: inTransitCount, pending: pendingCount, delayed: delayedCount },
-        maintenance: { total: totalMaintenance, overdue: overdueCount, dueSoon: dueSoonCount, completed: completedMaintCount, totalCost: totalMaintCost, upcoming: upcomingItems },
+        deliveries: {
+          total: totalDeliveries,
+          delivered: deliveredCount,
+          inTransit: inTransitCount,
+          pending: pendingCount,
+          delayed: delayedCount,
+        },
+        maintenance: {
+          total: totalMaintenance,
+          overdue: overdueCount,
+          dueSoon: dueSoonCount,
+          completed: completedMaintCount,
+          totalCost: totalMaintCost,
+          upcoming: upcomingItems,
+        },
         clients: { total: clientCount },
       },
       charts: { activityOverTime, maintenanceByCategory, vehicleUtilization },
       maintenanceRisk,
-    });
+    })
   } catch (error) {
-    console.error('Analytics error:', error);
-    return res.status(500).json({ error: 'Failed to load analytics' });
+    console.error('Analytics error:', error)
+    return res.status(500).json({ error: 'Failed to load analytics' })
   }
 }

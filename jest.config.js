@@ -1,5 +1,5 @@
 // jose ships ESM only; let babel-jest compile it to CommonJS for tests.
-const JOSE_TRANSFORM = ['/node_modules/(?!jose/)'];
+const JOSE_TRANSFORM = ['/node_modules/(?!jose/)']
 
 /** @type {import('jest').Config} */
 const config = {
@@ -42,16 +42,15 @@ const config = {
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
       },
       transform: {
-        '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
-          presets: [['next/babel', { 'preset-react': { runtime: 'automatic' } }]],
-        }],
+        '^.+\\.(js|jsx|ts|tsx)$': [
+          'babel-jest',
+          {
+            presets: [['next/babel', { 'preset-react': { runtime: 'automatic' } }]],
+          },
+        ],
       },
       modulePathIgnorePatterns: ['<rootDir>/.next/'],
-      testPathIgnorePatterns: [
-        '<rootDir>/node_modules/',
-        '<rootDir>/.next/',
-        '<rootDir>/__tests__/pages/api/',
-      ],
+      testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/', '<rootDir>/__tests__/pages/api/'],
       transformIgnorePatterns: JOSE_TRANSFORM,
     },
     {
@@ -85,15 +84,21 @@ const config = {
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/.next/'],
   transformIgnorePatterns: JOSE_TRANSFORM,
   transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
-      presets: [
-        ['next/babel', {
-          'preset-react': {
-            runtime: 'automatic',
-          },
-        }],
-      ],
-    }],
+    '^.+\\.(js|jsx|ts|tsx)$': [
+      'babel-jest',
+      {
+        presets: [
+          [
+            'next/babel',
+            {
+              'preset-react': {
+                runtime: 'automatic',
+              },
+            },
+          ],
+        ],
+      },
+    ],
   },
   collectCoverageFrom: [
     'components/**/*.{js,jsx,ts,tsx}',
@@ -111,6 +116,6 @@ const config = {
       statements: 70,
     },
   },
-};
+}
 
-module.exports = config;
+module.exports = config

@@ -1,19 +1,124 @@
-import {fireEvent,render,screen,waitFor} from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import VehicleFormModal from '../../components/VehicleFormModal'
 import DeliveryFormModal from '../../components/DeliveryFormModal'
-const mockAddVehicle=jest.fn(),mockUpdateVehicle=jest.fn(),mockAddDelivery=jest.fn(),mockUpdateDelivery=jest.fn(),mockGetDrivers=jest.fn()
-jest.mock('../../services/dataServiceWithSync',()=>({addVehicle:(v:unknown)=>mockAddVehicle(v),updateVehicle:(id:string,v:unknown)=>mockUpdateVehicle(id,v),addDelivery:(v:unknown)=>mockAddDelivery(v),updateDelivery:(id:string,v:unknown)=>mockUpdateDelivery(id,v),getDrivers:()=>mockGetDrivers()}))
-jest.mock('../../components/FormModal',()=>({__esModule:true,default:({children,isOpen}:{children:React.ReactNode,isOpen:boolean})=>isOpen?<div>{children}</div>:null}))
-jest.mock('../../components/AutocompleteInput',()=>({__esModule:true,default:({value,onChange,placeholder}:{value:string,onChange:(v:string)=>void,placeholder:string})=><input aria-label={placeholder} value={value} onChange={e=>onChange(e.target.value)}/> }))
-jest.mock('../../services/recentItems',()=>({getRecentItems:()=>({vehicleNames:[],drivers:[],locations:[],customerNames:[],addresses:[]}),addRecentVehicle:jest.fn(),addRecentDelivery:jest.fn()}))
-describe('stable driver form assignment',()=>{
- beforeEach(()=>{jest.clearAllMocks();mockGetDrivers.mockResolvedValue([{id:'driver-a',name:'Alex',label:'Alex · iver-a'},{id:'driver-b',name:'Alex',label:'Alex · iver-b'}]);mockAddVehicle.mockResolvedValue({id:'v1'});mockUpdateVehicle.mockResolvedValue({id:'v1'});mockAddDelivery.mockResolvedValue({id:'d1'});mockUpdateDelivery.mockResolvedValue({id:'d1'})})
- it('creates a vehicle using the selected driver id and can clear it on edit',async()=>{
-  const {rerender}=render(<VehicleFormModal isOpen onClose={jest.fn()} onSubmit={jest.fn()}/>);fireEvent.change(screen.getByLabelText('e.g., Delivery Van 1'),{target:{value:'Van'}});await screen.findByRole('option',{name:'Alex · iver-a'});fireEvent.change(screen.getByLabelText('Assigned Driver'),{target:{value:'driver-a'}});fireEvent.click(screen.getByRole('button',{name:'Add Vehicle'}));await waitFor(()=>expect(mockAddVehicle).toHaveBeenCalledWith(expect.objectContaining({assignedDriverId:'driver-a',driver:''})))
-  rerender(<VehicleFormModal isOpen onClose={jest.fn()} onSubmit={jest.fn()} vehicle={{id:'v1',name:'Van',status:'active',driver:'Alex',assignedDriverId:'driver-a',location:'',eta:'',mileage:0,maintenanceDue:false}}/>);fireEvent.change(screen.getByLabelText('Assigned Driver'),{target:{value:''}});fireEvent.click(screen.getByRole('button',{name:'Save Changes'}));await waitFor(()=>expect(mockUpdateVehicle).toHaveBeenCalledWith('v1',expect.objectContaining({assignedDriverId:null,driver:''})))
- })
- it('creates and reassigns a delivery by id even when names duplicate',async()=>{
-  const {rerender}=render(<DeliveryFormModal isOpen onClose={jest.fn()} onSubmit={jest.fn()}/>);fireEvent.change(screen.getByLabelText('e.g., Acme Corporation'),{target:{value:'Customer'}});fireEvent.change(screen.getByLabelText('Full street address'),{target:{value:'1 Road'}});await screen.findByRole('option',{name:'Alex · iver-b'});fireEvent.change(screen.getByLabelText('Assigned Driver'),{target:{value:'driver-b'}});fireEvent.click(screen.getByRole('button',{name:'Add Delivery'}));await waitFor(()=>expect(mockAddDelivery).toHaveBeenCalledWith(expect.objectContaining({assignedDriverId:'driver-b',driver:''})))
-  rerender(<DeliveryFormModal isOpen onClose={jest.fn()} onSubmit={jest.fn()} delivery={{id:'d1',customer:'Customer',address:'1 Road',status:'pending',driver:'Alex',assignedDriverId:'driver-b',items:1,progress:0}}/>);fireEvent.change(screen.getByLabelText('Assigned Driver'),{target:{value:'driver-a'}});fireEvent.click(screen.getByRole('button',{name:'Save Changes'}));await waitFor(()=>expect(mockUpdateDelivery).toHaveBeenCalledWith('d1',expect.objectContaining({assignedDriverId:'driver-a',driver:''})))
- })
+const mockAddVehicle = jest.fn(),
+  mockUpdateVehicle = jest.fn(),
+  mockAddDelivery = jest.fn(),
+  mockUpdateDelivery = jest.fn(),
+  mockGetDrivers = jest.fn()
+jest.mock('../../services/dataServiceWithSync', () => ({
+  addVehicle: (v: unknown) => mockAddVehicle(v),
+  updateVehicle: (id: string, v: unknown) => mockUpdateVehicle(id, v),
+  addDelivery: (v: unknown) => mockAddDelivery(v),
+  updateDelivery: (id: string, v: unknown) => mockUpdateDelivery(id, v),
+  getDrivers: () => mockGetDrivers(),
+}))
+jest.mock('../../components/FormModal', () => ({
+  __esModule: true,
+  default: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
+    isOpen ? <div>{children}</div> : null,
+}))
+jest.mock('../../components/AutocompleteInput', () => ({
+  __esModule: true,
+  default: ({
+    value,
+    onChange,
+    placeholder,
+  }: {
+    value: string
+    onChange: (v: string) => void
+    placeholder: string
+  }) => <input aria-label={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />,
+}))
+jest.mock('../../services/recentItems', () => ({
+  getRecentItems: () => ({ vehicleNames: [], drivers: [], locations: [], customerNames: [], addresses: [] }),
+  addRecentVehicle: jest.fn(),
+  addRecentDelivery: jest.fn(),
+}))
+describe('stable driver form assignment', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetDrivers.mockResolvedValue([
+      { id: 'driver-a', name: 'Alex', label: 'Alex · iver-a' },
+      { id: 'driver-b', name: 'Alex', label: 'Alex · iver-b' },
+    ])
+    mockAddVehicle.mockResolvedValue({ id: 'v1' })
+    mockUpdateVehicle.mockResolvedValue({ id: 'v1' })
+    mockAddDelivery.mockResolvedValue({ id: 'd1' })
+    mockUpdateDelivery.mockResolvedValue({ id: 'd1' })
+  })
+  it('creates a vehicle using the selected driver id and can clear it on edit', async () => {
+    const { rerender } = render(<VehicleFormModal isOpen onClose={jest.fn()} onSubmit={jest.fn()} />)
+    fireEvent.change(screen.getByLabelText('e.g., Delivery Van 1'), { target: { value: 'Van' } })
+    await screen.findByRole('option', { name: 'Alex · iver-a' })
+    fireEvent.change(screen.getByLabelText('Assigned Driver'), { target: { value: 'driver-a' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Vehicle' }))
+    await waitFor(() =>
+      expect(mockAddVehicle).toHaveBeenCalledWith(expect.objectContaining({ assignedDriverId: 'driver-a', driver: '' }))
+    )
+    rerender(
+      <VehicleFormModal
+        isOpen
+        onClose={jest.fn()}
+        onSubmit={jest.fn()}
+        vehicle={{
+          id: 'v1',
+          name: 'Van',
+          status: 'active',
+          driver: 'Alex',
+          assignedDriverId: 'driver-a',
+          location: '',
+          eta: '',
+          mileage: 0,
+          maintenanceDue: false,
+        }}
+      />
+    )
+    fireEvent.change(screen.getByLabelText('Assigned Driver'), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+    await waitFor(() =>
+      expect(mockUpdateVehicle).toHaveBeenCalledWith(
+        'v1',
+        expect.objectContaining({ assignedDriverId: null, driver: '' })
+      )
+    )
+  })
+  it('creates and reassigns a delivery by id even when names duplicate', async () => {
+    const { rerender } = render(<DeliveryFormModal isOpen onClose={jest.fn()} onSubmit={jest.fn()} />)
+    fireEvent.change(screen.getByLabelText('e.g., Acme Corporation'), { target: { value: 'Customer' } })
+    fireEvent.change(screen.getByLabelText('Full street address'), { target: { value: '1 Road' } })
+    await screen.findByRole('option', { name: 'Alex · iver-b' })
+    fireEvent.change(screen.getByLabelText('Assigned Driver'), { target: { value: 'driver-b' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add Delivery' }))
+    await waitFor(() =>
+      expect(mockAddDelivery).toHaveBeenCalledWith(
+        expect.objectContaining({ assignedDriverId: 'driver-b', driver: '' })
+      )
+    )
+    rerender(
+      <DeliveryFormModal
+        isOpen
+        onClose={jest.fn()}
+        onSubmit={jest.fn()}
+        delivery={{
+          id: 'd1',
+          customer: 'Customer',
+          address: '1 Road',
+          status: 'pending',
+          driver: 'Alex',
+          assignedDriverId: 'driver-b',
+          items: 1,
+          progress: 0,
+        }}
+      />
+    )
+    fireEvent.change(screen.getByLabelText('Assigned Driver'), { target: { value: 'driver-a' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }))
+    await waitFor(() =>
+      expect(mockUpdateDelivery).toHaveBeenCalledWith(
+        'd1',
+        expect.objectContaining({ assignedDriverId: 'driver-a', driver: '' })
+      )
+    )
+  })
 })

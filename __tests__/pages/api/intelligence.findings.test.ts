@@ -6,9 +6,12 @@ jest.mock('@/lib/apiAuth', () => ({
 }))
 jest.mock('@/lib/prisma', () => ({
   prisma: {
-    vehicle: { findMany: jest.fn() }, delivery: { findMany: jest.fn() },
-    maintenanceTask: { findMany: jest.fn() }, client: { findMany: jest.fn() },
-    intelligenceFinding: { findMany: jest.fn() }, $transaction: jest.fn(),
+    vehicle: { findMany: jest.fn() },
+    delivery: { findMany: jest.fn() },
+    maintenanceTask: { findMany: jest.fn() },
+    client: { findMany: jest.fn() },
+    intelligenceFinding: { findMany: jest.fn() },
+    $transaction: jest.fn(),
   },
 }))
 
@@ -27,11 +30,22 @@ const context = {
 function stored(overrides: Record<string, unknown> = {}) {
   return {
     id: 'fleet-ops-v1:team%3Ateam-1:delivery-unassigned:delivery:d-1',
-    ...scope, type: 'delivery-unassigned', severity: 'high', confidence: 0.95,
-    score: 500, ruleVersion: 'fleet-ops-v1', title: 'Title', explanation: 'Explanation',
-    evidence: '{"items":[],"total":0,"truncated":false}', action: 'Assign',
-    actionUrl: '/deliveries?record=d-1', status: 'OPEN', feedback: null,
-    generatedAt: NOW, expiresAt: new Date('2026-08-09T16:00:00Z'), resolvedAt: null,
+    ...scope,
+    type: 'delivery-unassigned',
+    severity: 'high',
+    confidence: 0.95,
+    score: 500,
+    ruleVersion: 'fleet-ops-v1',
+    title: 'Title',
+    explanation: 'Explanation',
+    evidence: '{"items":[],"total":0,"truncated":false}',
+    action: 'Assign',
+    actionUrl: '/deliveries?record=d-1',
+    status: 'OPEN',
+    feedback: null,
+    generatedAt: NOW,
+    expiresAt: new Date('2026-08-09T16:00:00Z'),
+    resolvedAt: null,
     ...overrides,
   }
 }
@@ -70,7 +84,9 @@ describe('/api/intelligence/findings', () => {
     ;(prisma.client.findMany as jest.Mock).mockResolvedValue([])
     ;(prisma.intelligenceFinding.findMany as jest.Mock).mockResolvedValue([])
     tx = createTx()
-    ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: (value: typeof tx) => unknown) => callback(tx))
+    ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback: (value: typeof tx) => unknown) =>
+      callback(tx)
+    )
   })
   afterEach(() => jest.useRealTimers())
 
@@ -89,14 +105,22 @@ describe('/api/intelligence/findings', () => {
     const { req, res } = createMocks({ method: 'GET', query: { status: 'EXPIRED' } })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(200)
-    expect(prisma.intelligenceFinding.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { AND: [scope, { status: 'OPEN', expiresAt: { lte: NOW } }] },
-      orderBy: [{ score: 'desc' }, { id: 'asc' }],
-    }))
-    expect(res._getJSONData().findings[0]).toEqual(expect.objectContaining({
-      evidence: [], evidenceValid: false, evidenceTotal: null,
-      evidenceTruncated: true, effectiveStatus: 'EXPIRED', expired: true,
-    }))
+    expect(prisma.intelligenceFinding.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { AND: [scope, { status: 'OPEN', expiresAt: { lte: NOW } }] },
+        orderBy: [{ score: 'desc' }, { id: 'asc' }],
+      })
+    )
+    expect(res._getJSONData().findings[0]).toEqual(
+      expect.objectContaining({
+        evidence: [],
+        evidenceValid: false,
+        evidenceTotal: null,
+        evidenceTruncated: true,
+        effectiveStatus: 'EXPIRED',
+        expired: true,
+      })
+    )
   })
 
   it('renders the explicit dismissed lifecycle filter in exact workspace scope', async () => {
@@ -104,17 +128,29 @@ describe('/api/intelligence/findings', () => {
     const { req, res } = createMocks({ method: 'GET', query: { status: 'DISMISSED' } })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(200)
-    expect(prisma.intelligenceFinding.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { AND: [scope, { status: 'DISMISSED' }] } }))
+    expect(prisma.intelligenceFinding.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { AND: [scope, { status: 'DISMISSED' }] } })
+    )
     expect(res._getJSONData().findings[0].effectiveStatus).toBe('DISMISSED')
   })
 
   it('redacts schema-valid legacy PII from the full findings route', async () => {
-    ;(prisma.intelligenceFinding.findMany as jest.Mock).mockResolvedValue([stored({ evidence: JSON.stringify({
-      items: [{ entityType: 'client', entityId: 'c-1', field: 'email', value: 'private@example.test', timestamp: null }], total: 1, truncated: false,
-    }) })])
+    ;(prisma.intelligenceFinding.findMany as jest.Mock).mockResolvedValue([
+      stored({
+        evidence: JSON.stringify({
+          items: [
+            { entityType: 'client', entityId: 'c-1', field: 'email', value: 'private@example.test', timestamp: null },
+          ],
+          total: 1,
+          truncated: false,
+        }),
+      }),
+    ])
     const { req, res } = createMocks({ method: 'GET' })
     await handler(req as never, res as never)
-    expect(res._getJSONData().findings[0]).toEqual(expect.objectContaining({ evidence: [], evidenceValid: false, evidenceTruncated: true }))
+    expect(res._getJSONData().findings[0]).toEqual(
+      expect.objectContaining({ evidence: [], evidenceValid: false, evidenceTruncated: true })
+    )
     expect(res._getData()).not.toContain('private@example.test')
   })
 
@@ -143,20 +179,33 @@ describe('/api/intelligence/findings', () => {
   })
 
   it('regenerates from bounded server data and ignores client-supplied findings', async () => {
-    tx.delivery.findMany.mockResolvedValue([{
-      id: 'd-1', status: 'pending', driver: null, vehicleId: null,
-      scheduledTime: null, estimatedArrival: null, contactPerson: null, updatedAt: NOW,
-    }])
+    tx.delivery.findMany.mockResolvedValue([
+      {
+        id: 'd-1',
+        status: 'pending',
+        driver: null,
+        vehicleId: null,
+        scheduledTime: null,
+        estimatedArrival: null,
+        contactPerson: null,
+        updatedAt: NOW,
+      },
+    ])
     const { req, res } = createMocks({
-      method: 'POST', headers: { host: 'x', origin: 'http://x' },
+      method: 'POST',
+      headers: { host: 'x', origin: 'http://x' },
       body: { findings: [{ id: 'attacker' }] },
     })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(200)
     for (const model of [tx.vehicle, tx.delivery, tx.maintenanceTask, tx.client]) {
-      expect(model.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: resourceWhere, orderBy: { id: 'asc' }, take: FINDING_SOURCE_LIMIT + 1,
-      }))
+      expect(model.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: resourceWhere,
+          orderBy: { id: 'asc' },
+          take: FINDING_SOURCE_LIMIT + 1,
+        })
+      )
     }
     const creates = tx.intelligenceFinding.createMany.mock.calls[0][0].data
     expect(creates.length).toBeGreaterThan(0)
@@ -165,8 +214,21 @@ describe('/api/intelligence/findings', () => {
     expect(tx.auditLog.createMany).toHaveBeenCalledTimes(1)
     expect(tx.intelligenceRun.upsert).toHaveBeenCalledWith({
       where: { id: 'team:team-1' },
-      create: expect.objectContaining({ id: 'team:team-1', ...scope, generatedAt: NOW, sourceComplete: true, findingsComplete: true, reconciliationComplete: true, evidenceComplete: true }),
-      update: expect.objectContaining({ ...scope, generatedAt: NOW, findingTotal: expect.any(Number), sourceCounts: expect.any(String) }),
+      create: expect.objectContaining({
+        id: 'team:team-1',
+        ...scope,
+        generatedAt: NOW,
+        sourceComplete: true,
+        findingsComplete: true,
+        reconciliationComplete: true,
+        evidenceComplete: true,
+      }),
+      update: expect.objectContaining({
+        ...scope,
+        generatedAt: NOW,
+        findingTotal: expect.any(Number),
+        sourceCounts: expect.any(String),
+      }),
     })
     expect(JSON.stringify(tx.auditLog.createMany.mock.calls)).not.toContain('Member')
   })
@@ -174,7 +236,10 @@ describe('/api/intelligence/findings', () => {
   it('never auto-resolves unseen findings when source coverage is truncated', async () => {
     tx.vehicle.findMany.mockResolvedValue(
       Array.from({ length: FINDING_SOURCE_LIMIT + 1 }, (_, index) => ({
-        id: `v-${index}`, status: 'inactive', updatedAt: NOW, lastUpdated: NOW,
+        id: `v-${index}`,
+        status: 'inactive',
+        updatedAt: NOW,
+        lastUpdated: NOW,
       }))
     )
     tx.intelligenceFinding.findMany.mockResolvedValue([stored({ id: 'unseen' })])
@@ -201,9 +266,15 @@ describe('/api/intelligence/findings', () => {
   })
 
   it('maps repeated primary-key collision to a sanitized conflict after one retry', async () => {
-    tx.delivery.findMany.mockResolvedValue([{
-      id: 'd-1', status: 'pending', driver: null, vehicleId: null, updatedAt: NOW,
-    }])
+    tx.delivery.findMany.mockResolvedValue([
+      {
+        id: 'd-1',
+        status: 'pending',
+        driver: null,
+        vehicleId: null,
+        updatedAt: NOW,
+      },
+    ])
     tx.intelligenceFinding.createMany.mockRejectedValue(Object.assign(new Error('other tenant'), { code: 'P2002' }))
     const spy = jest.spyOn(console, 'error').mockImplementation(() => undefined)
     const { req, res } = createMocks({ method: 'POST', headers: { host: 'x', origin: 'http://x' } })
@@ -215,7 +286,7 @@ describe('/api/intelligence/findings', () => {
     spy.mockRestore()
   })
 
-  it.each(['MEMBER', 'VIEWER'])('forbids %s regeneration', async role => {
+  it.each(['MEMBER', 'VIEWER'])('forbids %s regeneration', async (role) => {
     ;(requireTenantContext as jest.Mock).mockResolvedValue({ ...context, tenant: { ...context.tenant, role } })
     const { req, res } = createMocks({ method: 'POST', headers: { host: 'x', origin: 'http://x' } })
     await handler(req as never, res as never)
@@ -231,12 +302,15 @@ describe('/api/intelligence/findings', () => {
   })
 
   it.each([
-    ['HELPFUL', 'VIEWER', 'feedback_recorded'], ['NOT_HELPFUL', 'MEMBER', 'feedback_recorded'],
-    ['DISMISS', 'MANAGER', 'dismissed'], ['RESOLVE', 'ADMIN', 'resolved'],
+    ['HELPFUL', 'VIEWER', 'feedback_recorded'],
+    ['NOT_HELPFUL', 'MEMBER', 'feedback_recorded'],
+    ['DISMISS', 'MANAGER', 'dismissed'],
+    ['RESOLVE', 'ADMIN', 'resolved'],
   ])('applies allowlisted %s tenant-safely for %s', async (action, role, auditAction) => {
     ;(requireTenantContext as jest.Mock).mockResolvedValue({ ...context, tenant: { ...context.tenant, role } })
     const { req, res } = createMocks({
-      method: 'PATCH', headers: { host: 'x', origin: 'http://x' },
+      method: 'PATCH',
+      headers: { host: 'x', origin: 'http://x' },
       body: { id: stored().id, action, status: 'ATTACKER', feedback: 'ATTACKER' },
     })
     await handler(req as never, res as never)
@@ -249,17 +323,28 @@ describe('/api/intelligence/findings', () => {
     })
   })
 
-  it.each(['DISMISS', 'RESOLVE'])('forbids viewers from %s', async action => {
-    ;(requireTenantContext as jest.Mock).mockResolvedValue({ ...context, tenant: { ...context.tenant, role: 'VIEWER' } })
-    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'x', origin: 'http://x' }, body: { id: 'x', action } })
+  it.each(['DISMISS', 'RESOLVE'])('forbids viewers from %s', async (action) => {
+    ;(requireTenantContext as jest.Mock).mockResolvedValue({
+      ...context,
+      tenant: { ...context.tenant, role: 'VIEWER' },
+    })
+    const { req, res } = createMocks({
+      method: 'PATCH',
+      headers: { host: 'x', origin: 'http://x' },
+      body: { id: 'x', action },
+    })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(403)
     expect(prisma.$transaction).not.toHaveBeenCalled()
   })
 
-  it.each(['DISMISSED', 'RESOLVED'])('rejects lifecycle transition from %s without update or audit', async status => {
+  it.each(['DISMISSED', 'RESOLVED'])('rejects lifecycle transition from %s without update or audit', async (status) => {
     tx.intelligenceFinding.findFirst.mockResolvedValue(stored({ status }))
-    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'x', origin: 'http://x' }, body: { id: stored().id, action: 'RESOLVE' } })
+    const { req, res } = createMocks({
+      method: 'PATCH',
+      headers: { host: 'x', origin: 'http://x' },
+      body: { id: stored().id, action: 'RESOLVE' },
+    })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(409)
     expect(res._getJSONData()).toEqual({ error: 'INVALID_TRANSITION' })
@@ -269,7 +354,11 @@ describe('/api/intelligence/findings', () => {
 
   it('returns a deliberate feedback no-op without update or audit and exposes only public finding keys', async () => {
     tx.intelligenceFinding.findFirst.mockResolvedValue(stored({ feedback: 'HELPFUL' }))
-    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'x', origin: 'http://x' }, body: { id: stored().id, action: 'HELPFUL' } })
+    const { req, res } = createMocks({
+      method: 'PATCH',
+      headers: { host: 'x', origin: 'http://x' },
+      body: { id: stored().id, action: 'HELPFUL' },
+    })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(200)
     expect(res._getJSONData().noop).toBe(true)
@@ -277,12 +366,33 @@ describe('/api/intelligence/findings', () => {
     expect(tx.auditLog.create).not.toHaveBeenCalled()
     expect(res._getJSONData().finding).not.toHaveProperty('ownerId')
     expect(res._getJSONData().finding).not.toHaveProperty('teamId')
-    expect(Object.keys(res._getJSONData().finding).sort()).toEqual([
-      'action', 'actionUrl', 'confidence', 'effectiveStatus', 'evidence', 'evidenceTotal',
-      'evidenceTruncated', 'evidenceValid', 'expired', 'expiresAt', 'explanation', 'feedback',
-      'feedbackValid', 'generatedAt', 'id', 'resolvedAt', 'ruleVersion', 'score', 'severity',
-      'status', 'statusValid', 'title', 'type',
-    ].sort())
+    expect(Object.keys(res._getJSONData().finding).sort()).toEqual(
+      [
+        'action',
+        'actionUrl',
+        'confidence',
+        'effectiveStatus',
+        'evidence',
+        'evidenceTotal',
+        'evidenceTruncated',
+        'evidenceValid',
+        'expired',
+        'expiresAt',
+        'explanation',
+        'feedback',
+        'feedbackValid',
+        'generatedAt',
+        'id',
+        'resolvedAt',
+        'ruleVersion',
+        'score',
+        'severity',
+        'status',
+        'statusValid',
+        'title',
+        'type',
+      ].sort()
+    )
   })
 
   it.each([
@@ -298,7 +408,11 @@ describe('/api/intelligence/findings', () => {
 
   it('does not reveal a foreign finding ID', async () => {
     tx.intelligenceFinding.findFirst.mockResolvedValue(null)
-    const { req, res } = createMocks({ method: 'PATCH', headers: { host: 'x', origin: 'http://x' }, body: { id: 'foreign', action: 'HELPFUL' } })
+    const { req, res } = createMocks({
+      method: 'PATCH',
+      headers: { host: 'x', origin: 'http://x' },
+      body: { id: 'foreign', action: 'HELPFUL' },
+    })
     await handler(req as never, res as never)
     expect(res._getStatusCode()).toBe(404)
     expect(res._getJSONData()).toEqual({ error: 'Finding not found' })
@@ -308,11 +422,16 @@ describe('/api/intelligence/findings', () => {
 describe('parseStoredEvidence', () => {
   it('rejects invalid raw data without returning it', () => {
     for (const value of [
-      'x'.repeat(16_385), '{}',
+      'x'.repeat(16_385),
+      '{}',
       '[{"entityType":"vehicle","entityId":"v","field":"x","value":{},"timestamp":null}]',
       '[{"entityType":"vehicle","entityId":"v","field":"x","value":null,"timestamp":null,"secret":"x"}]',
-    ]) expect(parseStoredEvidence(value)).toEqual({
-      evidence: [], valid: false, evidenceTotal: null, evidenceTruncated: true,
-    })
+    ])
+      expect(parseStoredEvidence(value)).toEqual({
+        evidence: [],
+        valid: false,
+        evidenceTotal: null,
+        evidenceTruncated: true,
+      })
   })
 })

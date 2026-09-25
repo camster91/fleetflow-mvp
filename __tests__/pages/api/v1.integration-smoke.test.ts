@@ -1,7 +1,9 @@
 import { createMocks } from 'node-mocks-http'
 
 jest.mock('../../../lib/auth', () => ({
-  getServerSession: jest.fn(async () => ({ user: { id: 'smoke-user', email: 'smoke@example.com', name: 'Smoke User', role: 'OWNER' } })),
+  getServerSession: jest.fn(async () => ({
+    user: { id: 'smoke-user', email: 'smoke@example.com', name: 'Smoke User', role: 'OWNER' },
+  })),
   authOptions: {},
 }))
 
@@ -27,7 +29,11 @@ describe('disposable public API key integration smoke', () => {
     ;(prisma.apiKey.findUnique as jest.Mock).mockImplementation(async ({ where }: any) =>
       where.key === storedHash
         ? {
-            id: 'disposable-key', userId: 'smoke-user', key: storedHash, scopes: 'read', revokedAt: null,
+            id: 'disposable-key',
+            userId: 'smoke-user',
+            key: storedHash,
+            scopes: 'read',
+            revokedAt: null,
             user: { id: 'smoke-user', email: 'smoke@example.com', name: 'Smoke User' },
           }
         : null
@@ -48,7 +54,12 @@ describe('disposable public API key integration smoke', () => {
     await meHandler(me.req as any, me.res as any)
     expect(me.res._getStatusCode()).toBe(200)
     expect(JSON.parse(me.res._getData())).toMatchObject({
-      data: { apiKeyId: 'disposable-key', caller: { id: 'smoke-user' }, scopes: ['read'], workspace: { id: null, ownerId: 'smoke-user' } },
+      data: {
+        apiKeyId: 'disposable-key',
+        caller: { id: 'smoke-user' },
+        scopes: ['read'],
+        workspace: { id: null, ownerId: 'smoke-user' },
+      },
     })
     expect(me.res._getData()).not.toContain(plaintext)
   })

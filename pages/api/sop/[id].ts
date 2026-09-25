@@ -17,7 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'PUT') {
     const parsed = sopCategoryBodySchema.safeParse(req.body)
-    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid SOP category' })
+    if (!parsed.success)
+      return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid SOP category' })
     const existing = await prisma.sOPCategory.findFirst({ where: scopedWhere })
     if (!existing) return res.status(404).json({ error: 'Not found' })
     const { name, description, count } = parsed.data
@@ -30,8 +31,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const updated = await tx.sOPCategory.findFirst({ where: scopedWhere })
       if (!updated) return null
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'updated', entityType: 'sop', entityId: updated.id, entityName: updated.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'updated',
+        entityType: 'sop',
+        entityId: updated.id,
+        entityName: updated.name,
         description: `SOP category "${updated.name}" was updated`,
       })
       return updated
@@ -47,8 +54,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const result = await tx.sOPCategory.deleteMany({ where: scopedWhere })
       if (result.count === 0) return
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'deleted', entityType: 'sop', entityId: id, entityName: cat.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'deleted',
+        entityType: 'sop',
+        entityId: id,
+        entityName: cat.name,
         description: `SOP category "${cat.name}" was deleted`,
       })
     })

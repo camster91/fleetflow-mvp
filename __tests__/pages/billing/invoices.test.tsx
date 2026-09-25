@@ -1,7 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import InvoicesPage from '@/pages/billing/invoices'
 
-jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
+jest.mock('@/components/layouts/DashboardLayout', () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+}))
 jest.mock('@/components/PageHeader', () => ({ PageHeader: ({ title }: { title: string }) => <h1>{title}</h1> }))
 
 describe('InvoicesPage', () => {
@@ -21,9 +23,12 @@ describe('InvoicesPage', () => {
   })
 
   it('renders paid and failed invoices and only links available PDFs', async () => {
-    mockFetch({ ok: true, json: async () => ({ invoices: [
-      invoice('paid', 'https://invoice.stripe.com/paid.pdf'), invoice('failed', null, 'failed-id'),
-    ] }) })
+    mockFetch({
+      ok: true,
+      json: async () => ({
+        invoices: [invoice('paid', 'https://invoice.stripe.com/paid.pdf'), invoice('failed', null, 'failed-id')],
+      }),
+    })
     render(<InvoicesPage />)
     expect(await screen.findByText('paid')).toBeInTheDocument()
     expect(screen.getByText('failed')).toBeInTheDocument()
@@ -35,18 +40,34 @@ describe('InvoicesPage', () => {
   })
 
   it('formats zero and negative minor-unit amounts', async () => {
-    mockFetch({ ok: true, json: async () => ({ invoices: [
-      { ...invoice('paid', null), amount: 0 }, { ...invoice('paid', null, 'credit'), amount: -500 },
-    ] }) })
+    mockFetch({
+      ok: true,
+      json: async () => ({
+        invoices: [
+          { ...invoice('paid', null), amount: 0 },
+          { ...invoice('paid', null, 'credit'), amount: -500 },
+        ],
+      }),
+    })
     render(<InvoicesPage />)
     expect(await screen.findByText(/0\.00/)).toBeInTheDocument()
     expect(screen.getByText(/5\.00/)).toBeInTheDocument()
   })
 
   it('falls back safely for malformed currency, dates, and PDF URLs', async () => {
-    mockFetch({ ok: true, json: async () => ({ invoices: [{
-      ...invoice('paid', 'javascript:alert(1)'), currency: 'ZZZ', periodStart: 'not-a-date', periodEnd: 'also-bad',
-    }] }) })
+    mockFetch({
+      ok: true,
+      json: async () => ({
+        invoices: [
+          {
+            ...invoice('paid', 'javascript:alert(1)'),
+            currency: 'ZZZ',
+            periodStart: 'not-a-date',
+            periodEnd: 'also-bad',
+          },
+        ],
+      }),
+    })
     render(<InvoicesPage />)
     expect(await screen.findByText('Amount unavailable')).toBeInTheDocument()
     expect(screen.getByText('Date unavailable – Date unavailable')).toBeInTheDocument()
@@ -60,7 +81,13 @@ function mockFetch(result: { ok: boolean; json: () => Promise<unknown> }) {
 
 function invoice(status: string, invoicePdf: string | null, id = 'paid-id') {
   return {
-    id, amount: 4900, currency: 'USD', status, invoicePdf,
-    createdAt: '2026-08-08T00:00:00.000Z', periodStart: '2026-08-01T00:00:00.000Z', periodEnd: '2026-09-01T00:00:00.000Z',
+    id,
+    amount: 4900,
+    currency: 'USD',
+    status,
+    invoicePdf,
+    createdAt: '2026-08-08T00:00:00.000Z',
+    periodStart: '2026-08-01T00:00:00.000Z',
+    periodEnd: '2026-09-01T00:00:00.000Z',
   }
 }

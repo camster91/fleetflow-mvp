@@ -1,5 +1,45 @@
-import {assignedMaintenanceWhere,assignedResourceWhere,driverDeliveryDto,driverVehicleDto} from '../../lib/driverScope'
-describe('driver resource scope',()=>{
- it('adds stable user assignment to resource and maintenance queries',()=>{expect(assignedResourceWhere({teamId:'t'},'DRIVER','u')).toEqual({AND:[{teamId:'t'},{assignedDriverId:'u'}]});expect(assignedMaintenanceWhere({teamId:'t'},'DRIVER','u')).toEqual({AND:[{teamId:'t'},{vehicle:{assignedDriverId:'u'}}]})})
- it('returns minimized delivery and vehicle DTOs without sensitive fields',()=>{const delivery=driverDeliveryDto({id:'d',address:'a',customer:'c',status:'pending',contactPerson:'secret',accessCodes:'secret',securityNotes:'secret',photos:'secret',notes:'secret'});expect(delivery).not.toHaveProperty('contactPerson');expect(delivery).not.toHaveProperty('accessCodes');expect(delivery).not.toHaveProperty('securityNotes');expect(delivery).not.toHaveProperty('photos');expect(delivery).not.toHaveProperty('notes');const vehicle=driverVehicleDto({id:'v',name:'V',status:'active',notes:'secret',ownerId:'secret',teamId:'secret'});expect(vehicle).not.toHaveProperty('notes');expect(vehicle).not.toHaveProperty('ownerId');expect(vehicle).not.toHaveProperty('teamId')})
+import {
+  assignedMaintenanceWhere,
+  assignedResourceWhere,
+  driverDeliveryDto,
+  driverVehicleDto,
+} from '../../lib/driverScope'
+describe('driver resource scope', () => {
+  it('adds stable user assignment to resource and maintenance queries', () => {
+    expect(assignedResourceWhere({ teamId: 't' }, 'DRIVER', 'u')).toEqual({
+      AND: [{ teamId: 't' }, { assignedDriverId: 'u' }],
+    })
+    expect(assignedMaintenanceWhere({ teamId: 't' }, 'DRIVER', 'u')).toEqual({
+      AND: [{ teamId: 't' }, { vehicle: { assignedDriverId: 'u' } }],
+    })
+  })
+  it('returns minimized delivery and vehicle DTOs without sensitive fields', () => {
+    const delivery = driverDeliveryDto({
+      id: 'd',
+      address: 'a',
+      customer: 'c',
+      status: 'pending',
+      contactPerson: 'secret',
+      accessCodes: 'secret',
+      securityNotes: 'secret',
+      photos: 'secret',
+      notes: 'secret',
+    })
+    expect(delivery).not.toHaveProperty('contactPerson')
+    expect(delivery).not.toHaveProperty('accessCodes')
+    expect(delivery).not.toHaveProperty('securityNotes')
+    expect(delivery).not.toHaveProperty('photos')
+    expect(delivery).not.toHaveProperty('notes')
+    const vehicle = driverVehicleDto({
+      id: 'v',
+      name: 'V',
+      status: 'active',
+      notes: 'secret',
+      ownerId: 'secret',
+      teamId: 'secret',
+    })
+    expect(vehicle).not.toHaveProperty('notes')
+    expect(vehicle).not.toHaveProperty('ownerId')
+    expect(vehicle).not.toHaveProperty('teamId')
+  })
 })

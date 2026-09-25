@@ -29,9 +29,17 @@ import { assertSameOrigin } from '@/lib/apiAuth'
 import { rateLimitMiddleware } from '@/lib/rateLimit'
 
 const enabledUser = {
-  id: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager',
-  twoFactorEnabled: true, twoFactorSecret: 'encrypted', backupCodes: '[]',
-  tokenVersion: 0, lastTotpStep: null, failedLoginAttempts: 0, lockedUntil: null,
+  id: 'u1',
+  email: 'user@example.com',
+  name: 'User',
+  role: 'fleet_manager',
+  twoFactorEnabled: true,
+  twoFactorSecret: 'encrypted',
+  backupCodes: '[]',
+  tokenVersion: 0,
+  lastTotpStep: null,
+  failedLoginAttempts: 0,
+  lockedUntil: null,
 }
 
 const incrementCall = { where: { id: 'u1' }, data: { failedLoginAttempts: { increment: 1 } } }
@@ -67,7 +75,8 @@ describe('POST /api/auth/2fa/validate', () => {
     const { req, res } = createMocks({
       method: 'POST',
       headers: {
-        host: 'fleetvera.example', origin: 'https://evil.example',
+        host: 'fleetvera.example',
+        origin: 'https://evil.example',
         cookie: 'two_factor_challenge=challenge-token',
       },
       body: { code: '123456' },
@@ -98,9 +107,7 @@ describe('POST /api/auth/2fa/validate', () => {
     })
     const recordedStep = (prisma.user.updateMany as jest.Mock).mock.calls[0][0].data.lastTotpStep
     expect(Math.abs(recordedStep - step)).toBeLessThanOrEqual(1)
-    expect(signToken).toHaveBeenCalledWith(
-      expect.objectContaining({ sub: 'u1', purpose: 'session', tv: 4 })
-    )
+    expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ sub: 'u1', purpose: 'session', tv: 4 }))
     const cookies = res.getHeader('set-cookie') as string[]
     expect(cookies.join(';')).toContain('token=session-token')
     expect(cookies.join(';')).toContain('two_factor_challenge=')
@@ -110,7 +117,8 @@ describe('POST /api/auth/2fa/validate', () => {
 
   it('rejects a replayed TOTP code whose time step was already accepted', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...enabledUser, lastTotpStep: Math.floor(Date.now() / 1000 / 30) + 5,
+      ...enabledUser,
+      lastTotpStep: Math.floor(Date.now() / 1000 / 30) + 5,
     })
     // The conditional update matches nothing because lastTotpStep >= this step.
     ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
@@ -127,7 +135,8 @@ describe('POST /api/auth/2fa/validate', () => {
   it('does not run bcrypt for a wrong 6-digit code and counts the failure', async () => {
     ;(speakeasy.totp.verifyDelta as jest.Mock).mockReturnValue(undefined)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...enabledUser, backupCodes: '["h1","h2","h3"]',
+      ...enabledUser,
+      backupCodes: '["h1","h2","h3"]',
     })
     const { req, res } = validateRequest('000000')
 
@@ -143,7 +152,8 @@ describe('POST /api/auth/2fa/validate', () => {
 
   it('rejects malformed input without trying TOTP or backup codes', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...enabledUser, backupCodes: '["h1"]',
+      ...enabledUser,
+      backupCodes: '["h1"]',
     })
     const { req, res } = validateRequest('not-a-code')
 
@@ -157,7 +167,8 @@ describe('POST /api/auth/2fa/validate', () => {
   it('locks the account on the fifth failed 2FA attempt, shared with login lockout', async () => {
     ;(speakeasy.totp.verifyDelta as jest.Mock).mockReturnValue(undefined)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...enabledUser, failedLoginAttempts: 4,
+      ...enabledUser,
+      failedLoginAttempts: 4,
     })
     const { req, res } = validateRequest('000000')
 
@@ -170,7 +181,9 @@ describe('POST /api/auth/2fa/validate', () => {
 
   it('refuses a locked account before checking the code', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...enabledUser, failedLoginAttempts: 5, lockedUntil: new Date(Date.now() + 60_000),
+      ...enabledUser,
+      failedLoginAttempts: 5,
+      lockedUntil: new Date(Date.now() + 60_000),
     })
     const { req, res } = validateRequest('123456')
 
@@ -193,7 +206,8 @@ describe('POST /api/auth/2fa/validate', () => {
 
   it('accepts a matching backup code with async bcrypt and consumes it', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...enabledUser, backupCodes: '["h1","h2"]',
+      ...enabledUser,
+      backupCodes: '["h1","h2"]',
     })
     ;(bcrypt.compare as jest.Mock).mockImplementation(async (_code, hash) => hash === 'h2')
     const { req, res } = validateRequest('1234-5678-9012')
@@ -204,7 +218,9 @@ describe('POST /api/auth/2fa/validate', () => {
     expect(bcrypt.compareSync).not.toHaveBeenCalled()
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: {
-        id: 'u1', twoFactorEnabled: true, tokenVersion: 0,
+        id: 'u1',
+        twoFactorEnabled: true,
+        tokenVersion: 0,
         OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }],
         backupCodes: '["h1","h2"]',
       },
@@ -227,8 +243,12 @@ describe('POST /api/auth/2fa/validate', () => {
   it('rejects a backup code when another request consumed the same snapshot', async () => {
     ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager',
-      twoFactorEnabled: true, twoFactorSecret: 'encrypted',
+      id: 'u1',
+      email: 'user@example.com',
+      name: 'User',
+      role: 'fleet_manager',
+      twoFactorEnabled: true,
+      twoFactorSecret: 'encrypted',
       backupCodes: '["hashed-backup-code"]',
     })
     ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
@@ -266,10 +286,12 @@ describe('POST /api/auth/2fa/validate', () => {
     expect(res._getStatusCode()).toBe(400)
     expect(signToken).not.toHaveBeenCalled()
     const successWrite = (prisma.user.updateMany as jest.Mock).mock.calls[0][0]
-    expect(successWrite.where).toEqual(expect.objectContaining({
-      tokenVersion: 0,
-      OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }],
-    }))
+    expect(successWrite.where).toEqual(
+      expect.objectContaining({
+        tokenVersion: 0,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }],
+      })
+    )
     // Every write that clears lockedUntil is conditioned on the stored lock.
     for (const [args] of (prisma.user.updateMany as jest.Mock).mock.calls) {
       if (args.data.lockedUntil === null) expect('OR' in args.where || 'lockedUntil' in args.where).toBe(true)

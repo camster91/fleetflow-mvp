@@ -23,7 +23,8 @@ export async function consumePublicApiQuota(
   })
   if (row.count === 1) {
     const cutoff = new Date(bucketStart.getTime() - 24 * 60 * 60 * 1000)
-    void client.apiRateLimit.deleteMany({ where: { bucketStart: { lt: cutoff } } })
+    void client.apiRateLimit
+      .deleteMany({ where: { bucketStart: { lt: cutoff } } })
       .catch(() => console.error('Public API rate-limit cleanup failed'))
   }
   return {

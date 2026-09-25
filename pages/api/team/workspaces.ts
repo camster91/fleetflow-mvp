@@ -2,11 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { serialize } from 'cookie'
 import { parse as parseCookie } from 'cookie'
 import { prisma } from '../../../lib/prisma'
-import {
-  requireSession,
-  resolveTenantContext,
-  TenantContextError,
-} from '../../../lib/apiAuth'
+import { requireSession, resolveTenantContext, TenantContextError } from '../../../lib/apiAuth'
 
 const COOKIE_NAME = 'fleetflow_team'
 
@@ -18,10 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     const teams = await prisma.team.findMany({
       where: {
-        OR: [
-          { ownerId: userId },
-          { members: { some: { userId, status: 'ACCEPTED' } } },
-        ],
+        OR: [{ ownerId: userId }, { members: { some: { userId, status: 'ACCEPTED' } } }],
       },
       select: {
         id: true,
@@ -60,13 +53,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw error
     }
 
-    res.setHeader('Set-Cookie', serialize(COOKIE_NAME, teamId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 365 * 24 * 60 * 60,
-    }))
+    res.setHeader(
+      'Set-Cookie',
+      serialize(COOKIE_NAME, teamId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 365 * 24 * 60 * 60,
+      })
+    )
     return res.json({ ok: true, teamId })
   }
 

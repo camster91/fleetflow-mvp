@@ -23,8 +23,19 @@ import me from '../../../pages/api/v1/me'
 import docs from '../../../pages/api/docs'
 import { createPublicApiCursor, readPublicApiCursor } from '../../../lib/publicApi'
 
-const tenant = { ownerId: 'owner-1', teamId: 'team-1', role: 'OWNER', resourceWhere: { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] } }
-const context = { apiKeyId: 'key-1', user: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' }, scopes: ['read'], tenant, apiResourceWhere: { teamId: 'team-1' } }
+const tenant = {
+  ownerId: 'owner-1',
+  teamId: 'team-1',
+  role: 'OWNER',
+  resourceWhere: { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] },
+}
+const context = {
+  apiKeyId: 'key-1',
+  user: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' },
+  scopes: ['read'],
+  tenant,
+  apiResourceWhere: { teamId: 'team-1' },
+}
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -43,14 +54,16 @@ describe('public v1 read API', () => {
     const { req, res } = createMocks({ method: 'GET', query: { limit: '2', cursor: signedCursor } })
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(200)
-    expect(findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: context.apiResourceWhere,
-      orderBy: { id: 'asc' },
-      cursor: { id: 'previous' },
-      skip: 1,
-      take: 3,
-      select: expect.any(Object),
-    }))
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: context.apiResourceWhere,
+        orderBy: { id: 'asc' },
+        cursor: { id: 'previous' },
+        skip: 1,
+        take: 3,
+        select: expect.any(Object),
+      })
+    )
     const query = (findMany as jest.Mock).mock.calls[0][0]
     expect(query.select).not.toHaveProperty('ownerId')
     expect(query.select).not.toHaveProperty('teamId')
@@ -78,22 +91,25 @@ describe('public v1 read API', () => {
     ['vehicles', vehicles, prisma.vehicle.findMany, { assignedDriverId: 'driver-1' }],
     ['deliveries', deliveries, prisma.delivery.findMany, { assignedDriverId: 'driver-1' }],
     ['maintenance', maintenance, prisma.maintenanceTask.findMany, { vehicle: { assignedDriverId: 'driver-1' } }],
-  ] as const)('%s scopes a driver key to assigned work with the driver field set', async (_name, handler, findMany, assignment) => {
-    ;(requireApiKey as jest.Mock).mockResolvedValue({
-      ...context,
-      user: { id: 'driver-1', email: 'd@example.com', name: 'Driver' },
-      tenant: { ...tenant, role: 'DRIVER' },
-    })
-    ;(findMany as jest.Mock).mockResolvedValue([])
-    const { req, res } = createMocks({ method: 'GET' })
-    await handler(req as any, res as any)
-    expect(res._getStatusCode()).toBe(200)
-    const query = (findMany as jest.Mock).mock.calls[0][0]
-    expect(query.where).toEqual({ AND: [context.apiResourceWhere, assignment] })
-    expect(query.select).not.toHaveProperty('costEstimate')
-    expect(query.select).not.toHaveProperty('completedTime')
-    expect(query.select).not.toHaveProperty('year')
-  })
+  ] as const)(
+    '%s scopes a driver key to assigned work with the driver field set',
+    async (_name, handler, findMany, assignment) => {
+      ;(requireApiKey as jest.Mock).mockResolvedValue({
+        ...context,
+        user: { id: 'driver-1', email: 'd@example.com', name: 'Driver' },
+        tenant: { ...tenant, role: 'DRIVER' },
+      })
+      ;(findMany as jest.Mock).mockResolvedValue([])
+      const { req, res } = createMocks({ method: 'GET' })
+      await handler(req as any, res as any)
+      expect(res._getStatusCode()).toBe(200)
+      const query = (findMany as jest.Mock).mock.calls[0][0]
+      expect(query.where).toEqual({ AND: [context.apiResourceWhere, assignment] })
+      expect(query.select).not.toHaveProperty('costEstimate')
+      expect(query.select).not.toHaveProperty('completedTime')
+      expect(query.select).not.toHaveProperty('year')
+    }
+  )
 
   it('caps page size and rejects invalid pagination', async () => {
     ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue([])
@@ -127,7 +143,9 @@ describe('public v1 read API', () => {
     const { req, res } = createMocks({ method: 'GET' })
     await vehicles(req as any, res as any)
     expect(res._getStatusCode()).toBe(500)
-    expect(JSON.parse(res._getData())).toEqual({ error: { code: 'INTERNAL_ERROR', message: 'The request could not be completed' } })
+    expect(JSON.parse(res._getData())).toEqual({
+      error: { code: 'INTERNAL_ERROR', message: 'The request could not be completed' },
+    })
     expect(JSON.stringify(spy.mock.calls)).not.toContain('database URL secret')
     spy.mockRestore()
   })
@@ -161,19 +179,23 @@ describe('public v1 read API', () => {
     await docs(req as any, res as any)
     const body = JSON.parse(res._getData())
     expect(body.openapi).toBe('3.1.0')
-    expect(body.paths).toEqual(expect.objectContaining({
-      '/api/v1/me': expect.any(Object),
-      '/api/v1/vehicles': expect.any(Object),
-      '/api/v1/maintenance': expect.any(Object),
-      '/api/v1/deliveries': expect.any(Object),
-    }))
+    expect(body.paths).toEqual(
+      expect.objectContaining({
+        '/api/v1/me': expect.any(Object),
+        '/api/v1/vehicles': expect.any(Object),
+        '/api/v1/maintenance': expect.any(Object),
+        '/api/v1/deliveries': expect.any(Object),
+      })
+    )
     expect(JSON.stringify(body)).toContain('x-team-id')
     expect(JSON.stringify(body)).toContain('Bearer')
     expect(JSON.stringify(body)).toContain('100 requests per minute')
     expect(JSON.stringify(body)).toContain('nextCursor')
     expect(JSON.stringify(body)).toContain('curl')
     expect(body.paths['/api/v1/vehicles'].get.security).toEqual([{ bearerAuth: [] }])
-    expect(body.paths['/api/v1/vehicles'].get.responses).toEqual(expect.objectContaining({ '405': expect.any(Object), '500': expect.any(Object), '503': expect.any(Object) }))
+    expect(body.paths['/api/v1/vehicles'].get.responses).toEqual(
+      expect.objectContaining({ '405': expect.any(Object), '500': expect.any(Object), '503': expect.any(Object) })
+    )
     expect(body.paths['/api/v1/vehicles'].get.responses['503'].description).toContain('quota')
     expect(body.paths['/api/v1/vehicles'].get.responses['503'].description).toContain('cursor signing')
     for (const path of ['/api/v1/vehicles', '/api/v1/maintenance', '/api/v1/deliveries']) {

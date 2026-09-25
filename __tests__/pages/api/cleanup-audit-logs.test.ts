@@ -1,10 +1,12 @@
 import { createMocks } from 'node-mocks-http'
 jest.mock('@/lib/cronAuth', () => ({ isAuthorizedCronRequest: jest.fn(() => true) }))
-jest.mock('@/lib/prisma', () => ({ prisma: {
-  loginHistory: { deleteMany: jest.fn(async () => ({ count: 1 })) },
-  auditLog: { deleteMany: jest.fn(async () => ({ count: 2 })) },
-  idempotencyKey: { deleteMany: jest.fn(async () => ({ count: 3 })) },
-} }))
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    loginHistory: { deleteMany: jest.fn(async () => ({ count: 1 })) },
+    auditLog: { deleteMany: jest.fn(async () => ({ count: 2 })) },
+    idempotencyKey: { deleteMany: jest.fn(async () => ({ count: 3 })) },
+  },
+}))
 import handler from '@/pages/api/cron/cleanup-audit-logs'
 import { prisma } from '@/lib/prisma'
 import { isAuthorizedCronRequest } from '@/lib/cronAuth'

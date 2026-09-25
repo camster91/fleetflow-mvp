@@ -41,7 +41,10 @@ export interface CapturedEmail {
   capturedAt: string
 }
 
-export async function captureEmail(dir: string, message: { to: string | string[]; subject: string; text?: string; html: string }) {
+export async function captureEmail(
+  dir: string,
+  message: { to: string | string[]; subject: string; text?: string; html: string }
+) {
   await mkdir(dir, { recursive: true })
   const captured: CapturedEmail = {
     to: (Array.isArray(message.to) ? message.to : [message.to]).map((address) => address.toLowerCase()),

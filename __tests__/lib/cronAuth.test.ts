@@ -12,14 +12,13 @@ describe('isAuthorizedCronRequest', () => {
     delete process.env.CRON_SECRET
   })
 
-  it.each([
-    { 'x-cron-secret': secret },
-    { authorization: `Bearer ${secret}` },
-    { authorization: `bearer ${secret}` },
-  ])('accepts a supported authenticated scheduler header', (headers) => {
-    const { req } = createMocks({ headers })
-    expect(isAuthorizedCronRequest(req as never)).toBe(true)
-  })
+  it.each([{ 'x-cron-secret': secret }, { authorization: `Bearer ${secret}` }, { authorization: `bearer ${secret}` }])(
+    'accepts a supported authenticated scheduler header',
+    (headers) => {
+      const { req } = createMocks({ headers })
+      expect(isAuthorizedCronRequest(req as never)).toBe(true)
+    }
+  )
 
   it.each([
     {},

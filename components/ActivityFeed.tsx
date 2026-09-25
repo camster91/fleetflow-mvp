@@ -1,27 +1,38 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Truck, Package, Users, Wrench, FileText,
-  Plus, Edit2, Trash2, CheckCircle, AlertTriangle,
-  Clock, ChevronDown, Filter, RefreshCw,
+  Truck,
+  Package,
+  Users,
+  Wrench,
+  FileText,
+  Plus,
+  Edit2,
+  Trash2,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  ChevronDown,
+  Filter,
+  RefreshCw,
 } from 'lucide-react'
 import type { ActivityItem } from '../lib/fleet'
 
 const typeConfig: Record<string, { icon: React.ReactNode; color: string; bg: string }> = {
-  vehicle:     { icon: <Truck className="h-4 w-4" />,       color: 'text-blue-600',   bg: 'bg-blue-50' },
-  delivery:    { icon: <Package className="h-4 w-4" />,     color: 'text-green-600',  bg: 'bg-green-50' },
-  client:      { icon: <Users className="h-4 w-4" />,       color: 'text-purple-600', bg: 'bg-purple-50' },
-  maintenance: { icon: <Wrench className="h-4 w-4" />,      color: 'text-orange-600', bg: 'bg-orange-50' },
-  sop:         { icon: <FileText className="h-4 w-4" />,     color: 'text-indigo-600', bg: 'bg-indigo-50' },
-  user:        { icon: <Users className="h-4 w-4" />,       color: 'text-pink-600',   bg: 'bg-pink-50' },
+  vehicle: { icon: <Truck className="h-4 w-4" />, color: 'text-blue-600', bg: 'bg-blue-50' },
+  delivery: { icon: <Package className="h-4 w-4" />, color: 'text-green-600', bg: 'bg-green-50' },
+  client: { icon: <Users className="h-4 w-4" />, color: 'text-purple-600', bg: 'bg-purple-50' },
+  maintenance: { icon: <Wrench className="h-4 w-4" />, color: 'text-orange-600', bg: 'bg-orange-50' },
+  sop: { icon: <FileText className="h-4 w-4" />, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+  user: { icon: <Users className="h-4 w-4" />, color: 'text-pink-600', bg: 'bg-pink-50' },
 }
 
 const actionConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-  created:        { icon: <Plus className="h-3 w-3" />,          label: 'Created',  color: 'text-green-600' },
-  updated:        { icon: <Edit2 className="h-3 w-3" />,         label: 'Updated',  color: 'text-blue-600' },
-  deleted:        { icon: <Trash2 className="h-3 w-3" />,        label: 'Deleted',  color: 'text-red-600' },
-  completed:      { icon: <CheckCircle className="h-3 w-3" />,   label: 'Done',     color: 'text-green-600' },
-  assigned:       { icon: <Users className="h-3 w-3" />,         label: 'Assigned', color: 'text-purple-600' },
-  status_changed: { icon: <AlertTriangle className="h-3 w-3" />, label: 'Changed',  color: 'text-orange-600' },
+  created: { icon: <Plus className="h-3 w-3" />, label: 'Created', color: 'text-green-600' },
+  updated: { icon: <Edit2 className="h-3 w-3" />, label: 'Updated', color: 'text-blue-600' },
+  deleted: { icon: <Trash2 className="h-3 w-3" />, label: 'Deleted', color: 'text-red-600' },
+  completed: { icon: <CheckCircle className="h-3 w-3" />, label: 'Done', color: 'text-green-600' },
+  assigned: { icon: <Users className="h-3 w-3" />, label: 'Assigned', color: 'text-purple-600' },
+  status_changed: { icon: <AlertTriangle className="h-3 w-3" />, label: 'Changed', color: 'text-orange-600' },
 }
 
 interface ActivityFeedProps {
@@ -51,21 +62,26 @@ export default function ActivityFeed({ limit = 10, showFilter = true }: Activity
     try {
       const res = await fetch(`/api/activity?limit=50`)
       if (res.ok) setActivities(await res.json())
-    } catch { /* silent */ }
-    finally { setIsLoading(false) }
+    } catch {
+      /* silent */
+    } finally {
+      setIsLoading(false)
+    }
   }, [])
 
-  useEffect(() => { fetchActivities() }, [fetchActivities])
+  useEffect(() => {
+    fetchActivities()
+  }, [fetchActivities])
 
   const filtered = activities
     .filter((a) => filter === 'all' || a.type === filter)
     .slice(0, expanded ? undefined : limit)
 
   const filters = [
-    { value: 'all',         label: 'All',         count: activities.length },
-    { value: 'vehicle',     label: 'Vehicles',    count: activities.filter((a) => a.type === 'vehicle').length },
-    { value: 'delivery',    label: 'Deliveries',  count: activities.filter((a) => a.type === 'delivery').length },
-    { value: 'client',      label: 'Clients',     count: activities.filter((a) => a.type === 'client').length },
+    { value: 'all', label: 'All', count: activities.length },
+    { value: 'vehicle', label: 'Vehicles', count: activities.filter((a) => a.type === 'vehicle').length },
+    { value: 'delivery', label: 'Deliveries', count: activities.filter((a) => a.type === 'delivery').length },
+    { value: 'client', label: 'Clients', count: activities.filter((a) => a.type === 'client').length },
     { value: 'maintenance', label: 'Maintenance', count: activities.filter((a) => a.type === 'maintenance').length },
   ]
 
@@ -86,7 +102,9 @@ export default function ActivityFeed({ limit = 10, showFilter = true }: Activity
                 className="text-sm border border-gray-300 rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 {filters.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label} ({f.count})</option>
+                  <option key={f.value} value={f.value}>
+                    {f.label} ({f.count})
+                  </option>
                 ))}
               </select>
             </>
@@ -123,7 +141,9 @@ export default function ActivityFeed({ limit = 10, showFilter = true }: Activity
                 className="flex gap-3 px-4 py-3 hover:bg-gray-50 transition"
                 style={{ animationDelay: `${idx * 30}ms` }}
               >
-                <div className={`flex-shrink-0 w-9 h-9 rounded-lg ${typeStyle.bg} ${typeStyle.color} flex items-center justify-center`}>
+                <div
+                  className={`flex-shrink-0 w-9 h-9 rounded-lg ${typeStyle.bg} ${typeStyle.color} flex items-center justify-center`}
+                >
                   {typeStyle.icon}
                 </div>
                 <div className="flex-1 min-w-0">

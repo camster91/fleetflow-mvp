@@ -1,4 +1,9 @@
-const { evaluateEnvironment } = require('../../scripts/verify-production-readiness.cjs') as { evaluateEnvironment: (env: Record<string, string>, mode?: string) => { ready: boolean; missing: string[]; warnings: string[] } }
+const { evaluateEnvironment } = require('../../scripts/verify-production-readiness.cjs') as {
+  evaluateEnvironment: (
+    env: Record<string, string>,
+    mode?: string
+  ) => { ready: boolean; missing: string[]; warnings: string[] }
+}
 
 const core = {
   DATABASE_URL: 'postgresql://user:password@db:5432/fleetvera',
@@ -21,7 +26,7 @@ describe('verify-production-readiness', () => {
     const { TOKEN_ENCRYPTION_KEY: _omit, ...withoutKey } = core
     const result = evaluateEnvironment(withoutKey)
     expect(result.ready).toBe(false)
-    expect(result.missing.some(message => message.startsWith('TOKEN_ENCRYPTION_KEY'))).toBe(true)
+    expect(result.missing.some((message) => message.startsWith('TOKEN_ENCRYPTION_KEY'))).toBe(true)
     expect(evaluateEnvironment({ ...core, TOKEN_ENCRYPTION_KEY: 'short' }).ready).toBe(false)
   })
 
@@ -38,10 +43,17 @@ describe('verify-production-readiness', () => {
   it('requires live billing configuration for a public launch', () => {
     const result = evaluateEnvironment(core, 'public')
     expect(result.ready).toBe(false)
-    expect(result.missing).toEqual(expect.arrayContaining([
-      'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY',
-      'STRIPE_PRICE_MONTHLY_AMOUNT', 'STRIPE_PRICE_YEARLY_AMOUNT', 'STRIPE_PRICE_CURRENCY',
-    ]))
+    expect(result.missing).toEqual(
+      expect.arrayContaining([
+        'STRIPE_SECRET_KEY',
+        'STRIPE_WEBHOOK_SECRET',
+        'STRIPE_PRICE_MONTHLY',
+        'STRIPE_PRICE_YEARLY',
+        'STRIPE_PRICE_MONTHLY_AMOUNT',
+        'STRIPE_PRICE_YEARLY_AMOUNT',
+        'STRIPE_PRICE_CURRENCY',
+      ])
+    )
   })
 
   it('accepts only the billing configuration consumed by checkout', () => {
@@ -63,7 +75,12 @@ describe('verify-production-readiness', () => {
   })
 
   it('fails closed for weak secrets, insecure URLs, and malformed action keys without exposing values', () => {
-    const result = evaluateEnvironment({ ...core, JWT_SECRET: 'weak', NEXTAUTH_URL: 'http://localhost:3000', ACTION_PREVIEW_KEYS: '{oops' })
+    const result = evaluateEnvironment({
+      ...core,
+      JWT_SECRET: 'weak',
+      NEXTAUTH_URL: 'http://localhost:3000',
+      ACTION_PREVIEW_KEYS: '{oops',
+    })
     expect(result.ready).toBe(false)
     expect(result.missing.join(' ')).toContain('JWT_SECRET must be at least 32 characters')
     expect(result.missing.join(' ')).toContain('NEXTAUTH_URL must be a canonical https origin')
@@ -75,7 +92,7 @@ describe('verify-production-readiness', () => {
     'https://fleetvera.example?redirect=evil',
     'https://fleetvera.example#fragment',
     'https://fleetvera.example/path',
-  ])('rejects unsafe canonical application URL %s', value => {
+  ])('rejects unsafe canonical application URL %s', (value) => {
     const result = evaluateEnvironment({ ...core, NEXTAUTH_URL: value })
     expect(result.ready).toBe(false)
     expect(result.missing).toContain('NEXTAUTH_URL must be a canonical https origin')
@@ -92,7 +109,11 @@ describe('verify-production-readiness', () => {
   })
 
   it('requires an AES-256-GCM key ring if an integration is configured', () => {
-    const result = evaluateEnvironment({ ...core, GOOGLE_MAPS_SERVER_API_KEY: 'configured', INTEGRATION_ENCRYPTION_KEYS: 'bad:not-base64' })
+    const result = evaluateEnvironment({
+      ...core,
+      GOOGLE_MAPS_SERVER_API_KEY: 'configured',
+      INTEGRATION_ENCRYPTION_KEYS: 'bad:not-base64',
+    })
     expect(result.ready).toBe(false)
     expect(result.missing).toContain('INTEGRATION_ENCRYPTION_KEYS must contain AES-256-GCM keys')
   })

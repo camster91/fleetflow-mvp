@@ -20,7 +20,7 @@ const CLIENT_TYPES = [
   { value: 'warehouse', label: 'Warehouse', icon: '🏭' },
   { value: 'cafe', label: 'Cafe', icon: '☕' },
   { value: 'institution', label: 'Institution', icon: '🏛️' },
-  { value: 'other', label: 'Other', icon: '📍' }
+  { value: 'other', label: 'Other', icon: '📍' },
 ] as const
 
 const DELIVERY_FREQUENCIES = [
@@ -28,13 +28,13 @@ const DELIVERY_FREQUENCIES = [
   { value: 'weekly', label: 'Weekly' },
   { value: 'bi-weekly', label: 'Bi-weekly' },
   { value: 'monthly', label: 'Monthly' },
-  { value: 'as-needed', label: 'As Needed' }
+  { value: 'as-needed', label: 'As Needed' },
 ] as const
 
 export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: ClientFormModalProps) {
   const isEditing = !!client
   const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
-  
+
   const [formData, setFormData] = useState<{
     name: string
     businessName: string
@@ -78,9 +78,9 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
     securityNotes: '',
     specialRequirements: '',
     notes: '',
-    rating: 3
+    rating: 3,
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState<'basic' | 'contact' | 'delivery'>('basic')
@@ -88,7 +88,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
   useEffect(() => {
     if (isOpen) {
       setRecents(recentItems.getRecentItems())
-      
+
       if (client) {
         setFormData({
           name: client.name,
@@ -111,7 +111,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
           securityNotes: client.securityNotes || '',
           specialRequirements: client.specialRequirements?.join(', ') || '',
           notes: client.notes || '',
-          rating: client.rating || 3
+          rating: client.rating || 3,
         })
       } else {
         setFormData({
@@ -135,7 +135,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
           securityNotes: '',
           specialRequirements: '',
           notes: '',
-          rating: 3
+          rating: 3,
         })
       }
       setErrors({})
@@ -144,8 +144,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
     }
   }, [isOpen, client])
 
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -186,11 +185,11 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     setIsSubmitting(true)
-    
+
     try {
       const clientData = {
         name: formData.name,
@@ -200,26 +199,38 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
         phone: formData.phone || undefined,
         email: formData.email || undefined,
         website: formData.website || undefined,
-        contactPerson: formData.contactName ? {
-          name: formData.contactName,
-          phone: formData.contactPhone || undefined,
-          email: formData.contactEmail || undefined,
-          department: formData.contactDepartment || undefined,
-          availability: formData.contactAvailability || undefined
-        } : undefined,
+        contactPerson: formData.contactName
+          ? {
+              name: formData.contactName,
+              phone: formData.contactPhone || undefined,
+              email: formData.contactEmail || undefined,
+              department: formData.contactDepartment || undefined,
+              availability: formData.contactAvailability || undefined,
+            }
+          : undefined,
         deliveryFrequency: formData.deliveryFrequency,
         businessHours: formData.businessHours || undefined,
         parkingInstructions: formData.parkingInstructions || undefined,
         dropoffInstructions: formData.dropoffInstructions || undefined,
-        accessCodes: formData.accessCodes ? formData.accessCodes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        accessCodes: formData.accessCodes
+          ? formData.accessCodes
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
         securityNotes: formData.securityNotes || undefined,
-        specialRequirements: formData.specialRequirements ? formData.specialRequirements.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        specialRequirements: formData.specialRequirements
+          ? formData.specialRequirements
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
         notes: formData.notes || undefined,
-        rating: formData.rating as 1 | 2 | 3 | 4 | 5
+        rating: formData.rating as 1 | 2 | 3 | 4 | 5,
       }
-      
+
       let result: dataService.Client
-      
+
       if (isEditing && client) {
         const updated = await dataService.updateClient(client.id, clientData)
         if (!updated) throw new Error('Failed to update client')
@@ -227,14 +238,14 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
       } else {
         result = await dataService.addClient(clientData)
       }
-      
+
       // Save to recent items
       recentItems.addRecentClient({
         name: formData.name,
         businessName: formData.businessName,
-        type: formData.type
+        type: formData.type,
       })
-      
+
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -245,51 +256,31 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
   }
 
   const handleChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
   }
 
   const tabButtonClass = (tab: string) => `
     px-4 py-2 text-sm font-medium rounded-lg transition
-    ${activeTab === tab 
-      ? 'bg-primary-100 text-primary-700' 
-      : 'text-gray-600 hover:bg-gray-100'
-    }
+    ${activeTab === tab ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-100'}
   `
 
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Client' : 'Add New Client'}
-      size="lg"
-    >
+    <FormModal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit Client' : 'Add New Client'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Tabs */}
         <div className="flex gap-2 border-b border-gray-200 pb-4">
-          <button
-            type="button"
-            onClick={() => setActiveTab('basic')}
-            className={tabButtonClass('basic')}
-          >
+          <button type="button" onClick={() => setActiveTab('basic')} className={tabButtonClass('basic')}>
             <Building className="h-4 w-4 inline mr-2" />
             Basic Info
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('contact')}
-            className={tabButtonClass('contact')}
-          >
+          <button type="button" onClick={() => setActiveTab('contact')} className={tabButtonClass('contact')}>
             <User className="h-4 w-4 inline mr-2" />
             Contact
           </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('delivery')}
-            className={tabButtonClass('delivery')}
-          >
+          <button type="button" onClick={() => setActiveTab('delivery')} className={tabButtonClass('delivery')}>
             <Navigation className="h-4 w-4 inline mr-2" />
             Delivery
           </button>
@@ -301,9 +292,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Business Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Business Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
                 <AutocompleteInput
                   ariaLabel="Business Name"
                   value={formData.businessName}
@@ -332,11 +321,9 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Client Type */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Business Type
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Business Type</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {CLIENT_TYPES.map(type => (
+                  {CLIENT_TYPES.map((type) => (
                     <button
                       key={type.value}
                       type="button"
@@ -372,9 +359,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                 <AutocompleteInput
                   ariaLabel="Phone"
                   value={formData.phone}
@@ -387,9 +372,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <AutocompleteInput
                   ariaLabel="Email"
                   value={formData.email}
@@ -403,9 +386,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Website */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Website
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
                 <input
                   type="url"
                   value={formData.website}
@@ -417,19 +398,15 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Rating */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Client Rating
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Client Rating</label>
                 <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map(star => (
+                  {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
                       type="button"
                       onClick={() => handleChange('rating', star)}
                       className={`p-2 rounded-lg transition ${
-                        formData.rating >= star
-                          ? 'text-yellow-500 bg-yellow-50'
-                          : 'text-gray-300 hover:text-gray-400'
+                        formData.rating >= star ? 'text-yellow-500 bg-yellow-50' : 'text-gray-300 hover:text-gray-400'
                       }`}
                     >
                       <Star className={`h-6 w-6 ${formData.rating >= star ? 'fill-current' : ''}`} />
@@ -447,9 +424,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Contact Person */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Contact Name
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
                 <input
                   type="text"
                   value={formData.contactName}
@@ -461,9 +436,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Contact Department */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Department
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
                 <input
                   type="text"
                   value={formData.contactDepartment}
@@ -475,9 +448,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Contact Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Direct Phone
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Direct Phone</label>
                 <input
                   type="tel"
                   value={formData.contactPhone}
@@ -489,9 +460,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Contact Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Direct Email
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Direct Email</label>
                 <input
                   type="email"
                   value={formData.contactEmail}
@@ -506,9 +475,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Availability */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Best Time to Contact
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Best Time to Contact</label>
                 <input
                   type="text"
                   value={formData.contactAvailability}
@@ -527,25 +494,23 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Delivery Frequency */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Delivery Frequency
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Frequency</label>
                 <select
                   value={formData.deliveryFrequency}
                   onChange={(e) => handleChange('deliveryFrequency', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
                 >
-                  {DELIVERY_FREQUENCIES.map(freq => (
-                    <option key={freq.value} value={freq.value}>{freq.label}</option>
+                  {DELIVERY_FREQUENCIES.map((freq) => (
+                    <option key={freq.value} value={freq.value}>
+                      {freq.label}
+                    </option>
                   ))}
                 </select>
               </div>
 
               {/* Business Hours */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Business Hours
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Business Hours</label>
                 <input
                   type="text"
                   value={formData.businessHours}
@@ -557,9 +522,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Parking Instructions */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Parking Instructions
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parking Instructions</label>
                 <textarea
                   value={formData.parkingInstructions}
                   onChange={(e) => handleChange('parkingInstructions', e.target.value)}
@@ -571,9 +534,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Dropoff Instructions */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Dropoff Instructions
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Instructions</label>
                 <textarea
                   value={formData.dropoffInstructions}
                   onChange={(e) => handleChange('dropoffInstructions', e.target.value)}
@@ -585,9 +546,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Access Codes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Access Codes
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Access Codes</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <input
@@ -603,9 +562,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Security Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Security Notes
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Security Notes</label>
                 <input
                   type="text"
                   value={formData.securityNotes}
@@ -617,9 +574,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* Special Requirements */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Special Requirements
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Special Requirements</label>
                 <input
                   type="text"
                   value={formData.specialRequirements}
@@ -631,9 +586,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
 
               {/* General Notes */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea
                   value={formData.notes}
                   onChange={(e) => handleChange('notes', e.target.value)}
@@ -666,7 +619,7 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
               </button>
             )}
           </div>
-          
+
           <div className="flex gap-3">
             <button
               type="button"
@@ -694,8 +647,10 @@ export default function ClientFormModal({ isOpen, onClose, onSubmit, client }: C
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     {isEditing ? 'Saving...' : 'Adding...'}
                   </>
+                ) : isEditing ? (
+                  'Save Changes'
                 ) : (
-                  isEditing ? 'Save Changes' : 'Add Client'
+                  'Add Client'
                 )}
               </button>
             )}

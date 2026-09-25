@@ -27,11 +27,30 @@ const tenantContext = {
 }
 
 const existing = {
-  id: 'd1', ownerId: 'owner-1', teamId: null, address: '1 Main St', customer: 'Acme', status: 'in-transit',
-  driver: null, assignedDriverId: null, items: 3, progress: 50, notes: null, scheduledTime: null,
-  estimatedArrival: null, completedTime: null, parkingLocation: null, dropoffLocation: null,
-  parkingInstructions: null, dropoffInstructions: null, contactPerson: null, photos: null, accessCodes: null,
-  securityNotes: null, businessHours: null, specialRequirements: null,
+  id: 'd1',
+  ownerId: 'owner-1',
+  teamId: null,
+  address: '1 Main St',
+  customer: 'Acme',
+  status: 'in-transit',
+  driver: null,
+  assignedDriverId: null,
+  items: 3,
+  progress: 50,
+  notes: null,
+  scheduledTime: null,
+  estimatedArrival: null,
+  completedTime: null,
+  parkingLocation: null,
+  dropoffLocation: null,
+  parkingInstructions: null,
+  dropoffInstructions: null,
+  contactPerson: null,
+  photos: null,
+  accessCodes: null,
+  securityNotes: null,
+  businessHours: null,
+  specialRequirements: null,
 }
 
 async function put(body: unknown) {
@@ -78,17 +97,30 @@ describe('PUT /api/deliveries/[id] validation', () => {
   it('accepts the payload sent by the deliveries page', async () => {
     const res = await put({ status: 'delivered', progress: 100, completedTime: new Date().toISOString() })
     expect(res._getStatusCode()).toBe(200)
-    expect(tx.delivery.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'd1' },
-      data: expect.objectContaining({ status: 'delivered', progress: 100, items: 3, customer: 'Acme' }),
-    }))
+    expect(tx.delivery.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'd1' },
+        data: expect.objectContaining({ status: 'delivered', progress: 100, items: 3, customer: 'Acme' }),
+      })
+    )
     expect(tx.deliveryEvent.create).toHaveBeenCalledWith({ data: expect.objectContaining({ status: 'delivered' }) })
   })
 
   it('tolerates a full delivery record echoed back by a client', async () => {
     const res = await put({
-      id: 'd1', customer: 'Acme', address: '1 Main St', status: 'in-transit', driver: '', assignedDriverId: null,
-      items: 3, progress: 50, notes: null, scheduledTime: '', estimatedArrival: null, accessCodes: ['1234'], photos: null,
+      id: 'd1',
+      customer: 'Acme',
+      address: '1 Main St',
+      status: 'in-transit',
+      driver: '',
+      assignedDriverId: null,
+      items: 3,
+      progress: 50,
+      notes: null,
+      scheduledTime: '',
+      estimatedArrival: null,
+      accessCodes: ['1234'],
+      photos: null,
     })
     expect(res._getStatusCode()).toBe(200)
   })

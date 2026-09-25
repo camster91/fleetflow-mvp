@@ -24,8 +24,11 @@ describe('passwordless 2FA disable', () => {
   it('disables 2FA with a valid authenticator code when no password exists', async () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'user-1', password: null, twoFactorEnabled: true,
-      twoFactorSecret: 'encrypted', backupCodes: null,
+      id: 'user-1',
+      password: null,
+      twoFactorEnabled: true,
+      twoFactorSecret: 'encrypted',
+      backupCodes: null,
     })
     ;(prisma.user.update as jest.Mock).mockResolvedValue({ tokenVersion: 5 })
     const { req, res } = createMocks({ method: 'POST', body: { code: '123456' } })
@@ -53,8 +56,11 @@ describe('passwordless 2FA disable', () => {
     ;(speakeasy.totp.verify as jest.Mock).mockReturnValue(false)
     ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'user-1', password: null, twoFactorEnabled: true,
-      twoFactorSecret: 'encrypted', backupCodes: '["hashed-backup-code"]',
+      id: 'user-1',
+      password: null,
+      twoFactorEnabled: true,
+      twoFactorSecret: 'encrypted',
+      backupCodes: '["hashed-backup-code"]',
     })
     ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
 
@@ -70,7 +76,10 @@ describe('passwordless 2FA disable', () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
     ;(bcrypt.compare as jest.Mock).mockImplementation(async (_code: string, hash: string) => hash === 'h2')
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'user-1', twoFactorEnabled: true, twoFactorSecret: 'encrypted', backupCodes: '["h1","h2"]',
+      id: 'user-1',
+      twoFactorEnabled: true,
+      twoFactorSecret: 'encrypted',
+      backupCodes: '["h1","h2"]',
     })
     ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
     ;(prisma.user.update as jest.Mock).mockResolvedValue({ tokenVersion: 2 })
@@ -87,19 +96,25 @@ describe('passwordless 2FA disable', () => {
     expect(res._getStatusCode()).toBe(200)
   })
 
-  it.each(['000000', 'not-a-code', '1234-5678', 'x'.repeat(5000)])('rejects %s without hashing when it is not a valid code', async (code) => {
-    ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
-    ;(speakeasy.totp.verify as jest.Mock).mockReturnValue(false)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'user-1', twoFactorEnabled: true, twoFactorSecret: 'encrypted', backupCodes: '["h1"]',
-    })
-    const { req, res } = createMocks({ method: 'POST', body: { code } })
+  it.each(['000000', 'not-a-code', '1234-5678', 'x'.repeat(5000)])(
+    'rejects %s without hashing when it is not a valid code',
+    async (code) => {
+      ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
+      ;(speakeasy.totp.verify as jest.Mock).mockReturnValue(false)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        twoFactorEnabled: true,
+        twoFactorSecret: 'encrypted',
+        backupCodes: '["h1"]',
+      })
+      const { req, res } = createMocks({ method: 'POST', body: { code } })
 
-    await handler(req as never, res as never)
+      await handler(req as never, res as never)
 
-    expect(res._getStatusCode()).toBe(400)
-    expect(bcrypt.compare).not.toHaveBeenCalled()
-    expect(bcrypt.compareSync).not.toHaveBeenCalled()
-    expect(prisma.user.update).not.toHaveBeenCalled()
-  })
+      expect(res._getStatusCode()).toBe(400)
+      expect(bcrypt.compare).not.toHaveBeenCalled()
+      expect(bcrypt.compareSync).not.toHaveBeenCalled()
+      expect(prisma.user.update).not.toHaveBeenCalled()
+    }
+  )
 })

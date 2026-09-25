@@ -1,20 +1,20 @@
-import React from 'react';
-import { Card } from '../ui/Card';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import React from 'react'
+import { Card } from '../ui/Card'
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 
 interface StatCardProps {
-  title: string;
-  value: string | number;
-  change?: number;
-  changeLabel?: string;
-  prefix?: string;
-  suffix?: string;
-  icon?: React.ReactNode;
-  iconBgColor?: string;
-  iconColor?: string;
-  loading?: boolean;
-  className?: string;
-  footer?: React.ReactNode;
+  title: string
+  value: string | number
+  change?: number
+  changeLabel?: string
+  prefix?: string
+  suffix?: string
+  icon?: React.ReactNode
+  iconBgColor?: string
+  iconColor?: string
+  loading?: boolean
+  className?: string
+  footer?: React.ReactNode
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -31,14 +31,14 @@ export const StatCard: React.FC<StatCardProps> = ({
   className = '',
   footer,
 }) => {
-  const isPositive = change && change > 0;
-  const isNegative = change && change < 0;
-  const isNeutral = change === 0 || change === undefined;
+  const isPositive = change && change > 0
+  const isNegative = change && change < 0
+  const isNeutral = change === 0 || change === undefined
 
   const formatChange = (val: number) => {
-    const absValue = Math.abs(val);
-    return `${absValue.toFixed(1)}%`;
-  };
+    const absValue = Math.abs(val)
+    return `${absValue.toFixed(1)}%`
+  }
 
   return (
     <Card className={className}>
@@ -50,28 +50,20 @@ export const StatCard: React.FC<StatCardProps> = ({
               <div className="h-8 w-24 bg-slate-200 rounded animate-pulse" />
             ) : (
               <>
-                {prefix && (
-                  <span className="text-2xl font-semibold text-slate-400">{prefix}</span>
-                )}
+                {prefix && <span className="text-2xl font-semibold text-slate-400">{prefix}</span>}
                 <span className="text-3xl font-bold text-slate-900">
                   {typeof value === 'number' ? value.toLocaleString() : value}
                 </span>
-                {suffix && (
-                  <span className="text-lg font-medium text-slate-500">{suffix}</span>
-                )}
+                {suffix && <span className="text-lg font-medium text-slate-500">{suffix}</span>}
               </>
             )}
           </div>
-          
+
           {change !== undefined && !loading && (
             <div className="mt-2 flex items-center gap-1.5">
               <span
                 className={`inline-flex items-center gap-0.5 text-sm font-medium ${
-                  isPositive
-                    ? 'text-emerald-600'
-                    : isNegative
-                    ? 'text-red-600'
-                    : 'text-slate-500'
+                  isPositive ? 'text-emerald-600' : isNegative ? 'text-red-600' : 'text-slate-500'
                 }`}
               >
                 {isPositive && <TrendingUp className="h-4 w-4" />}
@@ -91,11 +83,9 @@ export const StatCard: React.FC<StatCardProps> = ({
         )}
       </div>
 
-      {footer && (
-        <div className="mt-4 pt-4 border-t border-slate-100">{footer}</div>
-      )}
+      {footer && <div className="mt-4 pt-4 border-t border-slate-100">{footer}</div>}
     </Card>
-  );
-};
+  )
+}
 
-export default StatCard;
+export default StatCard

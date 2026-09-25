@@ -19,7 +19,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const skip = (page - 1) * limit
 
     const [machines, total] = await Promise.all([
-      prisma.vendingMachine.findMany({ where: tenant.resourceWhere, orderBy: [{ name: 'asc' }, { id: 'asc' }], skip, take: limit }),
+      prisma.vendingMachine.findMany({
+        where: tenant.resourceWhere,
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        skip,
+        take: limit,
+      }),
       prisma.vendingMachine.count({ where: tenant.resourceWhere }),
     ])
     return res.json({ data: machines.map(dbToVendingMachine), total, page, limit, hasMore: skip + limit < total })
@@ -33,8 +38,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const machine = await prisma.$transaction(async (tx) => {
       const created = await tx.vendingMachine.create({ data })
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'created', entityType: 'vending', entityId: created.id, entityName: created.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'created',
+        entityType: 'vending',
+        entityId: created.id,
+        entityName: created.name,
         description: `Vending machine "${created.name}" at ${created.location} was added`,
       })
       return created

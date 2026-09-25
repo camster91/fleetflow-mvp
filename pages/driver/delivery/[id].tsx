@@ -1,10 +1,17 @@
-import { toast } from "react-hot-toast";
+import { toast } from 'react-hot-toast'
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import {
-  Package, MapPin, FileText, CheckCircle, Truck,
-  AlertTriangle, ArrowLeft, Navigation, Loader2,
+  Package,
+  MapPin,
+  FileText,
+  CheckCircle,
+  Truck,
+  AlertTriangle,
+  ArrowLeft,
+  Navigation,
+  Loader2,
 } from 'lucide-react'
 import { useDataFetch } from '../../../hooks/useDataFetch'
 import type { Delivery } from '../../../services/apiService'
@@ -44,7 +51,11 @@ export default function DriverDeliveryPage() {
   const { id } = router.query as { id: string }
   const [updating, setUpdating] = useState(false)
 
-  const { data: delivery, loading, refetch } = useDataFetch<Delivery | null>(
+  const {
+    data: delivery,
+    loading,
+    refetch,
+  } = useDataFetch<Delivery | null>(
     async () => {
       if (!id) return null
       const res = await fetch(`/api/deliveries/${id}`)
@@ -55,33 +66,38 @@ export default function DriverDeliveryPage() {
     [id]
   )
 
-  const updateStatus = useCallback(async (status: string, notes?: string) => {
-    if (!id || updating) return
-    setUpdating(true)
-    try {
-      const geo = await getGeoLocation()
-      const res = await fetch(`/api/deliveries/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, notes, ...geo }),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to update')
+  const updateStatus = useCallback(
+    async (status: string, notes?: string) => {
+      if (!id || updating) return
+      setUpdating(true)
+      try {
+        const geo = await getGeoLocation()
+        const res = await fetch(`/api/deliveries/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, notes, ...geo }),
+        })
+        if (!res.ok) {
+          const err = await res.json()
+          throw new Error(err.error || 'Failed to update')
+        }
+        await refetch()
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Failed to update delivery')
+      } finally {
+        setUpdating(false)
       }
-      await refetch()
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update delivery')
-    } finally {
-      setUpdating(false)
-    }
-  }, [id, updating, refetch])
+    },
+    [id, updating, refetch]
+  )
 
   const isComplete = delivery && ['delivered', 'failed', 'cancelled'].includes(delivery.status)
 
   return (
     <>
-      <Head><title>Delivery - FleetFlow</title></Head>
+      <Head>
+        <title>Delivery - FleetFlow</title>
+      </Head>
       <div className="min-h-screen bg-slate-50 flex flex-col">
         {/* Header */}
         <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3">
@@ -103,12 +119,15 @@ export default function DriverDeliveryPage() {
           <div className="flex-1 flex flex-col p-4 gap-4 max-w-lg mx-auto w-full">
             {/* Status Badge */}
             <div className="flex items-center justify-between">
-              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${STATUS_COLORS[delivery.status] || 'bg-slate-100 text-slate-800'}`}>
+              <span
+                className={`px-3 py-1.5 rounded-full text-sm font-medium ${STATUS_COLORS[delivery.status] || 'bg-slate-100 text-slate-800'}`}
+              >
                 {STATUS_LABELS[delivery.status] || delivery.status}
               </span>
               {delivery.estimatedArrival && (
                 <span className="text-sm text-slate-500">
-                  ETA: {new Date(delivery.estimatedArrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  ETA:{' '}
+                  {new Date(delivery.estimatedArrival).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               )}
             </div>
@@ -119,7 +138,9 @@ export default function DriverDeliveryPage() {
                 <Package className="h-5 w-5 text-slate-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="font-semibold text-slate-900">{delivery.customer}</p>
-                  <p className="text-sm text-slate-500">{delivery.items} item{delivery.items !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-slate-500">
+                    {delivery.items} item{delivery.items !== 1 ? 's' : ''}
+                  </p>
                 </div>
               </div>
 
@@ -128,7 +149,9 @@ export default function DriverDeliveryPage() {
                 <div>
                   <p className="text-sm text-slate-700">{delivery.address}</p>
                   <button
-                    onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(delivery.address)}`, '_blank')}
+                    onClick={() =>
+                      window.open(`https://maps.google.com/?q=${encodeURIComponent(delivery.address)}`, '_blank')
+                    }
                     className="mt-1 text-sm text-blue-600 font-medium flex items-center gap-1"
                   >
                     <Navigation className="h-3.5 w-3.5" /> Navigate
@@ -147,15 +170,19 @@ export default function DriverDeliveryPage() {
             {/* Action Buttons */}
             <div className="mt-auto space-y-3 pb-4">
               {isComplete ? (
-                <div className={`text-center py-6 rounded-xl ${delivery.status === 'delivered' ? 'bg-emerald-50' : 'bg-slate-50'}`}>
-                  <CheckCircle className={`h-12 w-12 mx-auto mb-2 ${delivery.status === 'delivered' ? 'text-emerald-500' : 'text-slate-400'}`} />
-                  <p className={`text-lg font-semibold ${delivery.status === 'delivered' ? 'text-emerald-700' : 'text-slate-600'}`}>
+                <div
+                  className={`text-center py-6 rounded-xl ${delivery.status === 'delivered' ? 'bg-emerald-50' : 'bg-slate-50'}`}
+                >
+                  <CheckCircle
+                    className={`h-12 w-12 mx-auto mb-2 ${delivery.status === 'delivered' ? 'text-emerald-500' : 'text-slate-400'}`}
+                  />
+                  <p
+                    className={`text-lg font-semibold ${delivery.status === 'delivered' ? 'text-emerald-700' : 'text-slate-600'}`}
+                  >
                     {STATUS_LABELS[delivery.status]}
                   </p>
                   {delivery.completedTime && (
-                    <p className="text-sm text-slate-500 mt-1">
-                      {new Date(delivery.completedTime).toLocaleString()}
-                    </p>
+                    <p className="text-sm text-slate-500 mt-1">{new Date(delivery.completedTime).toLocaleString()}</p>
                   )}
                 </div>
               ) : delivery.status === 'pending' ? (

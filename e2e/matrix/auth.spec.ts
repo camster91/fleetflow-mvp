@@ -1,7 +1,14 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import speakeasy from 'speakeasy'
 import { clearEmailsFor, waitForEmail, waitForLoginCode } from '../support/mail-capture'
-import { createSyntheticUser, disconnectMatrixDb, expectStatus, signInUser, useFreshClientAddress, userSecurityState } from './support'
+import {
+  createSyntheticUser,
+  disconnectMatrixDb,
+  expectStatus,
+  signInUser,
+  useFreshClientAddress,
+  userSecurityState,
+} from './support'
 
 /*
  * Real authentication flows against the local server: the email login code is
@@ -16,7 +23,12 @@ type SyntheticUser = Awaited<ReturnType<typeof createSyntheticUser>>
 let user: SyntheticUser
 
 test.beforeEach(async ({ page }, testInfo) => {
-  user = await createSyntheticUser(testInfo.title.split(':')[0].replace(/[^a-z0-9]+/gi, '-').toLowerCase())
+  user = await createSyntheticUser(
+    testInfo.title
+      .split(':')[0]
+      .replace(/[^a-z0-9]+/gi, '-')
+      .toLowerCase()
+  )
   await useFreshClientAddress(page)
 })
 test.afterEach(async () => {
@@ -51,7 +63,8 @@ function totp(secret: string, offsetSeconds = 0) {
 async function openAccountMenu(page: Page, email: string) {
   const account = page.getByRole('button', { name: new RegExp(email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) })
   // Below the lg breakpoint the account menu lives in the off-canvas sidebar.
-  if ((page.viewportSize()?.width ?? 1280) < 1024) await page.getByRole('button', { name: 'Open menu' }).filter({ visible: true }).first().click()
+  if ((page.viewportSize()?.width ?? 1280) < 1024)
+    await page.getByRole('button', { name: 'Open menu' }).filter({ visible: true }).first().click()
   await account.click()
 }
 
@@ -92,7 +105,7 @@ test('2fa: enroll, login requires a TOTP, and a backup code works exactly once',
   await expect(page.getByRole('heading', { name: 'Two-Factor Authentication' })).toBeVisible()
   const setupResponse = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/auth/2fa/setup')
   await page.getByRole('button', { name: 'Enable 2FA' }).click()
-  const setup = await (await setupResponse).json() as { secret: string; backupCodes: string[] }
+  const setup = (await (await setupResponse).json()) as { secret: string; backupCodes: string[] }
   expect(setup.backupCodes).toHaveLength(10)
   await expect(page.getByText(setup.secret, { exact: true })).toBeVisible()
   const enrolledAt = Date.now()
@@ -134,7 +147,10 @@ test('2fa: enroll, login requires a TOTP, and a backup code works exactly once',
   await backup.close()
 
   const replay = await replayContext(browser, baseURL!, challenge!.value)
-  const reused = await replay.request.post('/api/auth/2fa/validate', { data: { code: setup.backupCodes[0] }, headers: { origin: baseURL!, referer: `${baseURL}/auth/login` } })
+  const reused = await replay.request.post('/api/auth/2fa/validate', {
+    data: { code: setup.backupCodes[0] },
+    headers: { origin: baseURL!, referer: `${baseURL}/auth/login` },
+  })
   await expectStatus(reused, 400)
   expect((await reused.json()).code).toBe('INVALID_CODE')
   await expectStatus(await replay.request.get('/api/auth/me'), 401)
@@ -143,7 +159,16 @@ test('2fa: enroll, login requires a TOTP, and a backup code works exactly once',
 
 async function replayContext(browser: Browser, baseURL: string, challenge: string) {
   const context = await browser.newContext()
-  await context.addCookies([{ name: 'two_factor_challenge', value: challenge, domain: new URL(baseURL).hostname, path: '/', httpOnly: true, sameSite: 'Lax' }])
+  await context.addCookies([
+    {
+      name: 'two_factor_challenge',
+      value: challenge,
+      domain: new URL(baseURL).hostname,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'Lax',
+    },
+  ])
   return context
 }
 

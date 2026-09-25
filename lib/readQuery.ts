@@ -12,7 +12,7 @@ export function parseSearchTerm(raw: unknown): Parsed<string | null> {
 
 export function parseActivityFilters(
   limitRaw: unknown,
-  typeRaw: unknown,
+  typeRaw: unknown
 ): Parsed<{ limit: number; entityType?: string }> {
   let limit = 20
   if (limitRaw !== undefined) {
@@ -26,12 +26,7 @@ export function parseActivityFilters(
   }
 
   if (typeRaw === undefined) return { ok: true, value: { limit } }
-  if (
-    typeof typeRaw !== 'string'
-    || typeRaw.length < 1
-    || typeRaw.length > 64
-    || !/^[A-Za-z0-9_-]+$/.test(typeRaw)
-  ) {
+  if (typeof typeRaw !== 'string' || typeRaw.length < 1 || typeRaw.length > 64 || !/^[A-Za-z0-9_-]+$/.test(typeRaw)) {
     return { ok: false, error: 'Invalid activity type' }
   }
   return { ok: true, value: { limit, entityType: typeRaw } }
@@ -42,7 +37,7 @@ export function parseAuditMetadata(raw: string | null): Record<string, unknown> 
   try {
     const parsed: unknown = JSON.parse(raw)
     return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
+      ? (parsed as Record<string, unknown>)
       : undefined
   } catch {
     return undefined

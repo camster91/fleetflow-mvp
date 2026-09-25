@@ -3,13 +3,15 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 
 jest.mock('@/lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }))
 jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn().mockResolvedValue(true) }))
-jest.mock('@/lib/prisma', () => ({ prisma: {
-  team: { findMany: jest.fn() },
-  subscription: { findUnique: jest.fn(), update: jest.fn() },
-  auditLog: { create: jest.fn() },
-  $queryRaw: jest.fn(),
-  $transaction: jest.fn(),
-} }))
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    team: { findMany: jest.fn() },
+    subscription: { findUnique: jest.fn(), update: jest.fn() },
+    auditLog: { create: jest.fn() },
+    $queryRaw: jest.fn(),
+    $transaction: jest.fn(),
+  },
+}))
 jest.mock('@/lib/stripe', () => ({ cancelSubscription: jest.fn() }))
 
 import handler from '@/pages/api/subscription/cancel'
@@ -23,10 +25,13 @@ describe('POST /api/subscription/cancel', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'owner-1', name: 'Owner' } })
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([])
     ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
-      id: 'local-sub', stripeSubscriptionId: 'sub_123', status: 'ACTIVE', cancelAtPeriodEnd: false,
+      id: 'local-sub',
+      stripeSubscriptionId: 'sub_123',
+      status: 'ACTIVE',
+      cancelAtPeriodEnd: false,
     })
     ;(prisma.$queryRaw as jest.Mock).mockResolvedValue([{ acquired: 1 }])
-    ;(prisma.$transaction as jest.Mock).mockImplementation(async callback => callback(prisma))
+    ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(prisma))
     ;(cancelSubscription as jest.Mock).mockResolvedValue({ id: 'sub_123', cancel_at_period_end: true })
   })
 
@@ -39,18 +44,27 @@ describe('POST /api/subscription/cancel', () => {
     expect(prisma.$queryRaw).toHaveBeenCalled()
     expect(cancelSubscription).toHaveBeenCalledWith('sub_123', true)
     expect(prisma.subscription.update).toHaveBeenCalledWith({
-      where: { userId: 'owner-1' }, data: { cancelAtPeriodEnd: true },
+      where: { userId: 'owner-1' },
+      data: { cancelAtPeriodEnd: true },
     })
-    expect(prisma.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({
-      userId: 'owner-1', action: 'updated', entityType: 'subscription', entityId: 'local-sub',
-      description: 'Subscription cancellation scheduled for period end',
-    }) })
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 'owner-1',
+        action: 'updated',
+        entityType: 'subscription',
+        entityId: 'local-sub',
+        description: 'Subscription cancellation scheduled for period end',
+      }),
+    })
     expect(res.getHeader('Cache-Control')).toBe('private, no-store')
   })
 
   it('treats a repeated cancellation as successful without a second provider mutation', async () => {
     ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
-      id: 'local-sub', stripeSubscriptionId: 'sub_123', status: 'ACTIVE', cancelAtPeriodEnd: true,
+      id: 'local-sub',
+      stripeSubscriptionId: 'sub_123',
+      status: 'ACTIVE',
+      cancelAtPeriodEnd: true,
     })
     const { req, res } = request()
     await handler(req, res)
@@ -79,6 +93,7 @@ describe('POST /api/subscription/cancel', () => {
 
 function request() {
   return createMocks<NextApiRequest, NextApiResponse>({
-    method: 'POST', headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
+    method: 'POST',
+    headers: { host: 'localhost:3000', origin: 'http://localhost:3000' },
   })
 }

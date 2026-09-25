@@ -80,8 +80,15 @@ describe('delete and update routes map Prisma errors', () => {
 
   it('returns 404 when a maintenance task disappears before the update commits', async () => {
     ;(prisma.maintenanceTask.findFirst as jest.Mock).mockResolvedValue({
-      id: 't1', title: 'Oil', type: 'Oil', dueDate: new Date('2026-09-25T00:00:00.000Z'),
-      priority: 'medium', completed: false, completedDate: null, ownerId: 'owner-1', vehicleId: null,
+      id: 't1',
+      title: 'Oil',
+      type: 'Oil',
+      dueDate: new Date('2026-09-25T00:00:00.000Z'),
+      priority: 'medium',
+      completed: false,
+      completedDate: null,
+      ownerId: 'owner-1',
+      vehicleId: null,
     })
     mockTx.maintenanceTask.update.mockRejectedValue(knownError('P2025'))
     const { req, res } = createMocks({ method: 'PUT', query: { id: 't1' }, body: { notes: 'x' } })
@@ -123,15 +130,26 @@ describe('deletion policy in the schema', () => {
   const schema = readFileSync(join(process.cwd(), 'prisma/schema.prisma'), 'utf8')
   const relationLine = (model: string, field: string) => {
     const body = schema.slice(schema.indexOf(`model ${model} {`))
-    return body.slice(0, body.indexOf('\n}')).split('\n').find((line) => line.trim().startsWith(`${field} `)) ?? ''
+    return (
+      body
+        .slice(0, body.indexOf('\n}'))
+        .split('\n')
+        .find((line) => line.trim().startsWith(`${field} `)) ?? ''
+    )
   }
 
-  it.each(['Vehicle', 'Delivery', 'MaintenanceTask', 'Client', 'SOPCategory', 'VendingMachine', 'ExpenseRecord', 'Announcement'])(
-    'refuses to delete a team that still owns %s rows instead of moving them to personal scope',
-    (model) => {
-      expect(relationLine(model, 'team')).toContain('onDelete: NoAction')
-    },
-  )
+  it.each([
+    'Vehicle',
+    'Delivery',
+    'MaintenanceTask',
+    'Client',
+    'SOPCategory',
+    'VendingMachine',
+    'ExpenseRecord',
+    'Announcement',
+  ])('refuses to delete a team that still owns %s rows instead of moving them to personal scope', (model) => {
+    expect(relationLine(model, 'team')).toContain('onDelete: NoAction')
+  })
 
   it('keeps expense history restricted and removes password history with its user', () => {
     expect(relationLine('ExpenseRecord', 'vehicle')).toContain('onDelete: Restrict')

@@ -16,14 +16,24 @@ import { requireTenantContext } from '@/lib/apiAuth'
 import { prisma } from '@/lib/prisma'
 
 const member = (id: string, role: string, email: string) => ({
-  id, role, status: 'ACCEPTED', invitedAt: new Date('2026-01-01'), joinedAt: new Date('2026-01-02'), userId: `user-${id}`,
+  id,
+  role,
+  status: 'ACCEPTED',
+  invitedAt: new Date('2026-01-01'),
+  joinedAt: new Date('2026-01-02'),
+  userId: `user-${id}`,
   user: { id: `user-${id}`, name: `Name ${id}`, email, image: null, role: 'user', createdAt: new Date('2026-01-01') },
 })
 
 function asRole(role: string, teamId: string | null = 'team-1') {
   ;(requireTenantContext as jest.Mock).mockResolvedValue({
     session: { user: { id: 'caller', email: 'caller@example.test' } },
-    tenant: { ownerId: 'owner', teamId, role, resourceWhere: teamId ? { teamId } : { ownerId: 'caller', teamId: null } },
+    tenant: {
+      ownerId: 'owner',
+      teamId,
+      role,
+      resourceWhere: teamId ? { teamId } : { ownerId: 'caller', teamId: null },
+    },
   })
 }
 
@@ -42,20 +52,28 @@ describe('GET /api/team per role', () => {
     ])
   })
 
-  it.each(['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'])('%s gets the active workspace member list', async (role) => {
-    asRole(role)
-    const res = await get()
-    expect(res._getStatusCode()).toBe(200)
-    const body = res._getJSONData()
-    expect(body.map((row: { user: { email: string } }) => row.user.email)).toEqual(['owner@example.test', 'driver@example.test'])
-    // Scoped to the workspace every other tenant route resolves, not the first membership found.
-    expect(prisma.teamMember.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { teamId: 'team-1' } }))
-    expect(prisma.teamMember.findFirst).not.toHaveBeenCalled()
-  })
+  it.each(['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'])(
+    '%s gets the active workspace member list',
+    async (role) => {
+      asRole(role)
+      const res = await get()
+      expect(res._getStatusCode()).toBe(200)
+      const body = res._getJSONData()
+      expect(body.map((row: { user: { email: string } }) => row.user.email)).toEqual([
+        'owner@example.test',
+        'driver@example.test',
+      ])
+      // Scoped to the workspace every other tenant route resolves, not the first membership found.
+      expect(prisma.teamMember.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { teamId: 'team-1' } }))
+      expect(prisma.teamMember.findFirst).not.toHaveBeenCalled()
+    }
+  )
 
   it('marks the canonical owner even when the membership row carries another role', async () => {
     asRole('ADMIN')
-    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([{ ...member('m1', 'ADMIN', 'owner@example.test'), userId: 'owner' }])
+    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([
+      { ...member('m1', 'ADMIN', 'owner@example.test'), userId: 'owner' },
+    ])
     const res = await get()
     expect(res._getJSONData()[0]).toEqual(expect.objectContaining({ isOwner: true }))
   })
@@ -63,19 +81,30 @@ describe('GET /api/team per role', () => {
   it('includes the canonical owner when Team.ownerId has no membership row', async () => {
     asRole('ADMIN')
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'owner', name: 'Owner', email: 'real-owner@example.test', image: null, role: 'user', createdAt: new Date('2026-01-01'),
+      id: 'owner',
+      name: 'Owner',
+      email: 'real-owner@example.test',
+      image: null,
+      role: 'user',
+      createdAt: new Date('2026-01-01'),
     })
     const res = await get()
     const body = res._getJSONData()
-    expect(body[0]).toEqual(expect.objectContaining({ id: 'owner:owner', role: 'OWNER', isOwner: true, status: 'ACCEPTED' }))
+    expect(body[0]).toEqual(
+      expect.objectContaining({ id: 'owner:owner', role: 'OWNER', isOwner: true, status: 'ACCEPTED' })
+    )
     expect(body.map((row: { user: { email: string } }) => row.user.email)).toEqual([
-      'real-owner@example.test', 'owner@example.test', 'driver@example.test',
+      'real-owner@example.test',
+      'owner@example.test',
+      'driver@example.test',
     ])
   })
 
   it('does not duplicate the owner who already has a membership row', async () => {
     asRole('ADMIN')
-    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([{ ...member('m1', 'OWNER', 'owner@example.test'), userId: 'owner' }])
+    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([
+      { ...member('m1', 'OWNER', 'owner@example.test'), userId: 'owner' },
+    ])
     const res = await get()
     expect(res._getJSONData()).toHaveLength(1)
     expect(prisma.user.findUnique).not.toHaveBeenCalled()
@@ -91,7 +120,13 @@ describe('GET /api/team per role', () => {
 
   it('returns only the caller for a personal workspace', async () => {
     asRole('OWNER', null)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'caller', name: 'Caller', email: 'caller@example.test', image: null, createdAt: new Date('2026-01-01') })
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'caller',
+      name: 'Caller',
+      email: 'caller@example.test',
+      image: null,
+      createdAt: new Date('2026-01-01'),
+    })
     const res = await get()
     expect(res._getStatusCode()).toBe(200)
     expect(res._getJSONData()).toEqual([expect.objectContaining({ id: 'caller', role: 'OWNER', isSelf: true })])

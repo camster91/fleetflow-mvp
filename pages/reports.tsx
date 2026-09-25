@@ -1,105 +1,109 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
-import { DashboardLayout } from '../components/layouts/DashboardLayout';
-import { PageHeader } from '../components/PageHeader';
-import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { DateRangePicker } from '../components/ui/DateRangePicker';
-import { useSession } from '../lib/session';
-import { downloadCSV } from '../lib/csvExport';
-import { subDays, format } from 'date-fns';
-import { Download, Wrench, Package, Truck } from 'lucide-react';
-import { notify } from '../services/notifications';
-import type {
-  MaintenanceReportData,
-  DeliveriesReportData,
-  FleetReportData,
-} from '../components/reports/ReportPanels';
+import React, { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
+import { DashboardLayout } from '../components/layouts/DashboardLayout'
+import { PageHeader } from '../components/PageHeader'
+import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
+import { DateRangePicker } from '../components/ui/DateRangePicker'
+import { useSession } from '../lib/session'
+import { downloadCSV } from '../lib/csvExport'
+import { subDays, format } from 'date-fns'
+import { Download, Wrench, Package, Truck } from 'lucide-react'
+import { notify } from '../services/notifications'
+import type { MaintenanceReportData, DeliveriesReportData, FleetReportData } from '../components/reports/ReportPanels'
 
-interface DateRange { from: Date; to: Date; label: string; }
+interface DateRange {
+  from: Date
+  to: Date
+  label: string
+}
 
-type Tab = 'maintenance' | 'deliveries' | 'fleet';
+type Tab = 'maintenance' | 'deliveries' | 'fleet'
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
 
 // Chart panels live in components/reports/ReportPanels and are loaded
 // client-side only via next/dynamic, so recharts stays out of the shared
 // vendors chunk and downloads only when a report is actually viewed.
-const PanelSkeleton = () => <div className="h-80 bg-slate-100 rounded-xl animate-pulse" />;
+const PanelSkeleton = () => <div className="h-80 bg-slate-100 rounded-xl animate-pulse" />
 
-const MaintenanceReport = dynamic(
-  () => import('../components/reports/ReportPanels').then((m) => m.MaintenanceReport),
-  { ssr: false, loading: PanelSkeleton }
-);
-const DeliveriesReport = dynamic(
-  () => import('../components/reports/ReportPanels').then((m) => m.DeliveriesReport),
-  { ssr: false, loading: PanelSkeleton }
-);
-const FleetReport = dynamic(
-  () => import('../components/reports/ReportPanels').then((m) => m.FleetReport),
-  { ssr: false, loading: PanelSkeleton }
-);
+const MaintenanceReport = dynamic(() => import('../components/reports/ReportPanels').then((m) => m.MaintenanceReport), {
+  ssr: false,
+  loading: PanelSkeleton,
+})
+const DeliveriesReport = dynamic(() => import('../components/reports/ReportPanels').then((m) => m.DeliveriesReport), {
+  ssr: false,
+  loading: PanelSkeleton,
+})
+const FleetReport = dynamic(() => import('../components/reports/ReportPanels').then((m) => m.FleetReport), {
+  ssr: false,
+  loading: PanelSkeleton,
+})
 
 export default function ReportsPage() {
-  const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState<Tab>('maintenance');
+  const { data: session, status } = useSession()
+  const [activeTab, setActiveTab] = useState<Tab>('maintenance')
   const [dateRange, setDateRange] = useState<DateRange>({
-    from: subDays(new Date(), 30), to: new Date(), label: 'Last 30 days',
-  });
-  const [data, setData] = useState<MaintenanceReportData | DeliveriesReportData | FleetReportData | null>(null);
-  const [loading, setLoading] = useState(true);
+    from: subDays(new Date(), 30),
+    to: new Date(),
+    label: 'Last 30 days',
+  })
+  const [data, setData] = useState<MaintenanceReportData | DeliveriesReportData | FleetReportData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const params = new URLSearchParams({
         startDate: dateRange.from.toISOString(),
         endDate: dateRange.to.toISOString(),
-      });
-      const r = await fetch(`/api/reports/${activeTab}?${params}`);
+      })
+      const r = await fetch(`/api/reports/${activeTab}?${params}`)
       if (r.ok) {
-        setData(await r.json());
+        setData(await r.json())
       } else {
-        notify.error('Failed to load report data');
-        setData(null);
+        notify.error('Failed to load report data')
+        setData(null)
       }
     } catch {
-      notify.error('Failed to load report data');
-      setData(null);
+      notify.error('Failed to load report data')
+      setData(null)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [activeTab, dateRange]);
+  }, [activeTab, dateRange])
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleExportCSV = async () => {
     const params = new URLSearchParams({
       type: activeTab,
       startDate: dateRange.from.toISOString(),
       endDate: dateRange.to.toISOString(),
-    });
+    })
     try {
-      const r = await fetch(`/api/reports/export?${params}`);
-      if (!r.ok) throw new Error();
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${activeTab}-report-${format(dateRange.from, 'yyyy-MM-dd')}-to-${format(dateRange.to, 'yyyy-MM-dd')}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      notify.success('CSV exported successfully');
+      const r = await fetch(`/api/reports/export?${params}`)
+      if (!r.ok) throw new Error()
+      const blob = await r.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${activeTab}-report-${format(dateRange.from, 'yyyy-MM-dd')}-to-${format(dateRange.to, 'yyyy-MM-dd')}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      notify.success('CSV exported successfully')
     } catch {
-      notify.error('Failed to export CSV');
+      notify.error('Failed to export CSV')
     }
-  };
+  }
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'maintenance', label: 'Maintenance', icon: Wrench },
     { key: 'deliveries', label: 'Deliveries', icon: Package },
     { key: 'fleet', label: 'Fleet Utilization', icon: Truck },
-  ];
+  ]
 
   if (status === 'loading') {
     return (
@@ -109,7 +113,7 @@ export default function ReportsPage() {
           <div className="h-64 bg-slate-200 rounded" />
         </div>
       </DashboardLayout>
-    );
+    )
   }
 
   return (
@@ -120,11 +124,7 @@ export default function ReportsPage() {
         actions={
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <DateRangePicker value={dateRange} onChange={setDateRange} />
-            <Button
-              variant="outline"
-              iconLeft={<Download className="h-4 w-4" />}
-              onClick={handleExportCSV}
-            >
+            <Button variant="outline" iconLeft={<Download className="h-4 w-4" />} onClick={handleExportCSV}>
               Export CSV
             </Button>
           </div>
@@ -135,20 +135,18 @@ export default function ReportsPage() {
       <div className="mb-6 max-w-full overflow-x-auto pb-1">
         <div className="flex min-w-max gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Report type">
           {tabs.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={activeTab === key}
-            onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === key
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
+            <button
+              key={key}
+              role="tab"
+              aria-selected={activeTab === key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeTab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </button>
           ))}
         </div>
       </div>
@@ -156,7 +154,9 @@ export default function ReportsPage() {
       {loading ? (
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />)}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-slate-100 rounded-xl animate-pulse" />
+            ))}
           </div>
           <div className="h-80 bg-slate-100 rounded-xl animate-pulse" />
         </div>
@@ -172,5 +172,5 @@ export default function ReportsPage() {
         </Card>
       )}
     </DashboardLayout>
-  );
+  )
 }

@@ -1,8 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import {
-  ConfirmDialogProvider,
-  useConfirmDialog,
-} from '../../components/ui/ConfirmDialog'
+import { ConfirmDialogProvider, useConfirmDialog } from '../../components/ui/ConfirmDialog'
 import { Button } from '../../components/ui/Button'
 
 function ConfirmHarness() {
