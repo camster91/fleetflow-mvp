@@ -7,13 +7,14 @@ export function TrialBanner() {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    fetch('/api/subscription/status')
-      .then(async (r) => {
-        if (!r.ok) return null
-        return r.json()
-      })
-      .then((d) => {
-        if (d?.subscription) setData(d.subscription)
+    // During the free beta checkout is off, so a trial countdown or "Subscribe" link would be a dead
+    // end: only show the banner when online billing is actually available.
+    Promise.all([
+      fetch('/api/subscription/status').then((r) => (r.ok ? r.json() : null)),
+      fetch('/api/stripe/availability').then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([status, availability]) => {
+        if (status?.subscription && availability?.available === true) setData(status.subscription)
       })
       .catch(() => {})
   }, [])
@@ -28,10 +29,11 @@ export function TrialBanner() {
 
   return (
     <div
+      role="status"
       className={`px-4 py-2.5 text-sm flex items-center justify-between ${expired ? 'bg-red-50 text-red-800' : 'bg-blue-50 text-blue-800'}`}
     >
       <div className="flex items-center gap-2">
-        <Clock className="h-4 w-4 shrink-0" />
+        <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
         {expired ? (
           <span>
             Your trial has expired.{' '}
@@ -49,8 +51,13 @@ export function TrialBanner() {
           </span>
         )}
       </div>
-      <button onClick={() => setDismissed(true)} className="p-1 hover:opacity-70">
-        <X className="h-3.5 w-3.5" />
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss trial notice"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+      >
+        <X className="h-4 w-4" aria-hidden="true" />
       </button>
     </div>
   )
