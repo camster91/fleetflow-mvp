@@ -197,7 +197,8 @@ export async function getNotifications(
     const [notifications, total] = await Promise.all([
       prisma.notification.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        // id breaks createdAt ties so offset pages never skip or repeat rows.
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take: limit,
       }),

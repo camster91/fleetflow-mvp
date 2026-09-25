@@ -4,11 +4,12 @@ import { prisma } from '../../../lib/prisma'
 import { assertSameOrigin } from '../../../lib/apiAuth'
 import { rateLimit } from '../../../lib/security'
 import { sendPrismaError } from '../../../lib/prismaErrors'
+import { getClientIP } from '../../../lib/rateLimit'
 
 function requestMetadata(req: NextApiRequest) {
-  const forwarded = req.headers['x-forwarded-for']
-  const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim()
-    || req.socket.remoteAddress
+  // Audit metadata uses the same proxy-aware client address as rate limiting.
+  const clientIP = getClientIP(req)
+  const ip = clientIP === 'unknown' ? undefined : clientIP
   return {
     ...(ip ? { ip } : {}),
     ...(req.headers['user-agent'] ? { userAgent: req.headers['user-agent'] } : {}),

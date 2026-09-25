@@ -20,6 +20,8 @@ interface BillingPricing {
   yearly: { amount: number; currency: string }
 }
 
+const PAID_STATUSES = new Set(['ACTIVE', 'PAST_DUE', 'UNPAID']);
+
 function StatusBadge({ status, cancelAtPeriodEnd }: { status: string; cancelAtPeriodEnd?: boolean }) {
   const config: Record<string, { bg: string; text: string; label: string }> = {
     TRIAL: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Trial' },
@@ -114,6 +116,9 @@ export default function BillingPage() {
   const trialExpired = sub?.status === 'TRIAL' && sub.trialEndsAt && new Date(sub.trialEndsAt) < new Date();
 
   const isActive = sub?.status === 'ACTIVE';
+  // Workspaces with an existing paid subscription are not on the free beta, so
+  // never tell them billing is free when Stripe is temporarily unavailable.
+  const hasPaidSubscription = Boolean(sub && PAID_STATUSES.has(sub.status));
   const showPricing = !isActive && billingAvailable;
   const formatPrice = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value / 100)
   const savings = pricing && pricing.monthly.amount > 0
@@ -142,7 +147,14 @@ export default function BillingPage() {
           </div>
         )}
 
-        {!billingAvailable && !billingCheckFailed && (
+        {!billingAvailable && !billingCheckFailed && hasPaidSubscription && (
+          <div role="status" className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <div><p className="font-semibold">Online billing is temporarily unavailable</p><p>Your existing subscription is unaffected. Please try again later or contact support@ashbi.ca.</p></div>
+          </div>
+        )}
+
+        {!billingAvailable && !billingCheckFailed && !hasPaidSubscription && (
           <div role="status" className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <Check className="h-5 w-5 shrink-0 text-blue-700" />
             <div><p className="font-semibold">Fleetvera is free during the beta</p><p>No payment details are needed. We will give beta workspaces advance notice before paid plans start.</p></div>

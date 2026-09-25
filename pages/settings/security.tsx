@@ -12,12 +12,14 @@ import {
   Download,
   RefreshCw,
   Copy,
-  Check
+  Check,
+  LogOut
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
+import { confirmAction } from '../../services/notifications';
 
 interface SecuritySettings {
   twoFactorEnabled: boolean;
@@ -47,6 +49,7 @@ export default function SecuritySettingsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [loggingOutEverywhere, setLoggingOutEverywhere] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') { router.push('/auth/login'); return; }
@@ -96,6 +99,23 @@ export default function SecuritySettingsPage() {
       setSuccess('Two-factor authentication disabled successfully!'); fetchSecuritySettings();
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed to disable 2FA'); }
     finally { setSettingUp2FA(false); }
+  };
+
+  const logOutEverywhere = async () => {
+    const ok = await confirmAction(
+      'This signs you out on every device and browser, including this one. You will need a new sign-in code to continue.',
+      'Log out everywhere'
+    );
+    if (!ok) return;
+    setLoggingOutEverywhere(true); setError('');
+    try {
+      const response = await fetch('/api/auth/logout-all', { method: 'POST' });
+      if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Failed to log out other sessions'); }
+      router.push('/auth/login');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to log out other sessions');
+      setLoggingOutEverywhere(false);
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -217,6 +237,16 @@ export default function SecuritySettingsPage() {
                   {securitySettings?.twoFactorEnabled ? (<><CheckCircle className="h-5 w-5 text-green-500" /><span className="text-sm text-slate-700">2FA enabled</span></>) : (<><AlertCircle className="h-5 w-5 text-amber-500" /><span className="text-sm text-slate-700">2FA not enabled</span></>)}
                 </div>
                 <div className="flex items-center space-x-3"><CheckCircle className="h-5 w-5 text-green-500" /><span className="text-sm text-slate-700">Email verified</span></div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50"><h2 className="text-lg font-semibold text-slate-900">Sessions</h2></div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-600">Lost a device or signed in on a shared computer? End every session on every device, including this one.</p>
+                <Button variant="outline" onClick={logOutEverywhere} loading={loggingOutEverywhere} fullWidth>
+                  <LogOut className="h-4 w-4 mr-2" />Log out everywhere
+                </Button>
               </div>
             </div>
           </div>

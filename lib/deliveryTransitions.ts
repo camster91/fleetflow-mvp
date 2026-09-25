@@ -1,7 +1,15 @@
 import { z } from 'zod'
 
+/**
+ * Every status a delivery record may hold. Create and full-update requests,
+ * analytics, and intelligence rules all share this list.
+ */
+export const DELIVERY_STATUSES = ['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'cancelled', 'delayed'] as const
+export const deliveryStatusSchema = z.enum(DELIVERY_STATUSES)
+
+/** Driver/status-control transitions: every stored status except the dispatcher-only `delayed`. */
 export const deliveryStatusTransitionSchema = z.object({
-  status: z.enum(['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'cancelled']),
+  status: deliveryStatusSchema.exclude(['delayed']),
   notes: z.string().max(2000).optional(),
 }).strict()
 
@@ -29,7 +37,6 @@ export function applyDeliveryStatusTransition(
   }
 }
 
-const deliveryStatuses = deliveryStatusTransitionSchema.shape.status
 const shortText = z.string().max(500)
 const longText = z.string().max(2000)
 // Optional text, date, and list fields accept null to clear them (deliveryToDb
@@ -52,7 +59,7 @@ export const deliveryUpdateSchema = z.object({
   id: z.string().max(100).optional(),
   customer: z.string().trim().min(1).max(200).optional(),
   address: z.string().trim().min(1).max(500).optional(),
-  status: deliveryStatuses.optional(),
+  status: deliveryStatusSchema.optional(),
   driver: z.string().max(200).optional(),
   assignedDriverId: z.string().max(100).nullable().optional(),
   items: z.number().int().min(0).max(100000).optional(),
@@ -86,3 +93,22 @@ export const deliveryUpdateSchema = z.object({
 }).strict()
 
 export type DeliveryUpdateInput = z.infer<typeof deliveryUpdateSchema>
+
+/**
+ * Body accepted by POST /api/deliveries: the same strict field contract as
+ * updates, with the record-defining fields required and no client-supplied id.
+ */
+export const deliveryCreateSchema = deliveryUpdateSchema.omit({ id: true }).extend({
+  customer: z.string().trim().min(1).max(200),
+  address: z.string().trim().min(1).max(500),
+}).strict()
+
+export type DeliveryCreateInput = z.infer<typeof deliveryCreateSchema>
+
+/** Top-level field names (or unknown keys) named in a delivery validation error. */
+export function invalidDeliveryFields(error: z.ZodError): string[] {
+  return Array.from(new Set(error.issues.flatMap((issue) => {
+    if (issue.code === 'unrecognized_keys') return issue.keys
+    return [String(issue.path[0] ?? 'body')]
+  })))
+}

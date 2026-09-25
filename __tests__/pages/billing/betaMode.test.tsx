@@ -41,6 +41,16 @@ describe('free beta billing', () => {
     expect(screen.queryByText('Fleetvera is free during the beta')).not.toBeInTheDocument()
   })
 
+  it.each(['ACTIVE', 'PAST_DUE'])('billing page shows a neutral warning, not the beta notice, for a %s paid subscription', async (status) => {
+    mockFetch({
+      '/api/subscription/status': { ok: true, body: { subscription: { plan: 'PRO', status, trialEndsAt: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' } } },
+      '/api/stripe/availability': { ok: true, body: { available: false, pricing: null } },
+    })
+    render(<BillingPage />)
+    expect(await screen.findByText('Online billing is temporarily unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('Fleetvera is free during the beta')).not.toBeInTheDocument()
+  })
+
   it('billing page still offers checkout once billing is configured', async () => {
     mockFetch({
       '/api/subscription/status': { ok: true, body: { subscription: null } },

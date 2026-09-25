@@ -8,6 +8,7 @@ type Row = {
   dueDate: Date
   completed: boolean
   reminderSentAt: Date | null
+  overdueReminderSentAt: Date | null
   owner: { id: string; email: string | null; name: string }
   vehicle: { name: string } | null
 }
@@ -34,6 +35,7 @@ const mockMatches = (row: Row, where: Where): boolean =>
     if (key === 'completed') return row.completed === filter
     if (key === 'dueDate') return compare(row.dueDate, filter, row)
     if (key === 'reminderSentAt') return compare(row.reminderSentAt, filter, row)
+    if (key === 'overdueReminderSentAt') return compare(row.overdueReminderSentAt, filter, row)
     throw new Error(`unsupported where key ${key}`)
   })
 
@@ -41,9 +43,9 @@ const mockState = { active: 0, max: 0 }
 const notificationCreate = jest.fn()
 const mockTx = {
   maintenanceTask: {
-    updateMany: jest.fn(async ({ where, data }: { where: Where; data: { reminderSentAt: Date } }) => {
+    updateMany: jest.fn(async ({ where, data }: { where: Where; data: Partial<Pick<Row, 'reminderSentAt' | 'overdueReminderSentAt'>> }) => {
       const hit = mockRows.filter((row) => mockMatches(row, where))
-      hit.forEach((row) => { row.reminderSentAt = data.reminderSentAt })
+      hit.forEach((row) => { Object.assign(row, data) })
       return { count: hit.length }
     }),
   },
@@ -92,6 +94,7 @@ const makeRow = (id: string, dueDate: Date, extra: Partial<Row> = {}): Row => ({
   dueDate,
   completed: false,
   reminderSentAt: null,
+  overdueReminderSentAt: null,
   owner: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' },
   vehicle: { name: 'Van 1' },
   ...extra,
@@ -162,7 +165,7 @@ describe('POST /api/cron/maintenance-reminders', () => {
   it('does not remind again when already reminded (due soon or overdue) and dedupes a same-day rerun', async () => {
     mockRows.push(
       makeRow('soon-reminded', day('2026-09-26'), { reminderSentAt: new Date('2026-09-23T08:30:00.000Z') }),
-      makeRow('overdue-reminded', day('2026-09-20'), { reminderSentAt: new Date('2026-09-21T08:30:00.000Z') }),
+      makeRow('overdue-reminded', day('2026-09-20'), { reminderSentAt: new Date('2026-09-15T08:30:00.000Z'), overdueReminderSentAt: new Date('2026-09-21T08:30:00.000Z') }),
       makeRow('completed', day('2026-09-20'), { completed: true }),
       makeRow('fresh', day('2026-09-25')),
     )
@@ -171,6 +174,22 @@ describe('POST /api/cron/maintenance-reminders', () => {
     expect(notifiedTaskIds()).toEqual(['fresh'])
 
     notificationCreate.mockClear()
+    const second = await runCron()
+    expect(second.body.remindersSent).toBe(0)
+    expect(notificationCreate).not.toHaveBeenCalled()
+  })
+
+  it('still sends the overdue reminder for a task reminded on its due day, exactly once', async () => {
+    // Reminded (due soon) at 08:30 on its due day, so reminderSentAt > dueDate.
+    mockRows.push(makeRow('due-day-reminded', day('2026-09-23'), { reminderSentAt: new Date('2026-09-23T08:30:00.000Z') }))
+    const first = await runCron()
+    expect(first.body).toMatchObject({ remindersSent: 1, overdueSent: 1, dueSoonSent: 0 })
+    expect(notifiedTaskIds()).toEqual(['due-day-reminded'])
+    expect(mockRows[0].overdueReminderSentAt).toEqual(NOW)
+    expect(mockRows[0].reminderSentAt).toEqual(new Date('2026-09-23T08:30:00.000Z'))
+
+    notificationCreate.mockClear()
+    jest.setSystemTime(new Date('2026-09-25T08:30:00.000Z'))
     const second = await runCron()
     expect(second.body.remindersSent).toBe(0)
     expect(notificationCreate).not.toHaveBeenCalled()

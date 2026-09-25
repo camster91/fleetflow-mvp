@@ -28,20 +28,6 @@ export const vehicleBodySchema = z
   })
   .passthrough()
 
-export const deliveryBodySchema = z
-  .object({
-    customer: z.string().min(1).max(200).optional(),
-    address: z.string().max(500).optional(),
-    status: z
-      .enum(['pending', 'picked-up', 'in-transit', 'delivered', 'failed', 'cancelled', 'delayed'])
-      .optional(),
-    driver: z.string().max(120).nullable().optional(),
-    assignedDriverId: z.string().trim().min(1).max(64).nullable().optional(),
-    items: z.union([z.string(), z.number()]).optional(),
-    notes: z.string().max(2000).nullable().optional(),
-  })
-  .passthrough()
-
 export const clientBodySchema = z
   .object({
     name: z.string().min(1).max(200).optional(),

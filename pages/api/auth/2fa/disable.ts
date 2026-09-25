@@ -7,6 +7,10 @@ import speakeasy from 'speakeasy';
 import bcrypt from 'bcryptjs';
 import { assertSameOrigin } from '../../../../lib/apiAuth';
 
+const TOTP_CODE_PATTERN = /^\d{6}$/;
+// Matches generateBackupCodes() in lib/tokens.ts (XXXX-XXXX-XXXX digits).
+const BACKUP_CODE_PATTERN = /^\d{4}-\d{4}-\d{4}$/;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -46,34 +50,37 @@ export default async function handler(
       });
     }
 
-    const plaintextSecret = decryptSecret(user.twoFactorSecret);
-
-    const verified = speakeasy.totp.verify({
-      secret: plaintextSecret,
-      encoding: 'base32',
-      token: code,
-      window: 2,
+    const input = code.trim();
+    const invalidCode = () => res.status(400).json({
+      error: 'Invalid verification code',
+      code: 'INVALID_CODE'
     });
 
-    if (!verified) {
+    if (TOTP_CODE_PATTERN.test(input)) {
+      const verified = speakeasy.totp.verify({
+        secret: decryptSecret(user.twoFactorSecret),
+        encoding: 'base32',
+        token: input,
+        window: 2,
+      });
+      if (!verified) return invalidCode();
+    } else if (BACKUP_CODE_PATTERN.test(input)) {
+      // Only well-formed backup codes reach bcrypt, and hashing runs async so
+      // a burst of guesses cannot block the event loop.
       const storedBackupCodes = user.backupCodes;
-      const backupCodes = storedBackupCodes ? JSON.parse(storedBackupCodes) : [];
+      const backupCodes: unknown = storedBackupCodes ? JSON.parse(storedBackupCodes) : [];
+      if (!storedBackupCodes || !Array.isArray(backupCodes)) return invalidCode();
 
       let usedBackupCodeIndex = -1;
 
       for (let i = 0; i < backupCodes.length; i++) {
-        if (bcrypt.compareSync(code, backupCodes[i])) {
+        if (typeof backupCodes[i] === 'string' && await bcrypt.compare(input, backupCodes[i])) {
           usedBackupCodeIndex = i;
           break;
         }
       }
 
-      if (usedBackupCodeIndex < 0 || !storedBackupCodes) {
-        return res.status(400).json({
-          error: 'Invalid verification code',
-          code: 'INVALID_CODE'
-        });
-      }
+      if (usedBackupCodeIndex < 0) return invalidCode();
 
       backupCodes.splice(usedBackupCodeIndex, 1);
       const consumed = await prisma.user.updateMany({
@@ -87,12 +94,9 @@ export default async function handler(
         },
       });
 
-      if (consumed.count !== 1) {
-        return res.status(400).json({
-          error: 'Invalid verification code',
-          code: 'INVALID_CODE'
-        });
-      }
+      if (consumed.count !== 1) return invalidCode();
+    } else {
+      return invalidCode();
     }
 
     const updated = await prisma.user.update({

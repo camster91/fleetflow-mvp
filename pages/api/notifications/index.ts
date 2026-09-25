@@ -81,7 +81,8 @@ export default async function handler(
         const [rows, total] = await Promise.all([
           prisma.notification.findMany({
             where,
-            orderBy: { createdAt: 'desc' },
+            // id breaks createdAt ties so cursor/offset pages are stable.
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
             ...(cursor ? { cursor: { id: cursor }, skip: 1 } : { skip }),
             take: limit + 1,
           }),

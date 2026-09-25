@@ -6,7 +6,9 @@ import {
   buildCSP,
   contentSecurityPolicy,
   auditLog,
+  rateLimit,
 } from '@/lib/security';
+import { createMocks } from 'node-mocks-http';
 
 jest.mock('@/lib/prisma', () => ({
   prisma: { auditLog: { create: jest.fn() } },
@@ -121,5 +123,22 @@ describe('auditLog', () => {
         metadata: JSON.stringify({ newRole: 'viewer' }),
       }),
     })
+  })
+})
+
+describe('rateLimit client address', () => {
+  it('ignores a rotating, client-controlled first X-Forwarded-For hop', async () => {
+    const statuses: number[] = []
+    for (let i = 0; i < 6; i++) {
+      const { req, res } = createMocks({
+        method: 'POST',
+        headers: { 'x-forwarded-for': `10.0.0.${i}, 203.0.113.50` },
+      })
+      const allowed = await rateLimit(req as never, res as never, 'auth')
+      statuses.push(allowed ? 200 : res._getStatusCode())
+    }
+    // The auth bucket allows 5; the 6th request from the same proxy-reported
+    // client is limited even though the spoofed first hop changed each time.
+    expect(statuses).toEqual([200, 200, 200, 200, 200, 429])
   })
 })

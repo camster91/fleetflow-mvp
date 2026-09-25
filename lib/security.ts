@@ -2,6 +2,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible'
 import { prisma } from './prisma'
+import { getClientIP } from './rateLimit'
 
 // Rate limiters for different endpoints
 const rateLimiters = {
@@ -37,10 +38,9 @@ export async function rateLimit(
 ): Promise<boolean> {
   const limiter = rateLimiters[type]
   
-  // Get IP address (handle proxies)
-  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 
-             req.socket.remoteAddress || 
-             'unknown'
+  // Only trust X-Forwarded-For entries appended by TRUSTED_PROXY_HOPS proxies;
+  // the first hop is client-controlled and would let callers rotate buckets.
+  const ip = getClientIP(req)
   
   try {
     await limiter.consume(ip)

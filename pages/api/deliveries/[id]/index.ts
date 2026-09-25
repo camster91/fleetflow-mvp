@@ -8,7 +8,7 @@ import { canAssignDrivers, canManageDeliveries, canViewDeliveries } from '../../
 import { resolveDriverAssignment } from '../../../../lib/driverAssignment'
 import { driverDeliveryDto, isDriverRole } from '../../../../lib/driverScope'
 import { withPrismaErrors } from '../../../../lib/prismaErrors'
-import { deliveryUpdateSchema } from '../../../../lib/deliveryTransitions'
+import { deliveryUpdateSchema, invalidDeliveryFields } from '../../../../lib/deliveryTransitions'
 import type { Delivery } from '../../../../lib/fleet'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -34,7 +34,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!parsed.success) {
       return res.status(400).json({
         error: 'Invalid delivery update',
-        fields: Array.from(new Set(parsed.error.issues.map((issue) => issue.path[0] ?? (issue.code === 'unrecognized_keys' ? issue.keys.join(',') : 'body')))),
+        fields: invalidDeliveryFields(parsed.error),
       })
     }
     const { id: _bodyId, ...body } = parsed.data

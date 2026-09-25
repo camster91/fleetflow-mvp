@@ -13,6 +13,8 @@ describe('paginated list routes use a unique tie-breaker', () => {
     'pages/api/maintenance/index.ts',
     'pages/api/admin/users.ts',
     'pages/api/team/members.ts',
+    'pages/api/notifications/index.ts',
+    'lib/notifications.ts',
   ])('%s orders by id after its primary sort key', (route) => {
     const source = read(route)
     const findMany = source.slice(source.indexOf('.findMany('), source.indexOf('take: limit'))

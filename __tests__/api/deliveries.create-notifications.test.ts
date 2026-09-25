@@ -45,7 +45,7 @@ describe('POST /api/deliveries notifications', () => {
 
     const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
       method: 'POST',
-      body: { customer: 'Acme', assignedDriverId: 'owner-1' },
+      body: { customer: 'Acme', address: '1 Main St', assignedDriverId: 'owner-1' },
     })
     await handler(req, res)
 

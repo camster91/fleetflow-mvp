@@ -6,7 +6,7 @@ import bcrypt from 'bcryptjs';
 import { rateLimitMiddleware } from '../../../../lib/rateLimit';
 import { parse } from 'cookie';
 import { signToken, tokenVersionOf, verifyToken } from '../../../../lib/auth';
-import { isAccountLocked, nextFailedAttemptState } from '../../../../lib/loginLockout';
+import { isAccountLocked, notLockedWhere, recordFailedAttempt } from '../../../../lib/loginLockout';
 import { assertSameOrigin } from '../../../../lib/apiAuth';
 import { establishSessionCookies } from '../../../../lib/authCookies';
 
@@ -66,18 +66,25 @@ export default async function handler(
       return res.status(423).json({ error: 'Account temporarily locked. Try again later.' });
     }
 
-    // Wrong 2FA codes count toward the same lockout as wrong login codes.
+    // Wrong 2FA codes count toward the same lockout as wrong login codes. The
+    // counter is incremented in the database, never written from the snapshot.
     const rejectInvalidCode = async () => {
-      await prisma.user.update({
-        where: { id: userId },
-        data: nextFailedAttemptState(user),
-      });
+      await recordFailedAttempt(prisma, userId);
       return res.status(400).json({
         error: 'Invalid verification code',
         code: 'INVALID_CODE'
       });
     };
 
+    // Success writes only land while the account is unlocked and the challenge's
+    // token version is current (a concurrent lock bumps it), so a stale request
+    // can never clear a lock set after the snapshot above.
+    const successGuard = {
+      id: userId,
+      twoFactorEnabled: true,
+      tokenVersion: user.tokenVersion ?? 0,
+      ...notLockedWhere(),
+    };
     const successfulLogin = {
       lastLoginAt: new Date(),
       failedLoginAttempts: 0,
@@ -102,9 +109,8 @@ export default async function handler(
       const step = Math.floor(nowSeconds / TOTP_STEP_SECONDS) + match.delta;
       const accepted = await prisma.user.updateMany({
         where: {
-          id: userId,
-          twoFactorEnabled: true,
-          OR: [{ lastTotpStep: null }, { lastTotpStep: { lt: step } }],
+          ...successGuard,
+          AND: [{ OR: [{ lastTotpStep: null }, { lastTotpStep: { lt: step } }] }],
         },
         data: { ...successfulLogin, lastTotpStep: step },
       });
@@ -126,21 +132,17 @@ export default async function handler(
       backupCodes.splice(usedBackupCodeIndex, 1);
       const consumed = await prisma.user.updateMany({
         where: {
-          id: userId,
+          ...successGuard,
           backupCodes: storedBackupCodes,
-          twoFactorEnabled: true,
         },
         data: {
+          ...successfulLogin,
           backupCodes: JSON.stringify(backupCodes),
         },
       });
       if (consumed.count !== 1) return rejectInvalidCode();
 
       isBackupCode = true;
-      await prisma.user.update({
-        where: { id: userId },
-        data: successfulLogin,
-      });
     } else {
       return rejectInvalidCode();
     }

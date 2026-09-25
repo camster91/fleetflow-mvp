@@ -107,4 +107,24 @@ describe('/api/admin/users mutations', () => {
     })
     expect(res._getStatusCode()).toBe(200)
   })
+
+  it('records the proxy-appended client IP, not a spoofed first X-Forwarded-For hop', async () => {
+    mockTransaction.user.update.mockResolvedValue({ id: 'user-1', role: 'viewer' })
+    mockTransaction.auditLog.create.mockResolvedValue({ id: 'audit-1' })
+    const { req, res } = createMocks({
+      method: 'PATCH',
+      body: { userId: 'user-1', role: 'viewer' },
+      headers: {
+        origin: 'https://fleet.example.com',
+        host: 'fleet.example.com',
+        'x-forwarded-for': '198.51.100.66, 203.0.113.7',
+      },
+    })
+
+    await handler(req as never, res as never)
+
+    const metadata = mockTransaction.auditLog.create.mock.calls[0][0].data.metadata as string
+    expect(metadata).toContain('"ip":"203.0.113.7"')
+    expect(metadata).not.toContain('198.51.100.66')
+  })
 })

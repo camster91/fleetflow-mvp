@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { sendBackupCodesEmail } from '../../../../lib/email';
 
 const BACKUP_CODE_PATTERN = /^\d{4}-\d{4}-\d{4}$/;
+const TOTP_STEP_SECONDS = 30;
 
 export default async function handler(
   req: NextApiRequest,
@@ -77,14 +78,16 @@ export default async function handler(
 
       const plaintextSecret = decryptSecret(user.twoFactorSecret);
 
-      const verified = speakeasy.totp.verify({
+      const nowSeconds = Date.now() / 1000;
+      const match = speakeasy.totp.verifyDelta({
         secret: plaintextSecret,
         encoding: 'base32',
         token: code,
         window: 2,
+        time: nowSeconds,
       });
 
-      if (!verified) {
+      if (!match) {
         return res.status(400).json({
           error: 'Invalid verification code',
           code: 'INVALID_CODE',
@@ -100,6 +103,9 @@ export default async function handler(
         },
         data: {
           twoFactorEnabled: true,
+          // Record the setup code's time step so /api/auth/2fa/validate
+          // cannot accept the same code again (same rule as validate.ts).
+          lastTotpStep: Math.floor(nowSeconds / TOTP_STEP_SECONDS) + match.delta,
           // Revoke every other session issued before 2FA was turned on.
           tokenVersion: { increment: 1 },
         },
