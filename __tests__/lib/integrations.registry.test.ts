@@ -11,10 +11,38 @@ describe('integration provider registry', () => {
   })
 
   it('allows only official QuickBooks production/sandbox API hosts and an HTTPS callback', () => {
-    expect(validateQuickBooksConfig({ clientId: 'id', clientSecret: 'secret', redirectUri: 'https://fleetvera.test/callback', apiBaseUrl: 'https://quickbooks.api.intuit.com' }).success).toBe(true)
-    expect(validateQuickBooksConfig({ clientId: 'id', clientSecret: 'secret', redirectUri: 'http://fleetvera.test/callback', apiBaseUrl: 'https://quickbooks.api.intuit.com' }).success).toBe(false)
-    expect(validateQuickBooksConfig({ clientId: 'id', clientSecret: 'secret', redirectUri: 'https://fleetvera.test/callback', apiBaseUrl: 'https://evil.example' }).success).toBe(false)
-    expect(validateQuickBooksConfig({ clientId: 'id', clientSecret: 'secret', redirectUri: 'https://fleetvera.test/callback', apiBaseUrl: 'https://sandbox-quickbooks.api.intuit.com' }).success).toBe(true)
+    expect(
+      validateQuickBooksConfig({
+        clientId: 'id',
+        clientSecret: 'secret',
+        redirectUri: 'https://fleetvera.test/callback',
+        apiBaseUrl: 'https://quickbooks.api.intuit.com',
+      }).success
+    ).toBe(true)
+    expect(
+      validateQuickBooksConfig({
+        clientId: 'id',
+        clientSecret: 'secret',
+        redirectUri: 'http://fleetvera.test/callback',
+        apiBaseUrl: 'https://quickbooks.api.intuit.com',
+      }).success
+    ).toBe(false)
+    expect(
+      validateQuickBooksConfig({
+        clientId: 'id',
+        clientSecret: 'secret',
+        redirectUri: 'https://fleetvera.test/callback',
+        apiBaseUrl: 'https://evil.example',
+      }).success
+    ).toBe(false)
+    expect(
+      validateQuickBooksConfig({
+        clientId: 'id',
+        clientSecret: 'secret',
+        redirectUri: 'https://fleetvera.test/callback',
+        apiBaseUrl: 'https://sandbox-quickbooks.api.intuit.com',
+      }).success
+    ).toBe(true)
   })
 
   it('requires an HTTPS Maps endpoint on the Google host and server-only key', () => {

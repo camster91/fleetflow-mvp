@@ -85,7 +85,10 @@ async function main() {
       const stored = user.twoFactorSecret
       try {
         const { plaintext, current } = decryptWithKeys(stored, keys)
-        if (current) { counts.current++; continue }
+        if (current) {
+          counts.current++
+          continue
+        }
         if (apply) {
           await prisma.user.updateMany({
             where: { id: user.id, twoFactorSecret: stored },
@@ -105,8 +108,12 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch(error => {
-    console.error(error instanceof Error && error.message.startsWith('TOKEN_ENCRYPTION_KEY') ? error.message : 'Re-encryption failed')
+  main().catch((error) => {
+    console.error(
+      error instanceof Error && error.message.startsWith('TOKEN_ENCRYPTION_KEY')
+        ? error.message
+        : 'Re-encryption failed'
+    )
     process.exitCode = 1
   })
 }

@@ -2,10 +2,21 @@ import { randomUUID } from 'crypto'
 import { buildFleetSummaryPrompt } from './prompts'
 import { projectSafeFindings } from './redaction'
 import {
-  fleetSummaryRequestPayloadSchema, fleetSummaryJsonSchema, generatedFleetSummaryContentSchema, type AiDegradationReason,
-  type AiProvider, type AiProviderName, type AiResultMetadata, type AiUsage,
-  type FleetSummaryContent, type FleetSummaryRequestPayload, type FleetSummaryResult,
-  type ProviderFactory, type ProviderRequest, type ProviderSuccess, type SafeFinding,
+  fleetSummaryRequestPayloadSchema,
+  fleetSummaryJsonSchema,
+  generatedFleetSummaryContentSchema,
+  type AiDegradationReason,
+  type AiProvider,
+  type AiProviderName,
+  type AiResultMetadata,
+  type AiUsage,
+  type FleetSummaryContent,
+  type FleetSummaryRequestPayload,
+  type FleetSummaryResult,
+  type ProviderFactory,
+  type ProviderRequest,
+  type ProviderSuccess,
+  type SafeFinding,
 } from './types'
 
 type Env = Record<string, string | undefined>
@@ -35,7 +46,9 @@ export interface GenerateFleetSummaryOptions {
 }
 
 class AiFailure extends Error {
-  constructor(readonly code: AiDegradationReason) { super(code) }
+  constructor(readonly code: AiDegradationReason) {
+    super(code)
+  }
 }
 
 const NULL_USAGE: AiUsage = { inputTokens: null, outputTokens: null, totalTokens: null }
@@ -63,7 +76,8 @@ export class AiProviderRegistry {
     const factory = this.factories.get(name)
     if (!factory) throw new AiFailure('provider_misconfigured')
     const provider = factory({ env })
-    if (!provider || provider.name !== name || typeof provider.generate !== 'function') throw new AiFailure('provider_misconfigured')
+    if (!provider || provider.name !== name || typeof provider.generate !== 'function')
+      throw new AiFailure('provider_misconfigured')
     return provider
   }
 }
@@ -115,12 +129,17 @@ function fallbackContent(findings: readonly SafeFinding[]): FleetSummaryContent 
   const ranked = [...findings].sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, 5)
   if (!ranked.length) return { sections: [], claims: [], actions: [] }
   return {
-    sections: [{
-      heading: 'Fleet priorities',
-      summary: `${ranked.length} fleet finding${ranked.length === 1 ? '' : 's'} need review.`,
-      citationIds: ranked.map((finding) => finding.id),
-    }],
-    claims: ranked.map((finding) => ({ text: `${finding.title}: ${finding.explanation}`.slice(0, 1_000), citationIds: [finding.id] })),
+    sections: [
+      {
+        heading: 'Fleet priorities',
+        summary: `${ranked.length} fleet finding${ranked.length === 1 ? '' : 's'} need review.`,
+        citationIds: ranked.map((finding) => finding.id),
+      },
+    ],
+    claims: ranked.map((finding) => ({
+      text: `${finding.title}: ${finding.explanation}`.slice(0, 1_000),
+      citationIds: [finding.id],
+    })),
     actions: ranked.map((finding) => ({ text: finding.recommendedAction, citationIds: [finding.id] })),
   }
 }
@@ -169,7 +188,9 @@ async function discardResponseBody(response: Response): Promise<void> {
   if (!response.body || response.bodyUsed) return
   try {
     await response.body.cancel()
-  } catch { /* Never replace failed cancellation with an unbounded body drain. */ }
+  } catch {
+    /* Never replace failed cancellation with an unbounded body drain. */
+  }
 }
 
 function responseOutputText(body: unknown): { text: string; usage: AiUsage } {
@@ -180,7 +201,9 @@ function responseOutputText(body: unknown): { text: string; usage: AiUsage } {
   const parts: Record<string, unknown>[] = []
   for (const item of output) {
     if (!item || typeof item !== 'object') continue
-    const content = Array.isArray((item as Record<string, unknown>).content) ? (item as { content: unknown[] }).content : []
+    const content = Array.isArray((item as Record<string, unknown>).content)
+      ? (item as { content: unknown[] }).content
+      : []
     for (const part of content) {
       if (part && typeof part === 'object') parts.push(part as Record<string, unknown>)
     }
@@ -188,11 +211,15 @@ function responseOutputText(body: unknown): { text: string; usage: AiUsage } {
   if (parts.some((part) => part.type === 'refusal')) throw new AiFailure('provider_refusal')
   const textPart = parts.find((part) => part.type === 'output_text' && typeof part.text === 'string')
   if (textPart) {
-    const usage = data.usage && typeof data.usage === 'object' ? data.usage as Record<string, unknown> : {}
-    return { text: textPart.text as string, usage: {
-      inputTokens: usageCount(usage.input_tokens), outputTokens: usageCount(usage.output_tokens),
-      totalTokens: usageCount(usage.total_tokens),
-    } }
+    const usage = data.usage && typeof data.usage === 'object' ? (data.usage as Record<string, unknown>) : {}
+    return {
+      text: textPart.text as string,
+      usage: {
+        inputTokens: usageCount(usage.input_tokens),
+        outputTokens: usageCount(usage.output_tokens),
+        totalTokens: usageCount(usage.total_tokens),
+      },
+    }
   }
   throw new AiFailure('output_malformed')
 }
@@ -208,27 +235,45 @@ function validateGroundedOutput(json: unknown, allowedIds: ReadonlySet<string>):
 
 function parseGroundedOutput(text: string, allowedIds: ReadonlySet<string>): FleetSummaryContent {
   let json: unknown
-  try { json = JSON.parse(text) } catch { throw new AiFailure('output_malformed') }
+  try {
+    json = JSON.parse(text)
+  } catch {
+    throw new AiFailure('output_malformed')
+  }
   return validateGroundedOutput(json, allowedIds)
 }
 
-function abortContext(caller: AbortSignal | undefined, timeoutMs: number, dependencies: Pick<AiDependencies, 'setTimer' | 'clearTimer'>) {
+function abortContext(
+  caller: AbortSignal | undefined,
+  timeoutMs: number,
+  dependencies: Pick<AiDependencies, 'setTimer' | 'clearTimer'>
+) {
   const controller = new AbortController()
   let timedOut = false
-  const timeout = dependencies.setTimer(() => { timedOut = true; controller.abort() }, timeoutMs)
+  const timeout = dependencies.setTimer(() => {
+    timedOut = true
+    controller.abort()
+  }, timeoutMs)
   const onCallerAbort = () => controller.abort()
   caller?.addEventListener('abort', onCallerAbort, { once: true })
   if (caller?.aborted) controller.abort()
   return {
     signal: controller.signal,
-    reason: (): AiDegradationReason => caller?.aborted ? 'caller_aborted' : timedOut ? 'timeout' : 'provider_unavailable',
-    cleanup: () => { dependencies.clearTimer(timeout); caller?.removeEventListener('abort', onCallerAbort) },
+    reason: (): AiDegradationReason =>
+      caller?.aborted ? 'caller_aborted' : timedOut ? 'timeout' : 'provider_unavailable',
+    cleanup: () => {
+      dependencies.clearTimer(timeout)
+      caller?.removeEventListener('abort', onCallerAbort)
+    },
   }
 }
 
 async function invokeProvider(
-  provider: AiProvider, request: Omit<ProviderRequest, 'signal'>,
-  callerSignal: AbortSignal | undefined, timeoutMs: number, dependencies: AiDependencies,
+  provider: AiProvider,
+  request: Omit<ProviderRequest, 'signal'>,
+  callerSignal: AbortSignal | undefined,
+  timeoutMs: number,
+  dependencies: AiDependencies
 ): Promise<ProviderSuccess> {
   const abort = abortContext(callerSignal, timeoutMs, dependencies)
   let onAbort: (() => void) | undefined
@@ -259,7 +304,7 @@ class OpenAiProvider implements AiProvider {
     private readonly timeoutMs: number,
     private readonly maxOutputTokens: number,
     private readonly responseLimit: number,
-    private readonly dependencies: AiDependencies,
+    private readonly dependencies: AiDependencies
   ) {}
 
   async generate(request: ProviderRequest): Promise<ProviderSuccess> {
@@ -279,15 +324,25 @@ class OpenAiProvider implements AiProvider {
         let response: Response
         try {
           response = await this.dependencies.fetch('https://api.openai.com/v1/responses', {
-            method: 'POST', signal: abort.signal, body,
+            method: 'POST',
+            signal: abort.signal,
+            body,
             headers: {
-              'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${this.apiKey}`,
               'X-Client-Request-Id': request.requestId,
             },
           })
         } catch (error) {
-          if (abort.signal.aborted || (error instanceof Error && error.name === 'AbortError')) throw new AiFailure(abort.reason())
-          if (attempt < 2) { await this.dependencies.sleep(250 * (2 ** attempt) + Math.floor(this.dependencies.random() * 100), abort.signal); continue }
+          if (abort.signal.aborted || (error instanceof Error && error.name === 'AbortError'))
+            throw new AiFailure(abort.reason())
+          if (attempt < 2) {
+            await this.dependencies.sleep(
+              250 * 2 ** attempt + Math.floor(this.dependencies.random() * 100),
+              abort.signal
+            )
+            continue
+          }
           throw new AiFailure('provider_unavailable')
         }
         if (!response.ok) {
@@ -297,7 +352,10 @@ class OpenAiProvider implements AiProvider {
           if (attempt < 2) {
             const retryAfter = Number(response.headers.get('retry-after'))
             const serverDelay = Number.isFinite(retryAfter) ? retryAfter * 1_000 : 0
-            const delay = Math.min(2_000, Math.max(250 * (2 ** attempt), serverDelay) + Math.floor(this.dependencies.random() * 100))
+            const delay = Math.min(
+              2_000,
+              Math.max(250 * 2 ** attempt, serverDelay) + Math.floor(this.dependencies.random() * 100)
+            )
             await this.dependencies.sleep(delay, abort.signal)
             continue
           }
@@ -305,14 +363,22 @@ class OpenAiProvider implements AiProvider {
         }
         const raw = await readLimited(response, this.responseLimit)
         let decoded: unknown
-        try { decoded = JSON.parse(raw) } catch { throw new AiFailure('output_malformed') }
+        try {
+          decoded = JSON.parse(raw)
+        } catch {
+          throw new AiFailure('output_malformed')
+        }
         const output = responseOutputText(decoded)
-        return { content: parseGroundedOutput(output.text, new Set(request.findings.map((item) => item.id))), usage: output.usage }
+        return {
+          content: parseGroundedOutput(output.text, new Set(request.findings.map((item) => item.id))),
+          usage: output.usage,
+        }
       }
       throw new AiFailure('provider_unavailable')
     } catch (error) {
       if (error instanceof AiFailure) throw error
-      if (abort.signal.aborted || (error instanceof Error && error.name === 'AbortError')) throw new AiFailure(abort.reason())
+      if (abort.signal.aborted || (error instanceof Error && error.name === 'AbortError'))
+        throw new AiFailure(abort.reason())
       throw new AiFailure('provider_unavailable')
     } finally {
       abort.cleanup()
@@ -323,29 +389,49 @@ class OpenAiProvider implements AiProvider {
 export function createDefaultAiProviderRegistry(dependencies: AiDependencies): AiProviderRegistry {
   return new AiProviderRegistry()
     .register('disabled', () => ({
-      name: 'disabled', model: null,
-      generate: async () => { throw new AiFailure('provider_disabled') },
+      name: 'disabled',
+      model: null,
+      generate: async () => {
+        throw new AiFailure('provider_disabled')
+      },
     }))
     .register('openai', ({ env }) => {
       if (!env.OPENAI_API_KEY?.trim() || !env.OPENAI_MODEL?.trim()) throw new AiFailure('provider_misconfigured')
       return new OpenAiProvider(
-        env.OPENAI_MODEL.trim(), env.OPENAI_API_KEY.trim(),
+        env.OPENAI_MODEL.trim(),
+        env.OPENAI_API_KEY.trim(),
         boundedInteger(env.AI_TIMEOUT_MS, 15_000, 10, 60_000),
         boundedInteger(env.AI_MAX_OUTPUT_TOKENS, 1_200, 100, 4_000),
-        boundedInteger(env.AI_MAX_RESPONSE_BYTES, 64_000, 100, 1_000_000), dependencies,
+        boundedInteger(env.AI_MAX_RESPONSE_BYTES, 64_000, 100, 1_000_000),
+        dependencies
       )
     })
 }
 
-function metadata(requestId: string, provider: AiProviderName, model: string | null, latencyMs: number, status: AiResultMetadata['status'], usage: AiUsage, fallbackReason?: AiDegradationReason): AiResultMetadata {
+function metadata(
+  requestId: string,
+  provider: AiProviderName,
+  model: string | null,
+  latencyMs: number,
+  status: AiResultMetadata['status'],
+  usage: AiUsage,
+  fallbackReason?: AiDegradationReason
+): AiResultMetadata {
   return { requestId, provider, model, latencyMs, usage, status, ...(fallbackReason ? { fallbackReason } : {}) }
 }
 
 function emitTelemetry(logger: AiLogger, level: 'info' | 'error', event: SafeLog): void {
-  try { logger[level](event) } catch { /* Telemetry must never alter product behavior. */ }
+  try {
+    logger[level](event)
+  } catch {
+    /* Telemetry must never alter product behavior. */
+  }
 }
 
-export async function generateFleetSummary(payload: FleetSummaryRequestPayload, options: GenerateFleetSummaryOptions = {}): Promise<FleetSummaryResult> {
+export async function generateFleetSummary(
+  payload: FleetSummaryRequestPayload,
+  options: GenerateFleetSummaryOptions = {}
+): Promise<FleetSummaryResult> {
   if (typeof window !== 'undefined') throw new Error('The AI provider layer is server-only')
   const dependencies = { ...defaults, ...options.dependencies }
   const env = options.env ?? process.env
@@ -370,7 +456,13 @@ export async function generateFleetSummary(payload: FleetSummaryRequestPayload, 
     providerName = provider.name
     model = provider.model
     const orchestrationTimeoutMs = boundedInteger(env.AI_TIMEOUT_MS, 15_000, 10, 60_000)
-    const generated = await invokeProvider(provider, { findings, requestId }, options.signal, orchestrationTimeoutMs, dependencies)
+    const generated = await invokeProvider(
+      provider,
+      { findings, requestId },
+      options.signal,
+      orchestrationTimeoutMs,
+      dependencies
+    )
     const content = validateGroundedOutput(generated.content, new Set(findings.map((item) => item.id)))
     usage = {
       inputTokens: usageCount(generated.usage?.inputTokens),
@@ -379,16 +471,39 @@ export async function generateFleetSummary(payload: FleetSummaryRequestPayload, 
     }
     const meta = metadata(requestId, providerName, model, elapsed(started, dependencies.now()), 'generated', usage)
     emitTelemetry(dependencies.logger, 'info', {
-      event: 'ai_summary', requestId, provider: providerName, model, status: 'generated', latencyMs: meta.latencyMs,
-      usageInputTokens: usage.inputTokens, usageOutputTokens: usage.outputTokens, usageTotalTokens: usage.totalTokens,
+      event: 'ai_summary',
+      requestId,
+      provider: providerName,
+      model,
+      status: 'generated',
+      latencyMs: meta.latencyMs,
+      usageInputTokens: usage.inputTokens,
+      usageOutputTokens: usage.outputTokens,
+      usageTotalTokens: usage.totalTokens,
     })
     return { content, meta }
   } catch (error) {
     reason = error instanceof AiFailure ? error.code : 'provider_unavailable'
-    const meta = metadata(requestId, providerName, model, elapsed(started, dependencies.now()), 'fallback', usage, reason)
+    const meta = metadata(
+      requestId,
+      providerName,
+      model,
+      elapsed(started, dependencies.now()),
+      'fallback',
+      usage,
+      reason
+    )
     emitTelemetry(dependencies.logger, 'error', {
-      event: 'ai_summary', requestId, provider: providerName, model, status: 'fallback', code: reason, latencyMs: meta.latencyMs,
-      usageInputTokens: usage.inputTokens, usageOutputTokens: usage.outputTokens, usageTotalTokens: usage.totalTokens,
+      event: 'ai_summary',
+      requestId,
+      provider: providerName,
+      model,
+      status: 'fallback',
+      code: reason,
+      latencyMs: meta.latencyMs,
+      usageInputTokens: usage.inputTokens,
+      usageOutputTokens: usage.outputTokens,
+      usageTotalTokens: usage.totalTokens,
     })
     return { content: fallbackContent(findings), meta }
   }

@@ -1,11 +1,13 @@
 import { createMocks } from 'node-mocks-http'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-jest.mock('@/lib/prisma', () => ({ prisma: {
-  user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
-  verificationToken: { findFirst: jest.fn(), deleteMany: jest.fn() },
-  $transaction: jest.fn(),
-} }))
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
+    verificationToken: { findFirst: jest.fn(), deleteMany: jest.fn() },
+    $transaction: jest.fn(),
+  },
+}))
 jest.mock('@/lib/rateLimit', () => ({
   getClientIP: jest.fn(() => '127.0.0.1'),
   rateLimitMiddleware: jest.fn(async () => true),
@@ -18,9 +20,15 @@ import { prisma } from '@/lib/prisma'
 import { signToken } from '@/lib/auth'
 
 const user = {
-  id: 'u1', email: 'user@example.com', name: 'User', role: 'fleet_manager',
-  failedLoginAttempts: 0, lockedUntil: null, emailVerified: new Date(),
-  twoFactorEnabled: false, twoFactorSecret: null,
+  id: 'u1',
+  email: 'user@example.com',
+  name: 'User',
+  role: 'fleet_manager',
+  failedLoginAttempts: 0,
+  lockedUntil: null,
+  emailVerified: new Date(),
+  twoFactorEnabled: false,
+  twoFactorSecret: null,
 }
 
 describe('POST /api/auth/login boundary', () => {
@@ -28,7 +36,8 @@ describe('POST /api/auth/login boundary', () => {
     jest.clearAllMocks()
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
     ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue({
-      identifier: 'login:user@example.com', token: 'hashed',
+      identifier: 'login:user@example.com',
+      token: 'hashed',
       expires: new Date(Date.now() + 60_000),
     })
     ;(prisma.$transaction as jest.Mock).mockImplementation(async (operation) => {
@@ -82,7 +91,9 @@ describe('POST /api/auth/login boundary', () => {
 
   it('clears an existing session before returning a 2FA challenge', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...user, twoFactorEnabled: true, twoFactorSecret: 'encrypted',
+      ...user,
+      twoFactorEnabled: true,
+      twoFactorSecret: 'encrypted',
     })
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)
@@ -104,7 +115,9 @@ describe('POST /api/auth/login boundary', () => {
 
   it('restarts the failure count once an old lock has expired', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...user, failedLoginAttempts: 5, lockedUntil: new Date(Date.now() - 1000),
+      ...user,
+      failedLoginAttempts: 5,
+      lockedUntil: new Date(Date.now() - 1000),
     })
     ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue(null)
 
@@ -143,16 +156,20 @@ describe('POST /api/auth/login boundary', () => {
     )
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)
-    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'u1', OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }] },
-    }))
+    expect(updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'u1', OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }] },
+      })
+    )
     expect(res._getStatusCode()).toBe(423)
     expect(signToken).not.toHaveBeenCalled()
   })
 
   it('still refuses an account whose lock has not expired', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      ...user, failedLoginAttempts: 5, lockedUntil: new Date(Date.now() + 60_000),
+      ...user,
+      failedLoginAttempts: 5,
+      lockedUntil: new Date(Date.now() + 60_000),
     })
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)

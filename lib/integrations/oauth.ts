@@ -18,10 +18,12 @@ function keyring(): Array<{ id: string; key: Buffer }> {
     const separator = item.indexOf(':')
     const id = item.slice(0, separator)
     const key = Buffer.from(item.slice(separator + 1), 'base64')
-    if (!/^[A-Za-z0-9_-]{1,32}$/.test(id) || key.length !== 32) throw new Error('Invalid integration encryption keyring')
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(id) || key.length !== 32)
+      throw new Error('Invalid integration encryption keyring')
     return { id, key }
   })
-  if (!entries.length || new Set(entries.map(({ id }) => id)).size !== entries.length) throw new Error('Invalid integration encryption keyring')
+  if (!entries.length || new Set(entries.map(({ id }) => id)).size !== entries.length)
+    throw new Error('Invalid integration encryption keyring')
   return entries
 }
 
@@ -33,9 +35,23 @@ function validateCredentialPayload(value: unknown): IntegrationCredentialPayload
   if (!value || typeof value !== 'object') throw new Error('Invalid integration credential payload')
   const payload = value as Record<string, unknown>
   const allowed = new Set(['accessToken', 'refreshToken', 'realmId'])
-  if (Object.keys(payload).some((key) => !allowed.has(key)) || typeof payload.accessToken !== 'string' || payload.accessToken.length < 1 || payload.accessToken.length > 8192) throw new Error('Invalid integration credential payload')
-  if (payload.refreshToken !== undefined && (typeof payload.refreshToken !== 'string' || payload.refreshToken.length < 1 || payload.refreshToken.length > 8192)) throw new Error('Invalid integration credential payload')
-  if (payload.realmId !== undefined && (typeof payload.realmId !== 'string' || payload.realmId.length < 1 || payload.realmId.length > 128)) throw new Error('Invalid integration credential payload')
+  if (
+    Object.keys(payload).some((key) => !allowed.has(key)) ||
+    typeof payload.accessToken !== 'string' ||
+    payload.accessToken.length < 1 ||
+    payload.accessToken.length > 8192
+  )
+    throw new Error('Invalid integration credential payload')
+  if (
+    payload.refreshToken !== undefined &&
+    (typeof payload.refreshToken !== 'string' || payload.refreshToken.length < 1 || payload.refreshToken.length > 8192)
+  )
+    throw new Error('Invalid integration credential payload')
+  if (
+    payload.realmId !== undefined &&
+    (typeof payload.realmId !== 'string' || payload.realmId.length < 1 || payload.realmId.length > 128)
+  )
+    throw new Error('Invalid integration credential payload')
   return payload as unknown as IntegrationCredentialPayload
 }
 
@@ -49,7 +65,11 @@ export function encryptCredentialEnvelope(payload: IntegrationCredentialPayload,
   return `v2:${id}:${b64url(iv)}:${b64url(cipher.getAuthTag())}:${b64url(ciphertext)}`
 }
 
-export function decryptCredentialEnvelope(stored: string, scopeKey: string, provider: string): IntegrationCredentialPayload {
+export function decryptCredentialEnvelope(
+  stored: string,
+  scopeKey: string,
+  provider: string
+): IntegrationCredentialPayload {
   try {
     const [version, id, iv, tag, ciphertext, ...extra] = stored.split(':')
     if (version !== 'v2' || extra.length) throw new Error('bad envelope')
@@ -58,7 +78,9 @@ export function decryptCredentialEnvelope(stored: string, scopeKey: string, prov
     const decipher = crypto.createDecipheriv('aes-256-gcm', selected.key, Buffer.from(iv, 'base64url'))
     decipher.setAAD(aad(scopeKey, provider))
     decipher.setAuthTag(Buffer.from(tag, 'base64url'))
-    const value = Buffer.concat([decipher.update(Buffer.from(ciphertext, 'base64url')), decipher.final()]).toString('utf8')
+    const value = Buffer.concat([decipher.update(Buffer.from(ciphertext, 'base64url')), decipher.final()]).toString(
+      'utf8'
+    )
     return validateCredentialPayload(JSON.parse(value))
   } catch {
     throw new Error('Credential envelope could not be authenticated')

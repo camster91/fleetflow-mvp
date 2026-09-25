@@ -14,7 +14,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
-  const scopedWhere = { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{vehicle:{assignedDriverId:userId}}]:[])] }
+  const scopedWhere = {
+    AND: [
+      { id },
+      tenant.resourceWhere,
+      ...(isDriverRole(tenant.role) ? [{ vehicle: { assignedDriverId: userId } }] : []),
+    ],
+  }
 
   if (req.method === 'GET') {
     if (!canViewMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
@@ -23,7 +29,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       include: { vehicle: { select: { name: true } } },
     })
     if (!task) return res.status(404).json({ error: 'Not found' })
-    return res.json(isDriverRole(tenant.role)?driverMaintenanceDto(task):dbToMaintenanceTask(task))
+    return res.json(isDriverRole(tenant.role) ? driverMaintenanceDto(task) : dbToMaintenanceTask(task))
   }
 
   if (req.method === 'PUT') {
@@ -50,9 +56,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const task = await prisma.$transaction(async (tx) => {
       const updated = await tx.maintenanceTask.update({ where: { id }, data: fields })
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
         action: wasCompleted ? 'completed' : 'updated',
-        entityType: 'maintenance', entityId: id, entityName: updated.title,
+        entityType: 'maintenance',
+        entityId: id,
+        entityName: updated.title,
         description: wasCompleted
           ? `Maintenance "${updated.title}" for ${updated.vehicleName ?? 'vehicle'} was completed`
           : `Maintenance task "${updated.title}" was updated`,
@@ -69,8 +80,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     await prisma.$transaction(async (tx) => {
       await tx.maintenanceTask.delete({ where: { id } })
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'deleted', entityType: 'maintenance', entityId: id, entityName: task.title,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'deleted',
+        entityType: 'maintenance',
+        entityId: id,
+        entityName: task.title,
         description: `Maintenance task "${task.title}" was deleted`,
       })
     })

@@ -1,9 +1,9 @@
 /**
  * Avatar Component
- * 
+ *
  * User avatar component with fallback to initials, size variants,
  * and status indicator support.
- * 
+ *
  * @example
  * ```tsx
  * <Avatar src="/user.jpg" alt="John Doe" size="lg" status="online" />
@@ -11,9 +11,9 @@
  * ```
  */
 
-import React from 'react';
-import { User } from 'lucide-react';
-import Image from 'next/image';
+import React from 'react'
+import { User } from 'lucide-react'
+import Image from 'next/image'
 
 /**
  * Avatar size variants
@@ -25,7 +25,7 @@ const sizeStyles = {
   lg: 'w-12 h-12 text-base',
   xl: 'w-16 h-16 text-lg',
   '2xl': 'w-20 h-20 text-xl',
-} as const;
+} as const
 
 /**
  * Status indicator size variants
@@ -37,7 +37,7 @@ const statusSizeStyles = {
   lg: 'w-3 h-3',
   xl: 'w-3.5 h-3.5',
   '2xl': 'w-4 h-4',
-} as const;
+} as const
 
 /**
  * Status indicator position offset
@@ -49,7 +49,7 @@ const statusPositionStyles = {
   lg: '-bottom-1 -right-1',
   xl: '-bottom-1 -right-1',
   '2xl': '-bottom-1 -right-1',
-} as const;
+} as const
 
 /**
  * Status color styles
@@ -59,26 +59,26 @@ const statusStyles = {
   offline: 'bg-slate-400',
   away: 'bg-amber-500',
   busy: 'bg-red-500',
-} as const;
+} as const
 
 /**
  * Avatar component props
  */
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Image source URL */
-  src?: string;
+  src?: string
   /** Alt text for accessibility */
-  alt?: string;
+  alt?: string
   /** Avatar size */
-  size?: keyof typeof sizeStyles;
+  size?: keyof typeof sizeStyles
   /** Fallback text (usually initials or full name) */
-  fallback?: string;
+  fallback?: string
   /** Online status indicator */
-  status?: keyof typeof statusStyles;
+  status?: keyof typeof statusStyles
   /** Shape of the avatar */
-  shape?: 'circle' | 'square';
+  shape?: 'circle' | 'square'
   /** Additional class for the image */
-  imgClassName?: string;
+  imgClassName?: string
 }
 
 /**
@@ -87,10 +87,10 @@ export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
 function getInitials(name: string): string {
   return name
     .split(' ')
-    .map(part => part[0])
+    .map((part) => part[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2)
 }
 
 /**
@@ -113,51 +113,40 @@ function getBackgroundColor(name: string): string {
     'bg-fuchsia-500',
     'bg-pink-500',
     'bg-rose-500',
-  ];
-  
-  let hash = 0;
+  ]
+
+  let hash = 0
   for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
   }
-  
-  return colors[Math.abs(hash) % colors.length];
+
+  return colors[Math.abs(hash) % colors.length]
 }
 
 /**
  * Avatar component for user representation
- * 
+ *
  * @param props - Avatar props
  * @returns React component
  */
 export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
-  ({ 
-    src,
-    alt = '',
-    size = 'md',
-    fallback,
-    status,
-    shape = 'circle',
-    className = '',
-    imgClassName = '',
-    ...props 
-  }, ref) => {
-    const [imageError, setImageError] = React.useState(false);
-    const hasImage = src && !imageError;
-    const fallbackText = fallback || alt;
-    const hasFallback = !!fallbackText;
+  (
+    { src, alt = '', size = 'md', fallback, status, shape = 'circle', className = '', imgClassName = '', ...props },
+    ref
+  ) => {
+    const [imageError, setImageError] = React.useState(false)
+    const hasImage = src && !imageError
+    const fallbackText = fallback || alt
+    const hasFallback = !!fallbackText
 
     const handleImageError = () => {
-      setImageError(true);
-    };
+      setImageError(true)
+    }
 
-    const bgColor = hasFallback ? getBackgroundColor(fallbackText) : 'bg-slate-300';
+    const bgColor = hasFallback ? getBackgroundColor(fallbackText) : 'bg-slate-300'
 
     return (
-      <div 
-        ref={ref}
-        className={`relative inline-block shrink-0 ${className}`}
-        {...props}
-      >
+      <div ref={ref} className={`relative inline-block shrink-0 ${className}`} {...props}>
         <div
           className={`
             ${sizeStyles[size]}
@@ -183,8 +172,20 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           ) : hasFallback ? (
             <span>{getInitials(fallbackText)}</span>
           ) : (
-            <User 
-              size={size === 'xs' ? 12 : size === 'sm' ? 16 : size === 'md' ? 20 : size === 'lg' ? 24 : size === 'xl' ? 32 : 40} 
+            <User
+              size={
+                size === 'xs'
+                  ? 12
+                  : size === 'sm'
+                    ? 16
+                    : size === 'md'
+                      ? 20
+                      : size === 'lg'
+                        ? 24
+                        : size === 'xl'
+                          ? 32
+                          : 40
+              }
               className="text-white"
               aria-hidden="true"
             />
@@ -204,69 +205,53 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           />
         )}
       </div>
-    );
+    )
   }
-);
+)
 
-Avatar.displayName = 'Avatar';
+Avatar.displayName = 'Avatar'
 
 /**
  * Avatar Group component for displaying multiple avatars
  */
 export interface AvatarGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Maximum number of avatars to display */
-  max?: number;
+  max?: number
   /** Spacing between avatars */
-  spacing?: 'tight' | 'normal' | 'loose';
+  spacing?: 'tight' | 'normal' | 'loose'
   /** Avatar size */
-  size?: keyof typeof sizeStyles;
+  size?: keyof typeof sizeStyles
   /** Children avatars */
-  children: React.ReactNode;
+  children: React.ReactNode
   /** Additional count to display as +N */
-  total?: number;
+  total?: number
 }
 
 const groupSpacingStyles = {
   tight: '-space-x-2',
   normal: '-space-x-3',
   loose: '-space-x-1',
-} as const;
+} as const
 
 export const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(
-  ({ 
-    max,
-    spacing = 'normal',
-    size = 'md',
-    children,
-    total,
-    className = '',
-    ...props 
-  }, ref) => {
-    const childrenArray = React.Children.toArray(children);
-    const displayCount = max ? Math.min(childrenArray.length, max) : childrenArray.length;
-    const hiddenCount = total ?? (max && childrenArray.length > max ? childrenArray.length - max : 0);
-    const displayedChildren = childrenArray.slice(0, displayCount);
+  ({ max, spacing = 'normal', size = 'md', children, total, className = '', ...props }, ref) => {
+    const childrenArray = React.Children.toArray(children)
+    const displayCount = max ? Math.min(childrenArray.length, max) : childrenArray.length
+    const hiddenCount = total ?? (max && childrenArray.length > max ? childrenArray.length - max : 0)
+    const displayedChildren = childrenArray.slice(0, displayCount)
 
     return (
-      <div 
-        ref={ref}
-        className={`flex items-center ${groupSpacingStyles[spacing]} ${className}`}
-        {...props}
-      >
+      <div ref={ref} className={`flex items-center ${groupSpacingStyles[spacing]} ${className}`} {...props}>
         {displayedChildren.map((child, index) => (
-          <div 
-            key={index}
-            className="relative inline-block ring-2 ring-white rounded-full"
-          >
-            {React.isValidElement(child) 
+          <div key={index} className="relative inline-block ring-2 ring-white rounded-full">
+            {React.isValidElement(child)
               ? React.cloneElement(child as React.ReactElement<AvatarProps>, { size })
-              : child
-            }
+              : child}
           </div>
         ))}
-        
+
         {hiddenCount > 0 && (
-          <div 
+          <div
             className={`
               relative inline-flex items-center justify-center
               ${sizeStyles[size]}
@@ -278,10 +263,10 @@ export const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(
           </div>
         )}
       </div>
-    );
+    )
   }
-);
+)
 
-AvatarGroup.displayName = 'AvatarGroup';
+AvatarGroup.displayName = 'AvatarGroup'
 
-export default Avatar;
+export default Avatar

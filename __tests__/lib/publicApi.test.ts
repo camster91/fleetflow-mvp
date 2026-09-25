@@ -3,7 +3,9 @@ import { createPublicApiCursor, readPublicApiCursor, resolveApiCursorSecret } fr
 describe('public API cursor security', () => {
   it('fails closed in production without a dedicated or existing strong server secret', () => {
     expect(() => resolveApiCursorSecret({ NODE_ENV: 'production' })).toThrow('API_CURSOR_SECRET is required')
-    expect(() => resolveApiCursorSecret({ NODE_ENV: 'production', API_CURSOR_SECRET: 'too-short' })).toThrow('at least 32 characters')
+    expect(() => resolveApiCursorSecret({ NODE_ENV: 'production', API_CURSOR_SECRET: 'too-short' })).toThrow(
+      'at least 32 characters'
+    )
   })
 
   it('accepts a configured dedicated secret and binds cursors to personal tenants', () => {

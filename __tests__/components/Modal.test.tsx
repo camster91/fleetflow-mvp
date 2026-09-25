@@ -4,12 +4,7 @@ import { Modal } from '../../components/ui/Modal'
 describe('Modal', () => {
   test('renders custom header and footer content', () => {
     render(
-      <Modal
-        isOpen
-        onClose={jest.fn()}
-        header={<h2>Custom heading</h2>}
-        footer={<button>Continue</button>}
-      >
+      <Modal isOpen onClose={jest.fn()} header={<h2>Custom heading</h2>} footer={<button>Continue</button>}>
         Modal body
       </Modal>
     )
@@ -23,13 +18,7 @@ describe('Modal', () => {
   test('respects disabled escape and backdrop closing', () => {
     const onClose = jest.fn()
     render(
-      <Modal
-        isOpen
-        onClose={onClose}
-        title="Locked modal"
-        closeOnEsc={false}
-        closeOnBackdropClick={false}
-      >
+      <Modal isOpen onClose={onClose} title="Locked modal" closeOnEsc={false} closeOnBackdropClick={false}>
         Modal body
       </Modal>
     )

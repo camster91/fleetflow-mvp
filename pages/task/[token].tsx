@@ -1,65 +1,87 @@
-import { toast } from "react-hot-toast";
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import Head from 'next/head';
-import { Wrench, Car, Calendar, DollarSign, FileText, CheckCircle, AlertTriangle, Clock, Loader2, ExternalLink } from 'lucide-react';
+import { toast } from 'react-hot-toast'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import Head from 'next/head'
+import {
+  Wrench,
+  Car,
+  Calendar,
+  DollarSign,
+  FileText,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  Loader2,
+  ExternalLink,
+} from 'lucide-react'
 
 function fmtDate(dateStr: string) {
-  if (!dateStr) return '';
+  if (!dateStr) return ''
   try {
     return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', {
-      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
-    });
-  } catch { return dateStr; }
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  } catch {
+    return dateStr
+  }
 }
 
 function priorityColor(p: string) {
-  if (p === 'high') return 'bg-red-100 text-red-700 border-red-200';
-  if (p === 'medium') return 'bg-amber-100 text-amber-700 border-amber-200';
-  return 'bg-slate-100 text-slate-600 border-slate-200';
+  if (p === 'high') return 'bg-red-100 text-red-700 border-red-200'
+  if (p === 'medium') return 'bg-amber-100 text-amber-700 border-amber-200'
+  return 'bg-slate-100 text-slate-600 border-slate-200'
 }
 
 interface SharedTask {
-  id: string;
-  vehicle: string;
-  type: string;
-  dueDate: string;
-  priority: 'high' | 'medium' | 'low';
-  notes?: string | null;
-  estimatedDuration?: string | null;
-  serviceProvider?: string | null;
-  completed: boolean;
-  completedDate?: string | null;
-  actualCost?: number | null;
-  costEstimate?: number | null;
+  id: string
+  vehicle: string
+  type: string
+  dueDate: string
+  priority: 'high' | 'medium' | 'low'
+  notes?: string | null
+  estimatedDuration?: string | null
+  serviceProvider?: string | null
+  completed: boolean
+  completedDate?: string | null
+  actualCost?: number | null
+  costEstimate?: number | null
 }
 
 export default function MechanicTaskPage() {
-  const router = useRouter();
-  const { token } = router.query;
+  const router = useRouter()
+  const { token } = router.query
 
-  const [task, setTask] = useState<SharedTask | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ actualCost: '', completionNotes: '', markComplete: false });
+  const [task, setTask] = useState<SharedTask | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [form, setForm] = useState({ actualCost: '', completionNotes: '', markComplete: false })
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) return
     fetch(`/api/task/${token}`)
-      .then(r => r.json())
-      .then(d => { if (d.error) setError(d.error); else { setTask(d.task); if (d.task.completed) setSubmitted(true); } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) setError(d.error)
+        else {
+          setTask(d.task)
+          if (d.task.completed) setSubmitted(true)
+        }
+      })
       .catch(() => setError('Unable to load task. Please check the link.'))
-      .finally(() => setLoading(false));
-  }, [token]);
+      .finally(() => setLoading(false))
+  }, [token])
 
   const handleSubmit = async () => {
     if (!form.actualCost && !form.completionNotes && !form.markComplete) {
-      toast.error('Please fill in at least the cost or notes before submitting.');
-      return;
+      toast.error('Please fill in at least the cost or notes before submitting.')
+      return
     }
-    setSubmitting(true);
+    setSubmitting(true)
     try {
       const r = await fetch(`/api/task/${token}`, {
         method: 'PUT',
@@ -69,14 +91,18 @@ export default function MechanicTaskPage() {
           completionNotes: form.completionNotes || undefined,
           markComplete: form.markComplete,
         }),
-      });
-      if (r.ok) setSubmitted(true);
-      else setError('Submission failed. Please try again.');
-    } catch { setError('Submission failed. Please try again.'); }
-    finally { setSubmitting(false); }
-  };
+      })
+      if (r.ok) setSubmitted(true)
+      else setError('Submission failed. Please try again.')
+    } catch {
+      setError('Submission failed. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
-  const inputCls = 'w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition';
+  const inputCls =
+    'w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition'
 
   return (
     <>
@@ -100,7 +126,6 @@ export default function MechanicTaskPage() {
 
         <div className="flex-1 flex items-start justify-center px-4 py-8">
           <div className="w-full max-w-md">
-
             {loading && (
               <div className="flex flex-col items-center justify-center py-20 gap-3">
                 <Loader2 className="h-8 w-8 text-blue-900 animate-spin" />
@@ -120,14 +145,17 @@ export default function MechanicTaskPage() {
 
             {!loading && !error && task && (
               <div className="space-y-4">
-
                 {/* Task card */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                  <div className={`px-5 py-4 border-b ${
-                    task.completed ? 'bg-emerald-50 border-emerald-100'
-                    : new Date(task.dueDate) < new Date() ? 'bg-red-50 border-red-100'
-                    : 'bg-blue-50 border-blue-100'
-                  }`}>
+                  <div
+                    className={`px-5 py-4 border-b ${
+                      task.completed
+                        ? 'bg-emerald-50 border-emerald-100'
+                        : new Date(task.dueDate) < new Date()
+                          ? 'bg-red-50 border-red-100'
+                          : 'bg-blue-50 border-blue-100'
+                    }`}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="flex items-center gap-2 mb-1">
@@ -136,7 +164,9 @@ export default function MechanicTaskPage() {
                         </div>
                         <p className="text-lg font-bold text-slate-900">{task.type}</p>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${ priorityColor(task.priority) }`}>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${priorityColor(task.priority)}`}
+                      >
                         {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                       </span>
                     </div>
@@ -146,7 +176,9 @@ export default function MechanicTaskPage() {
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-slate-400 shrink-0" />
                       <span className="text-slate-600">Due:</span>
-                      <span className={`font-medium ${ new Date(task.dueDate) < new Date() && !task.completed ? 'text-red-600' : 'text-slate-900' }`}>
+                      <span
+                        className={`font-medium ${new Date(task.dueDate) < new Date() && !task.completed ? 'text-red-600' : 'text-slate-900'}`}
+                      >
                         {fmtDate(task.dueDate)}
                         {new Date(task.dueDate) < new Date() && !task.completed && (
                           <span className="ml-2 text-red-500 text-xs">(Overdue)</span>
@@ -201,15 +233,17 @@ export default function MechanicTaskPage() {
                     <h3 className="font-semibold text-slate-900">Submit Work Report</h3>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Actual Cost ($)
-                      </label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Actual Cost ($)</label>
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
+                          $
+                        </span>
                         <input
-                          type="number" step="0.01" min="0"
+                          type="number"
+                          step="0.01"
+                          min="0"
                           value={form.actualCost}
-                          onChange={e => setForm(f => ({ ...f, actualCost: e.target.value }))}
+                          onChange={(e) => setForm((f) => ({ ...f, actualCost: e.target.value }))}
                           className={inputCls + ' pl-8'}
                           placeholder="0.00"
                         />
@@ -217,12 +251,10 @@ export default function MechanicTaskPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Work Performed / Notes
-                      </label>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Work Performed / Notes</label>
                       <textarea
                         value={form.completionNotes}
-                        onChange={e => setForm(f => ({ ...f, completionNotes: e.target.value }))}
+                        onChange={(e) => setForm((f) => ({ ...f, completionNotes: e.target.value }))}
                         className={inputCls + ' resize-none'}
                         rows={4}
                         placeholder="Describe what was done, parts replaced, any issues found..."
@@ -233,7 +265,7 @@ export default function MechanicTaskPage() {
                       <input
                         type="checkbox"
                         checked={form.markComplete}
-                        onChange={e => setForm(f => ({ ...f, markComplete: e.target.checked }))}
+                        onChange={(e) => setForm((f) => ({ ...f, markComplete: e.target.checked }))}
                         className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                       />
                       <div>
@@ -247,9 +279,13 @@ export default function MechanicTaskPage() {
                       disabled={submitting}
                       className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-900 text-white rounded-xl font-semibold text-sm hover:bg-blue-800 disabled:opacity-60 transition"
                     >
-                      {submitting
-                        ? <><Loader2 className="h-4 w-4 animate-spin" /> Submitting...</>
-                        : 'Submit Report'}
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Submitting...
+                        </>
+                      ) : (
+                        'Submit Report'
+                      )}
                     </button>
                   </div>
                 )}
@@ -263,5 +299,5 @@ export default function MechanicTaskPage() {
         </div>
       </div>
     </>
-  );
+  )
 }

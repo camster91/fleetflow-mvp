@@ -1,13 +1,5 @@
 import { useState } from 'react'
-import {
-  Truck,
-  Package,
-  Wrench,
-  CheckCircle,
-  ArrowRight,
-  ArrowLeft,
-  Sparkles,
-} from 'lucide-react'
+import { Truck, Package, Wrench, CheckCircle, ArrowRight, ArrowLeft, Sparkles } from 'lucide-react'
 import { FadeIn } from '@/components/ui/FadeIn'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
@@ -38,22 +30,12 @@ const FEATURES = [
 export interface FtueWizardProps {
   firstName?: string
   onComplete: () => void | Promise<void>
-  onAddVehicle?: (vehicle: {
-    make: string
-    model: string
-    year: string
-    plate: string
-  }) => Promise<'ok' | 'error'>
+  onAddVehicle?: (vehicle: { make: string; model: string; year: string; plate: string }) => Promise<'ok' | 'error'>
   /** When true, skip API and just call onComplete after local validation */
   dryRun?: boolean
 }
 
-export function FtueWizard({
-  firstName = 'there',
-  onComplete,
-  onAddVehicle,
-  dryRun = false,
-}: FtueWizardProps) {
+export function FtueWizard({ firstName = 'there', onComplete, onAddVehicle, dryRun = false }: FtueWizardProps) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [banner, setBanner] = useState<string | null>(null)
@@ -176,12 +158,8 @@ export function FtueWizard({
                             <Icon className="h-5 w-5" aria-hidden="true" />
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900 dark:text-slate-100">
-                              {feature.title}
-                            </p>
-                            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-                              {feature.description}
-                            </p>
+                            <p className="font-semibold text-slate-900 dark:text-slate-100">{feature.title}</p>
+                            <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{feature.description}</p>
                           </div>
                         </li>
                       </FadeIn>
@@ -238,7 +216,10 @@ export function FtueWizard({
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="ob-make" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        htmlFor="ob-make"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
                         Make
                       </label>
                       <input
@@ -251,7 +232,10 @@ export function FtueWizard({
                       />
                     </div>
                     <div>
-                      <label htmlFor="ob-model" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        htmlFor="ob-model"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
                         Model
                       </label>
                       <input
@@ -266,7 +250,10 @@ export function FtueWizard({
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="ob-year" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        htmlFor="ob-year"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
                         Year
                       </label>
                       <input
@@ -281,7 +268,10 @@ export function FtueWizard({
                       />
                     </div>
                     <div>
-                      <label htmlFor="ob-plate" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                      <label
+                        htmlFor="ob-plate"
+                        className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                      >
                         License plate
                       </label>
                       <input

@@ -4,4 +4,6 @@ export const getServerSideProps: GetServerSideProps = async () => ({
   redirect: { destination: '/auth/login', permanent: false },
 })
 
-export default function Callback() { return null }
+export default function Callback() {
+  return null
+}

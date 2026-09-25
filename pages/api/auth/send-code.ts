@@ -68,13 +68,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sendLoginCodeEmail(normalizedEmail, user.name || '', code, { correlationId }),
       { timeoutMs: EMAIL_DELIVERY_TIMEOUT_MS }
     )
-    const errorCode = outcome.status === 'timeout'
-      ? 'delivery_timeout'
-      : outcome.status === 'failed'
-        ? 'delivery_exception'
-        : outcome.value.success
-          ? undefined
-          : outcome.value.errorCode || 'delivery_exception'
+    const errorCode =
+      outcome.status === 'timeout'
+        ? 'delivery_timeout'
+        : outcome.status === 'failed'
+          ? 'delivery_exception'
+          : outcome.value.success
+            ? undefined
+            : outcome.value.errorCode || 'delivery_exception'
     if (errorCode) {
       console.error({
         event: 'auth.login_code.delivery_failed',

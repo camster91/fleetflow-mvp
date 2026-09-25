@@ -1,2 +1,35 @@
 import { CommandShell, Exceptions, DecisionActions, type CommandCentreProps } from './CommandCentre'
-export default function MaintenanceDashboard(props:CommandCentreProps) { const open=props.availability.maintenance?props.maintenance.filter(m=>!m.completed):[]; return <CommandShell title="Maintenance command centre" partial={props.partial} retry={props.retry} availability={props.availability} restricted={props.restricted}><Exceptions {...props}/><section><h2 className="text-lg font-semibold">Work queue</h2>{!props.availability.maintenance?<p className="mt-3 text-sm text-slate-600">Maintenance work unavailable.</p>:open.length?<ul className="mt-3 space-y-2">{open.slice(0,8).map(m=><li className="rounded-lg border bg-white p-3" key={String(m.id)}><strong>{m.type}</strong><span className="block text-sm text-slate-600">{m.vehicle} - {m.priority}</span></li>)}</ul>:<p className="mt-3 text-sm text-slate-600">No open maintenance work.</p>}</section><DecisionActions {...props}/></CommandShell> }
+export default function MaintenanceDashboard(props: CommandCentreProps) {
+  const open = props.availability.maintenance ? props.maintenance.filter((m) => !m.completed) : []
+  return (
+    <CommandShell
+      title="Maintenance command centre"
+      partial={props.partial}
+      retry={props.retry}
+      availability={props.availability}
+      restricted={props.restricted}
+    >
+      <Exceptions {...props} />
+      <section>
+        <h2 className="text-lg font-semibold">Work queue</h2>
+        {!props.availability.maintenance ? (
+          <p className="mt-3 text-sm text-slate-600">Maintenance work unavailable.</p>
+        ) : open.length ? (
+          <ul className="mt-3 space-y-2">
+            {open.slice(0, 8).map((m) => (
+              <li className="rounded-lg border bg-white p-3" key={String(m.id)}>
+                <strong>{m.type}</strong>
+                <span className="block text-sm text-slate-600">
+                  {m.vehicle} - {m.priority}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-slate-600">No open maintenance work.</p>
+        )}
+      </section>
+      <DecisionActions {...props} />
+    </CommandShell>
+  )
+}

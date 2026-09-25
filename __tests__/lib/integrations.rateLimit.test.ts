@@ -7,5 +7,6 @@ describe('durable integration rate policies', () => {
     expect(integrationRatePolicy('sync')).toEqual({ limit: 30, windowMs: 3600000 })
     expect(integrationRatePolicy('review')).toEqual({ limit: 60, windowMs: 60000 })
   })
-  it('creates deterministic UTC buckets', () => expect(rateBucket(new Date('2026-08-08T12:03:12.345Z'), 300000).toISOString()).toBe('2026-08-08T12:00:00.000Z'))
+  it('creates deterministic UTC buckets', () =>
+    expect(rateBucket(new Date('2026-08-08T12:03:12.345Z'), 300000).toISOString()).toBe('2026-08-08T12:00:00.000Z'))
 })

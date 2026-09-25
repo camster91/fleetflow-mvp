@@ -1,8 +1,14 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import {
-  MATRIX_CLIENTS, MATRIX_DELIVERIES, MATRIX_MAINTENANCE, MATRIX_OWNER_ID,
-  MATRIX_ROLES, MATRIX_TEAM, MATRIX_VEHICLES, matrixUser,
+  MATRIX_CLIENTS,
+  MATRIX_DELIVERIES,
+  MATRIX_MAINTENANCE,
+  MATRIX_OWNER_ID,
+  MATRIX_ROLES,
+  MATRIX_TEAM,
+  MATRIX_VEHICLES,
+  matrixUser,
 } from './matrix-fixtures'
 
 const prisma = new PrismaClient()
@@ -92,7 +98,14 @@ async function seedRoleMatrixWorkspace() {
 
   const scope = { ownerId, teamId: MATRIX_TEAM.id }
   for (const { id, ...vehicle } of MATRIX_VEHICLES) {
-    const data = { ...vehicle, ...scope, status: 'active', location: 'Example Depot', mileage: 1000, vehicleType: 'van' }
+    const data = {
+      ...vehicle,
+      ...scope,
+      status: 'active',
+      location: 'Example Depot',
+      mileage: 1000,
+      vehicleType: 'van',
+    }
     await prisma.vehicle.upsert({ where: { id }, update: data, create: { id, ...data } })
   }
   for (const { id, ...delivery } of MATRIX_DELIVERIES) {
@@ -100,7 +113,13 @@ async function seedRoleMatrixWorkspace() {
     await prisma.delivery.upsert({ where: { id }, update: data, create: { id, ...data } })
   }
   for (const { id, ...task } of MATRIX_MAINTENANCE) {
-    const data = { ...task, ...scope, type: task.title, dueDate: new Date('2030-01-15T00:00:00.000Z'), completed: false }
+    const data = {
+      ...task,
+      ...scope,
+      type: task.title,
+      dueDate: new Date('2030-01-15T00:00:00.000Z'),
+      completed: false,
+    }
     await prisma.maintenanceTask.upsert({ where: { id }, update: data, create: { id, ...data } })
   }
   for (const { id, ...client } of MATRIX_CLIENTS) {
@@ -110,5 +129,8 @@ async function seedRoleMatrixWorkspace() {
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1) })
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
   .finally(() => prisma.$disconnect())

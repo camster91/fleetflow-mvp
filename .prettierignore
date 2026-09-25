@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+coverage
+playwright-report
+test-results
+public
+prisma/migrations
+package-lock.json
+*.md
+*.yml
+*.yaml
+*.json
+*.html
+*.css
+*.svg

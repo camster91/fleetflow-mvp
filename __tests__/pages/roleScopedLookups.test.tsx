@@ -7,14 +7,24 @@ const mockRouter = { isReady: true, pathname: '/deliveries', query: {} as Record
 
 jest.mock('next/router', () => ({ useRouter: () => mockRouter }))
 jest.mock('@/services/apiService', () => ({
-  getVehicles: jest.fn(), getDeliveryPage: jest.fn(), getClients: jest.fn(),
-  getMaintenancePage: jest.fn(), getMaintenanceTasksDue: jest.fn().mockResolvedValue([]), updateDelivery: jest.fn(), updateMaintenanceTask: jest.fn(),
-  deleteDelivery: jest.fn(), deleteMaintenanceTask: jest.fn(),
+  getVehicles: jest.fn(),
+  getDeliveryPage: jest.fn(),
+  getClients: jest.fn(),
+  getMaintenancePage: jest.fn(),
+  getMaintenanceTasksDue: jest.fn().mockResolvedValue([]),
+  updateDelivery: jest.fn(),
+  updateMaintenanceTask: jest.fn(),
+  deleteDelivery: jest.fn(),
+  deleteMaintenanceTask: jest.fn(),
 }))
 jest.mock('@/services/notifications', () => ({ notify: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }))
-jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }))
-jest.mock('@/components/PageHeader', () => ({ PageHeader: ({ actions }: { actions?: React.ReactNode }) => <div>{actions}</div> }))
+jest.mock('@/components/layouts/DashboardLayout', () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
+jest.mock('@/components/PageHeader', () => ({
+  PageHeader: ({ actions }: { actions?: React.ReactNode }) => <div>{actions}</div>,
+}))
 jest.mock('@/components/DeliveryFormModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/MaintenanceTaskDetailModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/MaintenanceTaskFormModal', () => ({ __esModule: true, default: () => null }))
@@ -36,14 +46,29 @@ describe('role-scoped lookup lists', () => {
   })
 
   it('shows a driver their deliveries when clients and vehicles are forbidden', async () => {
-    ;(api.getDeliveryPage as jest.Mock).mockResolvedValue(page([{
-      id: 'd-1', customer: 'Assigned Customer', address: '1 Example St', status: 'pending', driver: 'Driver',
-      progress: 0, items: 1, scheduledTime: null, estimatedArrival: null,
-    }]))
+    ;(api.getDeliveryPage as jest.Mock).mockResolvedValue(
+      page([
+        {
+          id: 'd-1',
+          customer: 'Assigned Customer',
+          address: '1 Example St',
+          status: 'pending',
+          driver: 'Driver',
+          progress: 0,
+          items: 1,
+          scheduledTime: null,
+          estimatedArrival: null,
+        },
+      ])
+    )
     ;(api.getVehicles as jest.Mock).mockImplementation(forbidden)
     ;(api.getClients as jest.Mock).mockImplementation(forbidden)
 
-    render(<ConfirmDialogProvider><DeliveriesPage /></ConfirmDialogProvider>)
+    render(
+      <ConfirmDialogProvider>
+        <DeliveriesPage />
+      </ConfirmDialogProvider>
+    )
 
     expect((await screen.findAllByText('Assigned Customer')).length).toBeGreaterThan(0)
     expect(screen.queryByText('You do not have permission to do that')).not.toBeInTheDocument()
@@ -54,18 +79,35 @@ describe('role-scoped lookup lists', () => {
     ;(api.getVehicles as jest.Mock).mockResolvedValue([])
     ;(api.getClients as jest.Mock).mockResolvedValue([])
 
-    render(<ConfirmDialogProvider><DeliveriesPage /></ConfirmDialogProvider>)
+    render(
+      <ConfirmDialogProvider>
+        <DeliveriesPage />
+      </ConfirmDialogProvider>
+    )
 
     expect(await screen.findByText('You do not have permission to do that')).toBeInTheDocument()
   })
 
   it('shows a technician maintenance work when vehicles are forbidden', async () => {
-    ;(api.getMaintenancePage as jest.Mock).mockResolvedValue(page([{
-      id: 'm-1', vehicle: 'Van', type: 'Brake inspection', dueDate: '2030-01-15', priority: 'high', completed: false,
-    }]))
+    ;(api.getMaintenancePage as jest.Mock).mockResolvedValue(
+      page([
+        {
+          id: 'm-1',
+          vehicle: 'Van',
+          type: 'Brake inspection',
+          dueDate: '2030-01-15',
+          priority: 'high',
+          completed: false,
+        },
+      ])
+    )
     ;(api.getVehicles as jest.Mock).mockImplementation(forbidden)
 
-    render(<ConfirmDialogProvider><MaintenancePage /></ConfirmDialogProvider>)
+    render(
+      <ConfirmDialogProvider>
+        <MaintenancePage />
+      </ConfirmDialogProvider>
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'List' }))
 
     expect(await screen.findByText('Brake inspection')).toBeInTheDocument()

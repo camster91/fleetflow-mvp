@@ -14,7 +14,9 @@ import handler from '@/pages/api/intelligence/data-quality'
 import { requireTenantContext } from '@/lib/apiAuth'
 import { prisma } from '@/lib/prisma'
 
-const models = [prisma.vehicle, prisma.delivery, prisma.maintenanceTask, prisma.client] as unknown as Array<{ findMany: jest.Mock }>
+const models = [prisma.vehicle, prisma.delivery, prisma.maintenanceTask, prisma.client] as unknown as Array<{
+  findMany: jest.Mock
+}>
 
 describe('GET /api/intelligence/data-quality', () => {
   beforeEach(() => {
@@ -42,23 +44,29 @@ describe('GET /api/intelligence/data-quality', () => {
 
     expect(res._getStatusCode()).toBe(200)
     for (const model of models) {
-      expect(model.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: resourceWhere, orderBy: { id: 'asc' }, take: 501,
-      }))
+      expect(model.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: resourceWhere,
+          orderBy: { id: 'asc' },
+          take: 501,
+        })
+      )
       expect(model.findMany.mock.calls[0][0].select).toBeDefined()
       expect(model.findMany.mock.calls[0][0].include).toBeUndefined()
     }
-    expect(res._getJSONData()).toEqual(expect.objectContaining({
-      issues: [],
-      summary: {
-        total: 0,
-        bySeverity: { high: 0, medium: 0, low: 0 },
-        byEntity: { vehicle: 0, delivery: 0, maintenance: 0, client: 0 },
-        countsComplete: true,
-      },
-      coverage: expect.objectContaining({ complete: true, sourceLimitPerEntity: 500, issueLimit: 100 }),
-      generatedAt: expect.any(String),
-    }))
+    expect(res._getJSONData()).toEqual(
+      expect.objectContaining({
+        issues: [],
+        summary: {
+          total: 0,
+          bySeverity: { high: 0, medium: 0, low: 0 },
+          byEntity: { vehicle: 0, delivery: 0, maintenance: 0, client: 0 },
+          countsComplete: true,
+        },
+        coverage: expect.objectContaining({ complete: true, sourceLimitPerEntity: 500, issueLimit: 100 }),
+        generatedAt: expect.any(String),
+      })
+    )
   })
 
   it('keeps personal data owner-scoped and excludes all team rows', async () => {
@@ -70,9 +78,11 @@ describe('GET /api/intelligence/data-quality', () => {
     const { req, res } = createMocks({ method: 'GET' })
     await handler(req as never, res as never)
     for (const model of models) {
-      expect(model.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: resourceWhere,
-      }))
+      expect(model.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: resourceWhere,
+        })
+      )
     }
   })
 
@@ -84,8 +94,14 @@ describe('GET /api/intelligence/data-quality', () => {
     })
     ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue(
       Array.from({ length: 501 }, (_, index) => ({
-        id: `v-${index}`, status: 'inactive', mileage: null, driver: null,
-        lastService: null, nextService: null, updatedAt: new Date(), lastUpdated: new Date(),
+        id: `v-${index}`,
+        status: 'inactive',
+        mileage: null,
+        driver: null,
+        lastService: null,
+        nextService: null,
+        updatedAt: new Date(),
+        lastUpdated: new Date(),
       }))
     )
     const { req, res } = createMocks({ method: 'GET' })
@@ -104,9 +120,15 @@ describe('GET /api/intelligence/data-quality', () => {
     })
     ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue(
       Array.from({ length: 25 }, (_, index) => ({
-        id: `v-${String(index).padStart(2, '0')}`, status: 'active', mileage: 0, driver: null,
-        lastService: null, nextService: null, createdAt: new Date('2020-01-01'),
-        updatedAt: new Date('2020-01-01'), lastUpdated: new Date('2020-01-01'),
+        id: `v-${String(index).padStart(2, '0')}`,
+        status: 'active',
+        mileage: 0,
+        driver: null,
+        lastService: null,
+        nextService: null,
+        createdAt: new Date('2020-01-01'),
+        updatedAt: new Date('2020-01-01'),
+        lastUpdated: new Date('2020-01-01'),
       }))
     )
     const { req, res } = createMocks({ method: 'GET' })
@@ -116,17 +138,22 @@ describe('GET /api/intelligence/data-quality', () => {
     expect(body.issues).toHaveLength(100)
     expect(body.summary).toEqual(expect.objectContaining({ total: 125, countsComplete: true }))
     expect(body.summary.bySeverity).toEqual({ high: 25, medium: 75, low: 25 })
-    expect(body.coverage).toEqual(expect.objectContaining({
-      complete: false, sourceTruncated: false, issuesTruncated: true, issuesReturned: 100,
-    }))
-    expect(body.issues.map((issue: { id: string }) => issue.id)).toEqual([
-      ...body.issues.map((issue: { id: string }) => issue.id),
-    ].sort((a: string, b: string) => {
-      const issueA = body.issues.find((issue: { id: string }) => issue.id === a)
-      const issueB = body.issues.find((issue: { id: string }) => issue.id === b)
-      const rank: Record<string, number> = { high: 0, medium: 1, low: 2 }
-      return rank[issueA.severity] - rank[issueB.severity] || a.localeCompare(b)
-    }))
+    expect(body.coverage).toEqual(
+      expect.objectContaining({
+        complete: false,
+        sourceTruncated: false,
+        issuesTruncated: true,
+        issuesReturned: 100,
+      })
+    )
+    expect(body.issues.map((issue: { id: string }) => issue.id)).toEqual(
+      [...body.issues.map((issue: { id: string }) => issue.id)].sort((a: string, b: string) => {
+        const issueA = body.issues.find((issue: { id: string }) => issue.id === a)
+        const issueB = body.issues.find((issue: { id: string }) => issue.id === b)
+        const rank: Record<string, number> = { high: 0, medium: 1, low: 2 }
+        return rank[issueA.severity] - rank[issueB.severity] || a.localeCompare(b)
+      })
+    )
   })
 
   it('returns a safe error without exposing database details', async () => {

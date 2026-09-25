@@ -30,9 +30,17 @@ const activeLink = {
   revokedAt: null,
   usedAt: null,
   task: {
-    id: 'task-1', vehicleName: 'Van 1', type: 'Oil change', dueDate: new Date(),
-    priority: 'high', notes: null, estimatedDuration: '1h', serviceProvider: null,
-    completed: false, completedDate: null, actualCost: null,
+    id: 'task-1',
+    vehicleName: 'Van 1',
+    type: 'Oil change',
+    dueDate: new Date(),
+    priority: 'high',
+    notes: null,
+    estimatedDuration: '1h',
+    serviceProvider: null,
+    completed: false,
+    completedDate: null,
+    actualCost: null,
   },
 }
 
@@ -79,19 +87,24 @@ describe('public task share API', () => {
     ;(prisma.taskShareLink.findUnique as jest.Mock).mockResolvedValue(activeLink)
     mockTx.taskShareLink.updateMany.mockResolvedValue({ count: 1 })
     const { req, res } = createMocks({
-      method: 'PUT', query: { token: 'secret' },
+      method: 'PUT',
+      query: { token: 'secret' },
       body: { actualCost: '123.45', completionNotes: 'Done', markComplete: true },
     })
 
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(200)
-    expect(mockTx.taskShareLink.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ id: 'link-1', usedAt: null, revokedAt: null }),
-    }))
-    expect(mockTx.maintenanceTask.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ actualCost: 123.45, notes: 'Done', completed: true }),
-    }))
+    expect(mockTx.taskShareLink.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: 'link-1', usedAt: null, revokedAt: null }),
+      })
+    )
+    expect(mockTx.maintenanceTask.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ actualCost: 123.45, notes: 'Done', completed: true }),
+      })
+    )
   })
 
   it('rejects a replayed write', async () => {

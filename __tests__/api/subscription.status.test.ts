@@ -59,8 +59,13 @@ describe('GET /api/subscription/status', () => {
       { id: 'team-1', ownerId: 'owner-2', members: [{ role: 'MANAGER' }] },
     ])
     ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
-      plan: 'PRO', status: 'ACTIVE', trialEndsAt: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,
-      stripeCustomerId: 'cus_secret', stripeSubscriptionId: 'sub_secret',
+      plan: 'PRO',
+      status: 'ACTIVE',
+      trialEndsAt: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+      stripeCustomerId: 'cus_secret',
+      stripeSubscriptionId: 'sub_secret',
     })
     const res = await call()
     expect(prisma.subscription.findUnique).toHaveBeenCalledWith({ where: { userId: 'owner-2' } })

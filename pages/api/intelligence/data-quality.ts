@@ -12,19 +12,41 @@ export const DATA_QUALITY_SOURCE_LIMIT = 500
 export const DATA_QUALITY_ISSUE_LIMIT = 100
 
 const vehicleSelect = {
-  id: true, status: true, mileage: true, driver: true, lastService: true,
-  nextService: true, createdAt: true, updatedAt: true, lastUpdated: true,
+  id: true,
+  status: true,
+  mileage: true,
+  driver: true,
+  lastService: true,
+  nextService: true,
+  createdAt: true,
+  updatedAt: true,
+  lastUpdated: true,
 } as const
 const deliverySelect = {
-  id: true, status: true, vehicleId: true, driver: true, scheduledTime: true,
-  estimatedArrival: true, contactPerson: true, updatedAt: true,
+  id: true,
+  status: true,
+  vehicleId: true,
+  driver: true,
+  scheduledTime: true,
+  estimatedArrival: true,
+  contactPerson: true,
+  updatedAt: true,
 } as const
 const maintenanceSelect = {
-  id: true, completed: true, dueDate: true, vehicleId: true,
-  costEstimate: true, actualCost: true, updatedAt: true,
+  id: true,
+  completed: true,
+  dueDate: true,
+  vehicleId: true,
+  costEstimate: true,
+  actualCost: true,
+  updatedAt: true,
 } as const
 const clientSelect = {
-  id: true, phone: true, email: true, contactPerson: true, updatedAt: true,
+  id: true,
+  phone: true,
+  email: true,
+  contactPerson: true,
+  updatedAt: true,
 } as const
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -51,8 +73,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.client.findMany({ where, select: clientSelect, orderBy: { id: 'asc' }, take }),
     ])
 
-    const sourceTruncated = [vehicleRows, deliveryRows, maintenanceRows, clientRows]
-      .some((rows) => rows.length > DATA_QUALITY_SOURCE_LIMIT)
+    const sourceTruncated = [vehicleRows, deliveryRows, maintenanceRows, clientRows].some(
+      (rows) => rows.length > DATA_QUALITY_SOURCE_LIMIT
+    )
     const records: DataQualityRecords = {
       vehicles: vehicleRows.slice(0, DATA_QUALITY_SOURCE_LIMIT),
       deliveries: deliveryRows.slice(0, DATA_QUALITY_SOURCE_LIMIT),
@@ -65,7 +88,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const bySeverity: Record<DataQualitySeverity, number> = { high: 0, medium: 0, low: 0 }
     const byEntity: Record<DataQualityEntityType, number> = {
-      vehicle: 0, delivery: 0, maintenance: 0, client: 0,
+      vehicle: 0,
+      delivery: 0,
+      maintenance: 0,
+      client: 0,
     }
     for (const issue of allScannedIssues) {
       bySeverity[issue.severity] += 1

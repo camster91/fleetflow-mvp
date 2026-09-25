@@ -33,9 +33,11 @@ describe('maintenance tenant authorization', () => {
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(200)
-    expect(prisma.maintenanceTask.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { teamId: 'team-1' },
-    }))
+    expect(prisma.maintenanceTask.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { teamId: 'team-1' },
+      })
+    )
   })
 
   it('denies a viewer from creating maintenance work', async () => {
@@ -53,9 +55,7 @@ describe('maintenance tenant authorization', () => {
 
   it('rejects cross-origin maintenance creation', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'owner-1' } })
-    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
-      { id: 'team-1', ownerId: 'owner-1', members: [] },
-    ])
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([{ id: 'team-1', ownerId: 'owner-1', members: [] }])
     const { req, res } = createMocks({
       method: 'POST',
       headers: { host: 'fleetflow.test', origin: 'https://attacker.example' },

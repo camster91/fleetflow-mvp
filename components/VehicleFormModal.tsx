@@ -19,23 +19,23 @@ const VEHICLE_TYPES = [
   { value: 'flatbed', label: 'Flatbed' },
   { value: 'refrigerated', label: 'Refrigerated' },
   { value: 'pickup', label: 'Pickup' },
-  { value: 'other', label: 'Other' }
+  { value: 'other', label: 'Other' },
 ]
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active', color: 'text-green-600 bg-green-50' },
   { value: 'inactive', label: 'Inactive', color: 'text-gray-600 bg-gray-50' },
-  { value: 'delayed', label: 'Delayed', color: 'text-orange-600 bg-orange-50' }
+  { value: 'delayed', label: 'Delayed', color: 'text-orange-600 bg-orange-50' },
 ]
 
 export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }: VehicleFormModalProps) {
   const isEditing = !!vehicle
   const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
-  
+
   useEffect(() => {
-    if (isOpen) setRecents(recentItems.getRecentItems());
-  }, [isOpen]);
-  
+    if (isOpen) setRecents(recentItems.getRecentItems())
+  }, [isOpen])
+
   const [formData, setFormData] = useState<{
     name: string
     vehicleType: string
@@ -65,15 +65,33 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
     maintenanceDue: false,
     lastService: '',
     nextService: '',
-    notes: ''
+    notes: '',
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [drivers,setDrivers]=useState<dataService.DriverOption[]>([])
-  const [driversUnavailable,setDriversUnavailable]=useState(false)
+  const [drivers, setDrivers] = useState<dataService.DriverOption[]>([])
+  const [driversUnavailable, setDriversUnavailable] = useState(false)
 
-  useEffect(()=>{ if(!isOpen)return; let active=true; setDriversUnavailable(false); dataService.getDrivers().then(items=>{if(active)setDrivers(items)}).catch(()=>{if(active){setDrivers([]);setDriversUnavailable(true)}}); return()=>{active=false} },[isOpen])
+  useEffect(() => {
+    if (!isOpen) return
+    let active = true
+    setDriversUnavailable(false)
+    dataService
+      .getDrivers()
+      .then((items) => {
+        if (active) setDrivers(items)
+      })
+      .catch(() => {
+        if (active) {
+          setDrivers([])
+          setDriversUnavailable(true)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [isOpen])
 
   // Reset form when modal opens/closes or vehicle changes
   useEffect(() => {
@@ -93,7 +111,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
           maintenanceDue: vehicle.maintenanceDue || false,
           lastService: vehicle.lastService || '',
           nextService: vehicle.nextService || '',
-          notes: ''
+          notes: '',
         })
       } else {
         setFormData({
@@ -110,7 +128,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
           maintenanceDue: false,
           lastService: '',
           nextService: '',
-          notes: ''
+          notes: '',
         })
       }
       setErrors({})
@@ -120,43 +138,43 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.name.trim()) {
       newErrors.name = 'Vehicle name is required'
     }
-    
+
     if (formData.mileage < 0) {
       newErrors.mileage = 'Mileage cannot be negative'
     }
-    
+
     if (formData.year < 1900 || formData.year > new Date().getFullYear() + 1) {
       newErrors.year = 'Please enter a valid year'
     }
-    
+
     if (formData.fuelLevel < 0 || formData.fuelLevel > 100) {
       newErrors.fuelLevel = 'Fuel level must be between 0 and 100'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     setIsSubmitting(true)
-    
+
     try {
       let result: dataService.Vehicle
-      
+
       if (isEditing && vehicle) {
         const updated = await dataService.updateVehicle(vehicle.id, {
           ...formData,
           assignedDriverId: formData.assignedDriverId || null,
           driver: '',
-          eta: vehicle.eta || 'N/A'
+          eta: vehicle.eta || 'N/A',
         })
         if (!updated) throw new Error('Failed to update vehicle')
         result = updated
@@ -165,19 +183,19 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
           ...formData,
           assignedDriverId: formData.assignedDriverId || null,
           driver: '',
-          eta: 'N/A'
+          eta: 'N/A',
         })
       }
-      
+
       // Save to recent items for autofill
       recentItems.addRecentVehicle({
         name: formData.name,
         vehicleType: formData.vehicleType,
         driver: formData.driver,
         location: formData.location,
-        licensePlate: formData.licensePlate
+        licensePlate: formData.licensePlate,
       })
-      
+
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -188,20 +206,15 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
   }
 
   const handleChange = (field: string, value: string | number | boolean) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
   }
 
   return (
-    <FormModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEditing ? 'Edit Vehicle' : 'Add New Vehicle'}
-      size="lg"
-    >
+    <FormModal isOpen={isOpen} onClose={onClose} title={isEditing ? 'Edit Vehicle' : 'Add New Vehicle'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="space-y-4">
@@ -209,7 +222,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
             <Truck className="h-4 w-4" />
             Basic Information
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Vehicle Name */}
             <div>
@@ -229,25 +242,23 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
 
             {/* Vehicle Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Vehicle Type
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type</label>
               <select
                 value={formData.vehicleType}
                 onChange={(e) => handleChange('vehicleType', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition"
               >
-                {VEHICLE_TYPES.map(type => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
+                {VEHICLE_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* License Plate */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                License Plate
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">License Plate</label>
               <input
                 type="text"
                 value={formData.licensePlate}
@@ -259,9 +270,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
 
             {/* Year */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Year
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
               <input
                 type="number"
                 value={formData.year}
@@ -283,24 +292,35 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
             <User className="h-4 w-4" />
             Assignment & Location
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Driver */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Assigned Driver
-              </label>
-              <select aria-label="Assigned Driver" value={formData.assignedDriverId} onChange={(e)=>handleChange('assignedDriverId',e.target.value)} disabled={driversUnavailable} className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white">
-                <option value="">Unassigned</option>{drivers.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}
+              <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Driver</label>
+              <select
+                aria-label="Assigned Driver"
+                value={formData.assignedDriverId}
+                onChange={(e) => handleChange('assignedDriverId', e.target.value)}
+                disabled={driversUnavailable}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+              >
+                <option value="">Unassigned</option>
+                {drivers.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
               </select>
-              {driversUnavailable&&<p role="alert" className="mt-1 text-sm text-red-600">Driver list unavailable. Try reopening this form.</p>}
+              {driversUnavailable && (
+                <p role="alert" className="mt-1 text-sm text-red-600">
+                  Driver list unavailable. Try reopening this form.
+                </p>
+              )}
             </div>
 
             {/* Location */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Current Location
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Current Location</label>
               <AutocompleteInput
                 value={formData.location}
                 onChange={(value) => handleChange('location', value)}
@@ -312,11 +332,9 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <div className="flex gap-2">
-                {STATUS_OPTIONS.map(status => (
+                {STATUS_OPTIONS.map((status) => (
                   <button
                     key={status.value}
                     type="button"
@@ -341,13 +359,11 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
             <Gauge className="h-4 w-4" />
             Vehicle Metrics
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Mileage */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mileage
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mileage</label>
               <div className="relative">
                 <Gauge className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -366,9 +382,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
 
             {/* Fuel Level */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Fuel Level (%)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fuel Level (%)</label>
               <div className="relative">
                 <Fuel className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -395,9 +409,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
                   onChange={(e) => handleChange('maintenanceDue', e.target.checked)}
                   className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                 />
-                <span className="text-sm font-medium text-gray-700">
-                  Maintenance Due
-                </span>
+                <span className="text-sm font-medium text-gray-700">Maintenance Due</span>
               </label>
             </div>
           </div>
@@ -409,13 +421,11 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
             <Calendar className="h-4 w-4" />
             Service History
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Last Service */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Service Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Service Date</label>
               <input
                 type="date"
                 value={formData.lastService}
@@ -426,9 +436,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
 
             {/* Next Service */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Next Service Due
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Next Service Due</label>
               <input
                 type="date"
                 value={formData.nextService}
@@ -445,7 +453,7 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
             <FileText className="h-4 w-4" />
             Notes
           </h4>
-          
+
           <textarea
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
@@ -481,8 +489,10 @@ export default function VehicleFormModal({ isOpen, onClose, onSubmit, vehicle }:
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {isEditing ? 'Saving...' : 'Adding...'}
               </>
+            ) : isEditing ? (
+              'Save Changes'
             ) : (
-              isEditing ? 'Save Changes' : 'Add Vehicle'
+              'Add Vehicle'
             )}
           </button>
         </div>

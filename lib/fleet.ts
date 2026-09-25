@@ -36,10 +36,10 @@ export interface Vehicle {
 
 export interface MaintenanceTask {
   id: string
-  vehicle: string        // display name
-  vehicleId?: string     // DB id (optional, for linking)
+  vehicle: string // display name
+  vehicleId?: string // DB id (optional, for linking)
   type: string
-  dueDate: string        // YYYY-MM-DD
+  dueDate: string // YYYY-MM-DD
   priority: 'high' | 'medium' | 'low'
   completed?: boolean
   completedDate?: string
@@ -51,15 +51,26 @@ export interface MaintenanceTask {
 }
 
 export interface LocationCoordinates {
-  lat: number; lng: number; address?: string; notes?: string
+  lat: number
+  lng: number
+  address?: string
+  notes?: string
 }
 
 export interface ContactPerson {
-  name: string; phone?: string; email?: string; department?: string; availability?: string
+  name: string
+  phone?: string
+  email?: string
+  department?: string
+  availability?: string
 }
 
 export interface DeliveryPhoto {
-  id: string; url: string; caption?: string; timestamp: string; uploadedBy: string
+  id: string
+  url: string
+  caption?: string
+  timestamp: string
+  uploadedBy: string
 }
 
 export interface Delivery {
@@ -125,7 +136,10 @@ export interface SOPCategory {
 }
 
 export interface VendingMachineNote {
-  id: string; text: string; author: string; timestamp: string
+  id: string
+  text: string
+  author: string
+  timestamp: string
   type?: 'maintenance' | 'inventory' | 'general'
   priority?: 'low' | 'normal' | 'high'
 }
@@ -168,10 +182,7 @@ type VendingMachineInput = NullableFields<
   VendingMachine,
   'machineType' | 'serialNumber' | 'notes' | 'lastService' | 'nextService'
 >
-type AnnouncementInput = NullableFields<
-  Announcement,
-  'category' | 'expiresAt' | 'actionUrl' | 'actionLabel'
->
+type AnnouncementInput = NullableFields<Announcement, 'category' | 'expiresAt' | 'actionUrl' | 'actionLabel'>
 
 // ─── DB ↔ Client converters ──────────────────────────────────────────────────
 
@@ -271,14 +282,17 @@ export interface ActivityItem {
 
 const parseJson = <T>(s: string | null | undefined): T | undefined => {
   if (!s) return undefined
-  try { return JSON.parse(s) as T } catch { return undefined }
+  try {
+    return JSON.parse(s) as T
+  } catch {
+    return undefined
+  }
 }
 
-const toJsonStr = (v: unknown): string | null =>
-  v == null ? null : JSON.stringify(v)
+const toJsonStr = (v: unknown): string | null => (v == null ? null : JSON.stringify(v))
 
 const toDateStr = (d: Date | string | null | undefined): string | undefined =>
-  d instanceof Date ? d.toISOString() : (d ?? undefined) as string | undefined
+  d instanceof Date ? d.toISOString() : ((d ?? undefined) as string | undefined)
 
 // ─── Vehicle converters ───────────────────────────────────────────────────────
 

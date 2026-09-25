@@ -54,7 +54,10 @@ describe('/api/admin/users mutations', () => {
 
   it('updates a role and writes its audit record in one transaction', async () => {
     mockTransaction.user.update.mockResolvedValue({
-      id: 'user-1', name: 'User', email: 'user@example.com', role: 'viewer',
+      id: 'user-1',
+      name: 'User',
+      email: 'user@example.com',
+      role: 'viewer',
     })
     mockTransaction.auditLog.create.mockResolvedValue({ id: 'audit-1' })
     const { req, res } = createMocks({
@@ -70,10 +73,12 @@ describe('/api/admin/users mutations', () => {
     await handler(req as never, res as never)
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(1)
-    expect(mockTransaction.user.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: 'user-1' },
-      data: { role: 'viewer' },
-    }))
+    expect(mockTransaction.user.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user-1' },
+        data: { role: 'viewer' },
+      })
+    )
     expect(mockTransaction.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 'admin-1',

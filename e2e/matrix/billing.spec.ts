@@ -46,5 +46,11 @@ test('owner billing page shows the free-beta plan and no checkout or cancel cont
 
 test('unauthenticated billing and checkout requests are refused', async ({ request, baseURL }) => {
   await expectStatus(await request.get('/api/subscription/status'), 401)
-  await expectStatus(await request.post('/api/stripe/checkout-session', { data: { interval: 'monthly' }, headers: { origin: baseURL!, referer: `${baseURL}/pricing` } }), 401)
+  await expectStatus(
+    await request.post('/api/stripe/checkout-session', {
+      data: { interval: 'monthly' },
+      headers: { origin: baseURL!, referer: `${baseURL}/pricing` },
+    }),
+    401
+  )
 })

@@ -19,15 +19,14 @@ export default function UnauthorizedPage() {
         <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
           <ShieldAlert className="h-8 w-8 text-red-600" />
         </div>
-        
+
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Access Denied</h1>
-        
+
         <div className="space-y-4 text-gray-600 mb-8">
-          <p>
-            You don't have permission to access this page with your current role.
-          </p>
+          <p>You don't have permission to access this page with your current role.</p>
           <p className="text-sm">
-            If you believe this is an error, please contact your administrator or try logging in with a different account.
+            If you believe this is an error, please contact your administrator or try logging in with a different
+            account.
           </p>
         </div>
 

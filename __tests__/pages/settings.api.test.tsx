@@ -17,7 +17,18 @@ describe('API settings one-time key handling', () => {
   it('labels historical empty-scope keys as inert and directs the user to replace them', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
-      json: async () => ({ keys: [{ id: 'legacy-key', name: 'Legacy automation', key: masked, scopes: [], createdAt: new Date().toISOString(), lastUsedAt: null }] }),
+      json: async () => ({
+        keys: [
+          {
+            id: 'legacy-key',
+            name: 'Legacy automation',
+            key: masked,
+            scopes: [],
+            createdAt: new Date().toISOString(),
+            lastUsedAt: null,
+          },
+        ],
+      }),
     })
     render(<APISettingsPage />)
     const name = await screen.findByText('Legacy automation')
@@ -33,12 +44,32 @@ describe('API settings one-time key handling', () => {
       if (options?.method === 'POST') {
         return {
           ok: true,
-          json: async () => ({ apiKey: { id: 'new-key', name: 'Production API Key', key: plaintext, scopes: ['read'], createdAt: new Date().toISOString(), lastUsedAt: null } }),
+          json: async () => ({
+            apiKey: {
+              id: 'new-key',
+              name: 'Production API Key',
+              key: plaintext,
+              scopes: ['read'],
+              createdAt: new Date().toISOString(),
+              lastUsedAt: null,
+            },
+          }),
         }
       }
       return {
         ok: true,
-        json: async () => ({ keys: [{ id: 'existing-key', name: 'Existing key', key: masked, scopes: ['read'], createdAt: new Date().toISOString(), lastUsedAt: null }] }),
+        json: async () => ({
+          keys: [
+            {
+              id: 'existing-key',
+              name: 'Existing key',
+              key: masked,
+              scopes: ['read'],
+              createdAt: new Date().toISOString(),
+              lastUsedAt: null,
+            },
+          ],
+        }),
       }
     })
 
@@ -68,14 +99,28 @@ describe('API settings one-time key handling', () => {
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
     ;(global.fetch as jest.Mock).mockImplementation(async (_url: string, options?: RequestInit) => ({
       ok: true,
-      json: async () => options?.method === 'POST'
-        ? { apiKey: { id: 'new-key', name: 'Production API Key', key: plaintext, scopes: ['read'], createdAt: new Date().toISOString(), lastUsedAt: null } }
-        : { keys: [] },
+      json: async () =>
+        options?.method === 'POST'
+          ? {
+              apiKey: {
+                id: 'new-key',
+                name: 'Production API Key',
+                key: plaintext,
+                scopes: ['read'],
+                createdAt: new Date().toISOString(),
+                lastUsedAt: null,
+              },
+            }
+          : { keys: [] },
     }))
     render(<APISettingsPage />)
     await screen.findByText('No API keys yet')
     await user.click(screen.getByRole('button', { name: 'Generate Key' }))
-    await user.click(within(screen.getByRole('dialog', { name: 'Generate API Key' })).getByRole('button', { name: 'Generate secure key' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Generate API Key' })).getByRole('button', {
+        name: 'Generate secure key',
+      })
+    )
     const modal = await screen.findByRole('dialog', { name: 'API Key Generated' })
     await user.click(within(modal).getByRole('button', { name: 'Copy to Clipboard' }))
     await waitFor(() => expect(screen.queryByText(plaintext)).not.toBeInTheDocument())
@@ -84,17 +129,38 @@ describe('API settings one-time key handling', () => {
 
   it('keeps the one-time key visible when clipboard copy fails', async () => {
     const user = userEvent.setup()
-    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: jest.fn(async () => { throw new Error('denied') }) } })
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: jest.fn(async () => {
+          throw new Error('denied')
+        }),
+      },
+    })
     ;(global.fetch as jest.Mock).mockImplementation(async (_url: string, options?: RequestInit) => ({
       ok: true,
-      json: async () => options?.method === 'POST'
-        ? { apiKey: { id: 'new-key', name: 'Production API Key', key: plaintext, scopes: ['read'], createdAt: new Date().toISOString(), lastUsedAt: null } }
-        : { keys: [] },
+      json: async () =>
+        options?.method === 'POST'
+          ? {
+              apiKey: {
+                id: 'new-key',
+                name: 'Production API Key',
+                key: plaintext,
+                scopes: ['read'],
+                createdAt: new Date().toISOString(),
+                lastUsedAt: null,
+              },
+            }
+          : { keys: [] },
     }))
     render(<APISettingsPage />)
     await screen.findByText('No API keys yet')
     await user.click(screen.getByRole('button', { name: 'Generate Key' }))
-    await user.click(within(screen.getByRole('dialog', { name: 'Generate API Key' })).getByRole('button', { name: 'Generate secure key' }))
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Generate API Key' })).getByRole('button', {
+        name: 'Generate secure key',
+      })
+    )
     const modal = await screen.findByRole('dialog', { name: 'API Key Generated' })
     await user.click(within(modal).getByRole('button', { name: 'Copy to Clipboard' }))
     expect(within(modal).getByText(plaintext)).toBeInTheDocument()

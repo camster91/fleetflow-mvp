@@ -14,7 +14,10 @@ describe('resolveTenantContext', () => {
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([])
 
     await expect(resolveTenantContext('u1')).resolves.toMatchObject({
-      ownerId: 'u1', teamId: null, role: 'OWNER', resourceWhere: { ownerId: 'u1', teamId: null },
+      ownerId: 'u1',
+      teamId: null,
+      role: 'OWNER',
+      resourceWhere: { ownerId: 'u1', teamId: null },
     })
   })
 
@@ -24,7 +27,9 @@ describe('resolveTenantContext', () => {
     ])
 
     await expect(resolveTenantContext('member-1')).resolves.toMatchObject({
-      ownerId: 'owner-1', teamId: 't1', role: 'MANAGER',
+      ownerId: 'owner-1',
+      teamId: 't1',
+      role: 'MANAGER',
       resourceWhere: { teamId: 't1' },
       auditWhere: { teamId: 't1' },
     })
@@ -40,9 +45,7 @@ describe('resolveTenantContext', () => {
   })
 
   it('rejects a requested team outside the user membership', async () => {
-    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
-      { id: 't1', ownerId: 'o1', members: [{ role: 'MEMBER' }] },
-    ])
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([{ id: 't1', ownerId: 'o1', members: [{ role: 'MEMBER' }] }])
 
     await expect(resolveTenantContext('u1', 'other-team')).rejects.toMatchObject({ code: 'TENANT_FORBIDDEN' })
   })

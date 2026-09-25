@@ -9,11 +9,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const context = await requireTenantContext(req, res)
   if (!context) return
-  const { tenant,session } = context
+  const { tenant, session } = context
   if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
   const { id } = req.query as { id: string }
-  const delivery = await prisma.delivery.findFirst({ where: { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{assignedDriverId:session.user.id}]:[])] } })
+  const delivery = await prisma.delivery.findFirst({
+    where: {
+      AND: [
+        { id },
+        tenant.resourceWhere,
+        ...(isDriverRole(tenant.role) ? [{ assignedDriverId: session.user.id }] : []),
+      ],
+    },
+  })
   if (!delivery) return res.status(404).json({ error: 'Not found' })
 
   const events = await prisma.deliveryEvent.findMany({
@@ -22,5 +30,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     take: 500,
   })
 
-  return res.json(isDriverRole(tenant.role)?events.map(event=>({id:event.id,status:event.status,timestamp:event.timestamp,latitude:event.latitude,longitude:event.longitude})):events)
+  return res.json(
+    isDriverRole(tenant.role)
+      ? events.map((event) => ({
+          id: event.id,
+          status: event.status,
+          timestamp: event.timestamp,
+          latitude: event.latitude,
+          longitude: event.longitude,
+        }))
+      : events
+  )
 }

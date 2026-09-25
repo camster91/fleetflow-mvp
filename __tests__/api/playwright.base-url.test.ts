@@ -7,8 +7,10 @@ describe('Playwright base URL guard', () => {
   })
 
   it('allows explicit non-production remote targets', () => {
-    expect(resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: 'https://staging.example.test' }))
-      .toEqual({ baseURL: 'https://staging.example.test', remote: true })
+    expect(resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: 'https://staging.example.test' })).toEqual({
+      baseURL: 'https://staging.example.test',
+      remote: true,
+    })
   })
 
   it('lists every documented production host', () => {
@@ -16,17 +18,25 @@ describe('Playwright base URL guard', () => {
   })
 
   it.each([
-    'https://fleet.ashbi.ca', 'https://FLEET.ashbi.ca/', 'https://www.fleet.ashbi.ca', 'https://fleet.ashbi.ca.:443',
-    'https://fleetflow.ashbi.ca', 'https://FleetFlow.ashbi.ca/api/health', 'https://www.fleetflow.ashbi.ca', 'https://fleetflow.ashbi.ca.',
-  ])(
-    'refuses production host %s without an explicit override', (url) => {
-      expect(() => resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: url })).toThrow(/PLAYWRIGHT_ALLOW_PRODUCTION=1/)
-    })
+    'https://fleet.ashbi.ca',
+    'https://FLEET.ashbi.ca/',
+    'https://www.fleet.ashbi.ca',
+    'https://fleet.ashbi.ca.:443',
+    'https://fleetflow.ashbi.ca',
+    'https://FleetFlow.ashbi.ca/api/health',
+    'https://www.fleetflow.ashbi.ca',
+    'https://fleetflow.ashbi.ca.',
+  ])('refuses production host %s without an explicit override', (url) => {
+    expect(() => resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: url })).toThrow(/PLAYWRIGHT_ALLOW_PRODUCTION=1/)
+  })
 
   it('allows production only with PLAYWRIGHT_ALLOW_PRODUCTION=1', () => {
-    expect(resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: 'https://fleet.ashbi.ca', PLAYWRIGHT_ALLOW_PRODUCTION: '1' }).baseURL)
-      .toBe('https://fleet.ashbi.ca')
-    expect(() => resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: 'https://fleet.ashbi.ca', PLAYWRIGHT_ALLOW_PRODUCTION: 'true' })).toThrow()
+    expect(
+      resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: 'https://fleet.ashbi.ca', PLAYWRIGHT_ALLOW_PRODUCTION: '1' }).baseURL
+    ).toBe('https://fleet.ashbi.ca')
+    expect(() =>
+      resolveBaseURL({ PLAYWRIGHT_TEST_BASE_URL: 'https://fleet.ashbi.ca', PLAYWRIGHT_ALLOW_PRODUCTION: 'true' })
+    ).toThrow()
   })
 
   it('does not treat look-alike hosts as production', () => {

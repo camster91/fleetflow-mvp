@@ -17,11 +17,7 @@ export default function UiPolishSandboxPage() {
   const [showFtue, setShowFtue] = useState(false)
 
   if (!IS_DEV) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-600">
-        Not found
-      </div>
-    )
+    return <div className="min-h-screen flex items-center justify-center text-slate-600">Not found</div>
   }
 
   if (showFtue) {
@@ -46,19 +42,20 @@ export default function UiPolishSandboxPage() {
         <div className="mx-auto max-w-2xl space-y-8">
           <FadeIn>
             <header>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">
-                Fleetvera
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800">Fleetvera</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
                 UI polish sandbox
               </h1>
-              <p className="mt-2 text-slate-500">
-                Confirm dialogs, toasts, empty states, and the 3-step FTUE.
-              </p>
+              <p className="mt-2 text-slate-500">Confirm dialogs, toasts, empty states, and the 3-step FTUE.</p>
             </header>
           </FadeIn>
 
-          <InlineAlert type="error" title="Fetch failed" actionLabel="Try again" onAction={() => notify.info('Retry clicked')}>
+          <InlineAlert
+            type="error"
+            title="Fetch failed"
+            actionLabel="Try again"
+            onAction={() => notify.info('Retry clicked')}
+          >
             Could not load vehicles (demo).
           </InlineAlert>
 

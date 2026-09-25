@@ -7,7 +7,10 @@ import { applyDeliveryStatusTransition, deliveryStatusTransitionSchema } from '.
 import { z } from 'zod'
 import { driverDeliveryDto, isDriverRole } from '../../../../lib/driverScope'
 
-const driverStatusSchema = deliveryStatusTransitionSchema.extend({ latitude: z.number().min(-90).max(90).optional(), longitude: z.number().min(-180).max(180).optional() })
+const driverStatusSchema = deliveryStatusTransitionSchema.extend({
+  latitude: z.number().min(-90).max(90).optional(),
+  longitude: z.number().min(-180).max(180).optional(),
+})
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PATCH') return res.status(405).json({ error: 'Method not allowed' })
@@ -16,7 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { session, tenant } = context
   if (!assertSameOrigin(req, res)) return
-  if (!canManageDeliveries(tenant.role) && !isDriverRole(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+  if (!canManageDeliveries(tenant.role) && !isDriverRole(tenant.role))
+    return res.status(403).json({ error: 'Forbidden' })
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
@@ -25,7 +29,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { status, latitude, longitude } = parsed.data
 
   // Owner-scoped lookup prevents cross-tenant status mutation (IDOR)
-  const delivery = await prisma.delivery.findFirst({ where: { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{assignedDriverId:userId}]:[])] } })
+  const delivery = await prisma.delivery.findFirst({
+    where: {
+      AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role) ? [{ assignedDriverId: userId }] : [])],
+    },
+  })
   if (!delivery) return res.status(404).json({ error: 'Not found' })
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -61,5 +69,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return updatedDelivery
   })
 
-  return res.json(isDriverRole(tenant.role)?driverDeliveryDto(updated):dbToDelivery(updated))
+  return res.json(isDriverRole(tenant.role) ? driverDeliveryDto(updated) : dbToDelivery(updated))
 }

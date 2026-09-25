@@ -26,13 +26,23 @@ const MAINTENANCE_TYPES = [
   'Belt Inspection',
   'Fluid Check',
   'Safety Inspection',
-  'General Maintenance'
+  'General Maintenance',
 ]
 
 const PRIORITY_OPTIONS = [
-  { value: 'high', label: 'High', color: 'text-red-600 bg-red-100 border-red-200', desc: 'Urgent - Immediate attention required' },
-  { value: 'medium', label: 'Medium', color: 'text-orange-600 bg-orange-100 border-orange-200', desc: 'Normal - Schedule soon' },
-  { value: 'low', label: 'Low', color: 'text-green-600 bg-green-100 border-green-200', desc: 'Routine - Can wait' }
+  {
+    value: 'high',
+    label: 'High',
+    color: 'text-red-600 bg-red-100 border-red-200',
+    desc: 'Urgent - Immediate attention required',
+  },
+  {
+    value: 'medium',
+    label: 'Medium',
+    color: 'text-orange-600 bg-orange-100 border-orange-200',
+    desc: 'Normal - Schedule soon',
+  },
+  { value: 'low', label: 'Low', color: 'text-green-600 bg-green-100 border-green-200', desc: 'Routine - Can wait' },
 ] as const
 
 export default function MaintenanceTaskFormModal({
@@ -40,11 +50,11 @@ export default function MaintenanceTaskFormModal({
   onClose,
   onSubmit,
   task,
-  vehicles = []
+  vehicles = [],
 }: MaintenanceTaskFormModalProps) {
   const isEditing = !!task
   const [recents, setRecents] = useState<recentItems.RecentItems>(recentItems.getRecentItems())
-  
+
   const [formData, setFormData] = useState<{
     vehicle: string
     type: string
@@ -64,16 +74,16 @@ export default function MaintenanceTaskFormModal({
     estimatedDuration: '',
     partsNeeded: '',
     serviceProvider: '',
-    costEstimate: ''
+    costEstimate: '',
   })
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
       setRecents(recentItems.getRecentItems())
-      
+
       if (task) {
         setFormData({
           vehicle: task.vehicle,
@@ -84,13 +94,13 @@ export default function MaintenanceTaskFormModal({
           estimatedDuration: task.estimatedDuration || '',
           partsNeeded: task.partsNeeded?.join(', ') || '',
           serviceProvider: task.serviceProvider || '',
-          costEstimate: task.costEstimate?.toString() || ''
+          costEstimate: task.costEstimate?.toString() || '',
         })
       } else {
         // Default due date is 7 days from now
         const nextWeek = new Date()
         nextWeek.setDate(nextWeek.getDate() + 7)
-        
+
         setFormData({
           vehicle: '',
           type: '',
@@ -100,7 +110,7 @@ export default function MaintenanceTaskFormModal({
           estimatedDuration: '',
           partsNeeded: '',
           serviceProvider: '',
-          costEstimate: ''
+          costEstimate: '',
         })
       }
       setErrors({})
@@ -110,34 +120,34 @@ export default function MaintenanceTaskFormModal({
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
-    
+
     if (!formData.vehicle.trim()) {
       newErrors.vehicle = 'Vehicle name is required'
     }
-    
+
     if (!formData.type.trim()) {
       newErrors.type = 'Maintenance type is required'
     }
-    
+
     if (!formData.dueDate) {
       newErrors.dueDate = 'Due date is required'
     }
-    
+
     if (formData.costEstimate && isNaN(parseFloat(formData.costEstimate))) {
       newErrors.costEstimate = 'Please enter a valid amount'
     }
-    
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validate()) return
-    
+
     setIsSubmitting(true)
-    
+
     try {
       const taskData = {
         vehicle: formData.vehicle,
@@ -146,13 +156,18 @@ export default function MaintenanceTaskFormModal({
         priority: formData.priority,
         notes: formData.notes,
         estimatedDuration: formData.estimatedDuration,
-        partsNeeded: formData.partsNeeded ? formData.partsNeeded.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        partsNeeded: formData.partsNeeded
+          ? formData.partsNeeded
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : undefined,
         serviceProvider: formData.serviceProvider,
-        costEstimate: formData.costEstimate ? parseFloat(formData.costEstimate) : undefined
+        costEstimate: formData.costEstimate ? parseFloat(formData.costEstimate) : undefined,
       }
-      
+
       let result: dataService.MaintenanceTask
-      
+
       if (isEditing && task) {
         const updated = await dataService.updateMaintenanceTask(task.id, taskData)
         if (!updated) throw new Error('Failed to update task')
@@ -160,10 +175,10 @@ export default function MaintenanceTaskFormModal({
       } else {
         result = await dataService.addMaintenanceTask(taskData)
       }
-      
+
       // Save to recent items
       recentItems.addRecentMaintenance({ vehicle: formData.vehicle, type: formData.type })
-      
+
       onSubmit(result)
       onClose()
     } catch (error) {
@@ -174,14 +189,14 @@ export default function MaintenanceTaskFormModal({
   }
 
   const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }))
+      setErrors((prev) => ({ ...prev, [field]: '' }))
     }
   }
 
   // Get vehicle names from both recent items and existing vehicles
-  const vehicleSuggestions = vehicles.map(v => v.name)
+  const vehicleSuggestions = vehicles.map((v) => v.name)
 
   return (
     <FormModal
@@ -197,7 +212,7 @@ export default function MaintenanceTaskFormModal({
             <Truck className="h-4 w-4" />
             Vehicle Information
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Vehicle Name */}
             <div>
@@ -239,7 +254,7 @@ export default function MaintenanceTaskFormModal({
             <Calendar className="h-4 w-4" />
             Scheduling
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Due Date */}
             <div>
@@ -262,9 +277,7 @@ export default function MaintenanceTaskFormModal({
 
             {/* Estimated Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Estimated Duration
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Duration</label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -285,9 +298,9 @@ export default function MaintenanceTaskFormModal({
             <AlertTriangle className="h-4 w-4" />
             Priority Level
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {PRIORITY_OPTIONS.map(priority => (
+            {PRIORITY_OPTIONS.map((priority) => (
               <button
                 key={priority.value}
                 type="button"
@@ -311,13 +324,11 @@ export default function MaintenanceTaskFormModal({
             <Wrench className="h-4 w-4" />
             Service Details
           </h4>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Service Provider */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service Provider
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Service Provider</label>
               <input
                 type="text"
                 value={formData.serviceProvider}
@@ -329,9 +340,7 @@ export default function MaintenanceTaskFormModal({
 
             {/* Cost Estimate */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cost Estimate ($)
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cost Estimate ($)</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
                 <input
@@ -351,9 +360,7 @@ export default function MaintenanceTaskFormModal({
 
             {/* Parts Needed */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Parts Needed
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Parts Needed</label>
               <input
                 type="text"
                 value={formData.partsNeeded}
@@ -371,7 +378,7 @@ export default function MaintenanceTaskFormModal({
             <FileText className="h-4 w-4" />
             Notes
           </h4>
-          
+
           <textarea
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
@@ -407,8 +414,10 @@ export default function MaintenanceTaskFormModal({
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 {isEditing ? 'Saving...' : 'Adding...'}
               </>
+            ) : isEditing ? (
+              'Save Changes'
             ) : (
-              isEditing ? 'Save Changes' : 'Add Task'
+              'Add Task'
             )}
           </button>
         </div>

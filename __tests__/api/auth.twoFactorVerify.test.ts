@@ -1,8 +1,6 @@
 import { createMocks } from 'node-mocks-http'
 
-const backupCodes = Array.from({ length: 10 }, (_, i) =>
-  `${String(i).padStart(4, '0')}-1111-2222`
-)
+const backupCodes = Array.from({ length: 10 }, (_, i) => `${String(i).padStart(4, '0')}-1111-2222`)
 const storedBackupCodes = backupCodes.map((code) => `hash(${code})`)
 
 jest.mock('@/lib/auth', () => ({
@@ -70,11 +68,7 @@ describe('POST /api/auth/2fa/verify setup', () => {
     // Enabling 2FA revokes other sessions and re-issues this one at the new version.
     expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ sub: 'u1', tv: 3 }))
     expect(res.getHeader('set-cookie')).toEqual(expect.stringContaining('token=rotated-session'))
-    expect(sendBackupCodesEmail).toHaveBeenCalledWith(
-      'user@example.com',
-      'User',
-      backupCodes
-    )
+    expect(sendBackupCodesEmail).toHaveBeenCalledWith('user@example.com', 'User', backupCodes)
     expect(res._getStatusCode()).toBe(200)
   })
 

@@ -1,7 +1,9 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
-const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
+// Compare structure, not layout: collapse whitespace and rejoin method chains Prettier splits across lines.
+const normalizeSource = (source: string) => source.replace(/\s+/g, ' ').replace(/ \./g, '.')
+const read = (path: string) => normalizeSource(readFileSync(join(process.cwd(), path), 'utf8'))
 
 describe('maintenance mutation integrity', () => {
   const collectionRoute = read('pages/api/maintenance/index.ts')
@@ -12,10 +14,12 @@ describe('maintenance mutation integrity', () => {
       expect(source).toContain('assertSameOrigin')
       expect(source).toContain('if (!assertSameOrigin(req, res)) return')
     }
-    expect(collectionRoute.indexOf('if (!assertSameOrigin(req, res)) return'))
-      .toBeLessThan(collectionRoute.indexOf("if (req.method === 'POST')"))
-    expect(itemRoute.indexOf('if (!assertSameOrigin(req, res)) return'))
-      .toBeLessThan(itemRoute.indexOf("if (req.method === 'PUT')"))
+    expect(collectionRoute.indexOf('if (!assertSameOrigin(req, res)) return')).toBeLessThan(
+      collectionRoute.indexOf("if (req.method === 'POST')")
+    )
+    expect(itemRoute.indexOf('if (!assertSameOrigin(req, res)) return')).toBeLessThan(
+      itemRoute.indexOf("if (req.method === 'PUT')")
+    )
   })
 
   it('commits creation and its activity record together', () => {

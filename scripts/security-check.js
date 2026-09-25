@@ -19,12 +19,7 @@ const PATTERNS = {
     /token\s*[=:]\s*["'][^"']+["']/gi,
   ],
   // Dangerous functions
-  dangerousFunctions: [
-    /eval\s*\(/g,
-    /new\s+Function\s*\(/g,
-    /document\.write/g,
-    /innerHTML\s*=/g,
-  ],
+  dangerousFunctions: [/eval\s*\(/g, /new\s+Function\s*\(/g, /document\.write/g, /innerHTML\s*=/g],
   // Console logs (potential info leak)
   consoleLogs: /console\.(log|warn|error|info)\s*\(/g,
   // SQL injection risks (raw queries)
@@ -42,28 +37,28 @@ function scanFile(filePath) {
   lines.forEach((line, index) => {
     // Check for hardcoded secrets (excluding env examples)
     if (!filePath.includes('.env.example')) {
-      PATTERNS.hardcodedSecrets.forEach(pattern => {
+      PATTERNS.hardcodedSecrets.forEach((pattern) => {
         if (pattern.test(line)) {
           issues.push({
             type: 'WARNING',
             file: filePath,
             line: index + 1,
             message: 'Potential hardcoded secret or sensitive value',
-            code: line.trim().substring(0, 80)
+            code: line.trim().substring(0, 80),
           })
         }
       })
     }
 
     // Check for dangerous functions
-    PATTERNS.dangerousFunctions.forEach(pattern => {
+    PATTERNS.dangerousFunctions.forEach((pattern) => {
       if (pattern.test(line)) {
         issues.push({
           type: 'DANGER',
           file: filePath,
           line: index + 1,
           message: 'Potentially dangerous function usage',
-          code: line.trim().substring(0, 80)
+          code: line.trim().substring(0, 80),
         })
       }
     })
@@ -75,7 +70,7 @@ function scanFile(filePath) {
         file: filePath,
         line: index + 1,
         message: 'Console statement (remove for production)',
-        code: line.trim().substring(0, 80)
+        code: line.trim().substring(0, 80),
       })
     }
   })
@@ -83,11 +78,11 @@ function scanFile(filePath) {
 
 function scanDirectory(dir) {
   const items = fs.readdirSync(dir)
-  
-  items.forEach(item => {
+
+  items.forEach((item) => {
     const fullPath = path.join(dir, item)
     const stat = fs.statSync(fullPath)
-    
+
     if (stat.isDirectory()) {
       if (!EXCLUDE_DIRS.includes(item)) {
         scanDirectory(fullPath)
@@ -105,9 +100,9 @@ console.log('Scanning for security issues...\n')
 scanDirectory('.')
 
 // Report results
-const dangers = issues.filter(i => i.type === 'DANGER')
-const warnings = issues.filter(i => i.type === 'WARNING')
-const infos = issues.filter(i => i.type === 'INFO')
+const dangers = issues.filter((i) => i.type === 'DANGER')
+const warnings = issues.filter((i) => i.type === 'WARNING')
+const infos = issues.filter((i) => i.type === 'INFO')
 
 console.log(`\n📊 Results:`)
 console.log(`  🔴 Dangers: ${dangers.length}`)
@@ -116,7 +111,7 @@ console.log(`  🔵 Info: ${infos.length}`)
 
 if (dangers.length > 0) {
   console.log('\n🔴 DANGER (Fix immediately):')
-  dangers.forEach(issue => {
+  dangers.forEach((issue) => {
     console.log(`  ${issue.file}:${issue.line}`)
     console.log(`    ${issue.message}`)
     console.log(`    ${issue.code}\n`)
@@ -125,7 +120,7 @@ if (dangers.length > 0) {
 
 if (warnings.length > 0) {
   console.log('\n🟠 WARNINGS (Review recommended):')
-  warnings.slice(0, 10).forEach(issue => {
+  warnings.slice(0, 10).forEach((issue) => {
     console.log(`  ${issue.file}:${issue.line}`)
     console.log(`    ${issue.message}`)
     console.log(`    ${issue.code}\n`)

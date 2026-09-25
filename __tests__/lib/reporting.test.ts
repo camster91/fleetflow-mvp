@@ -1,8 +1,4 @@
-import {
-  parseReportDateRange,
-  REPORT_MAX_RANGE_MS,
-  REPORT_ROW_LIMIT,
-} from '@/lib/reporting'
+import { parseReportDateRange, REPORT_MAX_RANGE_MS, REPORT_ROW_LIMIT } from '@/lib/reporting'
 
 describe('report query bounds', () => {
   const now = new Date('2026-08-28T12:00:00.000Z')
@@ -30,8 +26,11 @@ describe('report query bounds', () => {
     const endDate = new Date('2026-08-28T12:00:00.000Z')
     const startDate = new Date(endDate.getTime() - REPORT_MAX_RANGE_MS)
 
-    expect(parseReportDateRange(startDate.toISOString(), endDate.toISOString(), now))
-      .toEqual({ ok: true, startDate, endDate })
+    expect(parseReportDateRange(startDate.toISOString(), endDate.toISOString(), now)).toEqual({
+      ok: true,
+      startDate,
+      endDate,
+    })
   })
 
   it('keeps in-memory report materialization explicitly capped', () => {

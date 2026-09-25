@@ -10,7 +10,16 @@ const { cpSync, mkdirSync, readdirSync } = require('fs')
 const { randomUUID } = require('crypto')
 const os = require('os')
 const path = require('path')
-const { main, npx, parseFlags, psql, removeContainers, removeTempDir, startPostgres, waitPostgres } = require('./qa-harness-lib.cjs')
+const {
+  main,
+  npx,
+  parseFlags,
+  psql,
+  removeContainers,
+  removeTempDir,
+  startPostgres,
+  waitPostgres,
+} = require('./qa-harness-lib.cjs')
 
 const SKIPPED_FOR_UPGRADE = ['20260808060000_provider_integrations', '20260808073000_stable_driver_assignments']
 const EXPECTED_BACKFILL = 'fixture-sam|NULL|fixture-sam|NULL|NULL|NULL'
@@ -60,7 +69,7 @@ main(async () => {
   const tempRoot = path.join(os.tmpdir(), `${tempPrefix}${suffix}`)
   const db = { user: 'postgres', database: 'fleetvera' }
 
-  const upgradeSql = sql => {
+  const upgradeSql = (sql) => {
     const result = psql(upgradeName, { ...db, sql, extraArgs: ['-v', 'ON_ERROR_STOP=1', '-At'] })
     if (result.status !== 0) throw new Error('Upgrade fixture SQL failed')
     return result.stdout
@@ -75,14 +84,29 @@ main(async () => {
     const freshUrl = `postgresql://postgres@127.0.0.1:${freshPort}/fleetvera?schema=public`
     const freshEnv = { ...process.env, DATABASE_URL: freshUrl }
     npx(['prisma', 'migrate', 'deploy'], null, freshEnv)
-    npx(['prisma', 'migrate', 'diff', '--from-url', freshUrl, '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code'], null, freshEnv)
+    npx(
+      [
+        'prisma',
+        'migrate',
+        'diff',
+        '--from-url',
+        freshUrl,
+        '--to-schema-datamodel',
+        'prisma/schema.prisma',
+        '--exit-code',
+      ],
+      null,
+      freshEnv
+    )
 
     mkdirSync(path.join(tempRoot, 'migrations'), { recursive: true })
     cpSync('prisma/schema.prisma', path.join(tempRoot, 'schema.prisma'))
     cpSync('prisma/migrations/migration_lock.toml', path.join(tempRoot, 'migrations', 'migration_lock.toml'))
     for (const entry of readdirSync('prisma/migrations', { withFileTypes: true })) {
       if (!entry.isDirectory() || SKIPPED_FOR_UPGRADE.includes(entry.name)) continue
-      cpSync(path.join('prisma/migrations', entry.name), path.join(tempRoot, 'migrations', entry.name), { recursive: true })
+      cpSync(path.join('prisma/migrations', entry.name), path.join(tempRoot, 'migrations', entry.name), {
+        recursive: true,
+      })
     }
 
     const upgradeUrl = `postgresql://postgres@127.0.0.1:${upgradePort}/fleetvera?schema=public`
@@ -92,8 +116,22 @@ main(async () => {
     npx(['prisma', 'migrate', 'deploy'], null, upgradeEnv)
     const backfillResult = upgradeSql(BACKFILL_SQL)
     const lastLine = backfillResult.trim().split(/\r?\n/).pop().trim()
-    if (lastLine !== EXPECTED_BACKFILL) throw new Error(`Stable driver backfill fixture failed: ${backfillResult.trim()}`)
-    npx(['prisma', 'migrate', 'diff', '--from-url', upgradeUrl, '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code'], null, upgradeEnv)
+    if (lastLine !== EXPECTED_BACKFILL)
+      throw new Error(`Stable driver backfill fixture failed: ${backfillResult.trim()}`)
+    npx(
+      [
+        'prisma',
+        'migrate',
+        'diff',
+        '--from-url',
+        upgradeUrl,
+        '--to-schema-datamodel',
+        'prisma/schema.prisma',
+        '--exit-code',
+      ],
+      null,
+      upgradeEnv
+    )
     console.log('Integration migration verification passed: fresh, upgrade, and no-diff.')
   } finally {
     removeContainers(freshName, upgradeName)

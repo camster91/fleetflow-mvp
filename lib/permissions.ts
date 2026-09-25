@@ -2,162 +2,166 @@
  * Permission utilities for team-based access control
  */
 
-import { TeamRole } from '../types';
+import { TeamRole } from '../types'
 
 /**
  * Check if a role can manage vehicles (add, edit, delete, assign)
  */
 export function canManageVehicles(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role)
 }
 
 /**
  * Check if a role can view vehicles
  */
 export function canViewVehicles(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'DRIVER', 'MEMBER', 'VIEWER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'DRIVER', 'MEMBER', 'VIEWER'].includes(role)
 }
 
-const OPERATIONAL_MANAGERS: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER'];
-const BUSINESS_READERS: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'];
+const OPERATIONAL_MANAGERS: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER']
+const BUSINESS_READERS: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER']
 
 export function canViewBusinessData(role: TeamRole): boolean {
-  return BUSINESS_READERS.includes(role);
+  return BUSINESS_READERS.includes(role)
 }
 
 export function canManageClients(role: TeamRole): boolean {
-  return OPERATIONAL_MANAGERS.includes(role);
+  return OPERATIONAL_MANAGERS.includes(role)
 }
 
 export function canManageSOP(role: TeamRole): boolean {
-  return OPERATIONAL_MANAGERS.includes(role);
+  return OPERATIONAL_MANAGERS.includes(role)
 }
 
 export function canManageVendingMachines(role: TeamRole): boolean {
-  return OPERATIONAL_MANAGERS.includes(role);
+  return OPERATIONAL_MANAGERS.includes(role)
 }
 
 export function canManageAnnouncements(role: TeamRole): boolean {
-  return OPERATIONAL_MANAGERS.includes(role);
+  return OPERATIONAL_MANAGERS.includes(role)
 }
 
 /**
  * Check if a role can manage team members (invite, change roles, remove)
  */
 export function canManageTeam(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN'].includes(role);
+  return ['OWNER', 'ADMIN'].includes(role)
 }
 
 /**
  * Check if a role can view team members
  */
 export function canViewTeam(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER', 'VIEWER'].includes(role)
 }
 
 /**
  * Check if a role can view reports and analytics
  */
 export function canViewReports(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'MEMBER'].includes(role)
 }
 
 /**
  * Check if a role can manage billing and subscriptions
  */
 export function canManageBilling(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN'].includes(role);
+  return ['OWNER', 'ADMIN'].includes(role)
 }
 
 /**
  * Check if a role can view billing information
  */
 export function canViewBilling(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role)
 }
 
 /**
  * Check if a role can manage settings
  */
 export function canManageSettings(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN'].includes(role);
+  return ['OWNER', 'ADMIN'].includes(role)
 }
 
 /**
  * Check if a role can manage maintenance schedules
  */
 export function canManageMaintenance(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'TECHNICIAN'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'TECHNICIAN'].includes(role)
 }
 
 /**
  * Check if a role can view maintenance schedules
  */
 export function canViewMaintenance(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'].includes(role)
 }
 
 /**
  * Check if a role can manage deliveries
  */
 export function canManageDeliveries(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER'].includes(role)
 }
 
 /**
  * Check if a role can view deliveries
  */
 export function canViewDeliveries(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'DRIVER', 'MEMBER', 'VIEWER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'DRIVER', 'MEMBER', 'VIEWER'].includes(role)
 }
 
 /**
  * Check if a role can manage drivers
  */
 export function canManageDrivers(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role)
 }
-export function canViewClients(role: TeamRole): boolean { return [...BUSINESS_READERS, 'DISPATCHER'].includes(role) }
-export function canViewSOP(role: TeamRole): boolean { return [...BUSINESS_READERS, 'TECHNICIAN', 'DRIVER'].includes(role) }
+export function canViewClients(role: TeamRole): boolean {
+  return [...BUSINESS_READERS, 'DISPATCHER'].includes(role)
+}
+export function canViewSOP(role: TeamRole): boolean {
+  return [...BUSINESS_READERS, 'TECHNICIAN', 'DRIVER'].includes(role)
+}
 
 /** Assignment is narrower than general operational write access. */
 export function canAssignDrivers(role: TeamRole | 'DISPATCH' | 'MAINTENANCE'): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'DISPATCH'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'DISPATCH'].includes(role)
 }
 
 /**
  * Check if a role can view drivers
  */
 export function canViewDrivers(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'MEMBER', 'VIEWER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'MEMBER', 'VIEWER'].includes(role)
 }
 
 /**
  * Check if a role can export data
  */
 export function canExportData(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role)
 }
 
 /**
  * Check if a role can access API
  */
 export function canAccessApi(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role);
+  return ['OWNER', 'ADMIN', 'MANAGER'].includes(role)
 }
 
 /**
  * Check if a role can manage integrations
  */
 export function canManageIntegrations(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN'].includes(role);
+  return ['OWNER', 'ADMIN'].includes(role)
 }
 
 /**
  * Check if a role can delete the team/organization
  */
 export function canDeleteTeam(role: TeamRole): boolean {
-  return role === 'OWNER';
+  return role === 'OWNER'
 }
 
 /**
@@ -173,8 +177,8 @@ export function getRoleDisplayName(role: TeamRole): string {
     DRIVER: 'Driver',
     MEMBER: 'Member',
     VIEWER: 'Viewer',
-  };
-  return names[role] || role;
+  }
+  return names[role] || role
 }
 
 /**
@@ -190,8 +194,8 @@ export function getRoleDescription(role: TeamRole): string {
     DRIVER: 'Can view assigned operational work',
     MEMBER: 'Can view and update assigned items',
     VIEWER: 'View-only access to all data',
-  };
-  return descriptions[role] || '';
+  }
+  return descriptions[role] || ''
 }
 
 /**
@@ -207,29 +211,39 @@ export function getRoleColor(role: TeamRole): string {
     DRIVER: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     MEMBER: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     VIEWER: 'bg-slate-100 text-slate-800 border-slate-200',
-  };
-  return colors[role] || 'bg-slate-100 text-slate-800';
+  }
+  return colors[role] || 'bg-slate-100 text-slate-800'
 }
 
 /**
  * Get all available roles with their metadata
  */
 export function getAllRoles(): Array<{
-  value: TeamRole;
-  label: string;
-  description: string;
-  color: string;
+  value: TeamRole
+  label: string
+  description: string
+  color: string
 }> {
   return [
     { value: 'OWNER', label: 'Owner', description: getRoleDescription('OWNER'), color: getRoleColor('OWNER') },
     { value: 'ADMIN', label: 'Admin', description: getRoleDescription('ADMIN'), color: getRoleColor('ADMIN') },
     { value: 'MANAGER', label: 'Manager', description: getRoleDescription('MANAGER'), color: getRoleColor('MANAGER') },
-    { value: 'DISPATCHER', label: 'Dispatcher', description: getRoleDescription('DISPATCHER'), color: getRoleColor('DISPATCHER') },
-    { value: 'TECHNICIAN', label: 'Technician', description: getRoleDescription('TECHNICIAN'), color: getRoleColor('TECHNICIAN') },
+    {
+      value: 'DISPATCHER',
+      label: 'Dispatcher',
+      description: getRoleDescription('DISPATCHER'),
+      color: getRoleColor('DISPATCHER'),
+    },
+    {
+      value: 'TECHNICIAN',
+      label: 'Technician',
+      description: getRoleDescription('TECHNICIAN'),
+      color: getRoleColor('TECHNICIAN'),
+    },
     { value: 'DRIVER', label: 'Driver', description: getRoleDescription('DRIVER'), color: getRoleColor('DRIVER') },
     { value: 'MEMBER', label: 'Member', description: getRoleDescription('MEMBER'), color: getRoleColor('MEMBER') },
     { value: 'VIEWER', label: 'Viewer', description: getRoleDescription('VIEWER'), color: getRoleColor('VIEWER') },
-  ];
+  ]
 }
 
 /**
@@ -238,15 +252,15 @@ export function getAllRoles(): Array<{
 export function canAssignRole(assignerRole: TeamRole, targetRole: TeamRole): boolean {
   // Ownership is represented by Team.ownerId and requires a dedicated transfer.
   // Ordinary role changes may assign every non-owner role.
-  if (assignerRole === 'OWNER') return targetRole !== 'OWNER';
-  
+  if (assignerRole === 'OWNER') return targetRole !== 'OWNER'
+
   // Admin can assign Manager, Member, and Viewer roles
   if (assignerRole === 'ADMIN') {
-    return ['MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'].includes(targetRole);
+    return ['MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'].includes(targetRole)
   }
-  
+
   // Others cannot assign roles
-  return false;
+  return false
 }
 
 /**
@@ -254,10 +268,10 @@ export function canAssignRole(assignerRole: TeamRole, targetRole: TeamRole): boo
  */
 export function getAssignableRoles(assignerRole: TeamRole): TeamRole[] {
   if (assignerRole === 'OWNER') {
-    return ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
+    return ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER']
   }
   if (assignerRole === 'ADMIN') {
-    return ['MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
+    return ['MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER']
   }
-  return [];
+  return []
 }

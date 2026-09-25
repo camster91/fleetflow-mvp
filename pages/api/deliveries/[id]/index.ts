@@ -19,13 +19,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   const { id } = req.query as { id: string }
   const userId = session.user.id
-  const scopedWhere = { AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role)?[{assignedDriverId:userId}]:[])] }
+  const scopedWhere = {
+    AND: [{ id }, tenant.resourceWhere, ...(isDriverRole(tenant.role) ? [{ assignedDriverId: userId }] : [])],
+  }
 
   if (req.method === 'GET') {
     if (!canViewDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     const delivery = await prisma.delivery.findFirst({ where: scopedWhere })
     if (!delivery) return res.status(404).json({ error: 'Not found' })
-    return res.json(isDriverRole(tenant.role)?driverDeliveryDto(delivery):dbToDelivery(delivery))
+    return res.json(isDriverRole(tenant.role) ? driverDeliveryDto(delivery) : dbToDelivery(delivery))
   }
 
   if (req.method === 'PUT') {
@@ -42,10 +44,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!existing) return res.status(404).json({ error: 'Not found' })
     // Status controls submit partial records. Preserve all existing delivery data
     // instead of resetting omitted fields such as item count to defaults.
-    if (Object.prototype.hasOwnProperty.call(body, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    if (Object.prototype.hasOwnProperty.call(body, 'assignedDriverId') && !canAssignDrivers(tenant.role))
+      return res.status(403).json({ error: 'Forbidden' })
     let assignment = { assignedDriverId: existing.assignedDriverId, driver: existing.driver }
     if (Object.prototype.hasOwnProperty.call(body, 'assignedDriverId')) {
-      try { assignment = await resolveDriverAssignment(prisma, tenant, body.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
+      try {
+        assignment = await resolveDriverAssignment(prisma, tenant, body.assignedDriverId)
+      } catch {
+        return res.status(400).json({ error: 'Invalid driver assignment' })
+      }
     }
     // Nullable date/location fields are cleared by deliveryToDb's falsy checks.
     const merged = mergeDeliveryUpdate(existing, { ...body, driver: assignment.driver ?? '' } as Partial<Delivery>)
@@ -65,9 +72,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
       }
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
         action: wasCompleted ? 'completed' : 'status_changed',
-        entityType: 'delivery', entityId: id, entityName: updated.customer,
+        entityType: 'delivery',
+        entityId: id,
+        entityName: updated.customer,
         description: wasCompleted
           ? `Delivery for "${updated.customer}" was marked as delivered`
           : `Delivery for "${updated.customer}" status changed to ${updated.status}`,
@@ -95,7 +107,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             delivery,
             driverUser.name || delivery.driver || 'Unknown driver',
             driverUser.email,
-            session.user.name || 'Manager',
+            session.user.name || 'Manager'
           ).catch(console.error)
         }
       }
@@ -126,8 +138,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     await prisma.$transaction(async (tx) => {
       await tx.delivery.delete({ where: { id } })
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'deleted', entityType: 'delivery', entityId: id, entityName: delivery.customer,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'deleted',
+        entityType: 'delivery',
+        entityId: id,
+        entityName: delivery.customer,
         description: `Delivery for "${delivery.customer}" was deleted`,
       })
     })

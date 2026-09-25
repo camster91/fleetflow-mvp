@@ -27,8 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const updated = await tx.vendingMachine.findFirst({ where: scopedWhere })
       if (!updated) return null
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'updated', entityType: 'vending', entityId: updated.id, entityName: updated.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'updated',
+        entityType: 'vending',
+        entityId: updated.id,
+        entityName: updated.name,
         description: `Vending machine "${updated.name}" was updated`,
       })
       return updated
@@ -44,8 +50,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const result = await tx.vendingMachine.deleteMany({ where: scopedWhere })
       if (result.count === 0) return
       await logActivity(tx, {
-        userId, teamId: tenant.teamId, userName: session.user.name, userRole: tenant.role,
-        action: 'deleted', entityType: 'vending', entityId: id, entityName: machine.name,
+        userId,
+        teamId: tenant.teamId,
+        userName: session.user.name,
+        userRole: tenant.role,
+        action: 'deleted',
+        entityType: 'vending',
+        entityId: id,
+        entityName: machine.name,
         description: `Vending machine "${machine.name}" was deleted`,
       })
     })

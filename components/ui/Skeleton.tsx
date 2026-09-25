@@ -1,9 +1,9 @@
 /**
  * Skeleton Component
- * 
+ *
  * Loading skeleton placeholders for content that is loading.
  * Supports text, circle, and rectangle variants with pulse animation.
- * 
+ *
  * @example
  * ```tsx
  * <Skeleton variant="text" width={200} />
@@ -12,87 +12,80 @@
  * ```
  */
 
-import React from 'react';
+import React from 'react'
 
 /**
  * Skeleton variant types
  */
-export type SkeletonVariant = 'text' | 'circle' | 'rect' | 'rounded';
+export type SkeletonVariant = 'text' | 'circle' | 'rect' | 'rounded'
 
 /**
  * Skeleton animation types
  */
-export type SkeletonAnimation = 'pulse' | 'shimmer' | 'none';
+export type SkeletonAnimation = 'pulse' | 'shimmer' | 'none'
 
 /**
  * Skeleton component props
  */
 export interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Visual variant of the skeleton */
-  variant?: SkeletonVariant;
+  variant?: SkeletonVariant
   /** Width of the skeleton (number for pixels, string for CSS value) */
-  width?: number | string;
+  width?: number | string
   /** Height of the skeleton (number for pixels, string for CSS value) */
-  height?: number | string;
+  height?: number | string
   /** Animation style */
-  animation?: SkeletonAnimation;
+  animation?: SkeletonAnimation
   /** Number of lines to render (for text variant) */
-  lines?: number;
+  lines?: number
   /** Gap between lines (for text variant with multiple lines) */
-  lineGap?: number;
+  lineGap?: number
 }
 
 /**
  * Convert dimension value to CSS string
  */
 function toDimension(value: number | string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  return typeof value === 'number' ? `${value}px` : value;
+  if (value === undefined) return undefined
+  return typeof value === 'number' ? `${value}px` : value
 }
 
 /**
  * Skeleton component for loading states
- * 
+ *
  * @param props - Skeleton props
  * @returns React component
  */
 export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
-  ({ 
-    variant = 'text',
-    width,
-    height,
-    animation = 'pulse',
-    lines = 1,
-    lineGap = 8,
-    className = '',
-    style,
-    ...props 
-  }, ref) => {
-    const widthStyle = toDimension(width);
-    const heightStyle = toDimension(height);
+  (
+    { variant = 'text', width, height, animation = 'pulse', lines = 1, lineGap = 8, className = '', style, ...props },
+    ref
+  ) => {
+    const widthStyle = toDimension(width)
+    const heightStyle = toDimension(height)
 
     const animationClasses = {
       pulse: 'animate-pulse',
       shimmer: 'animate-shimmer',
       none: '',
-    };
+    }
 
     const variantClasses = {
       text: 'rounded',
       circle: 'rounded-full',
       rect: 'rounded-none',
       rounded: 'rounded-lg',
-    };
+    }
 
     // Single skeleton element
-    const SkeletonElement = ({ 
-      customWidth, 
+    const SkeletonElement = ({
+      customWidth,
       customHeight,
       isLast = true,
-    }: { 
-      customWidth?: string; 
-      customHeight?: string;
-      isLast?: boolean;
+    }: {
+      customWidth?: string
+      customHeight?: string
+      isLast?: boolean
     }) => (
       <div
         className={`
@@ -111,61 +104,61 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         aria-hidden="true"
         {...props}
       />
-    );
+    )
 
     // Multiple lines for text variant
     if (variant === 'text' && lines > 1) {
       return (
         <div ref={ref} className="w-full">
           {Array.from({ length: lines }).map((_, index) => (
-            <SkeletonElement 
+            <SkeletonElement
               key={index}
               customWidth={index === lines - 1 ? '75%' : '100%'}
               isLast={index === lines - 1}
             />
           ))}
         </div>
-      );
+      )
     }
 
     return (
       <div ref={ref}>
         <SkeletonElement />
       </div>
-    );
+    )
   }
-);
+)
 
-Skeleton.displayName = 'Skeleton';
+Skeleton.displayName = 'Skeleton'
 
 /**
  * Skeleton Card - Pre-configured skeleton for card-like content
  */
 export interface SkeletonCardProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Whether to show header section */
-  hasHeader?: boolean;
+  hasHeader?: boolean
   /** Whether to show footer section */
-  hasFooter?: boolean;
+  hasFooter?: boolean
   /** Number of content lines (alias for contentLines for backward compatibility) */
-  lines?: number;
+  lines?: number
   /** Number of content lines */
-  contentLines?: number;
+  contentLines?: number
   /** Animation style */
-  animation?: SkeletonAnimation;
+  animation?: SkeletonAnimation
 }
 
-export const SkeletonCard: React.FC<SkeletonCardProps> = ({ 
+export const SkeletonCard: React.FC<SkeletonCardProps> = ({
   hasHeader = true,
   hasFooter = true,
   lines,
   contentLines,
   animation = 'pulse',
   className = '',
-  ...props 
+  ...props
 }) => {
-  const numLines = lines ?? contentLines ?? 3;
+  const numLines = lines ?? contentLines ?? 3
   return (
-    <div 
+    <div
       className={`bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-6 ${className}`}
       {...props}
     >
@@ -178,13 +171,9 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
           </div>
         </div>
       )}
-      
-      <Skeleton 
-        variant="text" 
-        lines={numLines} 
-        animation={animation} 
-      />
-      
+
+      <Skeleton variant="text" lines={numLines} animation={animation} />
+
       {hasFooter && (
         <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
           <Skeleton variant="rounded" width={80} height={36} animation={animation} />
@@ -192,38 +181,38 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
 /**
  * Skeleton Table - Pre-configured skeleton for table content
  */
 export interface SkeletonTableProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Number of rows */
-  rows?: number;
+  rows?: number
   /** Number of columns */
-  columns?: number;
+  columns?: number
   /** Whether to show header */
-  hasHeader?: boolean;
+  hasHeader?: boolean
   /** Animation style */
-  animation?: SkeletonAnimation;
+  animation?: SkeletonAnimation
 }
 
-export const SkeletonTable: React.FC<SkeletonTableProps> = ({ 
+export const SkeletonTable: React.FC<SkeletonTableProps> = ({
   rows = 5,
   columns = 4,
   hasHeader = true,
   animation = 'pulse',
   className = '',
-  ...props 
+  ...props
 }) => (
   <div className={`w-full ${className}`} {...props}>
     {hasHeader && (
       <div className="flex gap-4 mb-4 pb-4 border-b border-slate-200">
         {Array.from({ length: columns }).map((_, index) => (
-          <Skeleton 
+          <Skeleton
             key={`header-${index}`}
-            variant="text" 
+            variant="text"
             width={`${100 / columns}%`}
             height={20}
             animation={animation}
@@ -231,13 +220,13 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({
         ))}
       </div>
     )}
-    
+
     {Array.from({ length: rows }).map((_, rowIndex) => (
       <div key={`row-${rowIndex}`} className="flex gap-4 mb-4">
         {Array.from({ length: columns }).map((_, colIndex) => (
-          <Skeleton 
+          <Skeleton
             key={`cell-${rowIndex}-${colIndex}`}
-            variant="text" 
+            variant="text"
             width={`${100 / columns}%`}
             height={16}
             animation={animation}
@@ -246,64 +235,55 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({
       </div>
     ))}
   </div>
-);
+)
 
 /**
  * Skeleton Avatar - Pre-configured skeleton for avatar
  */
 export interface SkeletonAvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Size of the avatar skeleton */
-  size?: number;
+  size?: number
   /** Animation style */
-  animation?: SkeletonAnimation;
+  animation?: SkeletonAnimation
 }
 
-export const SkeletonAvatar: React.FC<SkeletonAvatarProps> = ({ 
+export const SkeletonAvatar: React.FC<SkeletonAvatarProps> = ({
   size = 40,
   animation = 'pulse',
   className = '',
-  ...props 
-}) => (
-  <Skeleton 
-    variant="circle" 
-    width={size} 
-    height={size} 
-    animation={animation}
-    className={className}
-    {...props}
-  />
-);
+  ...props
+}) => <Skeleton variant="circle" width={size} height={size} animation={animation} className={className} {...props} />
 
 /**
  * Skeleton Text - Pre-configured skeleton for text blocks
  */
 export interface SkeletonTextProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Number of lines */
-  lines?: number;
+  lines?: number
   /** Width of each line (can be array for different widths) */
-  width?: (number | string) | (number | string)[];
+  width?: (number | string) | (number | string)[]
   /** Line height */
-  lineHeight?: number;
+  lineHeight?: number
   /** Gap between lines */
-  gap?: number;
+  gap?: number
   /** Animation style */
-  animation?: SkeletonAnimation;
+  animation?: SkeletonAnimation
 }
 
-export const SkeletonText: React.FC<SkeletonTextProps> = ({ 
+export const SkeletonText: React.FC<SkeletonTextProps> = ({
   lines = 3,
   width,
   lineHeight = 16,
   gap = 8,
   animation = 'pulse',
   className = '',
-  ...props 
+  ...props
 }) => {
   const getWidth = (index: number): number | string | undefined => {
-    if (!width) return index === lines - 1 ? '75%' : '100%';
-    if (Array.isArray(width)) return width[index % width.length];
-    return width;
-  };
+    if (!width) return index === lines - 1 ? '75%' : '100%'
+    if (Array.isArray(width)) return width[index % width.length]
+    return width
+  }
 
   return (
     <div className={className} {...props}>
@@ -318,7 +298,7 @@ export const SkeletonText: React.FC<SkeletonTextProps> = ({
         />
       ))}
     </div>
-  );
-};
+  )
+}
 
-export default Skeleton;
+export default Skeleton

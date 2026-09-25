@@ -30,25 +30,13 @@ export function expiredCookie(name: string) {
 }
 
 export function clearAuthenticationCookies() {
-  return [
-    expiredCookie(SESSION_COOKIE_NAME),
-    expiredCookie(TWO_FACTOR_COOKIE_NAME),
-    expiredCookie(TEAM_COOKIE_NAME),
-  ]
+  return [expiredCookie(SESSION_COOKIE_NAME), expiredCookie(TWO_FACTOR_COOKIE_NAME), expiredCookie(TEAM_COOKIE_NAME)]
 }
 
 export function beginTwoFactorCookies(challenge: string) {
-  return [
-    twoFactorChallengeCookie(challenge),
-    expiredCookie(SESSION_COOKIE_NAME),
-    expiredCookie(TEAM_COOKIE_NAME),
-  ]
+  return [twoFactorChallengeCookie(challenge), expiredCookie(SESSION_COOKIE_NAME), expiredCookie(TEAM_COOKIE_NAME)]
 }
 
 export function establishSessionCookies(token: string) {
-  return [
-    sessionCookie(token),
-    expiredCookie(TWO_FACTOR_COOKIE_NAME),
-    expiredCookie(TEAM_COOKIE_NAME),
-  ]
+  return [sessionCookie(token), expiredCookie(TWO_FACTOR_COOKIE_NAME), expiredCookie(TEAM_COOKIE_NAME)]
 }

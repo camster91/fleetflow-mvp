@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import { useSession } from '@/lib/session';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { PageHeader } from '../../components/PageHeader';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { Camera, Save, Globe, Clock } from 'lucide-react';
-import { notify } from '../../services/notifications';
+import React, { useState } from 'react'
+import { useSession } from '@/lib/session'
+import { DashboardLayout } from '../../components/layouts/DashboardLayout'
+import { PageHeader } from '../../components/PageHeader'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { Camera, Save, Globe, Clock } from 'lucide-react'
+import { notify } from '../../services/notifications'
 
 export default function ProfileSettingsPage() {
-  const { data: session, update } = useSession();
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: session, update } = useSession()
+  const [isLoading, setIsLoading] = useState(false)
   const [profile, setProfile] = useState({
     name: session?.user?.name || '',
     email: session?.user?.email || '',
@@ -19,18 +19,18 @@ export default function ProfileSettingsPage() {
     language: 'en',
     bio: '',
     isPublic: false,
-  });
+  })
 
   React.useEffect(() => {
     fetch('/api/settings/profile')
       .then(async (r) => {
-        if (!r.ok) return null;
-        return r.json();
+        if (!r.ok) return null
+        return r.json()
       })
-      .then(data => {
-        if (!data?.user) return;
-        const prefs = data.user.prefs?.preferences ?? {};
-        setProfile(prev => ({
+      .then((data) => {
+        if (!data?.user) return
+        const prefs = data.user.prefs?.preferences ?? {}
+        setProfile((prev) => ({
           ...prev,
           name: data.user.name ?? prev.name,
           email: data.user.email ?? prev.email,
@@ -39,13 +39,13 @@ export default function ProfileSettingsPage() {
           timezone: prefs.timezone ?? prev.timezone,
           language: prefs.language ?? prev.language,
           isPublic: prefs.isPublic ?? prev.isPublic,
-        }));
+        }))
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+  }, [])
 
   const handleSave = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       const res = await fetch('/api/settings/profile', {
         method: 'PUT',
@@ -56,29 +56,22 @@ export default function ProfileSettingsPage() {
           bio: profile.bio,
           preferences: { timezone: profile.timezone, language: profile.language, isPublic: profile.isPublic },
         }),
-      });
-      if (!res.ok) throw new Error('Save failed');
-      await update();
-      notify.success('Profile updated successfully');
+      })
+      if (!res.ok) throw new Error('Save failed')
+      await update()
+      notify.success('Profile updated successfully')
     } catch (error) {
-      notify.error('Failed to update profile');
+      notify.error('Failed to update profile')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <DashboardLayout
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/' },
-        { label: 'Settings', href: '/settings' },
-        { label: 'Profile' },
-      ]}
+      breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Settings', href: '/settings' }, { label: 'Profile' }]}
     >
-      <PageHeader
-        title="Profile Settings"
-        subtitle="Manage your personal information and preferences"
-      />
+      <PageHeader title="Profile Settings" subtitle="Manage your personal information and preferences" />
 
       <div className="max-w-3xl">
         {/* Avatar Section */}
@@ -99,9 +92,7 @@ export default function ProfileSettingsPage() {
               </button>
             </div>
             <div className="flex-1">
-              <p className="text-sm text-slate-600 mb-3">
-                Profile photo uploads are not yet available.
-              </p>
+              <p className="text-sm text-slate-600 mb-3">Profile photo uploads are not yet available.</p>
               <div className="flex gap-3">
                 <Button variant="outline" size="sm" disabled title="Profile photo uploads are coming soon">
                   Upload coming soon
@@ -137,9 +128,7 @@ export default function ProfileSettingsPage() {
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Bio
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Bio</label>
             <textarea
               value={profile.bio}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
@@ -147,9 +136,7 @@ export default function ProfileSettingsPage() {
               placeholder="Tell us a bit about yourself..."
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              This will be visible to your team members.
-            </p>
+            <p className="text-xs text-slate-500 mt-1">This will be visible to your team members.</p>
           </div>
         </Card>
 
@@ -201,25 +188,18 @@ export default function ProfileSettingsPage() {
                 onChange={(e) => setProfile({ ...profile, isPublic: e.target.checked })}
                 className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-slate-700">
-                Make my profile visible to other organizations
-              </span>
+              <span className="text-sm text-slate-700">Make my profile visible to other organizations</span>
             </label>
           </div>
         </Card>
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            loading={isLoading}
-            iconLeft={<Save className="h-4 w-4" />}
-          >
+          <Button variant="primary" onClick={handleSave} loading={isLoading} iconLeft={<Save className="h-4 w-4" />}>
             Save Changes
           </Button>
         </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

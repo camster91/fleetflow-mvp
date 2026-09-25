@@ -30,7 +30,9 @@ export function useDataFetch<T>(
   // Callers pass inline fetchers, so keep the latest one in a ref and only
   // reload when the caller-supplied deps actually change.
   const fetcherRef = useRef(fetcher)
-  useEffect(() => { fetcherRef.current = fetcher })
+  useEffect(() => {
+    fetcherRef.current = fetcher
+  })
   const [trackedDeps, setTrackedDeps] = useState(deps)
   const [depsVersion, setDepsVersion] = useState(0)
   if (!sameDeps(trackedDeps, deps)) {

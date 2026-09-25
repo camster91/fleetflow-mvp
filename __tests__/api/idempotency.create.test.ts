@@ -21,40 +21,53 @@ jest.mock('@/lib/fleet', () => ({
 }))
 jest.mock('@/lib/prisma', () => {
   const clone = (row: Row) => JSON.parse(JSON.stringify(row))
-  const matches = (row: Row, where: Row) => where.scope_key
-    ? row.scope === where.scope_key.scope && row.key === where.scope_key.key
-    : Object.entries(where).every(([field, value]) => {
-      if (value && typeof value === 'object' && 'lte' in value) return new Date(row[field]) <= value.lte
-      if (value && typeof value === 'object' && 'lt' in value) return new Date(row[field]) < value.lt
-      return row[field] === value
-    })
+  const matches = (row: Row, where: Row) =>
+    where.scope_key
+      ? row.scope === where.scope_key.scope && row.key === where.scope_key.key
+      : Object.entries(where).every(([field, value]) => {
+          if (value && typeof value === 'object' && 'lte' in value) return new Date(row[field]) <= value.lte
+          if (value && typeof value === 'object' && 'lt' in value) return new Date(row[field]) < value.lt
+          return row[field] === value
+        })
   let ids = 0
   const prisma = {
     idempotencyKey: {
       findUnique: jest.fn(async ({ where }: Row) => {
-        const row = mockDb.keys.find(item => matches(item, where))
+        const row = mockDb.keys.find((item) => matches(item, where))
         return row ? { ...clone(row), expiresAt: new Date(row.expiresAt) } : null
       }),
       deleteMany: jest.fn(async ({ where }: Row) => {
         const before = mockDb.keys.length
-        mockDb.keys = mockDb.keys.filter(item => !matches(item, where))
+        mockDb.keys = mockDb.keys.filter((item) => !matches(item, where))
         return { count: before - mockDb.keys.length }
       }),
     },
     $transaction: jest.fn(async (fn: (tx: Row) => Promise<unknown>) => {
       const staged: { clients: Row[]; keys: Row[] } = { clients: [], keys: [] }
       const tx = {
-        client: { create: jest.fn(async ({ data }: Row) => { const row = { id: `client-${++ids}`, ...data }; staged.clients.push(row); return row }) },
-        idempotencyKey: { create: jest.fn(async ({ data }: Row) => { staged.keys.push(data); return data }) },
+        client: {
+          create: jest.fn(async ({ data }: Row) => {
+            const row = { id: `client-${++ids}`, ...data }
+            staged.clients.push(row)
+            return row
+          }),
+        },
+        idempotencyKey: {
+          create: jest.fn(async ({ data }: Row) => {
+            staged.keys.push(data)
+            return data
+          }),
+        },
       }
       const result = await fn(tx)
       // Hold every transaction until `size` of them are ready so concurrent
       // requests interleave deterministically.
       mockBarrier.waiting++
-      if (mockBarrier.waiting < mockBarrier.size) await new Promise<void>(resolve => mockBarrier.release.push(resolve))
-      else mockBarrier.release.splice(0).forEach(resolve => resolve())
+      if (mockBarrier.waiting < mockBarrier.size)
+        await new Promise<void>((resolve) => mockBarrier.release.push(resolve))
+      else mockBarrier.release.splice(0).forEach((resolve) => resolve())
       for (const key of staged.keys) {
-        if (mockDb.keys.some(item => item.scope === key.scope && item.key === key.key)) {
+        if (mockDb.keys.some((item) => item.scope === key.scope && item.key === key.key)) {
           throw Object.assign(new Error('Unique constraint failed'), { code: 'P2002' })
         }
       }
@@ -71,7 +84,8 @@ import { requireTenantContext } from '@/lib/apiAuth'
 import { prisma } from '@/lib/prisma'
 
 const tenant = { ownerId: 'owner-1', teamId: 'team-1', role: 'OWNER', resourceWhere: { teamId: 'team-1' } }
-const asUser = (id: string) => (requireTenantContext as jest.Mock).mockResolvedValue({ session: { user: { id, name: 'User' } }, tenant })
+const asUser = (id: string) =>
+  (requireTenantContext as jest.Mock).mockResolvedValue({ session: { user: { id, name: 'User' } }, tenant })
 
 async function post(body: Row, headers: Record<string, string> = {}) {
   const { req, res } = createMocks<NextApiRequest, NextApiResponse>({ method: 'POST', body, headers })
@@ -104,10 +118,16 @@ describe('Idempotency-Key on POST /api/clients', () => {
     expect(mockDb.clients).toHaveLength(1)
     expect(mockDb.keys).toHaveLength(1)
     expect(mockDb.keys[0]).toMatchObject({
-      scope: 'team:team-1', key: 'submit-0001', userId: 'owner-1', route: 'POST /api/clients', statusCode: 201,
+      scope: 'team:team-1',
+      key: 'submit-0001',
+      userId: 'owner-1',
+      route: 'POST /api/clients',
+      statusCode: 201,
       requestHash: expect.stringMatching(/^[a-f0-9]{64}$/),
     })
-    expect(new Date(mockDb.keys[0].expiresAt).getTime() - new Date(mockDb.keys[0].createdAt).getTime()).toBe(24 * 60 * 60 * 1000)
+    expect(new Date(mockDb.keys[0].expiresAt).getTime() - new Date(mockDb.keys[0].createdAt).getTime()).toBe(
+      24 * 60 * 60 * 1000
+    )
     expect(prisma.$transaction).toHaveBeenCalledTimes(1)
   })
 
@@ -121,7 +141,7 @@ describe('Idempotency-Key on POST /api/clients', () => {
     expect(mockDb.clients).toHaveLength(1)
   })
 
-  it('does not replay another user\'s response for a reused key', async () => {
+  it("does not replay another user's response for a reused key", async () => {
     const headers = { 'idempotency-key': 'submit-0003' }
     await post({ name: 'Acme' }, headers)
     asUser('member-2')
@@ -143,12 +163,15 @@ describe('Idempotency-Key on POST /api/clients', () => {
     expect(prisma.idempotencyKey.findUnique).not.toHaveBeenCalled()
   })
 
-  it.each(['short', 'has spaces in it', 'x'.repeat(129), 'dots.are.not.ok'])('rejects malformed key %p before writing', async (key) => {
-    const res = await post({ name: 'Acme' }, { 'idempotency-key': key })
+  it.each(['short', 'has spaces in it', 'x'.repeat(129), 'dots.are.not.ok'])(
+    'rejects malformed key %p before writing',
+    async (key) => {
+      const res = await post({ name: 'Acme' }, { 'idempotency-key': key })
 
-    expect(res._getStatusCode()).toBe(400)
-    expect(prisma.$transaction).not.toHaveBeenCalled()
-  })
+      expect(res._getStatusCode()).toBe(400)
+      expect(prisma.$transaction).not.toHaveBeenCalled()
+    }
+  )
 
   it('does not store failed (non-2xx) responses, so a corrected retry can succeed', async () => {
     const headers = { 'idempotency-key': 'submit-0004' }
@@ -177,7 +200,17 @@ describe('Idempotency-Key on POST /api/clients', () => {
   })
 
   it('treats an expired key as unused', async () => {
-    mockDb.keys.push({ scope: 'team:team-1', key: 'submit-0006', userId: 'owner-1', route: 'POST /api/clients', requestHash: 'stale', statusCode: 201, responseBody: { id: 'old' }, createdAt: new Date(0).toISOString(), expiresAt: new Date(1).toISOString() })
+    mockDb.keys.push({
+      scope: 'team:team-1',
+      key: 'submit-0006',
+      userId: 'owner-1',
+      route: 'POST /api/clients',
+      requestHash: 'stale',
+      statusCode: 201,
+      responseBody: { id: 'old' },
+      createdAt: new Date(0).toISOString(),
+      expiresAt: new Date(1).toISOString(),
+    })
     const res = await post({ name: 'Acme' }, { 'idempotency-key': 'submit-0006' })
 
     expect(res._getStatusCode()).toBe(201)
@@ -194,7 +227,10 @@ describe('Idempotency-Key wiring on create routes', () => {
     ['maintenance', 'task', 'dbToMaintenanceTask'],
     ['clients', 'client', 'dbToClient'],
   ])('POST /api/%s stores the response in the create transaction and replays conflicts', (route, variable, dto) => {
+    // Compare structure, not layout: collapse whitespace and rejoin method chains Prettier splits across lines.
     const source = readFileSync(`${process.cwd()}/pages/api/${route}/index.ts`, 'utf8')
+      .replace(/\s+/g, ' ')
+      .replace(/ \./g, '.')
     const post = source.indexOf("if (req.method === 'POST')")
     const begin = source.indexOf(`beginIdempotentRequest(req, res, { tenant, userId, route: 'POST /api/${route}' })`)
     const transaction = source.indexOf(`const ${variable} = await prisma.$transaction(async (tx) => {`)

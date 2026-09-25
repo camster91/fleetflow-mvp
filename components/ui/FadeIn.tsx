@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'
 
 export interface FadeInProps extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode;
+  children: React.ReactNode
   /** Stagger delay in ms */
-  delay?: number;
+  delay?: number
   /** Duration in ms */
-  duration?: number;
+  duration?: number
   /** Translate distance in px on enter */
-  offset?: number;
+  offset?: number
   /** Disable animation (e.g. reduced motion handled via CSS too) */
-  disabled?: boolean;
+  disabled?: boolean
 }
 
 /**
@@ -26,23 +26,21 @@ export function FadeIn({
   style,
   ...props
 }: FadeInProps) {
-  const [visible, setVisible] = useState(disabled);
+  const [visible, setVisible] = useState(disabled)
 
   useEffect(() => {
     if (disabled) {
-      setVisible(true);
-      return;
+      setVisible(true)
+      return
     }
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduced) {
-      setVisible(true);
-      return;
+      setVisible(true)
+      return
     }
-    const frame = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(frame);
-  }, [disabled]);
+    const frame = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(frame)
+  }, [disabled])
 
   return (
     <div
@@ -59,7 +57,7 @@ export function FadeIn({
     >
       {children}
     </div>
-  );
+  )
 }
 
-export default FadeIn;
+export default FadeIn

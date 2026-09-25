@@ -3,16 +3,38 @@ import userEvent from '@testing-library/user-event'
 import { IntelligenceBrief } from '@/components/intelligence/IntelligenceBrief'
 
 const finding = {
-  id: 'f-1', type: 'delivery-late', severity: 'high', confidence: 0.9, score: 500,
-  title: 'Late delivery needs attention', explanation: 'The scheduled time has passed.',
-  evidence: [{ entityType: 'delivery', entityId: 'd-1', field: 'scheduledTime', value: '2026-08-08', timestamp: '2026-08-08T12:00:00Z' }],
-  evidenceValid: true, evidenceTotal: 1, evidenceTruncated: false,
-  action: 'Review delivery', actionUrl: '/deliveries?record=d-1', feedback: null,
-  status: 'OPEN', effectiveStatus: 'OPEN',
-  generatedAt: '2026-08-08T16:00:00Z', expiresAt: '2026-08-09T16:00:00Z',
+  id: 'f-1',
+  type: 'delivery-late',
+  severity: 'high',
+  confidence: 0.9,
+  score: 500,
+  title: 'Late delivery needs attention',
+  explanation: 'The scheduled time has passed.',
+  evidence: [
+    {
+      entityType: 'delivery',
+      entityId: 'd-1',
+      field: 'scheduledTime',
+      value: '2026-08-08',
+      timestamp: '2026-08-08T12:00:00Z',
+    },
+  ],
+  evidenceValid: true,
+  evidenceTotal: 1,
+  evidenceTruncated: false,
+  action: 'Review delivery',
+  actionUrl: '/deliveries?record=d-1',
+  feedback: null,
+  status: 'OPEN',
+  effectiveStatus: 'OPEN',
+  generatedAt: '2026-08-08T16:00:00Z',
+  expiresAt: '2026-08-09T16:00:00Z',
 }
 const brief = {
-  findings: [finding], totalOpen: 1, generatedAt: '2026-08-08T16:00:00Z', stale: false,
+  findings: [finding],
+  totalOpen: 1,
+  generatedAt: '2026-08-08T16:00:00Z',
+  stale: false,
   coverage: { complete: true, sourceTruncated: false, evidenceComplete: true },
   capabilities: { refresh: true, manage: true, feedback: true },
 }
@@ -33,12 +55,21 @@ describe('IntelligenceBrief', () => {
     expect(disclosure).toHaveAttribute('aria-expanded', 'false')
     await userEvent.click(disclosure)
     expect(disclosure).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('link', { name: /open delivery record/i })).toHaveAttribute('href', '/deliveries?record=d-1')
+    expect(screen.getByRole('link', { name: /open delivery record/i })).toHaveAttribute(
+      'href',
+      '/deliveries?record=d-1'
+    )
     expect(screen.queryByText(/\{"/)).not.toBeInTheDocument()
   })
 
   it('uses the canonical client detail route for client actions and evidence', async () => {
-    const clientFinding = { ...finding, id: 'client-f', actionUrl: '/clients/client%2Fone', action: 'Review client', evidence: [{ entityType: 'client', entityId: 'client/one', field: 'record', value: null, timestamp: null }] }
+    const clientFinding = {
+      ...finding,
+      id: 'client-f',
+      actionUrl: '/clients/client%2Fone',
+      action: 'Review client',
+      evidence: [{ entityType: 'client', entityId: 'client/one', field: 'record', value: null, timestamp: null }],
+    }
     global.fetch = jest.fn(() => response({ ...brief, findings: [clientFinding] })) as jest.Mock
     render(<IntelligenceBrief />)
     expect(await screen.findByRole('link', { name: /review client/i })).toHaveAttribute('href', '/clients/client%2Fone')
@@ -48,9 +79,15 @@ describe('IntelligenceBrief', () => {
 
   it('optimistically removes a dismissed finding and rolls back with an error on failure', async () => {
     let rejectPatch!: () => void
-    const fetchMock = jest.fn()
+    const fetchMock = jest
+      .fn()
       .mockImplementationOnce(() => response(brief))
-      .mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectPatch = () => reject(new Error('secret')) }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            rejectPatch = () => reject(new Error('secret'))
+          })
+      )
     global.fetch = fetchMock as jest.Mock
     render(<IntelligenceBrief />)
     await screen.findByText(finding.title)
@@ -65,7 +102,8 @@ describe('IntelligenceBrief', () => {
 
   it('moves focus to the next finding after a successful removal', async () => {
     const second = { ...finding, id: 'f-2', title: 'Second finding' }
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockImplementationOnce(() => response({ ...brief, findings: [finding, second], totalOpen: 2 }))
       .mockImplementationOnce(() => response({ finding: { ...finding, status: 'DISMISSED' } })) as jest.Mock
     render(<IntelligenceBrief />)
@@ -76,9 +114,15 @@ describe('IntelligenceBrief', () => {
 
   it('records helpful feedback without duplicate actions', async () => {
     let resolvePatch!: (value: unknown) => void
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockImplementationOnce(() => response(brief))
-      .mockImplementationOnce(() => new Promise(resolve => { resolvePatch = resolve })) as jest.Mock
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolvePatch = resolve
+          })
+      ) as jest.Mock
     render(<IntelligenceBrief />)
     const helpful = await screen.findByRole('button', { name: 'Mark Late delivery needs attention helpful' })
     await userEvent.click(helpful)
@@ -92,7 +136,10 @@ describe('IntelligenceBrief', () => {
   it.each([
     [{ ...brief, findings: [], totalOpen: 0 }, /nothing needs attention/i],
     [{ ...brief, stale: true }, /brief may be stale/i],
-    [{ ...brief, coverage: { complete: false, sourceTruncated: true, evidenceComplete: false } }, /coverage is incomplete/i],
+    [
+      { ...brief, coverage: { complete: false, sourceTruncated: true, evidenceComplete: false } },
+      /coverage is incomplete/i,
+    ],
   ])('renders truthful state %#', async (payload, message) => {
     global.fetch = jest.fn(() => response(payload)) as jest.Mock
     render(<IntelligenceBrief />)
@@ -100,7 +147,16 @@ describe('IntelligenceBrief', () => {
   })
 
   it('prompts first-time generation instead of claiming an empty fleet is clear', async () => {
-    global.fetch = jest.fn(() => response({ ...brief, findings: [], totalOpen: 0, generatedAt: null, stale: true, coverage: { complete: false, sourceTruncated: false, evidenceComplete: false, reason: 'NEVER_GENERATED' } })) as jest.Mock
+    global.fetch = jest.fn(() =>
+      response({
+        ...brief,
+        findings: [],
+        totalOpen: 0,
+        generatedAt: null,
+        stale: true,
+        coverage: { complete: false, sourceTruncated: false, evidenceComplete: false, reason: 'NEVER_GENERATED' },
+      })
+    ) as jest.Mock
     render(<IntelligenceBrief />)
     expect(await screen.findByText(/generate fleet intelligence/i)).toBeInTheDocument()
     expect(screen.queryByText(/nothing needs attention/i)).not.toBeInTheDocument()
@@ -109,11 +165,15 @@ describe('IntelligenceBrief', () => {
   it('renders persisted feedback as an accessible selected state after reload', async () => {
     global.fetch = jest.fn(() => response({ ...brief, findings: [{ ...finding, feedback: 'HELPFUL' }] })) as jest.Mock
     render(<IntelligenceBrief />)
-    expect(await screen.findByRole('button', { name: 'Mark Late delivery needs attention helpful' })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByRole('button', { name: 'Mark Late delivery needs attention helpful' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
   })
 
   it('shows a safe retryable error and recovers', async () => {
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockImplementationOnce(() => response({ error: 'database secret' }, false))
       .mockImplementationOnce(() => response(brief)) as jest.Mock
     render(<IntelligenceBrief />)
@@ -124,7 +184,8 @@ describe('IntelligenceBrief', () => {
   })
 
   it('does not announce refresh success when the follow-up brief load fails', async () => {
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockImplementationOnce(() => response(brief))
       .mockImplementationOnce(() => response({ generatedAt: brief.generatedAt }))
       .mockImplementationOnce(() => response({ error: 'secret' }, false)) as jest.Mock
@@ -138,9 +199,15 @@ describe('IntelligenceBrief', () => {
 
   it('prevents duplicate refresh requests while regeneration is pending', async () => {
     let finish!: (value: unknown) => void
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockImplementationOnce(() => response(brief))
-      .mockImplementationOnce(() => new Promise(resolve => { finish = resolve })) as jest.Mock
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve
+          })
+      ) as jest.Mock
     render(<IntelligenceBrief />)
     const refresh = await screen.findByRole('button', { name: /^refresh$/i })
     await userEvent.click(refresh)
@@ -152,7 +219,13 @@ describe('IntelligenceBrief', () => {
   })
 
   it('limits dashboard rendering to five findings', async () => {
-    global.fetch = jest.fn(() => response({ ...brief, findings: Array.from({ length: 8 }, (_, i) => ({ ...finding, id: `f-${i}`, title: `Issue ${i}` })), totalOpen: 8 })) as jest.Mock
+    global.fetch = jest.fn(() =>
+      response({
+        ...brief,
+        findings: Array.from({ length: 8 }, (_, i) => ({ ...finding, id: `f-${i}`, title: `Issue ${i}` })),
+        totalOpen: 8,
+      })
+    ) as jest.Mock
     render(<IntelligenceBrief />)
     await waitFor(() => expect(screen.getAllByTestId('finding-card')).toHaveLength(5))
     expect(screen.getByRole('link', { name: /view all 8 findings/i })).toHaveAttribute('href', '/intelligence')
@@ -162,10 +235,21 @@ describe('IntelligenceBrief', () => {
     const second = { ...finding, id: 'f-2', title: 'Second finding' }
     let succeed!: (value: unknown) => void
     let fail!: () => void
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockImplementationOnce(() => response({ ...brief, findings: [finding, second], totalOpen: 2 }))
-      .mockImplementationOnce(() => new Promise(resolve => { succeed = resolve }))
-      .mockImplementationOnce(() => new Promise((_resolve, reject) => { fail = () => reject(new Error('failed')) }))
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            succeed = resolve
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            fail = () => reject(new Error('failed'))
+          })
+      )
       .mockImplementationOnce(() => response({ ...brief, findings: [second], totalOpen: 1 })) as jest.Mock
     render(<IntelligenceBrief />)
     await screen.findByText(second.title)

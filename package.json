@@ -10,6 +10,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "audit": "npm audit --audit-level=high",
     "admin:bootstrap": "node create-admin.js",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
@@ -34,7 +36,7 @@
     "verify:production-config": "node scripts/verify-production-readiness.cjs",
     "verify:backup-restore": "node scripts/verify-backup-restore.cjs",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run audit && npm run lint && npm run typecheck && npm run ai:evaluate && npm run test:ci && npm run build"
+    "ci": "npm run audit && npm run lint && npm run format:check && npm run typecheck && npm run ai:evaluate && npm run test:ci && npm run build"
   },
   "prisma": {
     "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
@@ -84,6 +86,7 @@
     "jest-environment-jsdom": "^30.5.1",
     "node-mocks-http": "^1.18.1",
     "playwright": "^1.58.2",
+    "prettier": "3.9.9",
     "prisma": "^5.22.0",
     "puppeteer": "^25.10.0",
     "sharp": "^0.35.4",

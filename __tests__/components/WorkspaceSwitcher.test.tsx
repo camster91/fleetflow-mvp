@@ -8,7 +8,8 @@ jest.mock('next/router', () => ({ useRouter: () => ({ reload: mockReload }) }))
 describe('WorkspaceSwitcher', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    global.fetch = jest.fn()
+    global.fetch = jest
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -28,10 +29,12 @@ describe('WorkspaceSwitcher', () => {
 
     await userEvent.selectOptions(select, 'team-2')
 
-    await waitFor(() => expect(global.fetch).toHaveBeenLastCalledWith(
-      '/api/team/workspaces',
-      expect.objectContaining({ method: 'POST', body: JSON.stringify({ teamId: 'team-2' }) })
-    ))
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        '/api/team/workspaces',
+        expect.objectContaining({ method: 'POST', body: JSON.stringify({ teamId: 'team-2' }) })
+      )
+    )
     expect(mockReload).toHaveBeenCalled()
   })
 })

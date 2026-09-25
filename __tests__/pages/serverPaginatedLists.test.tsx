@@ -9,14 +9,32 @@ jest.mock('next/router', () => ({ useRouter: () => mockRouter }))
 let mockRoleState: { role: string | null; loading: boolean } = { role: 'MANAGER', loading: false }
 jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => mockRoleState }))
 jest.mock('@/services/apiService', () => ({
-  getVehiclePage: jest.fn(), getDeliveryPage: jest.fn(), getClientPage: jest.fn(), getMaintenancePage: jest.fn(),
-  getMaintenanceTasksDue: jest.fn(), getVehicles: jest.fn(), getClients: jest.fn(), getAllMatching: jest.fn(),
-  deleteVehicle: jest.fn(), deleteDelivery: jest.fn(), updateDelivery: jest.fn(), updateMaintenanceTask: jest.fn(),
+  getVehiclePage: jest.fn(),
+  getDeliveryPage: jest.fn(),
+  getClientPage: jest.fn(),
+  getMaintenancePage: jest.fn(),
+  getMaintenanceTasksDue: jest.fn(),
+  getVehicles: jest.fn(),
+  getClients: jest.fn(),
+  getAllMatching: jest.fn(),
+  deleteVehicle: jest.fn(),
+  deleteDelivery: jest.fn(),
+  updateDelivery: jest.fn(),
+  updateMaintenanceTask: jest.fn(),
 }))
 jest.mock('@/services/notifications', () => ({ notify: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }))
-jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
-jest.mock('@/components/PageHeader', () => ({ PageHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => <header><h1>{title}</h1>{actions}</header> }))
+jest.mock('@/components/layouts/DashboardLayout', () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+}))
+jest.mock('@/components/PageHeader', () => ({
+  PageHeader: ({ title, actions }: { title: string; actions?: React.ReactNode }) => (
+    <header>
+      <h1>{title}</h1>
+      {actions}
+    </header>
+  ),
+}))
 jest.mock('@/components/VehicleFormModal', () => ({
   __esModule: true,
   default: ({ isOpen, vehicle }: { isOpen: boolean; vehicle?: { id: string } | null }) =>
@@ -29,7 +47,11 @@ jest.mock('@/components/VehicleDetailModal', () => ({
 jest.mock('@/components/DeliveryFormModal', () => ({
   __esModule: true,
   default: ({ isOpen, delivery }: { isOpen: boolean; delivery?: { id: string; status: string } }) =>
-    isOpen ? <div data-testid="delivery-edit">{delivery?.id}:{delivery?.status}</div> : null,
+    isOpen ? (
+      <div data-testid="delivery-edit">
+        {delivery?.id}:{delivery?.status}
+      </div>
+    ) : null,
 }))
 jest.mock('@/components/DeliveryTimeline', () => ({ DeliveryTimeline: () => null }))
 jest.mock('@/components/ClientFormModal', () => ({ __esModule: true, default: () => null }))
@@ -43,11 +65,33 @@ import ClientsPage from '@/pages/clients'
 import MaintenancePage from '@/pages/maintenance'
 
 const vehicles = Array.from({ length: 25 }, (_, i) => ({
-  id: `v${i + 1}`, name: `Van ${i + 1}`, status: 'active', driver: 'Pat', location: 'Depot', mileage: 100, maintenanceDue: false, eta: '',
+  id: `v${i + 1}`,
+  name: `Van ${i + 1}`,
+  status: 'active',
+  driver: 'Pat',
+  location: 'Depot',
+  mileage: 100,
+  maintenanceDue: false,
+  eta: '',
 }))
-const delivery = { id: 'd1', customer: 'North Shop', address: '1 Road', status: 'pending', driver: 'Pat', items: 1, progress: 0, scheduledTime: null, estimatedArrival: null }
+const delivery = {
+  id: 'd1',
+  customer: 'North Shop',
+  address: '1 Road',
+  status: 'pending',
+  driver: 'Pat',
+  items: 1,
+  progress: 0,
+  scheduledTime: null,
+  estimatedArrival: null,
+}
 
-const renderPage = (Page: React.ComponentType) => render(<ConfirmDialogProvider><Page /></ConfirmDialogProvider>)
+const renderPage = (Page: React.ComponentType) =>
+  render(
+    <ConfirmDialogProvider>
+      <Page />
+    </ConfirmDialogProvider>
+  )
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -57,15 +101,37 @@ beforeEach(() => {
   mockRouter.push.mockResolvedValue(true)
   mockRouter.replace.mockResolvedValue(true)
   ;(api.getVehiclePage as jest.Mock).mockResolvedValue({
-    data: vehicles, total: 312, page: 1, limit: 25, hasMore: true,
+    data: vehicles,
+    total: 312,
+    page: 1,
+    limit: 25,
+    hasMore: true,
     summary: { total: 312, active: 300, maintenanceDue: 12, averageMileage: 45210 },
   })
   ;(api.getDeliveryPage as jest.Mock).mockResolvedValue({
-    data: [delivery], total: 1, page: 1, limit: 25, hasMore: false,
+    data: [delivery],
+    total: 1,
+    page: 1,
+    limit: 25,
+    hasMore: false,
     summary: { total: 90, byStatus: { pending: 40, 'in-transit': 30, delivered: 15, cancelled: 5 } },
   })
-  ;(api.getClientPage as jest.Mock).mockResolvedValue({ data: [], total: 0, page: 1, limit: 25, hasMore: false, summary: { total: 0, restaurantHotel: 0, highRating: 0 } })
-  ;(api.getMaintenancePage as jest.Mock).mockResolvedValue({ data: [], total: 0, page: 1, limit: 25, hasMore: false, summary: { total: 0, overdue: 0, dueThisWeek: 0, completed: 0 } })
+  ;(api.getClientPage as jest.Mock).mockResolvedValue({
+    data: [],
+    total: 0,
+    page: 1,
+    limit: 25,
+    hasMore: false,
+    summary: { total: 0, restaurantHotel: 0, highRating: 0 },
+  })
+  ;(api.getMaintenancePage as jest.Mock).mockResolvedValue({
+    data: [],
+    total: 0,
+    page: 1,
+    limit: 25,
+    hasMore: false,
+    summary: { total: 0, overdue: 0, dueThisWeek: 0, completed: 0 },
+  })
   ;(api.getMaintenanceTasksDue as jest.Mock).mockResolvedValue([])
   ;(api.getVehicles as jest.Mock).mockResolvedValue([])
   ;(api.getClients as jest.Mock).mockResolvedValue([])
@@ -88,7 +154,8 @@ describe('vehicles list', () => {
     renderPage(VehiclesPage)
     await screen.findByRole('navigation', { name: 'Vehicles pagination' })
     expect(api.getVehiclePage).toHaveBeenCalledWith(
-      { q: 'van', status: 'delayed', sort: 'mileage', order: 'desc', summary: 1, page: 3, limit: 50 }, expect.any(AbortSignal),
+      { q: 'van', status: 'delayed', sort: 'mileage', order: 'desc', summary: 1, page: 3, limit: 50 },
+      expect.any(AbortSignal)
     )
     expect(screen.getByRole('searchbox', { name: 'Search vehicles' })).toHaveValue('van')
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toHaveValue('delayed')
@@ -98,9 +165,15 @@ describe('vehicles list', () => {
   it('pushes paging and filtering to the URL so the back button works', async () => {
     renderPage(VehiclesPage)
     fireEvent.click(await screen.findByRole('button', { name: 'Next page' }))
-    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/vehicles', query: { page: '2' } }, undefined, { shallow: true })
+    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/vehicles', query: { page: '2' } }, undefined, {
+      shallow: true,
+    })
     fireEvent.change(screen.getByRole('combobox', { name: 'Filter by status' }), { target: { value: 'inactive' } })
-    expect(mockRouter.push).toHaveBeenLastCalledWith({ pathname: '/vehicles', query: { status: 'inactive' } }, undefined, { shallow: true })
+    expect(mockRouter.push).toHaveBeenLastCalledWith(
+      { pathname: '/vehicles', query: { status: 'inactive' } },
+      undefined,
+      { shallow: true }
+    )
   })
 
   it('exports every matching vehicle, not just the visible page', async () => {
@@ -127,7 +200,11 @@ describe('deliveries list', () => {
     renderPage(DeliveriesPage)
     expect(await screen.findByTestId('delivery-edit')).toHaveTextContent('d1:delivered')
     expect(api.getDeliveryPage).toHaveBeenCalledWith({ summary: 1, page: 1, limit: 25 }, expect.any(AbortSignal))
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/deliveries', query: {} }, undefined, { shallow: true }))
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/deliveries', query: {} }, undefined, {
+        shallow: true,
+      })
+    )
   })
 })
 
@@ -143,10 +220,16 @@ describe('clients and maintenance lists', () => {
     mockRouter.pathname = '/maintenance'
     mockRouter.query = { state: 'overdue' }
     renderPage(MaintenancePage)
-    await waitFor(() => expect(api.getMaintenancePage).toHaveBeenCalledWith(
-      expect.objectContaining({ state: 'overdue', today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), summary: 1 }), expect.any(AbortSignal),
-    ))
-    expect(api.getMaintenanceTasksDue).toHaveBeenCalledWith(expect.stringMatching(/-01$/), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/))
+    await waitFor(() =>
+      expect(api.getMaintenancePage).toHaveBeenCalledWith(
+        expect.objectContaining({ state: 'overdue', today: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), summary: 1 }),
+        expect.any(AbortSignal)
+      )
+    )
+    expect(api.getMaintenanceTasksDue).toHaveBeenCalledWith(
+      expect.stringMatching(/-01$/),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)
+    )
     expect(screen.getByRole('button', { name: 'Overdue' })).toHaveAttribute('aria-pressed', 'true')
   })
 })
@@ -162,15 +245,23 @@ describe('edit links wait for the workspace role (Codex finding on #175)', () =>
     const { rerender } = renderPage(Page)
     // The list has loaded but the role has not: the link must not be consumed yet.
     await waitFor(() => expect(pathname === '/vehicles' ? api.getVehiclePage : api.getDeliveryPage).toHaveBeenCalled())
-    await act(async () => { await Promise.resolve() })
+    await act(async () => {
+      await Promise.resolve()
+    })
     expect(mockRouter.replace).not.toHaveBeenCalled()
     expect(screen.queryByTestId('vehicle-detail')).not.toBeInTheDocument()
     expect(screen.queryByTestId(testId)).not.toBeInTheDocument()
 
     mockRoleState = { role: 'MANAGER', loading: false }
-    rerender(<ConfirmDialogProvider><Page /></ConfirmDialogProvider>)
+    rerender(
+      <ConfirmDialogProvider>
+        <Page />
+      </ConfirmDialogProvider>
+    )
     expect(await screen.findByTestId(testId)).toHaveTextContent(id)
     expect(screen.queryByTestId('vehicle-detail')).not.toBeInTheDocument()
-    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname, query: {} }, undefined, { shallow: true }))
+    await waitFor(() =>
+      expect(mockRouter.replace).toHaveBeenCalledWith({ pathname, query: {} }, undefined, { shallow: true })
+    )
   })
 })

@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             company: true,
             createdAt: true,
             updatedAt: true,
-            emailVerified: true
+            emailVerified: true,
           },
           orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
           skip,
@@ -67,7 +67,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing userId or role' })
     }
 
-    const validRoles = ['admin', 'fleet_manager', 'dispatch', 'driver', 'maintenance', 'safety_officer', 'finance', 'viewer']
+    const validRoles = [
+      'admin',
+      'fleet_manager',
+      'dispatch',
+      'driver',
+      'maintenance',
+      'safety_officer',
+      'finance',
+      'viewer',
+    ]
     if (!validRoles.includes(role)) {
       return res.status(400).json({ error: 'Invalid role' })
     }
@@ -85,8 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             id: true,
             name: true,
             email: true,
-            role: true
-          }
+            role: true,
+          },
         })
         await tx.auditLog.create({
           data: {
@@ -137,10 +146,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({ success: true })
     } catch (error) {
-      if (sendPrismaError(res, error, {
-        notFound: 'User not found',
-        foreignKey: 'This user still has records that must be kept, such as vehicle expense history or team records. Remove or reassign them first.',
-      })) return
+      if (
+        sendPrismaError(res, error, {
+          notFound: 'User not found',
+          foreignKey:
+            'This user still has records that must be kept, such as vehicle expense history or team records. Remove or reassign them first.',
+        })
+      )
+        return
       console.error('Error deleting user:', error)
       return res.status(500).json({ error: 'Failed to delete user' })
     }

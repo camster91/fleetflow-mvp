@@ -63,11 +63,7 @@ export function useRecordQuery<T extends { id: string }>({
       const { record: _record, edit: _edit, ...remainingQuery } = router.query
       if (editMode && prefillKeys) for (const key of prefillKeys.split(',')) delete remainingQuery[key]
       try {
-        await router.replace(
-          { pathname: router.pathname, query: remainingQuery },
-          undefined,
-          { shallow: true },
-        )
+        await router.replace({ pathname: router.pathname, query: remainingQuery }, undefined, { shallow: true })
       } catch {
         // The record is already resolved; interrupted shallow navigation must
         // not close it or create an unhandled rejection.
@@ -79,7 +75,7 @@ export function useRecordQuery<T extends { id: string }>({
       if (local) {
         processed.current = recordId
         inFlight.current = null
-        ;(editMode ? onEditRef.current ?? onMatchRef.current : onMatchRef.current)(local)
+        ;(editMode ? (onEditRef.current ?? onMatchRef.current) : onMatchRef.current)(local)
         await consumeQuery()
         return
       }
@@ -94,11 +90,8 @@ export function useRecordQuery<T extends { id: string }>({
           if (controller.signal.aborted) return
           processed.current = recordId
           inFlight.current = null
-          if (
-            candidate && typeof candidate === 'object' &&
-            (candidate as { id?: unknown }).id === recordId
-          ) {
-            ;(editMode ? onEditRef.current ?? onMatchRef.current : onMatchRef.current)(candidate as T)
+          if (candidate && typeof candidate === 'object' && (candidate as { id?: unknown }).id === recordId) {
+            ;(editMode ? (onEditRef.current ?? onMatchRef.current) : onMatchRef.current)(candidate as T)
           } else {
             onUnavailableRef.current()
           }

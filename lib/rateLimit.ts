@@ -1,6 +1,6 @@
 // Rate limiting utilities for authentication endpoints
-import { NextApiRequest, NextApiResponse } from 'next';
-import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible';
+import { NextApiRequest, NextApiResponse } from 'next'
+import { RateLimiterMemory, RateLimiterRes } from 'rate-limiter-flexible'
 
 // Rate limiter configurations
 const RATE_LIMITS = {
@@ -52,7 +52,7 @@ const RATE_LIMITS = {
     duration: 60, // 1 minute
     blockDuration: 60,
   },
-};
+}
 
 // Create rate limiter instances
 const rateLimiters = {
@@ -88,15 +88,15 @@ const rateLimiters = {
     keyPrefix: 'admin',
     ...RATE_LIMITS.admin,
   }),
-};
+}
 
 // Number of reverse proxies (Traefik/Coolify) in front of the app that append
 // to X-Forwarded-For. Defaults to 1. Set to 0 when the app is exposed directly.
 export function trustedProxyHops(): number {
-  const raw = process.env.TRUSTED_PROXY_HOPS?.trim();
-  if (!raw) return 1;
-  const hops = Number(raw);
-  return Number.isInteger(hops) && hops >= 0 ? hops : 1;
+  const raw = process.env.TRUSTED_PROXY_HOPS?.trim()
+  if (!raw) return 1
+  const hops = Number(raw)
+  return Number.isInteger(hops) && hops >= 0 ? hops : 1
 }
 
 // Get client IP address.
@@ -105,47 +105,44 @@ export function trustedProxyHops(): number {
 // X-Forwarded-For right-to-left, the address TRUSTED_PROXY_HOPS positions away
 // is the right-most hop no trusted proxy vouches for — the real client.
 export function getClientIP(req: Pick<NextApiRequest, 'headers' | 'socket'>): string {
-  const forwarded = req.headers['x-forwarded-for'];
+  const forwarded = req.headers['x-forwarded-for']
   const forwardedChain = (Array.isArray(forwarded) ? forwarded.join(',') : forwarded || '')
     .split(',')
     .map((entry) => entry.trim())
-    .filter(Boolean);
+    .filter(Boolean)
   // Nearest hop first: the socket peer, then X-Forwarded-For from right to left.
-  const hops = [req.socket?.remoteAddress, ...forwardedChain.reverse()];
-  const index = Math.min(trustedProxyHops(), hops.length - 1);
-  return hops[index] || 'unknown';
+  const hops = [req.socket?.remoteAddress, ...forwardedChain.reverse()]
+  const index = Math.min(trustedProxyHops(), hops.length - 1)
+  return hops[index] || 'unknown'
 }
 
 // Rate limit check result
 export interface RateLimitResult {
-  allowed: boolean;
-  retryAfter?: number;
-  remainingPoints?: number;
+  allowed: boolean
+  retryAfter?: number
+  remainingPoints?: number
 }
 
 // Check rate limit
-export async function checkRateLimit(
-  type: keyof typeof rateLimiters,
-  key: string
-): Promise<RateLimitResult> {
-  const limiter = rateLimiters[type];
-  
+export async function checkRateLimit(type: keyof typeof rateLimiters, key: string): Promise<RateLimitResult> {
+  const limiter = rateLimiters[type]
+
   try {
-    const res = await limiter.consume(key);
+    const res = await limiter.consume(key)
     return {
       allowed: true,
       remainingPoints: res.remainingPoints,
-    };
+    }
   } catch (rejRes) {
     if (rejRes instanceof RateLimiterRes) {
       return {
         allowed: false,
         retryAfter: Math.ceil(rejRes.msBeforeNext / 1000),
-      };
+      }
     }
     // Unexpected error, allow the request but log it
-    console.error('Rate limiter error:', rejRes);
-    return { allowed: true };
+    console.error('Rate limiter error:', rejRes)
+    return { allowed: true }
   }
 }
 
@@ -156,51 +153,43 @@ export async function rateLimitMiddleware(
   type: keyof typeof rateLimiters,
   key?: string
 ): Promise<boolean> {
-  const identifier = key || getClientIP(req);
-  const result = await checkRateLimit(type, identifier);
-  
+  const identifier = key || getClientIP(req)
+  const result = await checkRateLimit(type, identifier)
+
   if (!result.allowed) {
-    res.setHeader('Retry-After', result.retryAfter?.toString() || '60');
+    res.setHeader('Retry-After', result.retryAfter?.toString() || '60')
     res.status(429).json({
       error: 'Too many requests',
       retryAfter: result.retryAfter,
       message: `Please try again in ${result.retryAfter} seconds`,
-    });
-    return false;
+    })
+    return false
   }
-  
+
   // Set rate limit headers
   if (result.remainingPoints !== undefined) {
-    res.setHeader('X-RateLimit-Remaining', result.remainingPoints.toString());
+    res.setHeader('X-RateLimit-Remaining', result.remainingPoints.toString())
   }
-  
-  return true;
+
+  return true
 }
 
 // Create a custom rate limiter for specific use cases
-export function createRateLimiter(
-  keyPrefix: string,
-  points: number,
-  duration: number,
-  blockDuration?: number
-) {
+export function createRateLimiter(keyPrefix: string, points: number, duration: number, blockDuration?: number) {
   return new RateLimiterMemory({
     keyPrefix,
     points,
     duration,
     blockDuration: blockDuration || duration,
-  });
+  })
 }
 
 // Reset rate limit for a specific key (useful for successful auth)
-export async function resetRateLimit(
-  type: keyof typeof rateLimiters,
-  key: string
-): Promise<void> {
+export async function resetRateLimit(type: keyof typeof rateLimiters, key: string): Promise<void> {
   try {
-    await rateLimiters[type].delete(key);
+    await rateLimiters[type].delete(key)
   } catch (error) {
-    console.error('Error resetting rate limit:', error);
+    console.error('Error resetting rate limit:', error)
   }
 }
 
@@ -209,60 +198,60 @@ export async function getRateLimitInfo(
   type: keyof typeof rateLimiters,
   key: string
 ): Promise<{ remaining: number; resetTime: Date | null }> {
-  const limiter = rateLimiters[type];
-  
+  const limiter = rateLimiters[type]
+
   try {
-    const res = await limiter.get(key);
+    const res = await limiter.get(key)
     if (res) {
       return {
         remaining: Math.max(0, limiter.points - res.consumedPoints),
         resetTime: new Date(Date.now() + res.msBeforeNext),
-      };
+      }
     }
   } catch (error) {
-    console.error('Error getting rate limit info:', error);
+    console.error('Error getting rate limit info:', error)
   }
-  
+
   return {
     remaining: limiter.points,
     resetTime: null,
-  };
+  }
 }
 
 // Brute force protection for login attempts
-const loginAttempts = new Map<string, { count: number; firstAttempt: number; lockedUntil?: number }>();
+const loginAttempts = new Map<string, { count: number; firstAttempt: number; lockedUntil?: number }>()
 
 export function checkBruteForceProtection(
   identifier: string,
   maxAttempts: number = 5,
   lockDurationMinutes: number = 15
 ): { allowed: boolean; lockedUntil?: Date; attemptsRemaining: number } {
-  const now = Date.now();
-  const lockDurationMs = lockDurationMinutes * 60 * 1000;
-  
-  const record = loginAttempts.get(identifier);
-  
+  const now = Date.now()
+  const lockDurationMs = lockDurationMinutes * 60 * 1000
+
+  const record = loginAttempts.get(identifier)
+
   // Check if currently locked
   if (record?.lockedUntil && now < record.lockedUntil) {
     return {
       allowed: false,
       lockedUntil: new Date(record.lockedUntil),
       attemptsRemaining: 0,
-    };
+    }
   }
-  
+
   // If lock expired, reset
   if (record?.lockedUntil && now >= record.lockedUntil) {
-    loginAttempts.delete(identifier);
+    loginAttempts.delete(identifier)
   }
-  
+
   // Calculate remaining attempts
-  const attemptsRemaining = maxAttempts - (record?.count || 0);
-  
+  const attemptsRemaining = maxAttempts - (record?.count || 0)
+
   return {
     allowed: attemptsRemaining > 0,
     attemptsRemaining: Math.max(0, attemptsRemaining),
-  };
+  }
 }
 
 export function recordFailedAttempt(
@@ -270,49 +259,52 @@ export function recordFailedAttempt(
   maxAttempts: number = 5,
   lockDurationMinutes: number = 15
 ): { locked: boolean; lockedUntil?: Date } {
-  const now = Date.now();
-  const lockDurationMs = lockDurationMinutes * 60 * 1000;
-  
-  const record = loginAttempts.get(identifier);
-  
+  const now = Date.now()
+  const lockDurationMs = lockDurationMinutes * 60 * 1000
+
+  const record = loginAttempts.get(identifier)
+
   if (!record) {
     loginAttempts.set(identifier, {
       count: 1,
       firstAttempt: now,
-    });
-    return { locked: false };
+    })
+    return { locked: false }
   }
-  
-  record.count++;
-  
+
+  record.count++
+
   // Check if should lock
   if (record.count >= maxAttempts) {
-    record.lockedUntil = now + lockDurationMs;
+    record.lockedUntil = now + lockDurationMs
     return {
       locked: true,
       lockedUntil: new Date(record.lockedUntil),
-    };
+    }
   }
-  
-  return { locked: false };
+
+  return { locked: false }
 }
 
 export function resetBruteForceProtection(identifier: string): void {
-  loginAttempts.delete(identifier);
+  loginAttempts.delete(identifier)
 }
 
 // Clean up old entries periodically (every hour)
-const cleanupInterval = setInterval(() => {
-  const now = Date.now();
-  const oneHour = 60 * 60 * 1000;
-  
-  loginAttempts.forEach((record, key) => {
-    if (now - record.firstAttempt > oneHour && (!record.lockedUntil || now > record.lockedUntil)) {
-      loginAttempts.delete(key);
-    }
-  });
-}, 60 * 60 * 1000);
+const cleanupInterval = setInterval(
+  () => {
+    const now = Date.now()
+    const oneHour = 60 * 60 * 1000
+
+    loginAttempts.forEach((record, key) => {
+      if (now - record.firstAttempt > oneHour && (!record.lockedUntil || now > record.lockedUntil)) {
+        loginAttempts.delete(key)
+      }
+    })
+  },
+  60 * 60 * 1000
+)
 
 // Do not keep short-lived workers, CLI checks, or test processes alive solely
 // for this best-effort in-memory cleanup task.
-cleanupInterval.unref?.();
+cleanupInterval.unref?.()

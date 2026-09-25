@@ -4,14 +4,28 @@
  * All data is shared across users (single-tenant fleet data).
  */
 import type {
-  Vehicle, Delivery, MaintenanceTask, Client,
-  SOPCategory, VendingMachine, Announcement,
+  Vehicle,
+  Delivery,
+  MaintenanceTask,
+  Client,
+  SOPCategory,
+  VendingMachine,
+  Announcement,
 } from '../lib/fleet'
 
 export type {
-  Vehicle, Delivery, MaintenanceTask, Client,
-  SOPCategory, VendingMachine, Announcement,
-  LocationCoordinates, ContactPerson, DeliveryPhoto, VendingMachineNote, ActivityItem,
+  Vehicle,
+  Delivery,
+  MaintenanceTask,
+  Client,
+  SOPCategory,
+  VendingMachine,
+  Announcement,
+  LocationCoordinates,
+  ContactPerson,
+  DeliveryPhoto,
+  VendingMachineNote,
+  ActivityItem,
 } from '../lib/fleet'
 
 // ─── Generic fetch helpers ────────────────────────────────────────────────────
@@ -96,10 +110,27 @@ export const getAllMatching = <T>(url: string, params: ListParams) => getCollect
 export const getListPage = <T, S = undefined>(url: string, params: ListParams, signal?: AbortSignal) =>
   apiFetch<ListPage<T, S>>(withListParams(url, params), signal ? { signal } : undefined)
 
-export interface VehicleSummary { total: number; active: number; maintenanceDue: number; averageMileage: number }
-export interface DeliverySummary { total: number; byStatus: Record<string, number> }
-export interface MaintenanceSummary { total: number; overdue: number; dueThisWeek: number; completed: number }
-export interface ClientSummary { total: number; restaurantHotel: number; highRating: number }
+export interface VehicleSummary {
+  total: number
+  active: number
+  maintenanceDue: number
+  averageMileage: number
+}
+export interface DeliverySummary {
+  total: number
+  byStatus: Record<string, number>
+}
+export interface MaintenanceSummary {
+  total: number
+  overdue: number
+  dueThisWeek: number
+  completed: number
+}
+export interface ClientSummary {
+  total: number
+  restaurantHotel: number
+  highRating: number
+}
 
 // ─── Idempotent creates ───────────────────────────────────────────────────────
 
@@ -112,7 +143,7 @@ export const newIdempotencyKey = (): string => {
   const bytes = new Uint8Array(16)
   if (typeof c?.getRandomValues === 'function') c.getRandomValues(bytes)
   else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256)
-  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 /**
@@ -122,14 +153,18 @@ export const newIdempotencyKey = (): string => {
  * result instead of creating a duplicate. HTTP errors are not retried.
  */
 const create = async <T>(url: string, body: unknown): Promise<T> => {
-  const init: RequestInit = { method: 'POST', body: JSON.stringify(body), headers: { 'Idempotency-Key': newIdempotencyKey() } }
+  const init: RequestInit = {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  }
   for (let attempt = 0; ; attempt++) {
     try {
       return await apiFetch<T>(url, init)
     } catch (error) {
       // fetch() rejects with a TypeError only for network failures.
       if (!(error instanceof TypeError) || attempt >= CREATE_NETWORK_RETRIES) throw error
-      await new Promise(resolve => setTimeout(resolve, CREATE_RETRY_DELAY_MS * 2 ** attempt))
+      await new Promise((resolve) => setTimeout(resolve, CREATE_RETRY_DELAY_MS * 2 ** attempt))
     }
   }
 }
@@ -144,8 +179,12 @@ export const getVehiclePage = (params: ListParams, signal?: AbortSignal) =>
 export const addVehicle = (v: Omit<Vehicle, 'id'>) => create<Vehicle>('/api/vehicles', v)
 export const updateVehicle = (id: string, v: Partial<Vehicle>) => put<Vehicle>(`/api/vehicles/${id}`, v)
 export const deleteVehicle = (id: string) => del<{ success: boolean }>(`/api/vehicles/${id}`)
-export interface DriverOption { id:string; name:string; label:string }
-export const getDrivers = async () => (await get<{drivers:DriverOption[]}>('/api/drivers')).drivers
+export interface DriverOption {
+  id: string
+  name: string
+  label: string
+}
+export const getDrivers = async () => (await get<{ drivers: DriverOption[] }>('/api/drivers')).drivers
 
 // ─── Deliveries ───────────────────────────────────────────────────────────────
 
@@ -217,7 +256,7 @@ export const getDashboardStats = async () => {
     getDeliveries().catch(() => [] as Delivery[]),
     getMaintenanceTasks().catch(() => [] as MaintenanceTask[]),
   ])
-  
+
   return {
     totalVehicles: vehicles.length,
     activeVehicles: vehicles.filter((v) => v.status === 'active').length,

@@ -1,28 +1,26 @@
-import {
-  notificationUpdateSchema,
-  parseStoredPreferences,
-  profileUpdateSchema,
-} from '@/lib/settingsValidation'
+import { notificationUpdateSchema, parseStoredPreferences, profileUpdateSchema } from '@/lib/settingsValidation'
 
 describe('user settings validation', () => {
   it('accepts the settings payloads used by the current UI', () => {
-    expect(profileUpdateSchema.safeParse({
-      name: 'Fleet Manager',
-      company: 'Northwind',
-      phone: '+1 555 0100',
-      bio: 'Dispatch lead',
-      notificationSettings: {
-        emailDeliveries: true,
-        weeklyReports: false,
-      },
-      preferences: {
-        language: 'en',
-        timezone: 'America/Toronto',
-        dateFormat: 'YYYY-MM-DD',
-        theme: 'dark',
-        isPublic: false,
-      },
-    }).success).toBe(true)
+    expect(
+      profileUpdateSchema.safeParse({
+        name: 'Fleet Manager',
+        company: 'Northwind',
+        phone: '+1 555 0100',
+        bio: 'Dispatch lead',
+        notificationSettings: {
+          emailDeliveries: true,
+          weeklyReports: false,
+        },
+        preferences: {
+          language: 'en',
+          timezone: 'America/Toronto',
+          dateFormat: 'YYYY-MM-DD',
+          theme: 'dark',
+          isPublic: false,
+        },
+      }).success
+    ).toBe(true)
   })
 
   it.each([
@@ -41,29 +39,39 @@ describe('user settings validation', () => {
   })
 
   it('requires a strict notification update envelope', () => {
-    expect(notificationUpdateSchema.safeParse({
-      notificationSettings: { emailMaintenance: true },
-    }).success).toBe(true)
-    expect(notificationUpdateSchema.safeParse({
-      notificationSettings: {},
-    }).success).toBe(false)
-    expect(notificationUpdateSchema.safeParse({
-      notificationSettings: { emailMaintenance: true },
-      extra: true,
-    }).success).toBe(false)
+    expect(
+      notificationUpdateSchema.safeParse({
+        notificationSettings: { emailMaintenance: true },
+      }).success
+    ).toBe(true)
+    expect(
+      notificationUpdateSchema.safeParse({
+        notificationSettings: {},
+      }).success
+    ).toBe(false)
+    expect(
+      notificationUpdateSchema.safeParse({
+        notificationSettings: { emailMaintenance: true },
+        extra: true,
+      }).success
+    ).toBe(false)
   })
 
   it('recovers from malformed legacy preference JSON and strips unknown keys', () => {
     expect(parseStoredPreferences('{broken')).toEqual({})
     expect(parseStoredPreferences('null')).toEqual({})
-    expect(parseStoredPreferences(JSON.stringify({
-      phone: '+1 555 0100',
-      unknownSecret: 'drop-me',
-      preferences: {
-        language: 'en',
-        arbitrary: 'drop-me',
-      },
-    }))).toEqual({
+    expect(
+      parseStoredPreferences(
+        JSON.stringify({
+          phone: '+1 555 0100',
+          unknownSecret: 'drop-me',
+          preferences: {
+            language: 'en',
+            arbitrary: 'drop-me',
+          },
+        })
+      )
+    ).toEqual({
       phone: '+1 555 0100',
       preferences: { language: 'en' },
     })

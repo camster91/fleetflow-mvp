@@ -42,17 +42,24 @@ export function DataQualityCard() {
     setFailed(false)
     try {
       const response = await fetch('/api/intelligence/data-quality', {
-        method: 'GET', cache: 'no-store', signal: controller.signal,
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal,
       })
       if (!response.ok) throw new Error('Request failed')
-      const next = await response.json() as DataQualityResponse
+      const next = (await response.json()) as DataQualityResponse
       if (!next || !Array.isArray(next.issues) || !next.summary || !next.coverage) {
         throw new Error('Invalid response')
       }
       if (controller.signal.aborted || activeRequest.current !== controller) return
       setData(next)
     } catch (error) {
-      if (controller.signal.aborted || activeRequest.current !== controller || (error instanceof Error && error.name === 'AbortError')) return
+      if (
+        controller.signal.aborted ||
+        activeRequest.current !== controller ||
+        (error instanceof Error && error.name === 'AbortError')
+      )
+        return
       setFailed(true)
       setData(null)
     } finally {
@@ -65,15 +72,16 @@ export function DataQualityCard() {
     return () => activeRequest.current?.abort()
   }, [load])
 
-  const coverageMessage = data && (data.coverage.sourceTruncated || data.coverage.issuesTruncated)
-    ? `${
-      data.coverage.sourceTruncated && data.coverage.issuesTruncated
-        ? 'Partial scan: workspace scan and issue list are limited.'
-        : data.coverage.sourceTruncated
-          ? 'Partial scan: workspace scan is incomplete.'
-          : 'Partial results: issue list is limited.'
-    } ${data.summary.countsComplete ? 'Counts include all scanned records.' : 'Counts may be incomplete.'}`
-    : null
+  const coverageMessage =
+    data && (data.coverage.sourceTruncated || data.coverage.issuesTruncated)
+      ? `${
+          data.coverage.sourceTruncated && data.coverage.issuesTruncated
+            ? 'Partial scan: workspace scan and issue list are limited.'
+            : data.coverage.sourceTruncated
+              ? 'Partial scan: workspace scan is incomplete.'
+              : 'Partial results: issue list is limited.'
+        } ${data.summary.countsComplete ? 'Counts include all scanned records.' : 'Counts may be incomplete.'}`
+      : null
 
   return (
     <Card className="border-slate-200" aria-labelledby="data-quality-title">
@@ -83,7 +91,9 @@ export function DataQualityCard() {
             <Database className="h-5 w-5" />
           </div>
           <div>
-            <h3 id="data-quality-title" className="text-lg font-semibold text-slate-900">Data quality</h3>
+            <h3 id="data-quality-title" className="text-lg font-semibold text-slate-900">
+              Data quality
+            </h3>
             <p className="mt-1 text-sm text-slate-500">Fix unreliable records before using fleet recommendations.</p>
           </div>
         </div>
@@ -138,7 +148,9 @@ export function DataQualityCard() {
       {!loading && data && data.issues.length > 0 && (
         <>
           <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-slate-600" aria-label="Issue counts">
-            <span>{data.summary.total} {data.summary.total === 1 ? 'issue' : 'issues'} found</span>
+            <span>
+              {data.summary.total} {data.summary.total === 1 ? 'issue' : 'issues'} found
+            </span>
             {(data.summary.bySeverity.high || 0) > 0 && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 font-medium text-red-800">
                 {data.summary.bySeverity.high} high
@@ -157,8 +169,12 @@ export function DataQualityCard() {
                   >
                     <span className="min-w-0">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.badge}`}>{style.label}</span>
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{entityLabel(item.entityType)}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${style.badge}`}>
+                          {style.label}
+                        </span>
+                        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          {entityLabel(item.entityType)}
+                        </span>
                       </span>
                       <span className="mt-1 block text-sm text-slate-800">{item.message}</span>
                     </span>

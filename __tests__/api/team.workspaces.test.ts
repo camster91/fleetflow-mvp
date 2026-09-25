@@ -24,10 +24,13 @@ describe('/api/team/workspaces', () => {
 
     await handler(req as never, res as never)
 
-    expect(res._getJSONData()).toEqual({ activeTeamId: null, workspaces: [
-      { id: 'owned', name: 'Owned', role: 'OWNER' },
-      { id: 'joined', name: 'Joined', role: 'MEMBER' },
-    ] })
+    expect(res._getJSONData()).toEqual({
+      activeTeamId: null,
+      workspaces: [
+        { id: 'owned', name: 'Owned', role: 'OWNER' },
+        { id: 'joined', name: 'Joined', role: 'MEMBER' },
+      ],
+    })
   })
 
   it('sets an HTTP-only workspace cookie after access validation', async () => {

@@ -60,7 +60,11 @@ export function Modal({
         <div className={`relative w-full ${sizeClasses[size]} rounded-2xl bg-white shadow-2xl`}>
           {(header || title) && (
             <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-              {header ?? <h2 id={titleId} className="text-xl font-semibold text-slate-900">{title}</h2>}
+              {header ?? (
+                <h2 id={titleId} className="text-xl font-semibold text-slate-900">
+                  {title}
+                </h2>
+              )}
               {!header && (
                 <button
                   type="button"

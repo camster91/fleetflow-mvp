@@ -26,12 +26,8 @@ export interface TenantContext {
   ownerId: string
   teamId: string | null
   role: TeamRole
-  resourceWhere:
-    | { ownerId: string; teamId: null }
-    | { teamId: string }
-  auditWhere:
-    | { userId: string; teamId: null }
-    | { teamId: string }
+  resourceWhere: { ownerId: string; teamId: null } | { teamId: string }
+  auditWhere: { userId: string; teamId: null } | { teamId: string }
 }
 
 export type ApiKeyScope = 'read'
@@ -77,7 +73,11 @@ export async function requireApiKey(
     record = await prisma.apiKey.findUnique({
       where: { key: candidateHash },
       select: {
-        id: true, userId: true, key: true, scopes: true, revokedAt: true,
+        id: true,
+        userId: true,
+        key: true,
+        scopes: true,
+        revokedAt: true,
         user: { select: { id: true, email: true, name: true } },
       },
     })
@@ -134,14 +134,14 @@ export async function requireApiKey(
     return null
   }
 
-  void prisma.apiKey.update({
-    where: { id: record.id },
-    data: { lastUsedAt: new Date() },
-  }).catch(() => console.error('API key last-used update failed'))
+  void prisma.apiKey
+    .update({
+      where: { id: record.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch(() => console.error('API key last-used update failed'))
 
-  const apiResourceWhere = tenant.teamId
-    ? { teamId: tenant.teamId }
-    : { ownerId: record.userId, teamId: null as null }
+  const apiResourceWhere = tenant.teamId ? { teamId: tenant.teamId } : { ownerId: record.userId, teamId: null as null }
   return { apiKeyId: record.id, user: record.user, scopes, tenant, apiResourceWhere }
 }
 
@@ -153,16 +153,10 @@ export async function requireApiKey(
  * personal records must be migrated explicitly instead of being merged into a
  * team query. Users with multiple teams must select one explicitly.
  */
-export async function resolveTenantContext(
-  userId: string,
-  selectedTeamId?: string
-): Promise<TenantContext> {
+export async function resolveTenantContext(userId: string, selectedTeamId?: string): Promise<TenantContext> {
   const teams = await prisma.team.findMany({
     where: {
-      OR: [
-        { ownerId: userId },
-        { members: { some: { userId, status: 'ACCEPTED' } } },
-      ],
+      OR: [{ ownerId: userId }, { members: { some: { userId, status: 'ACCEPTED' } } }],
     },
     select: {
       id: true,
@@ -197,18 +191,11 @@ export async function resolveTenantContext(
     throw new TenantContextError('TENANT_FORBIDDEN', 'Workspace access denied')
   }
   if (!team) {
-    throw new TenantContextError(
-      'TENANT_SELECTION_REQUIRED',
-      'Select a workspace before accessing business data'
-    )
+    throw new TenantContextError('TENANT_SELECTION_REQUIRED', 'Select a workspace before accessing business data')
   }
 
   const membershipRole = team.members[0]?.role as TeamRole | undefined
-  const role = team.ownerId === userId
-    ? 'OWNER'
-    : membershipRole === 'OWNER'
-      ? undefined
-      : membershipRole
+  const role = team.ownerId === userId ? 'OWNER' : membershipRole === 'OWNER' ? undefined : membershipRole
   if (!role) {
     throw new TenantContextError('TENANT_FORBIDDEN', 'Workspace access denied')
   }
@@ -247,10 +234,7 @@ export async function requireTenantContext(
 }
 
 /** Require an authenticated session; returns null after writing 401. */
-export async function requireSession(
-  req: NextApiRequest,
-  res: NextApiResponse
-): Promise<AuthedSession | null> {
+export async function requireSession(req: NextApiRequest, res: NextApiResponse): Promise<AuthedSession | null> {
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user?.id) {
     res.status(401).json({ error: 'Unauthorized' })

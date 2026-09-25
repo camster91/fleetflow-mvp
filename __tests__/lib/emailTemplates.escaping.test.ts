@@ -14,7 +14,7 @@ describe('email template escaping', () => {
     const { html, text } = templates.deliveryAssignedEmail(
       { id: 'd1', customer: xss, address: attr, items: 2, scheduledTime: null },
       xss,
-      attr,
+      attr
     )
     expectEscaped(html)
     expect(html).toContain('&quot; onmouseover=&quot;alert(1)')
@@ -24,8 +24,14 @@ describe('email template escaping', () => {
 
   it('escapes status update fields and never interpolates an unknown status into style', () => {
     const { html } = templates.deliveryStatusUpdateEmail(
-      { id: '"><script>x</script>', customer: xss, status: 'red;}</style><script>alert(1)</script>', progress: 10, driver: attr },
-      'customer',
+      {
+        id: '"><script>x</script>',
+        customer: xss,
+        status: 'red;}</style><script>alert(1)</script>',
+        progress: 10,
+        driver: attr,
+      },
+      'customer'
     )
     expectEscaped(html)
     expect(html).toContain('border-left-color: #6B7280;')
@@ -36,7 +42,7 @@ describe('email template escaping', () => {
   it('uses the allow-listed colour for known statuses', () => {
     const { html } = templates.deliveryStatusUpdateEmail(
       { id: 'd1', customer: 'Acme', status: 'delivered', progress: 100, driver: null },
-      'admin',
+      'admin'
     )
     expect(html).toContain('border-left-color: #10B981;')
     expect(html).toContain('Status: DELIVERED')
@@ -46,13 +52,31 @@ describe('email template escaping', () => {
     const outputs = [
       templates.vehicleAddedEmail({ name: xss, type: xss, driver: attr, licensePlate: xss }, xss),
       templates.maintenanceDueEmail({ name: xss, nextService: attr }, [xss]),
-      templates.maintenanceTaskCreatedEmail({ vehicle: xss, type: attr, dueDate: '2026-01-01', priority: 'x" onclick="' }, xss),
+      templates.maintenanceTaskCreatedEmail(
+        { vehicle: xss, type: attr, dueDate: '2026-01-01', priority: 'x" onclick="' },
+        xss
+      ),
       templates.maintenanceOverdueEmail([{ vehicle: xss, type: attr, dueDate: '2026-01-01', daysOverdue: 2 }]),
       templates.clientWelcomeEmail(xss, attr),
       templates.announcementEmail({ message: `${xss}\nline two`, priority: 'normal', sentBy: attr }, xss),
-      templates.dailyReportEmail({ date: '2026-01-01', totalDeliveries: 1, completedDeliveries: 1, pendingDeliveries: 0, activeVehicles: 1, maintenanceTasks: 0, alerts: [xss] }),
+      templates.dailyReportEmail({
+        date: '2026-01-01',
+        totalDeliveries: 1,
+        completedDeliveries: 1,
+        pendingDeliveries: 0,
+        activeVehicles: 1,
+        maintenanceTasks: 0,
+        alerts: [xss],
+      }),
       templates.vendingMachineAlertEmail({ name: xss, location: attr, status: 'offline', openNotes: 1 }),
-      templates.weeklySummaryEmail({ weekOf: '2026-01-01', deliveriesCompleted: 1, newClients: 0, maintenanceCompleted: 0, topDriver: xss, fleetUtilization: 50 }),
+      templates.weeklySummaryEmail({
+        weekOf: '2026-01-01',
+        deliveriesCompleted: 1,
+        newClients: 0,
+        maintenanceCompleted: 0,
+        topDriver: xss,
+        fleetUtilization: 50,
+      }),
       templates.welcomeEmail(xss, 'https://fleet.example.com/login'),
     ]
     for (const { html } of outputs) {
@@ -71,7 +95,7 @@ describe('email template escaping', () => {
 
     const photo = templates.deliveryCompletedEmail(
       { customer: xss, address: xss, driver: xss },
-      'https://cdn.example.com/p.jpg?a=1&b="x"',
+      'https://cdn.example.com/p.jpg?a=1&b="x"'
     )
     expectEscaped(photo.html)
     expect(photo.html).toContain('src="https://cdn.example.com/p.jpg?a=1&amp;b=&quot;x&quot;"')

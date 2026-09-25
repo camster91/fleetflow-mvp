@@ -21,48 +21,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!canManageBilling(context.tenant.role)) {
     return res.status(403).json({ error: 'Forbidden' })
   }
-  if (!await rateLimitMiddleware(
-    req,
-    res,
-    'api',
-    `billing-cancel:${context.tenant.ownerId}`,
-  )) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `billing-cancel:${context.tenant.ownerId}`))) return
 
   try {
-    const result = await prisma.$transaction(async tx => {
-      const ownerId = context.tenant.ownerId
-      await tx.$queryRaw`SELECT 1 AS acquired FROM (SELECT pg_advisory_xact_lock(hashtextextended(${ownerId}, 0))) AS billing_lock`
-      const subscription = await tx.subscription.findUnique({
-        where: { userId: ownerId },
-      })
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const ownerId = context.tenant.ownerId
+        await tx.$queryRaw`SELECT 1 AS acquired FROM (SELECT pg_advisory_xact_lock(hashtextextended(${ownerId}, 0))) AS billing_lock`
+        const subscription = await tx.subscription.findUnique({
+          where: { userId: ownerId },
+        })
 
-      if (!subscription?.stripeSubscriptionId) {
-        throw cancellationError('No active subscription to cancel', 400)
-      }
-      if (subscription.cancelAtPeriodEnd) {
-        return { alreadyScheduled: true }
-      }
+        if (!subscription?.stripeSubscriptionId) {
+          throw cancellationError('No active subscription to cancel', 400)
+        }
+        if (subscription.cancelAtPeriodEnd) {
+          return { alreadyScheduled: true }
+        }
 
-      await cancelSubscription(subscription.stripeSubscriptionId, true)
-      await tx.subscription.update({
-        where: { userId: ownerId },
-        data: { cancelAtPeriodEnd: true },
-      })
-      await tx.auditLog.create({
-        data: {
-          userId: context.session.user.id,
-          teamId: context.tenant.teamId,
-          userName: context.session.user.name || null,
-          userRole: context.tenant.role,
-          action: 'updated',
-          entityType: 'subscription',
-          entityId: subscription.id,
-          description: 'Subscription cancellation scheduled for period end',
-          metadata: JSON.stringify({ cancelAtPeriodEnd: true }),
-        },
-      })
-      return { alreadyScheduled: false }
-    }, { maxWait: 5_000, timeout: 30_000 })
+        await cancelSubscription(subscription.stripeSubscriptionId, true)
+        await tx.subscription.update({
+          where: { userId: ownerId },
+          data: { cancelAtPeriodEnd: true },
+        })
+        await tx.auditLog.create({
+          data: {
+            userId: context.session.user.id,
+            teamId: context.tenant.teamId,
+            userName: context.session.user.name || null,
+            userRole: context.tenant.role,
+            action: 'updated',
+            entityType: 'subscription',
+            entityId: subscription.id,
+            description: 'Subscription cancellation scheduled for period end',
+            metadata: JSON.stringify({ cancelAtPeriodEnd: true }),
+          },
+        })
+        return { alreadyScheduled: false }
+      },
+      { maxWait: 5_000, timeout: 30_000 }
+    )
 
     res.setHeader('Cache-Control', 'private, no-store')
     return res.status(200).json({

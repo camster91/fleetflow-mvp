@@ -22,9 +22,17 @@ import { prisma } from '@/lib/prisma'
 describe('POST /api/auth/2fa/validate rate limiting', () => {
   it('limits one challenge after 5 attempts even when X-Forwarded-For rotates', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'rate-limited-user', email: 'user@example.com', name: 'User', role: 'fleet_manager',
-      twoFactorEnabled: true, twoFactorSecret: 'encrypted', backupCodes: '[]',
-      tokenVersion: 0, lastTotpStep: null, failedLoginAttempts: 0, lockedUntil: null,
+      id: 'rate-limited-user',
+      email: 'user@example.com',
+      name: 'User',
+      role: 'fleet_manager',
+      twoFactorEnabled: true,
+      twoFactorSecret: 'encrypted',
+      backupCodes: '[]',
+      tokenVersion: 0,
+      lastTotpStep: null,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
     })
 
     const statuses: number[] = []

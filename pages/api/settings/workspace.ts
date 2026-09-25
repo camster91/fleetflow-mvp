@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const context = await requireTenantContext(req, res)
   if (!context) return
   const { tenant, session } = context
-  if (!await rateLimitMiddleware(req, res, 'api', `settings:${session.user.id}`)) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `settings:${session.user.id}`))) return
   const canEdit = canManageSettings(tenant.role)
 
   if (req.method === 'GET') {

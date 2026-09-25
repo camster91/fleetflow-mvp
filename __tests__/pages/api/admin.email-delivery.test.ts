@@ -2,17 +2,32 @@ import { createMocks } from 'node-mocks-http'
 
 jest.mock('@/lib/apiAuth', () => ({ requireTenantContext: jest.fn(), assertSameOrigin: jest.fn(() => true) }))
 jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(async () => true) }))
-jest.mock('@/lib/emailConfig', () => ({ encryptMailgunApiKey: jest.fn(() => 'sealed'), publicEmailConfig: jest.fn(() => ({ configured: false })) }))
-jest.mock('@/lib/prisma', () => ({ prisma: { emailDeliveryConfig: { findUnique: jest.fn() }, $transaction: jest.fn(async (callback: any) => callback({ emailDeliveryConfig: { upsert: jest.fn() }, auditLog: { create: jest.fn() } })) } }))
+jest.mock('@/lib/emailConfig', () => ({
+  encryptMailgunApiKey: jest.fn(() => 'sealed'),
+  publicEmailConfig: jest.fn(() => ({ configured: false })),
+}))
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    emailDeliveryConfig: { findUnique: jest.fn() },
+    $transaction: jest.fn(async (callback: any) =>
+      callback({ emailDeliveryConfig: { upsert: jest.fn() }, auditLog: { create: jest.fn() } })
+    ),
+  },
+}))
 
 import handler from '@/pages/api/admin/email/delivery'
 import { requireTenantContext } from '@/lib/apiAuth'
 import { prisma } from '@/lib/prisma'
 
-const context = (role: string) => ({ session: { user: { id: 'user-1', role, name: 'System admin' } }, tenant: { ownerId: 'owner-1', teamId: 'team-1', role: 'OWNER' } })
+const context = (role: string) => ({
+  session: { user: { id: 'user-1', role, name: 'System admin' } },
+  tenant: { ownerId: 'owner-1', teamId: 'team-1', role: 'OWNER' },
+})
 
 describe('/api/admin/email/delivery', () => {
-  beforeEach(() => { jest.clearAllMocks() })
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
 
   it('denies a workspace owner before reading or writing the deployment-wide credential', async () => {
     ;(requireTenantContext as jest.Mock).mockResolvedValue(context('user'))

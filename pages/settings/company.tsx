@@ -1,19 +1,19 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DashboardLayout } from '../../components/layouts/DashboardLayout';
-import { PageHeader } from '../../components/PageHeader';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
-import { ColorPicker } from '../../components/ui/ColorPicker';
-import { Building, Save, Upload, Clock, Globe } from 'lucide-react';
-import { notify } from '../../services/notifications';
-import Image from 'next/image';
-import { DEFAULT_TIME_ZONE, supportedTimeZones } from '../../lib/dateOnly';
+import React, { useEffect, useMemo, useState } from 'react'
+import { DashboardLayout } from '../../components/layouts/DashboardLayout'
+import { PageHeader } from '../../components/PageHeader'
+import { Card } from '../../components/ui/Card'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { ColorPicker } from '../../components/ui/ColorPicker'
+import { Building, Save, Upload, Clock, Globe } from 'lucide-react'
+import { notify } from '../../services/notifications'
+import Image from 'next/image'
+import { DEFAULT_TIME_ZONE, supportedTimeZones } from '../../lib/dateOnly'
 
-type WorkspaceSettings = { scope: 'team' | 'personal'; name: string | null; timeZone: string; canEdit: boolean };
+type WorkspaceSettings = { scope: 'team' | 'personal'; name: string | null; timeZone: string; canEdit: boolean }
 
 export default function CompanySettingsPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false)
   const [company, setCompany] = useState({
     name: 'Acme Logistics',
     logo: null as string | null,
@@ -27,82 +27,79 @@ export default function CompanySettingsPage() {
     businessHours: '9:00 AM - 5:00 PM',
     primaryColor: '#2563eb',
     secondaryColor: '#1e40af',
-  });
+  })
 
-  const [workspace, setWorkspace] = useState<WorkspaceSettings | null>(null);
-  const [timeZone, setTimeZone] = useState(DEFAULT_TIME_ZONE);
-  const [timeZoneError, setTimeZoneError] = useState<string | null>(null);
-  const [isSavingTimeZone, setIsSavingTimeZone] = useState(false);
+  const [workspace, setWorkspace] = useState<WorkspaceSettings | null>(null)
+  const [timeZone, setTimeZone] = useState(DEFAULT_TIME_ZONE)
+  const [timeZoneError, setTimeZoneError] = useState<string | null>(null)
+  const [isSavingTimeZone, setIsSavingTimeZone] = useState(false)
   // Filled after mount: the browser's Intl zone list can differ from the
   // server's, so rendering it during prerender would cause a hydration mismatch.
-  const [zoneList, setZoneList] = useState<string[]>([DEFAULT_TIME_ZONE]);
+  const [zoneList, setZoneList] = useState<string[]>([DEFAULT_TIME_ZONE])
   const timeZones = useMemo(
     () => (zoneList.includes(timeZone) ? zoneList : [...zoneList, timeZone]),
-    [zoneList, timeZone],
-  );
+    [zoneList, timeZone]
+  )
 
   useEffect(() => {
-    setZoneList(supportedTimeZones());
-    let cancelled = false;
+    setZoneList(supportedTimeZones())
+    let cancelled = false
     fetch('/api/settings/workspace')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('load failed'))))
       .then((data: WorkspaceSettings) => {
-        if (cancelled) return;
-        setWorkspace(data);
-        setTimeZone(data.timeZone);
+        if (cancelled) return
+        setWorkspace(data)
+        setTimeZone(data.timeZone)
       })
-      .catch(() => { if (!cancelled) setTimeZoneError('Workspace time zone could not be loaded.'); });
-    return () => { cancelled = true; };
-  }, []);
+      .catch(() => {
+        if (!cancelled) setTimeZoneError('Workspace time zone could not be loaded.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const handleSaveTimeZone = async () => {
-    setIsSavingTimeZone(true);
-    setTimeZoneError(null);
+    setIsSavingTimeZone(true)
+    setTimeZoneError(null)
     try {
       const r = await fetch('/api/settings/workspace', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ timeZone }),
-      });
-      const data = await r.json().catch(() => ({}));
+      })
+      const data = await r.json().catch(() => ({}))
       if (!r.ok) {
-        setTimeZoneError(data.error || 'Failed to update the workspace time zone.');
-        return;
+        setTimeZoneError(data.error || 'Failed to update the workspace time zone.')
+        return
       }
-      setTimeZone(data.timeZone);
-      setWorkspace((current) => (current ? { ...current, timeZone: data.timeZone } : current));
-      notify.success('Workspace time zone updated');
+      setTimeZone(data.timeZone)
+      setWorkspace((current) => (current ? { ...current, timeZone: data.timeZone } : current))
+      notify.success('Workspace time zone updated')
     } catch {
-      setTimeZoneError('Failed to update the workspace time zone.');
+      setTimeZoneError('Failed to update the workspace time zone.')
     } finally {
-      setIsSavingTimeZone(false);
+      setIsSavingTimeZone(false)
     }
-  };
+  }
 
   const handleSave = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       // API call would go here
-      notify.success('Company settings updated successfully');
+      notify.success('Company settings updated successfully')
     } catch (error) {
-      notify.error('Failed to update settings');
+      notify.error('Failed to update settings')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   return (
     <DashboardLayout
-      breadcrumbs={[
-        { label: 'Dashboard', href: '/' },
-        { label: 'Settings', href: '/settings' },
-        { label: 'Company' },
-      ]}
+      breadcrumbs={[{ label: 'Dashboard', href: '/' }, { label: 'Settings', href: '/settings' }, { label: 'Company' }]}
     >
-      <PageHeader
-        title="Company Settings"
-        subtitle="Manage your organization details and branding"
-      />
+      <PageHeader title="Company Settings" subtitle="Manage your organization details and branding" />
 
       <div className="max-w-3xl">
         {/* Logo */}
@@ -111,7 +108,14 @@ export default function CompanySettingsPage() {
           <div className="flex items-center gap-6">
             <div className="w-24 h-24 bg-slate-100 rounded-lg flex items-center justify-center">
               {company.logo ? (
-                <Image unoptimized src={company.logo} alt="Company logo" width={96} height={96} className="w-full h-full object-contain" />
+                <Image
+                  unoptimized
+                  src={company.logo}
+                  alt="Company logo"
+                  width={96}
+                  height={96}
+                  className="w-full h-full object-contain"
+                />
               ) : (
                 <Building className="h-10 w-10 text-slate-400" />
               )}
@@ -154,9 +158,7 @@ export default function CompanySettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Business Hours
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Business Hours</label>
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-slate-400" />
                 <input
@@ -193,7 +195,9 @@ export default function CompanySettingsPage() {
                 className="min-h-11 flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
               >
                 {timeZones.map((zone) => (
-                  <option key={zone} value={zone}>{zone.replace(/_/g, ' ')}</option>
+                  <option key={zone} value={zone}>
+                    {zone.replace(/_/g, ' ')}
+                  </option>
                 ))}
               </select>
             </div>
@@ -210,7 +214,9 @@ export default function CompanySettingsPage() {
             )}
           </div>
           {timeZoneError ? (
-            <p id="workspace-time-zone-error" role="alert" className="mt-2 text-sm text-red-600">{timeZoneError}</p>
+            <p id="workspace-time-zone-error" role="alert" className="mt-2 text-sm text-red-600">
+              {timeZoneError}
+            </p>
           ) : (
             <p id="workspace-time-zone-help" className="mt-2 text-sm text-slate-500">
               {workspace && !workspace.canEdit
@@ -281,24 +287,19 @@ export default function CompanySettingsPage() {
           </div>
           <div className="mt-4 p-4 bg-slate-50 rounded-lg">
             <p className="text-sm text-slate-600">
-              <strong>Preview:</strong> These colors will be used in your branded reports, 
-              email templates, and customer-facing materials.
+              <strong>Preview:</strong> These colors will be used in your branded reports, email templates, and
+              customer-facing materials.
             </p>
           </div>
         </Card>
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            loading={isLoading}
-            iconLeft={<Save className="h-4 w-4" />}
-          >
+          <Button variant="primary" onClick={handleSave} loading={isLoading} iconLeft={<Save className="h-4 w-4" />}>
             Save Changes
           </Button>
         </div>
       </div>
     </DashboardLayout>
-  );
+  )
 }

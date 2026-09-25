@@ -13,7 +13,9 @@ jest.mock('@/hooks/usePaginatedList', () => ({
 }))
 jest.mock('@/hooks/useRecordQuery', () => ({ useRecordQuery: jest.fn() }))
 jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'OWNER', loading: false }) }))
-jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }))
+jest.mock('@/components/layouts/DashboardLayout', () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}))
 jest.mock('@/components/PageHeader', () => ({ PageHeader: () => null }))
 jest.mock('@/components/VehicleDetailModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/VehicleFormModal', () => ({ __esModule: true, default: () => null }))
@@ -25,13 +27,21 @@ import VehiclesPage from '@/pages/vehicles'
 import AdminUserManagement from '@/components/AdminUserManagement'
 
 const vehicle = {
-  id: 'v-1', name: 'Truck 7', status: 'active', driver: 'Driver', location: 'Depot',
-  mileage: 10, maintenanceDue: false, fuelLevel: 80,
+  id: 'v-1',
+  name: 'Truck 7',
+  status: 'active',
+  driver: 'Driver',
+  location: 'Depot',
+  mileage: 10,
+  maintenanceDue: false,
+  fuelLevel: 80,
 }
 
 function deferred() {
   let resolve!: () => void
-  const promise = new Promise<void>((r) => { resolve = r })
+  const promise = new Promise<void>((r) => {
+    resolve = r
+  })
   return { promise, resolve }
 }
 
@@ -41,14 +51,36 @@ describe('vehicles page delete confirmation', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(usePaginatedList as jest.Mock).mockReturnValue({
-      rows: [vehicle], total: 1, summary: undefined, loading: false, error: null, refetch,
-      page: 1, pageSize: 25, pageCount: 1, setPage: jest.fn(), setPageSize: jest.fn(),
-      searchInput: '', setSearchInput: jest.fn(), q: '', filters: {}, setFilter: jest.fn(),
-      sort: '', order: '', setSort: jest.fn(), queryParams: {}, isFiltered: false,
+      rows: [vehicle],
+      total: 1,
+      summary: undefined,
+      loading: false,
+      error: null,
+      refetch,
+      page: 1,
+      pageSize: 25,
+      pageCount: 1,
+      setPage: jest.fn(),
+      setPageSize: jest.fn(),
+      searchInput: '',
+      setSearchInput: jest.fn(),
+      q: '',
+      filters: {},
+      setFilter: jest.fn(),
+      sort: '',
+      order: '',
+      setSort: jest.fn(),
+      queryParams: {},
+      isFiltered: false,
     })
   })
 
-  const renderPage = () => render(<ConfirmDialogProvider><VehiclesPage /></ConfirmDialogProvider>)
+  const renderPage = () =>
+    render(
+      <ConfirmDialogProvider>
+        <VehiclesPage />
+      </ConfirmDialogProvider>
+    )
 
   it('opens the accessible dialog and cancel does not call the API', async () => {
     renderPage()
@@ -96,7 +128,9 @@ describe('vehicles page delete confirmation', () => {
     expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     expect(api.deleteVehicle).toHaveBeenCalledTimes(1)
 
-    await act(async () => { pending.resolve() })
+    await act(async () => {
+      pending.resolve()
+    })
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument())
     expect(notify.success).toHaveBeenCalledWith('Vehicle "Truck 7" deleted')
     expect(refetch).toHaveBeenCalled()
@@ -108,11 +142,31 @@ describe('admin user management delete confirmation', () => {
   it('keeps the dialog open when the delete fails', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined)
     global.fetch = jest.fn((_url: string, init?: RequestInit) =>
-      Promise.resolve(init?.method === 'DELETE'
-        ? { ok: false, json: () => Promise.resolve({ error: 'Cannot delete this user' }) }
-        : { ok: true, json: () => Promise.resolve({ users: [{ id: 'u-1', name: 'Ada', email: 'ada@example.com', role: 'viewer', createdAt: new Date().toISOString() }] }) })
+      Promise.resolve(
+        init?.method === 'DELETE'
+          ? { ok: false, json: () => Promise.resolve({ error: 'Cannot delete this user' }) }
+          : {
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  users: [
+                    {
+                      id: 'u-1',
+                      name: 'Ada',
+                      email: 'ada@example.com',
+                      role: 'viewer',
+                      createdAt: new Date().toISOString(),
+                    },
+                  ],
+                }),
+            }
+      )
     ) as unknown as typeof fetch
-    render(<ConfirmDialogProvider><AdminUserManagement /></ConfirmDialogProvider>)
+    render(
+      <ConfirmDialogProvider>
+        <AdminUserManagement />
+      </ConfirmDialogProvider>
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'Delete user' }))
     await screen.findByRole('alertdialog', { name: 'Delete User' })
     fireEvent.click(screen.getByRole('button', { name: 'Delete User' }))
@@ -133,7 +187,11 @@ describe('admin user management delete confirmation', () => {
   })
 
   it('uses the shared dialog with the Delete User label and only deletes on confirm', async () => {
-    render(<ConfirmDialogProvider><AdminUserManagement /></ConfirmDialogProvider>)
+    render(
+      <ConfirmDialogProvider>
+        <AdminUserManagement />
+      </ConfirmDialogProvider>
+    )
     fireEvent.click(await screen.findByRole('button', { name: 'Delete user' }))
 
     await screen.findByRole('alertdialog', { name: 'Delete User' })

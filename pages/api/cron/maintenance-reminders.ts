@@ -32,17 +32,14 @@ type ReminderKind = 'due_soon' | 'overdue'
 function reminderConditions(kind: ReminderKind): Prisma.MaintenanceTaskWhereInput {
   if (kind === 'due_soon') return { reminderSentAt: null }
   return {
-    OR: [
-      { overdueReminderSentAt: null },
-      { overdueReminderSentAt: { lt: prisma.maintenanceTask.fields.dueDate } },
-    ],
+    OR: [{ overdueReminderSentAt: null }, { overdueReminderSentAt: { lt: prisma.maintenanceTask.fields.dueDate } }],
   }
 }
 
 async function claimAndNotify(
   task: { id: string; ownerId: string; title: string; vehicleName: string | null; dueDate: Date },
   kind: ReminderKind,
-  now: Date,
+  now: Date
 ): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     const claimed = await tx.maintenanceTask.updateMany({
@@ -58,9 +55,10 @@ async function claimAndNotify(
         userId: task.ownerId,
         type: 'MAINTENANCE_DUE',
         title: kind === 'overdue' ? 'Maintenance Overdue' : 'Maintenance Reminder',
-        message: kind === 'overdue'
-          ? `"${task.title}" for ${vehicle} was due on ${dueDay} and is overdue`
-          : `"${task.title}" for ${vehicle} is due on ${dueDay}`,
+        message:
+          kind === 'overdue'
+            ? `"${task.title}" for ${vehicle} was due on ${dueDay} and is overdue`
+            : `"${task.title}" for ${vehicle} is due on ${dueDay}`,
         data: JSON.stringify({
           taskId: task.id,
           vehicleName: task.vehicleName,
@@ -86,7 +84,7 @@ function workspaceZoneScope(zones: string[], unknownZonesExcept: string[] | null
   if (unknownZonesExcept) {
     scopes.push(
       { team: { timeZone: { notIn: unknownZonesExcept } } },
-      { teamId: null, owner: { timeZone: { notIn: unknownZonesExcept } } },
+      { teamId: null, owner: { timeZone: { notIn: unknownZonesExcept } } }
     )
   }
   return { OR: scopes }
@@ -141,26 +139,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dueSoon = []
     for (const { startOfToday, scope } of await zoneGroupsByToday(now)) {
       const dueSoonEnd = new Date(startOfToday.getTime() + (DUE_SOON_DAYS + 1) * DAY_MS)
-      overdue.push(...await prisma.maintenanceTask.findMany({
-        where: {
-          AND: [scope, reminderConditions('overdue')],
-          completed: false,
-          dueDate: { lt: startOfToday },
-        },
-        include,
-        take: CANDIDATE_LIMIT,
-        orderBy: { dueDate: 'asc' },
-      }))
-      dueSoon.push(...await prisma.maintenanceTask.findMany({
-        where: {
-          AND: [scope, reminderConditions('due_soon')],
-          completed: false,
-          dueDate: { gte: startOfToday, lt: dueSoonEnd },
-        },
-        include,
-        take: CANDIDATE_LIMIT,
-        orderBy: { dueDate: 'asc' },
-      }))
+      overdue.push(
+        ...(await prisma.maintenanceTask.findMany({
+          where: {
+            AND: [scope, reminderConditions('overdue')],
+            completed: false,
+            dueDate: { lt: startOfToday },
+          },
+          include,
+          take: CANDIDATE_LIMIT,
+          orderBy: { dueDate: 'asc' },
+        }))
+      )
+      dueSoon.push(
+        ...(await prisma.maintenanceTask.findMany({
+          where: {
+            AND: [scope, reminderConditions('due_soon')],
+            completed: false,
+            dueDate: { gte: startOfToday, lt: dueSoonEnd },
+          },
+          include,
+          take: CANDIDATE_LIMIT,
+          orderBy: { dueDate: 'asc' },
+        }))
+      )
     }
 
     const candidates = [

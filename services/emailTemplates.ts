@@ -56,7 +56,7 @@ const BRAND = {
   warning: '#F59E0B',
   danger: '#EF4444',
   gray: '#6B7280',
-  lightGray: '#F3F4F6'
+  lightGray: '#F3F4F6',
 }
 
 // Base email layout wrapper
@@ -177,12 +177,15 @@ export function passwordResetEmail(resetUrl: string, expiresIn: string = '1 hour
 
 // ==================== VEHICLE EMAILS ====================
 
-export function vehicleAddedEmail(vehicle: {
-  name: string
-  type?: string
-  driver?: string
-  licensePlate?: string
-}, addedBy: string) {
+export function vehicleAddedEmail(
+  vehicle: {
+    name: string
+    type?: string
+    driver?: string
+    licensePlate?: string
+  },
+  addedBy: string
+) {
   const content = `
     <h2>New Vehicle Added</h2>
     <p>A new vehicle has been added to the fleet by ${esc(addedBy)}.</p>
@@ -193,24 +196,36 @@ export function vehicleAddedEmail(vehicle: {
         <span class="label">Vehicle Name</span>
         <span class="value">${esc(vehicle.name)}</span>
       </div>
-      ${vehicle.type ? `
+      ${
+        vehicle.type
+          ? `
       <div class="detail-row">
         <span class="label">Type</span>
         <span class="value">${esc(vehicle.type)}</span>
       </div>
-      ` : ''}
-      ${vehicle.driver ? `
+      `
+          : ''
+      }
+      ${
+        vehicle.driver
+          ? `
       <div class="detail-row">
         <span class="label">Driver</span>
         <span class="value">${esc(vehicle.driver)}</span>
       </div>
-      ` : ''}
-      ${vehicle.licensePlate ? `
+      `
+          : ''
+      }
+      ${
+        vehicle.licensePlate
+          ? `
       <div class="detail-row">
         <span class="label">License Plate</span>
         <span class="value">${esc(vehicle.licensePlate)}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
     
     <p style="text-align: center; margin: 30px 0;">
@@ -220,11 +235,14 @@ export function vehicleAddedEmail(vehicle: {
   return wrapEmail(content, 'New Vehicle Added')
 }
 
-export function maintenanceDueEmail(vehicle: {
-  name: string
-  mileage?: number
-  nextService?: string
-}, tasks: string[]) {
+export function maintenanceDueEmail(
+  vehicle: {
+    name: string
+    mileage?: number
+    nextService?: string
+  },
+  tasks: string[]
+) {
   const content = `
     <h2>🔧 Maintenance Due</h2>
     <div class="alert alert-warning">
@@ -237,24 +255,32 @@ export function maintenanceDueEmail(vehicle: {
         <span class="label">Vehicle</span>
         <span class="value">${esc(vehicle.name)}</span>
       </div>
-      ${vehicle.mileage ? `
+      ${
+        vehicle.mileage
+          ? `
       <div class="detail-row">
         <span class="label">Current Mileage</span>
         <span class="value">${esc(vehicle.mileage.toLocaleString())} mi</span>
       </div>
-      ` : ''}
-      ${vehicle.nextService ? `
+      `
+          : ''
+      }
+      ${
+        vehicle.nextService
+          ? `
       <div class="detail-row">
         <span class="label">Service Due</span>
         <span class="value">${esc(vehicle.nextService)}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
     
     <div class="card">
       <h3>Required Maintenance</h3>
       <ul>
-        ${tasks.map(task => `<li>${esc(task)}</li>`).join('')}
+        ${tasks.map((task) => `<li>${esc(task)}</li>`).join('')}
       </ul>
     </div>
     
@@ -287,12 +313,16 @@ export function deliveryAssignedEmail(delivery: DeliveryEmailPayload, driverName
         <span class="label">Items</span>
         <span class="value">${esc(delivery.items)}</span>
       </div>
-      ${delivery.scheduledTime ? `
+      ${
+        delivery.scheduledTime
+          ? `
       <div class="detail-row">
         <span class="label">Scheduled</span>
         <span class="value">${esc(new Date(delivery.scheduledTime).toLocaleString())}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
     
     <p style="text-align: center; margin: 30px 0;">
@@ -307,27 +337,29 @@ export function deliveryAssignedEmail(delivery: DeliveryEmailPayload, driverName
 export function deliveryStatusUpdateEmail(delivery: DeliveryStatusPayload, recipientType: 'customer' | 'admin') {
   // Fixed allow-list: the status string never reaches the style attribute.
   const statusColors: Record<string, string> = {
-    'pending': BRAND.warning,
+    pending: BRAND.warning,
     'picked-up': BRAND.primary,
     'in-transit': BRAND.primary,
-    'delivered': BRAND.success,
-    'failed': BRAND.danger,
-    'cancelled': BRAND.danger
+    delivered: BRAND.success,
+    failed: BRAND.danger,
+    cancelled: BRAND.danger,
   }
-  
+
   const statusMessages: Record<string, string> = {
-    'pending': 'Your delivery is pending and will be dispatched soon.',
+    pending: 'Your delivery is pending and will be dispatched soon.',
     'picked-up': 'Your delivery has been picked up.',
     'in-transit': 'Your delivery is on the way!',
-    'delivered': 'Your delivery has been completed.',
-    'failed': 'Your delivery could not be completed.',
-    'cancelled': 'Your delivery has been cancelled.'
+    delivered: 'Your delivery has been completed.',
+    failed: 'Your delivery could not be completed.',
+    cancelled: 'Your delivery has been cancelled.',
   }
-  const statusColor = Object.prototype.hasOwnProperty.call(statusColors, delivery.status) ? statusColors[delivery.status] : BRAND.gray
+  const statusColor = Object.prototype.hasOwnProperty.call(statusColors, delivery.status)
+    ? statusColors[delivery.status]
+    : BRAND.gray
   const statusMessage = Object.prototype.hasOwnProperty.call(statusMessages, delivery.status)
     ? statusMessages[delivery.status]
     : 'Your delivery status has been updated.'
-  
+
   const content = `
     <h2>📦 Delivery Update</h2>
     
@@ -352,26 +384,33 @@ export function deliveryStatusUpdateEmail(delivery: DeliveryStatusPayload, recip
       </div>
     </div>
     
-    ${recipientType === 'customer' ? `
+    ${
+      recipientType === 'customer'
+        ? `
     <p>Track your delivery in real-time:</p>
     <p style="text-align: center; margin: 30px 0;">
       <a href="${SAFE_APP_URL}/track/${esc(encodeURIComponent(delivery.id))}" class="button">Track Delivery</a>
     </p>
-    ` : `
+    `
+        : `
     <p style="text-align: center; margin: 30px 0;">
       <a href="${SAFE_APP_URL}?tab=deliveries" class="button">View All Deliveries</a>
     </p>
-    `}
+    `
+    }
   `
   return wrapEmail(content, 'Delivery Status Update')
 }
 
-export function deliveryCompletedEmail(delivery: {
-  customer: string
-  address: string
-  completedTime?: string
-  driver: string
-}, proofPhoto?: string) {
+export function deliveryCompletedEmail(
+  delivery: {
+    customer: string
+    address: string
+    completedTime?: string
+    driver: string
+  },
+  proofPhoto?: string
+) {
   const content = `
     <h2>✅ Delivery Completed</h2>
     <div class="alert alert-success">
@@ -392,18 +431,26 @@ export function deliveryCompletedEmail(delivery: {
         <span class="label">Driver</span>
         <span class="value">${esc(delivery.driver)}</span>
       </div>
-      ${delivery.completedTime ? `
+      ${
+        delivery.completedTime
+          ? `
       <div class="detail-row">
         <span class="label">Completed At</span>
         <span class="value">${esc(new Date(delivery.completedTime).toLocaleString())}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
     
-    ${proofPhoto ? `
+    ${
+      proofPhoto
+        ? `
     <p>Proof of delivery photo:</p>
     <img src="${safeUrl(proofPhoto)}" alt="Delivery Photo" style="max-width: 100%; border-radius: 8px; margin: 16px 0;">
-    ` : ''}
+    `
+        : ''
+    }
     
     <p>Thank you for using Fleetvera!</p>
   `
@@ -412,20 +459,25 @@ export function deliveryCompletedEmail(delivery: {
 
 // ==================== MAINTENANCE EMAILS ====================
 
-export function maintenanceTaskCreatedEmail(task: {
-  vehicle: string
-  type: string
-  dueDate: string
-  priority: string
-  estimatedDuration?: string
-}, createdBy: string) {
+export function maintenanceTaskCreatedEmail(
+  task: {
+    vehicle: string
+    type: string
+    dueDate: string
+    priority: string
+    estimatedDuration?: string
+  },
+  createdBy: string
+) {
   const priorityColors: Record<string, string> = {
-    'high': BRAND.danger,
-    'medium': BRAND.warning,
-    'low': BRAND.success
+    high: BRAND.danger,
+    medium: BRAND.warning,
+    low: BRAND.success,
   }
-  
-  const priorityColor = Object.prototype.hasOwnProperty.call(priorityColors, task.priority) ? priorityColors[task.priority] : BRAND.gray
+
+  const priorityColor = Object.prototype.hasOwnProperty.call(priorityColors, task.priority)
+    ? priorityColors[task.priority]
+    : BRAND.gray
 
   const content = `
     <h2>🔧 New Maintenance Task</h2>
@@ -449,12 +501,16 @@ export function maintenanceTaskCreatedEmail(task: {
         <span class="label">Priority</span>
         <span class="value" style="color: ${priorityColor};">${esc(task.priority.toUpperCase())}</span>
       </div>
-      ${task.estimatedDuration ? `
+      ${
+        task.estimatedDuration
+          ? `
       <div class="detail-row">
         <span class="label">Estimated Duration</span>
         <span class="value">${esc(task.estimatedDuration)}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
     
     <p style="text-align: center; margin: 30px 0;">
@@ -464,12 +520,14 @@ export function maintenanceTaskCreatedEmail(task: {
   return wrapEmail(content, 'New Maintenance Task')
 }
 
-export function maintenanceOverdueEmail(tasks: Array<{
-  vehicle: string
-  type: string
-  dueDate: string
-  daysOverdue: number
-}>) {
+export function maintenanceOverdueEmail(
+  tasks: Array<{
+    vehicle: string
+    type: string
+    dueDate: string
+    daysOverdue: number
+  }>
+) {
   const content = `
     <h2>⚠️ Maintenance Overdue</h2>
     <div class="alert alert-danger">
@@ -478,14 +536,18 @@ export function maintenanceOverdueEmail(tasks: Array<{
     
     <div class="card">
       <h3>Overdue Tasks</h3>
-      ${tasks.map(task => `
+      ${tasks
+        .map(
+          (task) => `
         <div style="padding: 12px; border-bottom: 1px solid #E5E7EB;">
           <strong>${esc(task.vehicle)}</strong> - ${esc(task.type)}<br>
           <span style="color: ${BRAND.danger}; font-size: 14px;">
             Due: ${esc(new Date(task.dueDate).toLocaleDateString())} (${esc(task.daysOverdue)} days overdue)
           </span>
         </div>
-      `).join('')}
+      `
+        )
+        .join('')}
     </div>
     
     <p style="text-align: center; margin: 30px 0;">
@@ -499,7 +561,7 @@ export function maintenanceOverdueEmail(tasks: Array<{
 
 export function clientWelcomeEmail(clientName: string, businessName?: string) {
   const displayName = businessName || clientName
-  
+
   const content = `
     <h2>Welcome to Fleetvera Delivery Services</h2>
     <p>Dear ${esc(clientName)},</p>
@@ -525,26 +587,31 @@ export function clientWelcomeEmail(clientName: string, businessName?: string) {
 
 // ==================== ANNOUNCEMENT EMAILS ====================
 
-export function announcementEmail(announcement: {
-  message: string
-  priority: 'low' | 'normal' | 'high' | 'urgent'
-  sentBy?: string
-}, recipientName?: string) {
+export function announcementEmail(
+  announcement: {
+    message: string
+    priority: 'low' | 'normal' | 'high' | 'urgent'
+    sentBy?: string
+  },
+  recipientName?: string
+) {
   const priorityColors: Record<string, string> = {
-    'low': BRAND.success,
-    'normal': BRAND.primary,
-    'high': BRAND.warning,
-    'urgent': BRAND.danger
+    low: BRAND.success,
+    normal: BRAND.primary,
+    high: BRAND.warning,
+    urgent: BRAND.danger,
   }
-  
+
   const priorityBg: Record<string, string> = {
-    'low': '#D1FAE5',
-    'normal': '#DBEAFE',
-    'high': '#FEF3C7',
-    'urgent': '#FEE2E2'
+    low: '#D1FAE5',
+    normal: '#DBEAFE',
+    high: '#FEF3C7',
+    urgent: '#FEE2E2',
   }
-  
-  const priority = Object.prototype.hasOwnProperty.call(priorityColors, announcement.priority) ? announcement.priority : 'normal'
+
+  const priority = Object.prototype.hasOwnProperty.call(priorityColors, announcement.priority)
+    ? announcement.priority
+    : 'normal'
 
   const content = `
     <h2>📢 Fleet Announcement</h2>
@@ -602,14 +669,18 @@ export function dailyReportEmail(report: {
       </div>
     </div>
     
-    ${report.alerts.length > 0 ? `
+    ${
+      report.alerts.length > 0
+        ? `
     <div class="alert alert-warning">
       <h4>⚠️ Alerts</h4>
       <ul>
-        ${report.alerts.map(alert => `<li>${esc(alert)}</li>`).join('')}
+        ${report.alerts.map((alert) => `<li>${esc(alert)}</li>`).join('')}
       </ul>
     </div>
-    ` : ''}
+    `
+        : ''
+    }
     
     <p style="text-align: center; margin: 30px 0;">
       <a href="${SAFE_APP_URL}?tab=reports" class="button">View Full Report</a>
@@ -629,9 +700,9 @@ export function vendingMachineAlertEmail(machine: {
   const statusMessages: Record<string, string> = {
     'needs-restock': 'This machine needs to be restocked.',
     'needs-maintenance': 'This machine requires maintenance.',
-    'offline': 'This machine is currently offline.'
+    offline: 'This machine is currently offline.',
   }
-  
+
   const content = `
     <h2>🚨 Vending Machine Alert</h2>
     <div class="alert alert-warning">
@@ -652,12 +723,16 @@ export function vendingMachineAlertEmail(machine: {
         <span class="label">Status</span>
         <span class="value">${esc(machine.status.replace('-', ' ').toUpperCase())}</span>
       </div>
-      ${machine.openNotes > 0 ? `
+      ${
+        machine.openNotes > 0
+          ? `
       <div class="detail-row">
         <span class="label">Open Notes</span>
         <span class="value">${esc(machine.openNotes)}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
     
     <p>${Object.prototype.hasOwnProperty.call(statusMessages, machine.status) ? statusMessages[machine.status] : 'Please check this machine.'}</p>
@@ -702,12 +777,16 @@ export function weeklySummaryEmail(data: {
       </div>
     </div>
     
-    ${data.topDriver ? `
+    ${
+      data.topDriver
+        ? `
     <div class="card" style="text-align: center; background: linear-gradient(135deg, ${BRAND.primary}10, ${BRAND.primary}20);">
       <h3>🏆 Driver of the Week</h3>
       <p style="font-size: 24px; font-weight: bold; color: ${BRAND.primary}; margin: 8px 0;">${esc(data.topDriver)}</p>
     </div>
-    ` : ''}
+    `
+        : ''
+    }
     
     <p style="text-align: center; margin: 30px 0;">
       <a href="${SAFE_APP_URL}?tab=reports" class="button">View Full Report</a>

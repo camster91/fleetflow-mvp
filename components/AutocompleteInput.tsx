@@ -54,7 +54,7 @@ export default function AutocompleteInput({
   allowNew = true,
   onSelect,
   className = '',
-  disabled = false
+  disabled = false,
 }: AutocompleteInputProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState(value)
@@ -81,16 +81,20 @@ export default function AutocompleteInput({
   }, [])
 
   // Filter suggestions based on input
-  const filteredRecent = recentItems.filter(item =>
-    item.toLowerCase().includes(inputValue.toLowerCase()) &&
-    item.toLowerCase() !== inputValue.toLowerCase()
-  ).slice(0, 5)
+  const filteredRecent = recentItems
+    .filter(
+      (item) => item.toLowerCase().includes(inputValue.toLowerCase()) && item.toLowerCase() !== inputValue.toLowerCase()
+    )
+    .slice(0, 5)
 
-  const filteredSuggestions = suggestions.filter(item =>
-    item.toLowerCase().includes(inputValue.toLowerCase()) &&
-    item.toLowerCase() !== inputValue.toLowerCase() &&
-    !recentItems.includes(item)
-  ).slice(0, 5)
+  const filteredSuggestions = suggestions
+    .filter(
+      (item) =>
+        item.toLowerCase().includes(inputValue.toLowerCase()) &&
+        item.toLowerCase() !== inputValue.toLowerCase() &&
+        !recentItems.includes(item)
+    )
+    .slice(0, 5)
 
   const hasResults = filteredRecent.length > 0 || filteredSuggestions.length > 0
 
@@ -112,18 +116,16 @@ export default function AutocompleteInput({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const allOptions = [...filteredRecent, ...filteredSuggestions]
-    
+
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
         setIsOpen(true)
-        setHighlightedIndex(prev => 
-          prev < allOptions.length - 1 ? prev + 1 : prev
-        )
+        setHighlightedIndex((prev) => (prev < allOptions.length - 1 ? prev + 1 : prev))
         break
       case 'ArrowUp':
         e.preventDefault()
-        setHighlightedIndex(prev => (prev > 0 ? prev - 1 : -1))
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : -1))
         break
       case 'Enter':
         e.preventDefault()
@@ -156,14 +158,10 @@ export default function AutocompleteInput({
           {label}
         </label>
       )}
-      
+
       <div className="relative">
-        {icon && (
-          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-            {icon}
-          </div>
-        )}
-        
+        {icon && <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">{icon}</div>}
+
         <input
           id={inputId}
           ref={inputRef}
@@ -183,7 +181,7 @@ export default function AutocompleteInput({
             icon ? 'pl-10' : ''
           } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
         />
-        
+
         {inputValue && (
           <button
             type="button"
@@ -194,8 +192,8 @@ export default function AutocompleteInput({
             <X className="h-4 w-4" />
           </button>
         )}
-        
-        <ChevronDown 
+
+        <ChevronDown
           className={`absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 transition-transform ${
             isOpen ? 'rotate-180' : ''
           }`}
@@ -204,7 +202,11 @@ export default function AutocompleteInput({
 
       {/* Dropdown */}
       {isOpen && (hasResults || !inputValue) && (
-        <div id={`${inputId}-listbox`} role="listbox" className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
+        <div
+          id={`${inputId}-listbox`}
+          role="listbox"
+          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto"
+        >
           {/* Recent Items Section */}
           {filteredRecent.length > 0 && (
             <div>
@@ -231,9 +233,7 @@ export default function AutocompleteInput({
           {/* Suggestions Section */}
           {filteredSuggestions.length > 0 && (
             <div>
-              {filteredRecent.length > 0 && (
-                <div className="border-t border-gray-100" />
-              )}
+              {filteredRecent.length > 0 && <div className="border-t border-gray-100" />}
               <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
                 <Search className="h-3 w-3" />
                 Suggestions
@@ -244,7 +244,9 @@ export default function AutocompleteInput({
                   key={`sugg-${item}`}
                   onClick={() => handleSelect(item)}
                   className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition flex items-center gap-2 ${
-                    highlightedIndex === filteredRecent.length + index ? 'bg-primary-50 text-primary-700' : 'text-gray-700'
+                    highlightedIndex === filteredRecent.length + index
+                      ? 'bg-primary-50 text-primary-700'
+                      : 'text-gray-700'
                   }`}
                 >
                   <Search className="h-3 w-3 text-gray-400" />
@@ -256,9 +258,7 @@ export default function AutocompleteInput({
 
           {/* Empty State */}
           {inputValue && !hasResults && !allowNew && (
-            <div className="px-3 py-4 text-sm text-gray-500 text-center">
-              No matches found
-            </div>
+            <div className="px-3 py-4 text-sm text-gray-500 text-center">No matches found</div>
           )}
 
           {/* Add New Option */}

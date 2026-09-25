@@ -2,7 +2,9 @@ import { render, screen } from '@testing-library/react'
 import BillingPage from '@/pages/billing/index'
 import PricingPage from '@/pages/pricing'
 
-jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
+jest.mock('@/components/layouts/DashboardLayout', () => ({
+  DashboardLayout: ({ children }: { children: React.ReactNode }) => <main>{children}</main>,
+}))
 jest.mock('@/components/PageHeader', () => ({ PageHeader: ({ title }: { title: string }) => <h1>{title}</h1> }))
 jest.mock('@/components/marketing/Navbar', () => ({ Navbar: () => null }))
 jest.mock('@/components/marketing/Footer', () => ({ Footer: () => null }))
@@ -10,7 +12,10 @@ jest.mock('@/components/marketing/Footer', () => ({ Footer: () => null }))
 const unsupportedClaims = /white-label|SLA|dedicated account manager|priority support|custom reports/i
 
 function mockFetch(responses: Record<string, { ok: boolean; body?: unknown }>) {
-  const withRole = { '/api/team/workspaces': { ok: true, body: { activeTeamId: 't1', workspaces: [{ id: 't1', role: 'OWNER' }] } }, ...responses }
+  const withRole = {
+    '/api/team/workspaces': { ok: true, body: { activeTeamId: 't1', workspaces: [{ id: 't1', role: 'OWNER' }] } },
+    ...responses,
+  }
   global.fetch = jest.fn(async (url: string) => {
     const match = withRole[url as keyof typeof withRole]
     return { ok: match?.ok ?? false, json: async () => match?.body ?? {} }
@@ -42,20 +47,42 @@ describe('free beta billing', () => {
     expect(screen.queryByText('Fleetvera is free during the beta')).not.toBeInTheDocument()
   })
 
-  it.each(['ACTIVE', 'PAST_DUE'])('billing page shows a neutral warning, not the beta notice, for a %s paid subscription', async (status) => {
-    mockFetch({
-      '/api/subscription/status': { ok: true, body: { subscription: { plan: 'PRO', status, trialEndsAt: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1' } } },
-      '/api/stripe/availability': { ok: true, body: { available: false, pricing: null } },
-    })
-    render(<BillingPage />)
-    expect(await screen.findByText('Online billing is temporarily unavailable')).toBeInTheDocument()
-    expect(screen.queryByText('Fleetvera is free during the beta')).not.toBeInTheDocument()
-  })
+  it.each(['ACTIVE', 'PAST_DUE'])(
+    'billing page shows a neutral warning, not the beta notice, for a %s paid subscription',
+    async (status) => {
+      mockFetch({
+        '/api/subscription/status': {
+          ok: true,
+          body: {
+            subscription: {
+              plan: 'PRO',
+              status,
+              trialEndsAt: null,
+              currentPeriodEnd: null,
+              cancelAtPeriodEnd: false,
+              stripeCustomerId: 'cus_1',
+              stripeSubscriptionId: 'sub_1',
+            },
+          },
+        },
+        '/api/stripe/availability': { ok: true, body: { available: false, pricing: null } },
+      })
+      render(<BillingPage />)
+      expect(await screen.findByText('Online billing is temporarily unavailable')).toBeInTheDocument()
+      expect(screen.queryByText('Fleetvera is free during the beta')).not.toBeInTheDocument()
+    }
+  )
 
   it('billing page still offers checkout once billing is configured', async () => {
     mockFetch({
       '/api/subscription/status': { ok: true, body: { subscription: null } },
-      '/api/stripe/availability': { ok: true, body: { available: true, pricing: { monthly: { amount: 4900, currency: 'USD' }, yearly: { amount: 49000, currency: 'USD' } } } },
+      '/api/stripe/availability': {
+        ok: true,
+        body: {
+          available: true,
+          pricing: { monthly: { amount: 4900, currency: 'USD' }, yearly: { amount: 49000, currency: 'USD' } },
+        },
+      },
     })
     render(<BillingPage />)
     expect(await screen.findByRole('button', { name: 'Subscribe Monthly' })).toBeEnabled()

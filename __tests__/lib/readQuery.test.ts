@@ -1,8 +1,4 @@
-import {
-  parseActivityFilters,
-  parseAuditMetadata,
-  parseSearchTerm,
-} from '@/lib/readQuery'
+import { parseActivityFilters, parseAuditMetadata, parseSearchTerm } from '@/lib/readQuery'
 
 describe('bounded read query parsing', () => {
   it.each([

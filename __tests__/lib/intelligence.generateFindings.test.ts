@@ -7,7 +7,15 @@ describe('generateFindings integration', () => {
   it('is reproducible for an injected clock, produces unique stable IDs, and separates tenants', () => {
     const records = {
       vehicles: [{ id: 'v:1', status: 'active', lastUpdated: new Date('2026-07-01T00:00:00Z') }],
-      deliveries: [{ id: 'd:1', status: 'pending', driver: null, vehicleId: null, scheduledTime: new Date('2026-08-08T12:00:00Z') }],
+      deliveries: [
+        {
+          id: 'd:1',
+          status: 'pending',
+          driver: null,
+          vehicleId: null,
+          scheduledTime: new Date('2026-08-08T12:00:00Z'),
+        },
+      ],
       maintenance: [{ id: 'm:1', completed: false, dueDate: new Date('2026-08-01T00:00:00Z') }],
       dataQualityIssues: [
         { entityType: 'vehicle' as const, entityId: 'v:1', field: 'mileage', severity: 'high' as const },
@@ -19,21 +27,30 @@ describe('generateFindings integration', () => {
     const otherTenant = generateFindings({ tenantKey: 'tenant:b', now: NOW, records })
 
     expect(first).toEqual(second)
-    expect(new Set(first.map(finding => finding.id)).size).toBe(first.length)
-    expect(otherTenant.map(finding => finding.id)).not.toEqual(first.map(finding => finding.id))
-    expect(first.map(finding => finding.score)).toEqual([...first].map(finding => finding.score).sort((a, b) => b - a))
-    expect(first.every(finding => finding.generatedAt.toISOString() === NOW.toISOString())).toBe(true)
-    expect(first.every(finding => finding.id.length <= MAX_FINDING_ID_LENGTH)).toBe(true)
+    expect(new Set(first.map((finding) => finding.id)).size).toBe(first.length)
+    expect(otherTenant.map((finding) => finding.id)).not.toEqual(first.map((finding) => finding.id))
+    expect(first.map((finding) => finding.score)).toEqual(
+      [...first].map((finding) => finding.score).sort((a, b) => b - a)
+    )
+    expect(first.every((finding) => finding.generatedAt.toISOString() === NOW.toISOString())).toBe(true)
+    expect(first.every((finding) => finding.id.length <= MAX_FINDING_ID_LENGTH)).toBe(true)
   })
 
   it('handles malformed record values without throwing or leaking unsafe fields', () => {
     const findings = generateFindings({
-      tenantKey: 'tenant', now: NOW,
+      tenantKey: 'tenant',
+      now: NOW,
       records: {
         vehicles: [null, { id: '', status: 'active', updatedAt: 'bad' }] as never,
         deliveries: [null, { id: 'd', status: 42, scheduledTime: 'bad' }] as never,
-        maintenance: [null, { id: 'm', completed: true, vehicleId: 'v', actualCost: Number.NaN, completedDate: 'bad' }] as never,
-        dataQualityIssues: [null, { entityType: 'vehicle', entityId: 'v', field: 'apiKey=secret', severity: 'high' }] as never,
+        maintenance: [
+          null,
+          { id: 'm', completed: true, vehicleId: 'v', actualCost: Number.NaN, completedDate: 'bad' },
+        ] as never,
+        dataQualityIssues: [
+          null,
+          { entityType: 'vehicle', entityId: 'v', field: 'apiKey=secret', severity: 'high' },
+        ] as never,
       },
     })
     expect(findings).toHaveLength(1)
@@ -50,10 +67,13 @@ describe('generateFindings integration', () => {
 
   it('uses absolute instants consistently across timezone-offset inputs', () => {
     const records = {
-      maintenance: [{
-        id: 'm', completed: false,
-        dueDate: '2026-08-08T11:59:59-04:00',
-      }],
+      maintenance: [
+        {
+          id: 'm',
+          completed: false,
+          dueDate: '2026-08-08T11:59:59-04:00',
+        },
+      ],
     }
     const utc = generateFindings({ tenantKey: 't', now: new Date('2026-08-08T16:00:00Z'), records })
     const offset = generateFindings({ tenantKey: 't', now: new Date('2026-08-08T12:00:00-04:00'), records })
@@ -63,14 +83,16 @@ describe('generateFindings integration', () => {
 
   it('processes a large bounded input deterministically', () => {
     const deliveries = Array.from({ length: 5_000 }, (_, index) => ({
-      id: `d-${index}`, status: index % 2 ? 'pending' : 'delivered',
-      driver: index % 2 ? 'assigned' : null, vehicleId: `v-${index % 100}`,
+      id: `d-${index}`,
+      status: index % 2 ? 'pending' : 'delivered',
+      driver: index % 2 ? 'assigned' : null,
+      vehicleId: `v-${index % 100}`,
       scheduledTime: new Date(NOW.getTime() + 60_000),
     }))
     const started = performance.now()
     const findings = generateFindings({ tenantKey: 'large', now: NOW, records: { deliveries } })
     expect(performance.now() - started).toBeLessThan(2_000)
     expect(findings).toHaveLength(50)
-    expect(new Set(findings.map(finding => finding.id)).size).toBe(50)
+    expect(new Set(findings.map((finding) => finding.id)).size).toBe(50)
   })
 })

@@ -84,20 +84,40 @@ describe('overdue checks use the workspace calendar day', () => {
   ]
 
   it('intelligence findings: due today in Vancouver is due soon, not overdue', () => {
-    const findings = maintenanceScheduleFindings({ tenantKey: 'team-1', now, timeZone: 'America/Vancouver', records: { maintenance: tasks } })
-    const types = Object.fromEntries(findings.map(f => [f.evidence[0].entityId, f.type]))
+    const findings = maintenanceScheduleFindings({
+      tenantKey: 'team-1',
+      now,
+      timeZone: 'America/Vancouver',
+      records: { maintenance: tasks },
+    })
+    const types = Object.fromEntries(findings.map((f) => [f.evidence[0].entityId, f.type]))
     expect(types).toEqual({ 'due-today': 'maintenance-due-soon', 'due-yesterday': 'maintenance-overdue' })
-    expect(findings.find(f => f.type === 'maintenance-overdue')?.explanation).toContain('1 day(s) ago')
+    expect(findings.find((f) => f.type === 'maintenance-overdue')?.explanation).toContain('1 day(s) ago')
 
-    const utc = maintenanceScheduleFindings({ tenantKey: 'team-1', now, timeZone: 'UTC', records: { maintenance: tasks } })
-    expect(utc.every(f => f.type === 'maintenance-overdue')).toBe(true)
+    const utc = maintenanceScheduleFindings({
+      tenantKey: 'team-1',
+      now,
+      timeZone: 'UTC',
+      records: { maintenance: tasks },
+    })
+    expect(utc.every((f) => f.type === 'maintenance-overdue')).toBe(true)
   })
 
   it('maintenance risk: due today in Vancouver scores no overdue points', () => {
-    const base = { vehicle: { id: 'v1', name: 'Van', year: 2024, mileage: 0, lastService: null, maintenanceDue: false }, serviceMileage: null, costUnit: 'major' as const }
-    const today = scoreMaintenanceRisk({ ...base, tasks: [{ id: 't1', type: 'Oil', dueDate: day('2026-12-01'), completed: false }] }, { now, timeZone: 'America/Vancouver' })
-    expect(today.factors.find(f => f.code === 'overdue-maintenance')).toBeUndefined()
-    const yesterday = scoreMaintenanceRisk({ ...base, tasks: [{ id: 't1', type: 'Oil', dueDate: day('2026-11-30'), completed: false }] }, { now, timeZone: 'America/Vancouver' })
-    expect(yesterday.factors.find(f => f.code === 'overdue-maintenance')?.points).toBe(10)
+    const base = {
+      vehicle: { id: 'v1', name: 'Van', year: 2024, mileage: 0, lastService: null, maintenanceDue: false },
+      serviceMileage: null,
+      costUnit: 'major' as const,
+    }
+    const today = scoreMaintenanceRisk(
+      { ...base, tasks: [{ id: 't1', type: 'Oil', dueDate: day('2026-12-01'), completed: false }] },
+      { now, timeZone: 'America/Vancouver' }
+    )
+    expect(today.factors.find((f) => f.code === 'overdue-maintenance')).toBeUndefined()
+    const yesterday = scoreMaintenanceRisk(
+      { ...base, tasks: [{ id: 't1', type: 'Oil', dueDate: day('2026-11-30'), completed: false }] },
+      { now, timeZone: 'America/Vancouver' }
+    )
+    expect(yesterday.factors.find((f) => f.code === 'overdue-maintenance')?.points).toBe(10)
   })
 })

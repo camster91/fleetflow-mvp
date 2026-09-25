@@ -2,6 +2,9 @@ import { createMocks } from 'node-mocks-http'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 
+// Compare structure, not layout: collapse whitespace and rejoin method chains Prettier splits across lines.
+const normalizeSource = (source: string) => source.replace(/\s+/g, ' ').replace(/ \./g, '.')
+
 jest.mock('@/lib/apiAuth', () => ({
   requireTenantContext: jest.fn(),
   assertSameOrigin: jest.fn(),
@@ -70,8 +73,8 @@ describe('client mutation security and integrity', () => {
   })
 
   it('keeps client changes and audit records in the same transaction', () => {
-    const collection = readFileSync(join(process.cwd(), 'pages/api/clients/index.ts'), 'utf8')
-    const item = readFileSync(join(process.cwd(), 'pages/api/clients/[id].ts'), 'utf8')
+    const collection = normalizeSource(readFileSync(join(process.cwd(), 'pages/api/clients/index.ts'), 'utf8'))
+    const item = normalizeSource(readFileSync(join(process.cwd(), 'pages/api/clients/[id].ts'), 'utf8'))
 
     expect(collection).toContain('const client = await prisma.$transaction(async (tx) => {')
     expect(collection).toContain('const created = await tx.client.create({ data })')

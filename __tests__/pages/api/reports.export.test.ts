@@ -21,10 +21,18 @@ describe('/api/reports/export CSV safety', () => {
   it.each(['=SUM(1,1)', '+1+1', '-1+1', '@HYPERLINK("https://evil.example")', '  =1+1'])(
     'literalizes formula-leading delivery text: %s',
     async (customer) => {
-      ;(prisma.delivery.findMany as jest.Mock).mockResolvedValue([{
-        customer, address: 'Address', status: 'pending', driver: null, items: 'Items',
-        scheduledTime: null, completedTime: null, createdAt: new Date('2026-01-01T00:00:00Z'),
-      }])
+      ;(prisma.delivery.findMany as jest.Mock).mockResolvedValue([
+        {
+          customer,
+          address: 'Address',
+          status: 'pending',
+          driver: null,
+          items: 'Items',
+          scheduledTime: null,
+          completedTime: null,
+          createdAt: new Date('2026-01-01T00:00:00Z'),
+        },
+      ])
       const { req, res } = createMocks({ method: 'GET', query: { type: 'deliveries' } })
 
       await handler(req as never, res as never)

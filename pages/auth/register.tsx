@@ -1,14 +1,11 @@
-import { ShieldAlert } from 'lucide-react';
-import Link from 'next/link';
-import { AuthLayout } from '../../components/layouts/AuthLayout';
-import { Button } from '../../components/ui/Button';
+import { ShieldAlert } from 'lucide-react'
+import Link from 'next/link'
+import { AuthLayout } from '../../components/layouts/AuthLayout'
+import { Button } from '../../components/ui/Button'
 
 export default function RegisterPage() {
   return (
-    <AuthLayout
-      title="Registration Disabled"
-      subtitle="Access is by invitation only"
-    >
+    <AuthLayout title="Registration Disabled" subtitle="Access is by invitation only">
       <div className="text-center space-y-6">
         <div className="mx-auto w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center">
           <ShieldAlert className="h-8 w-8 text-slate-400" />
@@ -28,5 +25,5 @@ export default function RegisterPage() {
         </Link>
       </div>
     </AuthLayout>
-  );
+  )
 }

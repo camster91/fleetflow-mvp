@@ -23,7 +23,8 @@ describe('POST /api/auth/refresh', () => {
       return false
     })
     const { req, res } = createMocks<NextApiRequest, NextApiResponse>({
-      method: 'POST', headers: { host: 'fleetvera.example', origin: 'https://evil.example' },
+      method: 'POST',
+      headers: { host: 'fleetvera.example', origin: 'https://evil.example' },
     })
     await handler(req, res)
     expect(res._getStatusCode()).toBe(403)

@@ -35,14 +35,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!parsed.ok) return res.status(400).json({ error: parsed.error })
     const { page, limit, skip, conditions, orderBy } = parsed.value
 
-    const scope=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
+    const scope = assignedResourceWhere(tenant.resourceWhere, tenant.role, userId)
     const where = scopedWhere(scope, conditions)
     const [deliveries, total, summary] = await Promise.all([
-      prisma.delivery.findMany({ where, orderBy: orderBy as Prisma.DeliveryOrderByWithRelationInput[], skip, take: limit }),
+      prisma.delivery.findMany({
+        where,
+        orderBy: orderBy as Prisma.DeliveryOrderByWithRelationInput[],
+        skip,
+        take: limit,
+      }),
       prisma.delivery.count({ where }),
       parsed.value.summary ? deliverySummary(scope) : undefined,
     ])
-    return res.json({ data: deliveries.map(item=>isDriverRole(tenant.role)?driverDeliveryDto(item):dbToDelivery(item)), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
+    return res.json({
+      data: deliveries.map((item) => (isDriverRole(tenant.role) ? driverDeliveryDto(item) : dbToDelivery(item))),
+      total,
+      page,
+      limit,
+      hasMore: skip + limit < total,
+      ...(summary ? { summary } : {}),
+    })
   }
 
   if (req.method === 'POST') {
@@ -50,27 +62,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const idempotency = await beginIdempotentRequest(req, res, { tenant, userId, route: 'POST /api/deliveries' })
     if (!idempotency.proceed) return
     const parsed = deliveryCreateSchema.safeParse(req.body ?? {})
-    if (!parsed.success) return res.status(400).json({ error: 'Invalid delivery', fields: invalidDeliveryFields(parsed.error) })
+    if (!parsed.success)
+      return res.status(400).json({ error: 'Invalid delivery', fields: invalidDeliveryFields(parsed.error) })
     // Only validated fields reach the database; the driver name is derived from the assignment.
     const { driver: _driver, ...body } = parsed.data
-    if (Object.prototype.hasOwnProperty.call(body, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    if (Object.prototype.hasOwnProperty.call(body, 'assignedDriverId') && !canAssignDrivers(tenant.role))
+      return res.status(403).json({ error: 'Forbidden' })
     let assignment
-    try { assignment = await resolveDriverAssignment(prisma, tenant, body.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
+    try {
+      assignment = await resolveDriverAssignment(prisma, tenant, body.assignedDriverId)
+    } catch {
+      return res.status(400).json({ error: 'Invalid driver assignment' })
+    }
     const mapped = deliveryToDb({ ...body, driver: assignment.driver } as Omit<Delivery, 'id'>, tenant.ownerId)
     const data = { ...mapped, ...assignment, ownerId: tenant.ownerId, teamId: tenant.teamId }
-    const delivery = await prisma.$transaction(async (tx) => {
-      const created = await tx.delivery.create({ data })
-      await logActivity(tx, {
-        userId,
-        teamId: tenant.teamId,
-        userName: session.user.name, userRole: tenant.role,
-        action: 'created', entityType: 'delivery',
-        entityId: created.id, entityName: created.customer,
-        description: `Delivery for "${created.customer}" was created`,
+    const delivery = await prisma
+      .$transaction(async (tx) => {
+        const created = await tx.delivery.create({ data })
+        await logActivity(tx, {
+          userId,
+          teamId: tenant.teamId,
+          userName: session.user.name,
+          userRole: tenant.role,
+          action: 'created',
+          entityType: 'delivery',
+          entityId: created.id,
+          entityName: created.customer,
+          description: `Delivery for "${created.customer}" was created`,
+        })
+        await idempotency.store(tx, 201, dbToDelivery(created))
+        return created
       })
-      await idempotency.store(tx, 201, dbToDelivery(created))
-      return created
-    }).catch(idempotency.replayOnConflict)
+      .catch(idempotency.replayOnConflict)
     if (!delivery) return
     // The delivery is already committed. Notifications are best-effort so a
     // failure here never turns into a 500 that prompts a duplicate retry.
@@ -94,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               delivery,
               driverUser.name || delivery.driver || 'Unknown driver',
               driverUser.email,
-              session.user.name || 'Manager',
+              session.user.name || 'Manager'
             ).catch(console.error)
           }
         }

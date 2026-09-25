@@ -5,8 +5,15 @@ const renderPagination = (props: Partial<React.ComponentProps<typeof Pagination>
   const onPageChange = jest.fn()
   const onPageSizeChange = jest.fn()
   render(
-    <Pagination label="vehicles" page={2} pageSize={25} total={60}
-      onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} {...props} />,
+    <Pagination
+      label="vehicles"
+      page={2}
+      pageSize={25}
+      total={60}
+      onPageChange={onPageChange}
+      onPageSizeChange={onPageSizeChange}
+      {...props}
+    />
   )
   return { onPageChange, onPageSizeChange }
 }
@@ -48,7 +55,8 @@ describe('Pagination', () => {
     renderPagination({ page: 1, total: 0 })
     expect(screen.getByText('No vehicles')).toBeInTheDocument()
     expect(screen.getByText('Page 1 of 1')).toBeInTheDocument()
-    for (const name of ['First page', 'Previous page', 'Next page', 'Last page']) expect(screen.getByRole('button', { name })).toBeDisabled()
+    for (const name of ['First page', 'Previous page', 'Next page', 'Last page'])
+      expect(screen.getByRole('button', { name })).toBeDisabled()
   })
 
   it('disables everything while a page is loading', () => {
@@ -60,7 +68,11 @@ describe('Pagination', () => {
   it('offers 25/50/100 rows per page', () => {
     const { onPageSizeChange } = renderPagination()
     const select = screen.getByRole('combobox', { name: 'Rows per page' })
-    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(['25', '50', '100'])
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent)
+    ).toEqual(['25', '50', '100'])
     fireEvent.change(select, { target: { value: '100' } })
     expect(onPageSizeChange).toHaveBeenCalledWith(100)
   })

@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { tenant, session } = context
   if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-  if (!await rateLimitMiddleware(req, res, 'api', `activity:${session.user.id}`)) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `activity:${session.user.id}`))) return
 
   const parsed = parseActivityFilters(req.query.limit, req.query.type)
   if (!parsed.ok) return res.status(400).json({ error: parsed.error })

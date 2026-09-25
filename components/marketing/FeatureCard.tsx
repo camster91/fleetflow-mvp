@@ -1,10 +1,10 @@
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon } from 'lucide-react'
 
 interface FeatureCardProps {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  className?: string;
+  icon: LucideIcon
+  title: string
+  description: string
+  className?: string
 }
 
 export function FeatureCard({ icon: Icon, title, description, className = '' }: FeatureCardProps) {
@@ -18,15 +18,15 @@ export function FeatureCard({ icon: Icon, title, description, className = '' }: 
       <h3 className="text-lg font-semibold text-slate-900 mb-2">{title}</h3>
       <p className="text-slate-600 text-sm leading-relaxed">{description}</p>
     </div>
-  );
+  )
 }
 
 interface FeatureCardLargeProps {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  features: string[];
-  imagePosition?: 'left' | 'right';
+  icon: LucideIcon
+  title: string
+  description: string
+  features: string[]
+  imagePosition?: 'left' | 'right'
 }
 
 export function FeatureCardLarge({
@@ -52,7 +52,7 @@ export function FeatureCardLarge({
         ))}
       </ul>
     </div>
-  );
+  )
 
   const imagePlaceholder = (
     <div className="relative aspect-video rounded-xl bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center overflow-hidden">
@@ -64,7 +64,7 @@ export function FeatureCardLarge({
         <span className="text-sm text-slate-500 font-medium">Feature Preview</span>
       </div>
     </div>
-  );
+  )
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -80,5 +80,5 @@ export function FeatureCardLarge({
         </>
       )}
     </div>
-  );
+  )
 }

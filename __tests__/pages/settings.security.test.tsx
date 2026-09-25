@@ -14,7 +14,8 @@ jest.mock('next/router', () => ({ useRouter: () => ({ push: mockPush }) }))
 
 function mockFetch(logoutAllOk = true) {
   global.fetch = jest.fn(async (url: string) => {
-    if (url === '/api/auth/logout-all') return { ok: logoutAllOk, json: async () => (logoutAllOk ? { ok: true } : { error: 'Server unavailable' }) }
+    if (url === '/api/auth/logout-all')
+      return { ok: logoutAllOk, json: async () => (logoutAllOk ? { ok: true } : { error: 'Server unavailable' }) }
     return { ok: true, json: async () => ({ twoFactorEnabled: false, lastLoginAt: null, loginHistory: [] }) }
   }) as unknown as typeof fetch
 }

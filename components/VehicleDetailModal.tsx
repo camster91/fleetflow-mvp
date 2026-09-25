@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { X, Truck, MapPin, Battery, Calendar, Wrench, Navigation, Mail, FileText, Loader2, CheckCircle, Clock } from 'lucide-react'
+import {
+  X,
+  Truck,
+  MapPin,
+  Battery,
+  Calendar,
+  Wrench,
+  Navigation,
+  Mail,
+  FileText,
+  Loader2,
+  CheckCircle,
+  Clock,
+} from 'lucide-react'
 
 interface Vehicle {
   id: string
@@ -53,7 +66,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
         if (!r.ok) return null
         return r.json()
       })
-      .then(data => {
+      .then((data) => {
         if (!data) return
         setMaintenanceTasks(data.maintenanceTasks ?? [])
         setDriverUser(data.driverUser ?? null)
@@ -78,10 +91,19 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
   ]
 
   const priorityColor = (p: string) =>
-    p === 'high' ? 'bg-red-100 text-red-800' : p === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+    p === 'high'
+      ? 'bg-red-100 text-red-800'
+      : p === 'medium'
+        ? 'bg-yellow-100 text-yellow-800'
+        : 'bg-blue-100 text-blue-800'
 
   const driverInitials = vehicle.driver
-    ? vehicle.driver.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    ? vehicle.driver
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
     : '?'
 
   return (
@@ -91,35 +113,51 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
         <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
           <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="absolute top-0 right-0 pt-4 pr-4">
-              <button onClick={onClose} className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none">
+              <button
+                onClick={onClose}
+                className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
             {/* Header */}
             <div className="flex items-start space-x-4">
-              <div className={`p-3 rounded-lg ${
-                vehicle.status === 'active' ? 'bg-green-100 text-green-600' :
-                vehicle.status === 'delayed' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-600'
-              }`}>
+              <div
+                className={`p-3 rounded-lg ${
+                  vehicle.status === 'active'
+                    ? 'bg-green-100 text-green-600'
+                    : vehicle.status === 'delayed'
+                      ? 'bg-orange-100 text-orange-600'
+                      : 'bg-gray-100 text-gray-600'
+                }`}
+              >
                 <Truck className="h-8 w-8" />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg leading-6 font-medium text-gray-900">{vehicle.name}</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {vehicle.driver} • {vehicle.status === 'active' ? 'On Route' : vehicle.status === 'delayed' ? 'Delayed' : 'Inactive'}
+                  {vehicle.driver} •{' '}
+                  {vehicle.status === 'active' ? 'On Route' : vehicle.status === 'delayed' ? 'Delayed' : 'Inactive'}
                 </p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                vehicle.status === 'active' ? 'bg-green-100 text-green-800' :
-                vehicle.status === 'delayed' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'
-              }`}>{vehicle.status}</span>
+              <span
+                className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  vehicle.status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : vehicle.status === 'delayed'
+                      ? 'bg-orange-100 text-orange-800'
+                      : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {vehicle.status}
+              </span>
             </div>
 
             {/* Tabs */}
             <div className="mt-6 border-b border-gray-200">
               <nav className="-mb-px flex space-x-8 overflow-x-auto">
-                {tabs.map(tab => (
+                {tabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
@@ -128,7 +166,9 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                         ? 'border-primary-500 text-primary-600'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
-                  >{tab.label}</button>
+                  >
+                    {tab.label}
+                  </button>
                 ))}
               </nav>
             </div>
@@ -164,10 +204,14 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                       <div className="flex-1">
                         <h4 className="text-sm font-medium text-blue-900">Vehicle Mileage</h4>
                         <p className="mt-1 text-sm text-blue-700">
-                          {(vehicle.mileage ?? 0).toLocaleString()} mi • Next service at {((Math.floor((vehicle.mileage ?? 0) / 5000) + 1) * 5000).toLocaleString()} mi
+                          {(vehicle.mileage ?? 0).toLocaleString()} mi • Next service at{' '}
+                          {((Math.floor((vehicle.mileage ?? 0) / 5000) + 1) * 5000).toLocaleString()} mi
                         </p>
                         <div className="mt-2 h-2 bg-blue-200 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-600 rounded-full" style={{ width: `${((vehicle.mileage ?? 0) % 5000) / 5000 * 100}%` }} />
+                          <div
+                            className="h-full bg-blue-600 rounded-full"
+                            style={{ width: `${(((vehicle.mileage ?? 0) % 5000) / 5000) * 100}%` }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -190,17 +234,23 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
 
               {activeTab === 'maintenance' && (
                 <div className="space-y-4">
-                  <div className={`border rounded-lg p-4 ${
-                    vehicle.maintenanceDue ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'
-                  }`}>
+                  <div
+                    className={`border rounded-lg p-4 ${
+                      vehicle.maintenanceDue ? 'bg-yellow-50 border-yellow-200' : 'bg-green-50 border-green-200'
+                    }`}
+                  >
                     <div className="flex items-center space-x-3">
                       <Wrench className={`h-5 w-5 ${vehicle.maintenanceDue ? 'text-yellow-600' : 'text-green-600'}`} />
                       <div>
-                        <h4 className={`text-sm font-medium ${vehicle.maintenanceDue ? 'text-yellow-900' : 'text-green-900'}`}>
+                        <h4
+                          className={`text-sm font-medium ${vehicle.maintenanceDue ? 'text-yellow-900' : 'text-green-900'}`}
+                        >
                           {vehicle.maintenanceDue ? 'Maintenance Required' : 'Maintenance Up to Date'}
                         </h4>
                         <p className={`mt-1 text-sm ${vehicle.maintenanceDue ? 'text-yellow-700' : 'text-green-700'}`}>
-                          {vehicle.maintenanceDue ? 'This vehicle requires immediate attention' : 'All maintenance items are current'}
+                          {vehicle.maintenanceDue
+                            ? 'This vehicle requires immediate attention'
+                            : 'All maintenance items are current'}
                         </p>
                       </div>
                     </div>
@@ -217,15 +267,26 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-gray-900">Maintenance Tasks ({maintenanceTasks.length})</h4>
-                      {maintenanceTasks.map(task => (
-                        <div key={task.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                      <h4 className="text-sm font-medium text-gray-900">
+                        Maintenance Tasks ({maintenanceTasks.length})
+                      </h4>
+                      {maintenanceTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
+                        >
                           <div className="flex items-center space-x-3">
-                            {task.completed
-                              ? <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
-                              : <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                            {task.completed ? (
+                              <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            )}
                             <div>
-                              <h5 className={`font-medium text-gray-900 ${task.completed ? 'line-through text-gray-400' : ''}`}>{task.title}</h5>
+                              <h5
+                                className={`font-medium text-gray-900 ${task.completed ? 'line-through text-gray-400' : ''}`}
+                              >
+                                {task.title}
+                              </h5>
                               <p className="text-xs text-gray-500">
                                 {task.completed
                                   ? `Completed ${task.completedDate ? new Date(task.completedDate).toLocaleDateString() : ''}`
@@ -238,9 +299,11 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                             {task.costEstimate && (
                               <span className="text-xs text-gray-500">${task.costEstimate.toFixed(0)}</span>
                             )}
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              task.completed ? 'bg-green-100 text-green-800' : priorityColor(task.priority)
-                            }`}>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                task.completed ? 'bg-green-100 text-green-800' : priorityColor(task.priority)
+                              }`}
+                            >
                               {task.completed ? 'done' : task.priority}
                             </span>
                           </div>
@@ -262,13 +325,24 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                       <div className="bg-gray-50 rounded-lg p-4">
                         <div className="flex items-center space-x-4">
                           <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                            {driverUser?.image
-                              ? <Image unoptimized src={driverUser.image} alt={vehicle.driver} width={48} height={48} className="w-12 h-12 rounded-full object-cover" />
-                              : <span className="text-primary-600 font-bold text-lg">{driverInitials}</span>}
+                            {driverUser?.image ? (
+                              <Image
+                                unoptimized
+                                src={driverUser.image}
+                                alt={vehicle.driver}
+                                width={48}
+                                height={48}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-primary-600 font-bold text-lg">{driverInitials}</span>
+                            )}
                           </div>
                           <div className="flex-1">
                             <h4 className="font-medium text-gray-900">{driverUser?.name ?? vehicle.driver}</h4>
-                            <p className="text-sm text-gray-600">{driverUser ? 'Fleet Member' : 'Driver (not linked to account)'}</p>
+                            <p className="text-sm text-gray-600">
+                              {driverUser ? 'Fleet Member' : 'Driver (not linked to account)'}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -287,7 +361,9 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                         )}
                         {!driverUser && (
                           <div className="text-center py-4 text-gray-500">
-                            <p className="text-sm">Driver <strong>{vehicle.driver}</strong> is not linked to a FleetFlow account.</p>
+                            <p className="text-sm">
+                              Driver <strong>{vehicle.driver}</strong> is not linked to a FleetFlow account.
+                            </p>
                             <p className="text-xs mt-1">Invite them via Team Settings to see contact info here.</p>
                           </div>
                         )}
@@ -321,19 +397,28 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
           </div>
 
           <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button type="button" onClick={onClose}
-              className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition"
+            >
               Close
             </button>
             {onEdit && (
-              <button type="button" onClick={onEdit}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition">
+              <button
+                type="button"
+                onClick={onEdit}
+                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition"
+              >
                 Edit Vehicle
               </button>
             )}
             {onDelete && (
-              <button type="button" onClick={onDelete}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition">
+              <button
+                type="button"
+                onClick={onDelete}
+                className="mt-3 w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition"
+              >
                 Delete Vehicle
               </button>
             )}

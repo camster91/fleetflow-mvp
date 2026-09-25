@@ -6,7 +6,9 @@ const mockMessagesCreate = jest.fn(async () => ({ id: 'provider-id' }))
 jest.mock('mailgun.js', () => ({
   __esModule: true,
   default: class MailgunMock {
-    client() { return { messages: { create: mockMessagesCreate } } }
+    client() {
+      return { messages: { create: mockMessagesCreate } }
+    }
   },
 }))
 
@@ -28,9 +30,14 @@ describe('E2E email capture guard', () => {
     expect(e2eEmailCaptureDir({ E2E_EMAIL_CAPTURE_DIR: '/tmp/mail', NEXTAUTH_URL: url })).toBeNull()
   })
 
-  it.each(['http://localhost:3000', 'http://127.0.0.1:3000', 'http://[::1]:3000'])('captures for the loopback origin %p', (url) => {
-    expect(e2eEmailCaptureDir({ E2E_EMAIL_CAPTURE_DIR: '/tmp/mail', NEXTAUTH_URL: url })).toBe(path.resolve('/tmp/mail'))
-  })
+  it.each(['http://localhost:3000', 'http://127.0.0.1:3000', 'http://[::1]:3000'])(
+    'captures for the loopback origin %p',
+    (url) => {
+      expect(e2eEmailCaptureDir({ E2E_EMAIL_CAPTURE_DIR: '/tmp/mail', NEXTAUTH_URL: url })).toBe(
+        path.resolve('/tmp/mail')
+      )
+    }
+  )
 })
 
 describe('sendEmail with E2E capture', () => {
@@ -69,7 +76,12 @@ describe('sendEmail with E2E capture', () => {
   })
 
   it('ignores the capture directory on an HTTPS deployment and delivers through the provider', async () => {
-    process.env = { ...previousEnv, ...mailgunEnv, NEXTAUTH_URL: 'https://fleet.example.com', E2E_EMAIL_CAPTURE_DIR: dir }
+    process.env = {
+      ...previousEnv,
+      ...mailgunEnv,
+      NEXTAUTH_URL: 'https://fleet.example.com',
+      E2E_EMAIL_CAPTURE_DIR: dir,
+    }
     const { sendEmail } = await import('@/lib/email')
     const result = await sendEmail({ to: 'recipient@example.com', subject: 'subject', html: '<p>body</p>' })
     expect(result).toEqual({ success: true, messageId: 'provider-id' })

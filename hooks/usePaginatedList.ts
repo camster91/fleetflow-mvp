@@ -8,7 +8,7 @@ export const SEARCH_DEBOUNCE_MS = 300
 
 type QueryValue = string | string[] | undefined
 
-const first = (value: QueryValue): string => (Array.isArray(value) ? value[0] ?? '' : value ?? '')
+const first = (value: QueryValue): string => (Array.isArray(value) ? (value[0] ?? '') : (value ?? ''))
 
 export interface ListUrlState {
   page: number
@@ -28,7 +28,7 @@ export interface ListUrlState {
 export function readListState(
   query: Record<string, QueryValue>,
   filterKeys: readonly string[],
-  sortKeys: readonly string[] = [],
+  sortKeys: readonly string[] = []
 ): ListUrlState {
   const page = Number.parseInt(first(query.page), 10)
   const pageSize = Number.parseInt(first(query.pageSize), 10)
@@ -108,8 +108,13 @@ export function usePaginatedList<T, S = undefined>({
   const filterKeyList = filterKeys.join(',')
   const sortKeyList = sortKeys.join(',')
   const state = useMemo(
-    () => readListState(router.query, filterKeyList ? filterKeyList.split(',') : [], sortKeyList ? sortKeyList.split(',') : []),
-    [router.query, filterKeyList, sortKeyList],
+    () =>
+      readListState(
+        router.query,
+        filterKeyList ? filterKeyList.split(',') : [],
+        sortKeyList ? sortKeyList.split(',') : []
+      ),
+    [router.query, filterKeyList, sortKeyList]
   )
 
   const [rows, setRows] = useState<T[]>([])
@@ -119,25 +124,32 @@ export function usePaginatedList<T, S = undefined>({
   const [error, setError] = useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  const queryParams = useMemo<ListParams>(() => ({
-    q: state.q.trim() || undefined,
-    ...state.filters,
-    sort: state.sort || undefined,
-    order: state.order || undefined,
-  }), [state])
+  const queryParams = useMemo<ListParams>(
+    () => ({
+      q: state.q.trim() || undefined,
+      ...state.filters,
+      sort: state.sort || undefined,
+      order: state.order || undefined,
+    }),
+    [state]
+  )
   const extraKey = JSON.stringify(extraParams ?? {})
   const requestParams = useMemo<ListParams>(
     () => ({ ...queryParams, ...(JSON.parse(extraKey) as ListParams), page: state.page, limit: state.pageSize }),
-    [queryParams, extraKey, state.page, state.pageSize],
+    [queryParams, extraKey, state.page, state.pageSize]
   )
   const requestKey = JSON.stringify(requestParams)
 
   const fetchRef = useRef(fetchPage)
-  useEffect(() => { fetchRef.current = fetchPage })
+  useEffect(() => {
+    fetchRef.current = fetchPage
+  })
   const generationRef = useRef(0)
   const controllerRef = useRef<AbortController | null>(null)
   const paramsRef = useRef(requestParams)
-  useEffect(() => { paramsRef.current = requestParams }, [requestParams])
+  useEffect(() => {
+    paramsRef.current = requestParams
+  }, [requestParams])
 
   const refetch = useCallback(async (options?: { background?: boolean }) => {
     const generation = ++generationRef.current
@@ -176,33 +188,50 @@ export function usePaginatedList<T, S = undefined>({
     return cancelActiveRequest
   }, [router.isReady, requestKey, refetch, cancelActiveRequest])
 
-  const navigate = useCallback((changes: Record<string, string | number | null>, mode: 'push' | 'replace') => {
-    const query: Record<string, QueryValue> = { ...router.query }
-    for (const [key, value] of Object.entries(changes)) {
-      if (value === null || value === '') delete query[key]
-      else query[key] = String(value)
-    }
-    const go = mode === 'push' && router.push ? router.push : router.replace
-    void Promise.resolve(go.call(router, { pathname: router.pathname, query }, undefined, { shallow: true })).catch(() => undefined)
-  }, [router])
+  const navigate = useCallback(
+    (changes: Record<string, string | number | null>, mode: 'push' | 'replace') => {
+      const query: Record<string, QueryValue> = { ...router.query }
+      for (const [key, value] of Object.entries(changes)) {
+        if (value === null || value === '') delete query[key]
+        else query[key] = String(value)
+      }
+      const go = mode === 'push' && router.push ? router.push : router.replace
+      void Promise.resolve(go.call(router, { pathname: router.pathname, query }, undefined, { shallow: true })).catch(
+        () => undefined
+      )
+    },
+    [router]
+  )
 
   const pageCount = Math.max(1, Math.ceil(total / state.pageSize))
 
-  const setPage = useCallback((page: number) => {
-    navigate({ page: page > 1 ? page : null }, 'push')
-  }, [navigate])
+  const setPage = useCallback(
+    (page: number) => {
+      navigate({ page: page > 1 ? page : null }, 'push')
+    },
+    [navigate]
+  )
 
-  const setPageSize = useCallback((size: number) => {
-    navigate({ pageSize: size === DEFAULT_PAGE_SIZE ? null : size, page: null }, 'push')
-  }, [navigate])
+  const setPageSize = useCallback(
+    (size: number) => {
+      navigate({ pageSize: size === DEFAULT_PAGE_SIZE ? null : size, page: null }, 'push')
+    },
+    [navigate]
+  )
 
-  const setFilter = useCallback((key: string, value: string) => {
-    navigate({ [key]: value === 'all' ? null : value, page: null }, 'push')
-  }, [navigate])
+  const setFilter = useCallback(
+    (key: string, value: string) => {
+      navigate({ [key]: value === 'all' ? null : value, page: null }, 'push')
+    },
+    [navigate]
+  )
 
-  const setSort = useCallback((sort: string, order?: 'asc' | 'desc') => {
-    navigate({ sort: sort || null, order: sort && order ? order : null, page: null }, 'push')
-  }, [navigate])
+  const setSort = useCallback(
+    (sort: string, order?: 'asc' | 'desc') => {
+      navigate({ sort: sort || null, order: sort && order ? order : null, page: null }, 'push')
+    },
+    [navigate]
+  )
 
   // Search input: local state for responsiveness, committed to the URL after a pause.
   const [searchInput, setSearchInputState] = useState(state.q)
@@ -217,16 +246,19 @@ export function usePaginatedList<T, S = undefined>({
   }, [state.q])
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
-  const setSearchInput = useCallback((value: string) => {
-    setSearchInputState(value)
-    clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      const next = value.trim().slice(0, 100)
-      if (next === committedQ.current) return
-      committedQ.current = next
-      navigate({ q: next || null, page: null }, 'replace')
-    }, debounceMs)
-  }, [debounceMs, navigate])
+  const setSearchInput = useCallback(
+    (value: string) => {
+      setSearchInputState(value)
+      clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        const next = value.trim().slice(0, 100)
+        if (next === committedQ.current) return
+        committedQ.current = next
+        navigate({ q: next || null, page: null }, 'replace')
+      }, debounceMs)
+    },
+    [debounceMs, navigate]
+  )
 
   // A page past the end (e.g. after deleting the last row on the last page) moves to the last page.
   useEffect(() => {
@@ -236,12 +268,26 @@ export function usePaginatedList<T, S = undefined>({
   }, [loading, error, rows.length, total, state.page, pageCount, navigate])
 
   return {
-    rows, total, summary, loading, error, lastUpdated, refetch,
-    page: state.page, pageSize: state.pageSize, pageCount,
-    setPage, setPageSize,
-    searchInput, setSearchInput, q: state.q,
-    filters: state.filters, setFilter,
-    sort: state.sort, order: state.order, setSort,
+    rows,
+    total,
+    summary,
+    loading,
+    error,
+    lastUpdated,
+    refetch,
+    page: state.page,
+    pageSize: state.pageSize,
+    pageCount,
+    setPage,
+    setPageSize,
+    searchInput,
+    setSearchInput,
+    q: state.q,
+    filters: state.filters,
+    setFilter,
+    sort: state.sort,
+    order: state.order,
+    setSort,
     queryParams,
     isFiltered: Boolean(state.q.trim()) || Object.keys(state.filters).length > 0,
   }

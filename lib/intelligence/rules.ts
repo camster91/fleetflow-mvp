@@ -33,9 +33,19 @@ const ACTIVE_DELIVERY_STATUSES = new Set(['pending', 'picked-up', 'in-transit', 
 export const MAX_OPAQUE_ID_LENGTH = 128
 export const MAX_FINDING_ID_LENGTH = 1024
 const ALLOWED_DATA_QUALITY_FIELDS = new Set([
-  'actualCost', 'contact', 'contactPerson', 'costEstimate', 'driver',
-  'estimatedArrival', 'lastService', 'lastUpdated', 'mileage', 'nextService',
-  'scheduledTime', 'updatedAt', 'vehicleId',
+  'actualCost',
+  'contact',
+  'contactPerson',
+  'costEstimate',
+  'driver',
+  'estimatedArrival',
+  'lastService',
+  'lastUpdated',
+  'mileage',
+  'nextService',
+  'scheduledTime',
+  'updatedAt',
+  'vehicleId',
 ])
 
 function validNow(now: Date): number {
@@ -66,10 +76,19 @@ function timestamp(value: Date | string | null | undefined): number | null {
   const offsetMinute = match[8].toUpperCase() === 'Z' ? 0 : Number(match[11])
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
   if (
-    year < 1 || month < 1 || month > 12 || day < 1 || day > daysInMonth ||
-    hour > 23 || minute > 59 || second > 59 ||
-    offsetHour > 14 || offsetMinute > 59 || (offsetHour === 14 && offsetMinute !== 0)
-  ) return null
+    year < 1 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59 ||
+    offsetHour > 14 ||
+    offsetMinute > 59 ||
+    (offsetHour === 14 && offsetMinute !== 0)
+  )
+    return null
   const parsed = new Date(value).getTime()
   return Number.isFinite(parsed) ? parsed : null
 }
@@ -87,8 +106,13 @@ function hasText(value: unknown): boolean {
 }
 
 export function isValidOpaqueId(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= MAX_OPAQUE_ID_LENGTH &&
-    value.trim() === value && /^[\x21-\x7e]+$/.test(value)
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_OPAQUE_ID_LENGTH &&
+    value.trim() === value &&
+    /^[\x21-\x7e]+$/.test(value)
+  )
 }
 
 function assertTenantKey(value: unknown): asserts value is string {
@@ -122,9 +146,8 @@ export function sortRuleFindings(findings: readonly UnrankedFinding[]): Unranked
 
 function recordUrl(entityType: FindingEvidence['entityType'], entityId: string): string {
   const id = encodeURIComponent(entityId)
-  const collection = entityType === 'delivery' ? 'deliveries'
-    : entityType === 'maintenance' ? 'maintenance'
-      : `${entityType}s`
+  const collection =
+    entityType === 'delivery' ? 'deliveries' : entityType === 'maintenance' ? 'maintenance' : `${entityType}s`
   return entityType === 'client' ? `/clients/${id}` : `/${collection}?record=${id}`
 }
 
@@ -133,8 +156,11 @@ function expires(nowMs: number, durationMs: number): Date {
 }
 
 function directEvidence(
-  entityType: FindingEvidence['entityType'], entityId: string, field: string,
-  value: FindingEvidence['value'], observedAt: number | null,
+  entityType: FindingEvidence['entityType'],
+  entityId: string,
+  field: string,
+  value: FindingEvidence['value'],
+  observedAt: number | null
 ): FindingEvidence {
   return { entityType, entityId, field, value, timestamp: iso(observedAt) }
 }
@@ -210,8 +236,18 @@ export function maintenanceScheduleFindings(input: GenerateFindingsInput): Unran
       explanation: overdue
         ? `This open maintenance task passed its due date ${Math.ceil(ageMs / DAY_MS)} day(s) ago.`
         : `This open maintenance task is due within ${INTELLIGENCE_THRESHOLDS.maintenanceDueSoonMs / DAY_MS} days.`,
-      evidence: [directEvidence('maintenance', task.id, 'dueDate', new Date(dueMs).toISOString(), timestamp(task.updatedAt) ?? dueMs)],
-      recommendedAction: overdue ? 'Review and reschedule or complete this maintenance task.' : 'Confirm the service appointment and required parts.',
+      evidence: [
+        directEvidence(
+          'maintenance',
+          task.id,
+          'dueDate',
+          new Date(dueMs).toISOString(),
+          timestamp(task.updatedAt) ?? dueMs
+        ),
+      ],
+      recommendedAction: overdue
+        ? 'Review and reschedule or complete this maintenance task.'
+        : 'Confirm the service appointment and required parts.',
       actionUrl: recordUrl('maintenance', task.id),
       generatedAt: new Date(nowMs),
       expiresAt: expires(nowMs, DAY_MS),
@@ -251,7 +287,8 @@ export function maintenanceCostFindings(input: GenerateFindingsInput): UnrankedF
       items.length < INTELLIGENCE_THRESHOLDS.maintenanceCostMinSamples ||
       total < INTELLIGENCE_THRESHOLDS.maintenanceCostMinTotalCents ||
       share < INTELLIGENCE_THRESHOLDS.maintenanceCostShare
-    ) continue
+    )
+      continue
     const ordered = [...items].sort((a, b) => compareStableText(a.task.id, b.task.id))
     findings.push({
       id: stableId(input.tenantKey, 'maintenance-cost-concentration', 'vehicle', vehicleId),
@@ -262,8 +299,10 @@ export function maintenanceCostFindings(input: GenerateFindingsInput): UnrankedF
       title: 'Repeated maintenance costs are concentrated on one vehicle',
       explanation: `${items.length} completed tasks for this vehicle account for ${Math.round(share * 100)}% of recorded maintenance costs in the last 90 days.`,
       evidence: ordered.map(({ task, cents: amount, completedAt }) =>
-        directEvidence('maintenance', task.id, 'actualCostCents', amount, completedAt)),
-      recommendedAction: 'Review the vehicle cost history and decide whether repair, replacement, or monitoring is appropriate.',
+        directEvidence('maintenance', task.id, 'actualCostCents', amount, completedAt)
+      ),
+      recommendedAction:
+        'Review the vehicle cost history and decide whether repair, replacement, or monitoring is appropriate.',
       actionUrl: recordUrl('vehicle', vehicleId),
       generatedAt: new Date(nowMs),
       expiresAt: expires(nowMs, 7 * DAY_MS),
@@ -279,20 +318,22 @@ export function staleVehicleFindings(input: GenerateFindingsInput): UnrankedFind
   for (const vehicle of input.records.vehicles ?? []) {
     if (!vehicle || !isValidOpaqueId(vehicle.id)) continue
     const status = normalizeStatus(vehicle.status)
-    const threshold = status === 'active'
-      ? INTELLIGENCE_THRESHOLDS.activeVehicleStaleMs
-      : status === 'delayed'
-        ? INTELLIGENCE_THRESHOLDS.delayedVehicleStaleMs
-        : status === 'maintenance'
-          ? INTELLIGENCE_THRESHOLDS.maintenanceVehicleStaleMs
-          : null
+    const threshold =
+      status === 'active'
+        ? INTELLIGENCE_THRESHOLDS.activeVehicleStaleMs
+        : status === 'delayed'
+          ? INTELLIGENCE_THRESHOLDS.delayedVehicleStaleMs
+          : status === 'maintenance'
+            ? INTELLIGENCE_THRESHOLDS.maintenanceVehicleStaleMs
+            : null
     if (threshold === null) continue
     const observedAt = timestamp(vehicle.lastUpdated) ?? timestamp(vehicle.updatedAt)
     if (observedAt === null || nowMs - observedAt <= threshold) continue
     const days = Math.floor((nowMs - observedAt) / DAY_MS)
     findings.push({
       id: stableId(input.tenantKey, 'vehicle-stale', 'vehicle', vehicle.id),
-      type: 'vehicle-stale', ruleVersion: FINDING_RULE_VERSION,
+      type: 'vehicle-stale',
+      ruleVersion: FINDING_RULE_VERSION,
       severity: status === 'delayed' ? 'high' : 'medium',
       confidence: confidence('high', 1),
       title: 'Vehicle status needs an update',
@@ -300,7 +341,8 @@ export function staleVehicleFindings(input: GenerateFindingsInput): UnrankedFind
       evidence: [directEvidence('vehicle', vehicle.id, 'lastUpdated', new Date(observedAt).toISOString(), observedAt)],
       recommendedAction: 'Confirm the vehicle status, location, and current assignment.',
       actionUrl: recordUrl('vehicle', vehicle.id),
-      generatedAt: new Date(nowMs), expiresAt: expires(nowMs, DAY_MS),
+      generatedAt: new Date(nowMs),
+      expiresAt: expires(nowMs, DAY_MS),
       urgency: Math.min(100, 45 + Math.floor((nowMs - observedAt) / threshold) * 10),
     })
   }
@@ -322,15 +364,25 @@ export function deliveryScheduleFindings(input: GenerateFindingsInput): Unranked
     if (lateBy <= 0) continue
     findings.push({
       id: stableId(input.tenantKey, 'delivery-schedule-passed', 'delivery', delivery.id),
-      type: 'delivery-schedule-passed', ruleVersion: FINDING_RULE_VERSION,
+      type: 'delivery-schedule-passed',
+      ruleVersion: FINDING_RULE_VERSION,
       severity: lateBy >= HOUR_MS ? 'high' : 'medium',
       confidence: confidence('high', 1),
       title: 'Active delivery is past its scheduled time',
       explanation: `The scheduled time plus a ${INTELLIGENCE_THRESHOLDS.deliveryScheduleGraceMs / 60000}-minute grace period has passed.`,
-      evidence: [directEvidence('delivery', delivery.id, 'scheduledTime', new Date(scheduledAt).toISOString(), timestamp(delivery.updatedAt) ?? scheduledAt)],
+      evidence: [
+        directEvidence(
+          'delivery',
+          delivery.id,
+          'scheduledTime',
+          new Date(scheduledAt).toISOString(),
+          timestamp(delivery.updatedAt) ?? scheduledAt
+        ),
+      ],
       recommendedAction: 'Check the delivery status and update the customer or assignment if needed.',
       actionUrl: recordUrl('delivery', delivery.id),
-      generatedAt: new Date(nowMs), expiresAt: expires(nowMs, 4 * HOUR_MS),
+      generatedAt: new Date(nowMs),
+      expiresAt: expires(nowMs, 4 * HOUR_MS),
       urgency: Math.min(100, 60 + Math.floor(lateBy / HOUR_MS) * 5),
     })
   }
@@ -341,7 +393,8 @@ export function deliveryLoadFindings(input: GenerateFindingsInput): UnrankedFind
   const nowMs = validNow(input.now)
   const byVehicle = new Map<string, IntelligenceDelivery[]>()
   for (const delivery of input.records.deliveries ?? []) {
-    if (!delivery || !isValidOpaqueId(delivery.id) || !activeDelivery(delivery) || !isValidOpaqueId(delivery.vehicleId)) continue
+    if (!delivery || !isValidOpaqueId(delivery.id) || !activeDelivery(delivery) || !isValidOpaqueId(delivery.vehicleId))
+      continue
     const values = byVehicle.get(delivery.vehicleId as string) ?? []
     values.push(delivery)
     byVehicle.set(delivery.vehicleId as string, values)
@@ -352,15 +405,19 @@ export function deliveryLoadFindings(input: GenerateFindingsInput): UnrankedFind
     const ordered = [...deliveries].sort((a, b) => compareStableText(a.id, b.id))
     findings.push({
       id: stableId(input.tenantKey, 'vehicle-delivery-load', 'vehicle', vehicleId),
-      type: 'vehicle-delivery-load', ruleVersion: FINDING_RULE_VERSION,
+      type: 'vehicle-delivery-load',
+      ruleVersion: FINDING_RULE_VERSION,
       severity: deliveries.length >= INTELLIGENCE_THRESHOLDS.deliveryHighLoadCount * 2 ? 'high' : 'medium',
       confidence: confidence('high', 1),
       title: 'Vehicle has a high active-delivery load',
       explanation: `This vehicle has ${deliveries.length} active deliveries; the review threshold is ${INTELLIGENCE_THRESHOLDS.deliveryHighLoadCount}.`,
-      evidence: ordered.map(delivery => directEvidence('delivery', delivery.id, 'vehicleId', vehicleId, timestamp(delivery.updatedAt))),
+      evidence: ordered.map((delivery) =>
+        directEvidence('delivery', delivery.id, 'vehicleId', vehicleId, timestamp(delivery.updatedAt))
+      ),
       recommendedAction: 'Review route capacity and rebalance assignments if needed.',
       actionUrl: recordUrl('vehicle', vehicleId),
-      generatedAt: new Date(nowMs), expiresAt: expires(nowMs, 4 * HOUR_MS),
+      generatedAt: new Date(nowMs),
+      expiresAt: expires(nowMs, 4 * HOUR_MS),
       urgency: Math.min(100, 45 + deliveries.length * 5),
     })
   }
@@ -377,18 +434,23 @@ export function unassignedDeliveryFindings(input: GenerateFindingsInput): Unrank
     if (!missingVehicle && !missingDriver) continue
     const fields = [missingVehicle ? 'vehicle' : null, missingDriver ? 'driver' : null].filter(Boolean).join(' and ')
     const evidence: FindingEvidence[] = []
-    if (missingVehicle) evidence.push(directEvidence('delivery', delivery.id, 'vehicleId', null, timestamp(delivery.updatedAt)))
-    if (missingDriver) evidence.push(directEvidence('delivery', delivery.id, 'driver', null, timestamp(delivery.updatedAt)))
+    if (missingVehicle)
+      evidence.push(directEvidence('delivery', delivery.id, 'vehicleId', null, timestamp(delivery.updatedAt)))
+    if (missingDriver)
+      evidence.push(directEvidence('delivery', delivery.id, 'driver', null, timestamp(delivery.updatedAt)))
     findings.push({
       id: stableId(input.tenantKey, 'delivery-unassigned', 'delivery', delivery.id),
-      type: 'delivery-unassigned', ruleVersion: FINDING_RULE_VERSION,
+      type: 'delivery-unassigned',
+      ruleVersion: FINDING_RULE_VERSION,
       severity: normalizeStatus(delivery.status) === 'pending' ? 'medium' : 'high',
       confidence: confidence('high', 1),
       title: 'Active delivery is not fully assigned',
-      explanation: `This active delivery has no assigned ${fields}.`, evidence,
+      explanation: `This active delivery has no assigned ${fields}.`,
+      evidence,
       recommendedAction: 'Assign the missing driver or vehicle before continuing the delivery.',
       actionUrl: recordUrl('delivery', delivery.id),
-      generatedAt: new Date(nowMs), expiresAt: expires(nowMs, 4 * HOUR_MS),
+      generatedAt: new Date(nowMs),
+      expiresAt: expires(nowMs, 4 * HOUR_MS),
       urgency: normalizeStatus(delivery.status) === 'pending' ? 65 : 90,
     })
   }
@@ -399,7 +461,8 @@ export function dataQualityBlockerFindings(input: GenerateFindingsInput): Unrank
   const nowMs = validNow(input.now)
   const unique = new Map<string, IntelligenceDataQualityIssue>()
   for (const issue of input.records.dataQualityIssues ?? []) {
-    if (!issue || !isValidOpaqueId(issue.entityId) || !isEntityType(issue.entityType) || !isSeverity(issue.severity)) continue
+    if (!issue || !isValidOpaqueId(issue.entityId) || !isEntityType(issue.entityType) || !isSeverity(issue.severity))
+      continue
     const field = safeIssueField(issue.field)
     const key = stableId(input.tenantKey, 'data-quality-blocker', issue.entityType, issue.entityId, field)
     const current = unique.get(key)
@@ -407,20 +470,24 @@ export function dataQualityBlockerFindings(input: GenerateFindingsInput): Unrank
       unique.set(key, { ...issue, field })
     }
   }
-  return sortRuleFindings([...unique.values()].map(issue => ({
-    id: stableId(input.tenantKey, 'data-quality-blocker', issue.entityType, issue.entityId, issue.field),
-    type: 'data-quality-blocker' as const, ruleVersion: FINDING_RULE_VERSION,
-    severity: issue.severity,
-    confidence: confidence('medium', 0.85),
-    title: 'Record quality blocks reliable analysis',
-    explanation: `This ${issue.entityType} record has missing or unreliable ${issue.field} data.`,
-    evidence: [directEvidence(issue.entityType, issue.entityId, issue.field, null, null)],
-    recommendedAction: 'Update the source record so future analysis can use complete information.',
-    // Derive the link instead of trusting caller-provided URLs.
-    actionUrl: recordUrl(issue.entityType, issue.entityId),
-    generatedAt: new Date(nowMs), expiresAt: expires(nowMs, 7 * DAY_MS),
-    urgency: issue.severity === 'high' ? 75 : issue.severity === 'medium' ? 50 : 25,
-  })))
+  return sortRuleFindings(
+    [...unique.values()].map((issue) => ({
+      id: stableId(input.tenantKey, 'data-quality-blocker', issue.entityType, issue.entityId, issue.field),
+      type: 'data-quality-blocker' as const,
+      ruleVersion: FINDING_RULE_VERSION,
+      severity: issue.severity,
+      confidence: confidence('medium', 0.85),
+      title: 'Record quality blocks reliable analysis',
+      explanation: `This ${issue.entityType} record has missing or unreliable ${issue.field} data.`,
+      evidence: [directEvidence(issue.entityType, issue.entityId, issue.field, null, null)],
+      recommendedAction: 'Update the source record so future analysis can use complete information.',
+      // Derive the link instead of trusting caller-provided URLs.
+      actionUrl: recordUrl(issue.entityType, issue.entityId),
+      generatedAt: new Date(nowMs),
+      expiresAt: expires(nowMs, 7 * DAY_MS),
+      urgency: issue.severity === 'high' ? 75 : issue.severity === 'medium' ? 50 : 25,
+    }))
+  )
 }
 
 export const FINDING_RULES = Object.freeze([

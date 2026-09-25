@@ -15,13 +15,9 @@ export function isAuthorizedCronRequest(req: NextApiRequest): boolean {
   if (Array.isArray(internalHeader)) return false
 
   const authorization = req.headers.authorization
-  const bearerMatch = typeof authorization === 'string'
-    ? /^Bearer ([^\s]+)$/i.exec(authorization)
-    : null
+  const bearerMatch = typeof authorization === 'string' ? /^Bearer ([^\s]+)$/i.exec(authorization) : null
 
-  const presented = typeof internalHeader === 'string'
-    ? internalHeader
-    : bearerMatch?.[1]
+  const presented = typeof internalHeader === 'string' ? internalHeader : bearerMatch?.[1]
 
   return typeof presented === 'string' && constantTimeCompare(presented, configured)
 }

@@ -1,13 +1,13 @@
-import Stripe from 'stripe';
+import Stripe from 'stripe'
 
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY || 'sk_test_not_configured', {
   apiVersion: '2026-02-25.clover',
   typescript: true,
-});
+})
 
-export const STRIPE_WEBHOOK_SECRET_KEY = process.env.STRIPE_WEBHOOK_SECRET;
+export const STRIPE_WEBHOOK_SECRET_KEY = process.env.STRIPE_WEBHOOK_SECRET
 
 export type BillingInterval = 'monthly' | 'yearly'
 
@@ -54,16 +54,37 @@ export function getConfiguredPricing(): BillingPricing | null {
   const monthly = Number(process.env.STRIPE_PRICE_MONTHLY_AMOUNT)
   const yearly = Number(process.env.STRIPE_PRICE_YEARLY_AMOUNT)
   const currency = process.env.STRIPE_PRICE_CURRENCY?.trim().toUpperCase()
-  if (!Number.isSafeInteger(monthly) || monthly < 0 || !Number.isSafeInteger(yearly) || yearly < 0 || !currency || !SUPPORTED_CURRENCIES.has(currency)) return null
+  if (
+    !Number.isSafeInteger(monthly) ||
+    monthly < 0 ||
+    !Number.isSafeInteger(yearly) ||
+    yearly < 0 ||
+    !currency ||
+    !SUPPORTED_CURRENCIES.has(currency)
+  )
+    return null
   return { monthly: { amount: monthly, currency }, yearly: { amount: yearly, currency } }
 }
 
 export function getBillingAvailability() {
-  const required = ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_MONTHLY', 'STRIPE_PRICE_YEARLY', 'STRIPE_PRICE_MONTHLY_AMOUNT', 'STRIPE_PRICE_YEARLY_AMOUNT', 'STRIPE_PRICE_CURRENCY'] as const
+  const required = [
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'STRIPE_PRICE_MONTHLY',
+    'STRIPE_PRICE_YEARLY',
+    'STRIPE_PRICE_MONTHLY_AMOUNT',
+    'STRIPE_PRICE_YEARLY_AMOUNT',
+    'STRIPE_PRICE_CURRENCY',
+  ] as const
   const missing = required.filter((name) => !process.env[name]?.trim())
   const pricing = getConfiguredPricing()
   const canonicalUrl = getCanonicalAppUrl()
-  return { available: missing.length === 0 && Boolean(pricing) && Boolean(canonicalUrl), missing, pricing, canonicalUrl }
+  return {
+    available: missing.length === 0 && Boolean(pricing) && Boolean(canonicalUrl),
+    missing,
+    pricing,
+    canonicalUrl,
+  }
 }
 
 export function getConfiguredPrice(interval: BillingInterval): string | null {
@@ -91,13 +112,13 @@ export async function createCheckoutSession({
   trialDays = 0,
   idempotencyKey,
 }: {
-  priceId: string;
-  customerId?: string;
-  userId: string;
-  successUrl: string;
-  cancelUrl: string;
-  trialDays?: number;
-  idempotencyKey?: string;
+  priceId: string
+  customerId?: string
+  userId: string
+  successUrl: string
+  cancelUrl: string
+  trialDays?: number
+  idempotencyKey?: string
 }) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   const sessionConfig: Stripe.Checkout.SessionCreateParams = {
@@ -128,18 +149,18 @@ export async function createCheckoutSession({
     tax_id_collection: {
       enabled: true,
     },
-  };
+  }
 
   // If customer exists, use it; otherwise, create a new customer on checkout
   if (customerId) {
-    sessionConfig.customer = customerId;
+    sessionConfig.customer = customerId
   } else {
-    sessionConfig.customer_creation = 'always';
+    sessionConfig.customer_creation = 'always'
   }
 
   return idempotencyKey
     ? stripe.checkout.sessions.create(sessionConfig, { idempotencyKey })
-    : stripe.checkout.sessions.create(sessionConfig);
+    : stripe.checkout.sessions.create(sessionConfig)
 }
 
 // Helper function to create a customer portal session
@@ -147,15 +168,15 @@ export async function createCustomerPortalSession({
   customerId,
   returnUrl,
 }: {
-  customerId: string;
-  returnUrl: string;
+  customerId: string
+  returnUrl: string
 }) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
-  });
-  return session;
+  })
+  return session
 }
 
 // Helper function to create a Stripe customer
@@ -165,10 +186,10 @@ export async function createStripeCustomer({
   userId,
   idempotencyKey,
 }: {
-  email: string;
-  name?: string;
-  userId: string;
-  idempotencyKey?: string;
+  email: string
+  name?: string
+  userId: string
+  idempotencyKey?: string
 }) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   const params: Stripe.CustomerCreateParams = {
@@ -176,9 +197,7 @@ export async function createStripeCustomer({
     name,
     metadata: { userId },
   }
-  return idempotencyKey
-    ? stripe.customers.create(params, { idempotencyKey })
-    : stripe.customers.create(params);
+  return idempotencyKey ? stripe.customers.create(params, { idempotencyKey }) : stripe.customers.create(params)
 }
 
 export async function findOpenCheckoutSessions(customerId: string, userId: string) {
@@ -188,10 +207,8 @@ export async function findOpenCheckoutSessions(customerId: string, userId: strin
     status: 'open',
     limit: 10,
   })
-  return sessions.data.filter(session =>
-    session.mode === 'subscription'
-    && session.metadata?.userId === userId
-    && Boolean(session.url)
+  return sessions.data.filter(
+    (session) => session.mode === 'subscription' && session.metadata?.userId === userId && Boolean(session.url)
   )
 }
 
@@ -203,35 +220,29 @@ export async function expireCheckoutSession(sessionId: string) {
 // Helper function to retrieve a Stripe customer
 export async function getStripeCustomer(customerId: string) {
   requireStripeSecret('STRIPE_SECRET_KEY')
-  return await stripe.customers.retrieve(customerId);
+  return await stripe.customers.retrieve(customerId)
 }
 
 // Helper function to cancel a subscription
-export async function cancelSubscription(
-  subscriptionId: string,
-  atPeriodEnd: boolean = true
-) {
+export async function cancelSubscription(subscriptionId: string, atPeriodEnd: boolean = true) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   if (atPeriodEnd) {
     return await stripe.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
-    });
+    })
   } else {
-    return await stripe.subscriptions.cancel(subscriptionId);
+    return await stripe.subscriptions.cancel(subscriptionId)
   }
 }
 
 // Helper function to update subscription
-export async function updateSubscription(
-  subscriptionId: string,
-  newPriceId: string
-) {
+export async function updateSubscription(subscriptionId: string, newPriceId: string) {
   requireStripeSecret('STRIPE_SECRET_KEY')
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  
-  const itemId = subscription.items.data[0]?.id;
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+
+  const itemId = subscription.items.data[0]?.id
   if (!itemId) {
-    throw new Error('Subscription has no items');
+    throw new Error('Subscription has no items')
   }
 
   return await stripe.subscriptions.update(subscriptionId, {
@@ -242,12 +253,12 @@ export async function updateSubscription(
       },
     ],
     proration_behavior: 'create_prorations',
-  });
+  })
 }
 
 // Helper function to construct event from webhook payload
 export function constructWebhookEvent(payload: string | Buffer, signature: string) {
-  return stripe.webhooks.constructEvent(payload, signature, requireStripeSecret('STRIPE_WEBHOOK_SECRET'));
+  return stripe.webhooks.constructEvent(payload, signature, requireStripeSecret('STRIPE_WEBHOOK_SECRET'))
 }
 
 export async function retrieveSubscriptionSnapshot(subscriptionId: string): Promise<StripeSubscriptionSnapshot> {
@@ -256,8 +267,14 @@ export async function retrieveSubscriptionSnapshot(subscriptionId: string): Prom
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
     const item = subscription.items.data[0]
     const statusMap: Record<string, StripeSubscriptionSnapshot['status']> = {
-      active: 'ACTIVE', past_due: 'PAST_DUE', canceled: 'CANCELLED', unpaid: 'UNPAID', trialing: 'TRIAL',
-      incomplete: 'UNPAID', incomplete_expired: 'UNPAID', paused: 'UNPAID',
+      active: 'ACTIVE',
+      past_due: 'PAST_DUE',
+      canceled: 'CANCELLED',
+      unpaid: 'UNPAID',
+      trialing: 'TRIAL',
+      incomplete: 'UNPAID',
+      incomplete_expired: 'UNPAID',
+      paused: 'UNPAID',
     }
     return {
       id: subscription.id,
@@ -269,7 +286,14 @@ export async function retrieveSubscriptionSnapshot(subscriptionId: string): Prom
     }
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'resource_missing') {
-      return { id: subscriptionId, status: 'CANCELLED', priceId: null, currentPeriodStart: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
+      return {
+        id: subscriptionId,
+        status: 'CANCELLED',
+        priceId: null,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      }
     }
     throw new Error('Stripe subscription reconciliation failed')
   }
@@ -280,13 +304,14 @@ export async function retrieveInvoiceSnapshot(invoiceId: string): Promise<Stripe
   try {
     const invoice = await stripe.invoices.retrieve(invoiceId)
     const legacyPaid = (invoice as Stripe.Invoice & { paid?: boolean }).paid
-    const status: StripeInvoiceSnapshot['status'] = legacyPaid || invoice.status === 'paid'
-      ? 'paid'
-      : invoice.status === 'uncollectible'
-        ? 'failed'
-        : invoice.status === 'void'
-          ? 'void'
-          : 'open'
+    const status: StripeInvoiceSnapshot['status'] =
+      legacyPaid || invoice.status === 'paid'
+        ? 'paid'
+        : invoice.status === 'uncollectible'
+          ? 'failed'
+          : invoice.status === 'void'
+            ? 'void'
+            : 'open'
     return {
       id: invoice.id,
       status,
@@ -302,4 +327,4 @@ export async function retrieveInvoiceSnapshot(invoiceId: string): Promise<Stripe
   }
 }
 
-export default stripe;
+export default stripe

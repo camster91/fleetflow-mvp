@@ -1,11 +1,11 @@
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
+import React from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
 
 interface AuthLayoutProps {
-  children: React.ReactNode;
-  title?: string;
-  subtitle?: string;
+  children: React.ReactNode
+  title?: string
+  subtitle?: string
 }
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({
@@ -22,7 +22,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5"/>
+                <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
               </pattern>
             </defs>
             <rect width="100" height="100" fill="url(#grid)" />
@@ -39,7 +39,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <div>
             <Link href="/" className="flex items-center group">
               <Image
-                src="/brand/logo/logo-horizontal-dark.svg" 
+                src="/brand/logo/logo-horizontal-dark.svg"
                 alt="Fleetvera"
                 width={200}
                 height={40}
@@ -51,12 +51,8 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           {/* Main Content */}
           <div className="space-y-8">
             <div>
-              <h1 className="text-4xl xl:text-5xl font-bold leading-tight">
-                {title}
-              </h1>
-              <p className="mt-4 text-xl text-blue-100">
-                {subtitle}
-              </p>
+              <h1 className="text-4xl xl:text-5xl font-bold leading-tight">{title}</h1>
+              <p className="mt-4 text-xl text-blue-100">{subtitle}</p>
             </div>
 
             {/* Feature List */}
@@ -83,9 +79,15 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
           <div className="text-sm text-blue-200">
             <p>© 2026 Fleetvera. All rights reserved.</p>
             <div className="mt-2 flex items-center space-x-4">
-              <Link href="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/terms-of-service" className="hover:text-white transition-colors">Terms</Link>
-              <Link href="/help" className="hover:text-white transition-colors">Support</Link>
+              <Link href="/privacy-policy" className="hover:text-white transition-colors">
+                Privacy
+              </Link>
+              <Link href="/terms-of-service" className="hover:text-white transition-colors">
+                Terms
+              </Link>
+              <Link href="/help" className="hover:text-white transition-colors">
+                Support
+              </Link>
             </div>
           </div>
         </div>
@@ -97,7 +99,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-white">
           <Link href="/" className="flex items-center">
             <Image
-              src="/brand/logo/logo-horizontal.svg" 
+              src="/brand/logo/logo-horizontal.svg"
               alt="Fleetvera"
               width={140}
               height={28}
@@ -108,9 +110,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
 
         {/* Form Container */}
         <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-12">
-          <div className="w-full max-w-md">
-            {children}
-          </div>
+          <div className="w-full max-w-md">{children}</div>
         </div>
 
         {/* Mobile Footer */}
@@ -119,7 +119,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default AuthLayout;
+export default AuthLayout

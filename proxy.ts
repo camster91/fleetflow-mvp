@@ -15,14 +15,7 @@ function getJwtSecret() {
   return configured || 'dev-only-placeholder-not-for-production'
 }
 
-const PUBLIC_PAGES = new Set([
-  '/',
-  '/pricing',
-  '/cookie-policy',
-  '/privacy-policy',
-  '/terms-of-service',
-  '/gdpr',
-])
+const PUBLIC_PAGES = new Set(['/', '/pricing', '/cookie-policy', '/privacy-policy', '/terms-of-service', '/gdpr'])
 
 const RETIRED_PUBLIC_PREFIXES = ['/about', '/features', '/blog', '/changelog', '/status']
 
@@ -57,11 +50,7 @@ async function getTokenPayload(req: NextRequest) {
   const token = req.cookies.get('token')?.value
   if (!token) return null
   try {
-    const { payload } = await jwtVerify(
-      token,
-      new TextEncoder().encode(getJwtSecret()),
-      { algorithms: ['HS256'] }
-    )
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(getJwtSecret()), { algorithms: ['HS256'] })
     // Mirror getUserFromRequest's claim checks. The proxy deliberately does
     // not query the database on every navigation, so the tokenVersion
     // comparison that enforces revocation ("log out everywhere", 2FA changes)
@@ -85,17 +74,9 @@ export async function proxy(req: NextRequest) {
   const method = req.method.toUpperCase()
 
   // CSRF: block cross-origin mutating API calls that rely on cookie auth
-  const csrfExempt =
-    pathname.startsWith('/api/stripe/webhook') ||
-    pathname.startsWith('/api/cron/')
+  const csrfExempt = pathname.startsWith('/api/stripe/webhook') || pathname.startsWith('/api/cron/')
 
-  if (
-    pathname.startsWith('/api/') &&
-    !csrfExempt &&
-    method !== 'GET' &&
-    method !== 'HEAD' &&
-    method !== 'OPTIONS'
-  ) {
+  if (pathname.startsWith('/api/') && !csrfExempt && method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
     const origin = req.headers.get('origin')
     const referer = req.headers.get('referer')
     const host = req.headers.get('host')
@@ -136,7 +117,7 @@ export async function proxy(req: NextRequest) {
 
   // Let auth API and static files pass through
   if (
-    PUBLIC_API_PREFIXES.some(p => pathname.startsWith(p)) ||
+    PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/brand') ||
     pathname.startsWith('/icons') ||
@@ -150,7 +131,7 @@ export async function proxy(req: NextRequest) {
   const token = await getTokenPayload(req)
   const isAuthPage = pathname.startsWith('/auth')
 
-  if (RETIRED_PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+  if (RETIRED_PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL('/', req.url))
   }
 
@@ -160,12 +141,12 @@ export async function proxy(req: NextRequest) {
   }
 
   // Public routes that don't need auth
-  if (PUBLIC_PAGES.has(pathname) || PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+  if (PUBLIC_PAGES.has(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.next()
   }
 
   // Protected route without a session → send to login
-  if (PROTECTED_PREFIXES.some(p => pathname.startsWith(p)) && !token) {
+  if (PROTECTED_PREFIXES.some((p) => pathname.startsWith(p)) && !token) {
     const loginUrl = new URL('/auth/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)

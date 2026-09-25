@@ -1,6 +1,8 @@
 jest.mock('@/lib/email', () => ({
-  APP_URL: 'https://fleet.example.com', FROM_EMAIL: 'Fleetvera <notify@mg.example.com>',
-  MAILGUN_DOMAIN: 'mg.example.com', sendEmail: jest.fn(async () => ({ success: true, messageId: 'id' })),
+  APP_URL: 'https://fleet.example.com',
+  FROM_EMAIL: 'Fleetvera <notify@mg.example.com>',
+  MAILGUN_DOMAIN: 'mg.example.com',
+  sendEmail: jest.fn(async () => ({ success: true, messageId: 'id' })),
   validateEmailReadiness: jest.fn(() => ({ ready: true, errors: [] })),
 }))
 
@@ -12,8 +14,12 @@ const mockSendEmail = adapterSendEmail as jest.Mock
 it('preserves facade exports and passes optional delivery fields through', async () => {
   expect(facade.MAILGUN_DOMAIN).toBe('mg.example.com')
   await facade.sendEmail({
-    to: 'a@example.com', subject: 'subject', html: '<p>body</p>',
-    cc: 'cc@example.com', bcc: ['bcc@example.com'], replyTo: 'reply@example.com',
+    to: 'a@example.com',
+    subject: 'subject',
+    html: '<p>body</p>',
+    cc: 'cc@example.com',
+    bcc: ['bcc@example.com'],
+    replyTo: 'reply@example.com',
     attachments: [{ filename: 'note.txt', data: 'safe' }],
   })
   expect(mockSendEmail).toHaveBeenCalledWith(expect.objectContaining({ cc: 'cc@example.com' }))

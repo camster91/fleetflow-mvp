@@ -7,9 +7,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!isAuthorizedCronRequest(req)) return res.status(401).json({ error: 'Unauthorized' })
   const now = new Date()
   try {
-    const deleted = await prisma.$transaction(async tx => {
+    const deleted = await prisma.$transaction(async (tx) => {
       const result = await tx.maintenanceRiskFeedback.deleteMany({ where: { expiresAt: { lte: now } } })
-      if (result.count) await tx.auditLog.create({ data: { userId: 'system', teamId: null, userName: 'System', userRole: 'SYSTEM', action: 'pilot_feedback_retention_cleanup', entityType: 'maintenance_risk', description: 'Deleted expired maintenance attention pilot feedback', metadata: JSON.stringify({ deleted: result.count }) } })
+      if (result.count)
+        await tx.auditLog.create({
+          data: {
+            userId: 'system',
+            teamId: null,
+            userName: 'System',
+            userRole: 'SYSTEM',
+            action: 'pilot_feedback_retention_cleanup',
+            entityType: 'maintenance_risk',
+            description: 'Deleted expired maintenance attention pilot feedback',
+            metadata: JSON.stringify({ deleted: result.count }),
+          },
+        })
       return result.count
     })
     return res.status(200).json({ deleted })

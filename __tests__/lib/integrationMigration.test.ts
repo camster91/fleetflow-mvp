@@ -3,7 +3,10 @@ import path from 'path'
 
 describe('integration persistence migration', () => {
   it('is additive, tenant-scoped, idempotent, and stores no plaintext credential columns', () => {
-    const sql = fs.readFileSync(path.join(process.cwd(), 'prisma/migrations/20260808060000_provider_integrations/migration.sql'), 'utf8')
+    const sql = fs.readFileSync(
+      path.join(process.cwd(), 'prisma/migrations/20260808060000_provider_integrations/migration.sql'),
+      'utf8'
+    )
     expect(sql).toContain('"IntegrationConnection"')
     expect(sql).toContain('"credentialEnvelope" TEXT')
     expect(sql).toContain('CREATE UNIQUE INDEX "IntegrationConnection_scopeKey_provider_key"')

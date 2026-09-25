@@ -27,7 +27,7 @@ describe('settings API integrity controls', () => {
   it('keeps unsupported avatar writes visibly disabled', () => {
     const page = read('pages/settings/profile.tsx')
 
-    expect(page).not.toContain("body: JSON.stringify({ image: dataUrl })")
+    expect(page).not.toContain('body: JSON.stringify({ image: dataUrl })')
     expect(page).toContain('Profile photo uploads are not yet available.')
     expect(page).toContain('Upload coming soon')
   })

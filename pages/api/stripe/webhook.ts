@@ -2,7 +2,14 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import type { Prisma } from '@prisma/client'
 import Stripe from 'stripe'
 import { prisma } from '../../../lib/prisma'
-import { constructWebhookEvent, resolvePricePlan, retrieveInvoiceSnapshot, retrieveSubscriptionSnapshot, type StripeInvoiceSnapshot, type StripeSubscriptionSnapshot } from '../../../lib/stripe'
+import {
+  constructWebhookEvent,
+  resolvePricePlan,
+  retrieveInvoiceSnapshot,
+  retrieveSubscriptionSnapshot,
+  type StripeInvoiceSnapshot,
+  type StripeSubscriptionSnapshot,
+} from '../../../lib/stripe'
 
 export const config = { api: { bodyParser: false } }
 export const STRIPE_WEBHOOK_MAX_BYTES = 1024 * 1024
@@ -40,11 +47,16 @@ type WebhookDb = Prisma.TransactionClient
 
 async function auditTransition(db: WebhookDb, userId: string, entityId: string, from: string | null, to: string) {
   if (from === to) return
-  await db.auditLog.create({ data: {
-    userId, action: 'status_changed', entityType: 'subscription', entityId,
-    description: `Subscription status changed from ${from || 'UNKNOWN'} to ${to}`,
-    metadata: JSON.stringify({ source: 'stripe_webhook', from, to }),
-  } })
+  await db.auditLog.create({
+    data: {
+      userId,
+      action: 'status_changed',
+      entityType: 'subscription',
+      entityId,
+      description: `Subscription status changed from ${from || 'UNKNOWN'} to ${to}`,
+      metadata: JSON.stringify({ source: 'stripe_webhook', from, to }),
+    },
+  })
 }
 
 type EventOrderedSubscription = { stripeLastEventCreated?: number | null; stripeLastEventId?: string | null }
@@ -57,7 +69,10 @@ function eventTiming(event: Stripe.Event, subscription: EventOrderedSubscription
 }
 
 function eventOrder(event: Stripe.Event) {
-  return { stripeLastEventCreated: Number.isSafeInteger(event.created) ? event.created : 0, stripeLastEventId: event.id }
+  return {
+    stripeLastEventCreated: Number.isSafeInteger(event.created) ? event.created : 0,
+    stripeLastEventId: event.id,
+  }
 }
 
 function snapshotState(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event) {
@@ -74,27 +89,39 @@ function snapshotState(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event
   }
 }
 
-async function syncInvoice(db: WebhookDb, event: Stripe.Event, subscriptionSnapshot: StripeSubscriptionSnapshot, invoice: Stripe.Invoice, invoiceSnapshot: StripeInvoiceSnapshot) {
+async function syncInvoice(
+  db: WebhookDb,
+  event: Stripe.Event,
+  subscriptionSnapshot: StripeSubscriptionSnapshot,
+  invoice: Stripe.Invoice,
+  invoiceSnapshot: StripeInvoiceSnapshot
+) {
   const stripeSubscriptionId = getInvoiceSubscriptionId(invoice)
   if (!stripeSubscriptionId) return
   const local = await db.subscription.findUnique({ where: { stripeSubscriptionId } })
   if (!local) return
   const amount = invoiceSnapshot.status === 'paid' ? invoiceSnapshot.amountPaid : invoiceSnapshot.amountDue
-  const presentationStatus = event.type === 'invoice.payment_failed' && invoiceSnapshot.status === 'open'
-    ? 'failed'
-    : invoiceSnapshot.status
+  const presentationStatus =
+    event.type === 'invoice.payment_failed' && invoiceSnapshot.status === 'open' ? 'failed' : invoiceSnapshot.status
   await db.invoice.upsert({
     where: { stripeInvoiceId: invoiceSnapshot.id },
     update: {
       amount,
-      currency: invoiceSnapshot.currency.toUpperCase(), status: presentationStatus, invoicePdf: invoiceSnapshot.invoicePdf,
-      periodStart: new Date(invoiceSnapshot.periodStart * 1000), periodEnd: new Date(invoiceSnapshot.periodEnd * 1000),
+      currency: invoiceSnapshot.currency.toUpperCase(),
+      status: presentationStatus,
+      invoicePdf: invoiceSnapshot.invoicePdf,
+      periodStart: new Date(invoiceSnapshot.periodStart * 1000),
+      periodEnd: new Date(invoiceSnapshot.periodEnd * 1000),
     },
     create: {
-      userId: local.userId, stripeInvoiceId: invoiceSnapshot.id,
+      userId: local.userId,
+      stripeInvoiceId: invoiceSnapshot.id,
       amount,
-      currency: invoiceSnapshot.currency.toUpperCase(), status: presentationStatus, invoicePdf: invoiceSnapshot.invoicePdf,
-      periodStart: new Date(invoiceSnapshot.periodStart * 1000), periodEnd: new Date(invoiceSnapshot.periodEnd * 1000),
+      currency: invoiceSnapshot.currency.toUpperCase(),
+      status: presentationStatus,
+      invoicePdf: invoiceSnapshot.invoicePdf,
+      periodStart: new Date(invoiceSnapshot.periodStart * 1000),
+      periodEnd: new Date(invoiceSnapshot.periodEnd * 1000),
     },
   })
   if (eventTiming(event, local) === 'older') return
@@ -103,19 +130,35 @@ async function syncInvoice(db: WebhookDb, event: Stripe.Event, subscriptionSnaps
   await auditTransition(db, local.userId, local.id, local.status, subscriptionSnapshot.status)
 }
 
-async function processEvent(db: WebhookDb, event: Stripe.Event, snapshot: StripeSubscriptionSnapshot | null, invoiceSnapshot: StripeInvoiceSnapshot | null) {
+async function processEvent(
+  db: WebhookDb,
+  event: Stripe.Event,
+  snapshot: StripeSubscriptionSnapshot | null,
+  invoiceSnapshot: StripeInvoiceSnapshot | null
+) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session
       const userId = session.metadata?.userId
-      if (!userId || !session.subscription || !session.customer || !snapshot) throw new Error('Invalid checkout mapping')
+      if (!userId || !session.subscription || !session.customer || !snapshot)
+        throw new Error('Invalid checkout mapping')
       const previous = await db.subscription.findUnique({ where: { userId } })
       if (previous && eventTiming(event, previous) === 'older') break
       const data = snapshotState(snapshot, event)
       const record = await db.subscription.upsert({
         where: { userId },
-        update: { stripeSubscriptionId: String(session.subscription), stripeCustomerId: String(session.customer), ...data },
-        create: { userId, stripeSubscriptionId: String(session.subscription), stripeCustomerId: String(session.customer), plan: 'UNLIMITED', ...data },
+        update: {
+          stripeSubscriptionId: String(session.subscription),
+          stripeCustomerId: String(session.customer),
+          ...data,
+        },
+        create: {
+          userId,
+          stripeSubscriptionId: String(session.subscription),
+          stripeCustomerId: String(session.customer),
+          plan: 'UNLIMITED',
+          ...data,
+        },
       })
       await auditTransition(db, userId, record.id, previous?.status || null, snapshot.status)
       break
@@ -125,7 +168,10 @@ async function processEvent(db: WebhookDb, event: Stripe.Event, snapshot: Stripe
       if (!snapshot) throw new Error('Missing Stripe subscription state')
       const local = await db.subscription.findUnique({ where: { stripeSubscriptionId: subscription.id } })
       if (!local || eventTiming(event, local) === 'older') break
-      await db.subscription.update({ where: { stripeSubscriptionId: subscription.id }, data: snapshotState(snapshot, event) })
+      await db.subscription.update({
+        where: { stripeSubscriptionId: subscription.id },
+        data: snapshotState(snapshot, event),
+      })
       await auditTransition(db, local.userId, local.id, local.status, snapshot.status)
       break
     }
@@ -133,7 +179,10 @@ async function processEvent(db: WebhookDb, event: Stripe.Event, snapshot: Stripe
       const subscription = event.data.object as Stripe.Subscription
       const local = await db.subscription.findUnique({ where: { stripeSubscriptionId: subscription.id } })
       if (!local || !snapshot || eventTiming(event, local) === 'older') break
-      await db.subscription.update({ where: { stripeSubscriptionId: subscription.id }, data: snapshotState(snapshot, event) })
+      await db.subscription.update({
+        where: { stripeSubscriptionId: subscription.id },
+        data: snapshotState(snapshot, event),
+      })
       await auditTransition(db, local.userId, local.id, local.status, snapshot.status)
       break
     }
@@ -150,7 +199,8 @@ async function processEvent(db: WebhookDb, event: Stripe.Event, snapshot: Stripe
 }
 
 export function isDuplicateWebhookEvent(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null || !('code' in error) || error.code !== 'P2002' || !('meta' in error)) return false
+  if (typeof error !== 'object' || error === null || !('code' in error) || error.code !== 'P2002' || !('meta' in error))
+    return false
   const meta = error.meta
   if (typeof meta !== 'object' || meta === null) return false
   const modelName = 'modelName' in meta ? meta.modelName : null
@@ -182,15 +232,21 @@ function eventSubscriptionId(event: Stripe.Event): string | null {
 }
 
 function eventInvoiceId(event: Stripe.Event): string | null {
-  return event.type === 'invoice.payment_failed' || event.type === 'invoice.paid' || event.type === 'invoice.payment_succeeded'
+  return event.type === 'invoice.payment_failed' ||
+    event.type === 'invoice.paid' ||
+    event.type === 'invoice.payment_succeeded'
     ? (event.data.object as Stripe.Invoice).id
     : null
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed' }) }
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
   const signature = req.headers['stripe-signature']
-  if (!signature || typeof signature !== 'string') return res.status(400).json({ error: 'Missing stripe-signature header' })
+  if (!signature || typeof signature !== 'string')
+    return res.status(400).json({ error: 'Missing stripe-signature header' })
 
   const contentLengthHeader = Array.isArray(req.headers['content-length'])
     ? req.headers['content-length'][0]
@@ -245,17 +301,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await prisma.$transaction(async (db) => {
-      try {
-        await db.stripeWebhookEvent.create({ data: { id: event.id, type: event.type } })
-      } catch (error) {
-        // This classifier is deliberately scoped to the marker insert. A
-        // model-less PostgreSQL `id` target is safe here but ambiguous after it.
-        if (isDuplicateWebhookEvent(error)) throw new DuplicateWebhookDelivery()
-        throw error
-      }
-      await processEvent(db, event, snapshot, invoiceSnapshot)
-    }, { isolationLevel: 'Serializable' })
+    await prisma.$transaction(
+      async (db) => {
+        try {
+          await db.stripeWebhookEvent.create({ data: { id: event.id, type: event.type } })
+        } catch (error) {
+          // This classifier is deliberately scoped to the marker insert. A
+          // model-less PostgreSQL `id` target is safe here but ambiguous after it.
+          if (isDuplicateWebhookEvent(error)) throw new DuplicateWebhookDelivery()
+          throw error
+        }
+        await processEvent(db, event, snapshot, invoiceSnapshot)
+      },
+      { isolationLevel: 'Serializable' }
+    )
   } catch (error) {
     if (error instanceof DuplicateWebhookDelivery) return res.status(200).json({ received: true, duplicate: true })
     console.error(`Stripe webhook processing failed for ${event.id || 'unknown'} (${event.type})`)

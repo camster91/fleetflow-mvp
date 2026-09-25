@@ -20,9 +20,9 @@ it('requires HTTPS and a sender on the acknowledged sending domain', () => {
     NEXTAUTH_URL: 'http://fleet.example.com',
   })
   expect(result.ready).toBe(false)
-  expect(result.errors).toEqual(expect.arrayContaining([
-    expect.stringContaining('sending domain'), expect.stringContaining('HTTPS'),
-  ]))
+  expect(result.errors).toEqual(
+    expect.arrayContaining([expect.stringContaining('sending domain'), expect.stringContaining('HTTPS')])
+  )
 })
 
 it('reports every missing readiness input without throwing', () => {
@@ -36,10 +36,12 @@ it.each([
   'https://user:pass@fleet.example.com',
   'https://fleet.example.com?redirect=evil',
   'https://fleet.example.com#fragment',
-])('rejects unsafe email application URL %s', value => {
+])('rejects unsafe email application URL %s', (value) => {
   expect(getEmailAppUrl({ NEXTAUTH_URL: value } as unknown as NodeJS.ProcessEnv)).toBeNull()
 })
 
 it('normalizes email links to the configured HTTPS origin', () => {
-  expect(getEmailAppUrl({ NEXTAUTH_URL: 'https://fleet.example.com/path/' } as unknown as NodeJS.ProcessEnv)).toBe('https://fleet.example.com')
+  expect(getEmailAppUrl({ NEXTAUTH_URL: 'https://fleet.example.com/path/' } as unknown as NodeJS.ProcessEnv)).toBe(
+    'https://fleet.example.com'
+  )
 })

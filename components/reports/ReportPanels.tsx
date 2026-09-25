@@ -1,41 +1,69 @@
-import React from 'react';
-import { Card } from '../ui/Card';
-import { StatCard } from '../analytics/StatCard';
-import { format } from 'date-fns';
-import { Wrench, Package, Truck, AlertTriangle, Clock, DollarSign, Users, TrendingUp } from 'lucide-react';
+import React from 'react'
+import { Card } from '../ui/Card'
+import { StatCard } from '../analytics/StatCard'
+import { format } from 'date-fns'
+import { Wrench, Package, Truck, AlertTriangle, Clock, DollarSign, Users, TrendingUp } from 'lucide-react'
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from 'recharts';
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 
 // Chart panels for pages/reports.tsx. Kept in a separate module so the page
 // can load them via next/dynamic (ssr: false) — this keeps recharts out of
 // the shared vendors chunk and only downloads it when a report is viewed.
 
-const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 
-interface StatusBreakdown { status: string; count: number }
+interface StatusBreakdown {
+  status: string
+  count: number
+}
 interface UpcomingTask {
-  id: string; title: string; vehicleName: string; type: string; dueDate: string;
-  priority: string; costEstimate: number | null;
+  id: string
+  title: string
+  vehicleName: string
+  type: string
+  dueDate: string
+  priority: string
+  costEstimate: number | null
 }
 export interface MaintenanceReportData {
-  totalCost: number; totalTasks: number; upcomingTasks: UpcomingTask[];
-  costByVehicle: Array<{ vehicle: string; cost: number }>;
-  costOverTime: Array<{ month: string; cost: number }>;
+  totalCost: number
+  totalTasks: number
+  upcomingTasks: UpcomingTask[]
+  costByVehicle: Array<{ vehicle: string; cost: number }>
+  costOverTime: Array<{ month: string; cost: number }>
 }
 export interface DeliveriesReportData {
-  totalDeliveries: number; onTimeRate: number; avgDeliveryTime: number;
-  topDrivers: Array<{ driver: string; deliveries: number }>;
-  statusBreakdown: StatusBreakdown[];
+  totalDeliveries: number
+  onTimeRate: number
+  avgDeliveryTime: number
+  topDrivers: Array<{ driver: string; deliveries: number }>
+  statusBreakdown: StatusBreakdown[]
 }
 interface MaintenanceVehicle {
-  id: string; name: string; vehicleType: string | null; mileage: number | null;
-  lastService: string | null; driver: string | null;
+  id: string
+  name: string
+  vehicleType: string | null
+  mileage: number | null
+  lastService: string | null
+  driver: string | null
 }
 export interface FleetReportData {
-  totalVehicles: number; statusBreakdown: StatusBreakdown[];
-  vehiclesNeedingMaintenance: MaintenanceVehicle[];
+  totalVehicles: number
+  statusBreakdown: StatusBreakdown[]
+  vehiclesNeedingMaintenance: MaintenanceVehicle[]
 }
 
 export function MaintenanceReport({ data }: { data: MaintenanceReportData }) {
@@ -62,7 +90,9 @@ export function MaintenanceReport({ data }: { data: MaintenanceReportData }) {
                 <Bar dataKey="cost" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyChart />}
+          ) : (
+            <EmptyChart />
+          )}
         </Card>
 
         <Card>
@@ -77,7 +107,9 @@ export function MaintenanceReport({ data }: { data: MaintenanceReportData }) {
                 <Line type="monotone" dataKey="cost" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
-          ) : <EmptyChart />}
+          ) : (
+            <EmptyChart />
+          )}
         </Card>
       </div>
 
@@ -118,7 +150,7 @@ export function MaintenanceReport({ data }: { data: MaintenanceReportData }) {
         </Card>
       )}
     </div>
-  );
+  )
 }
 
 export function DeliveriesReport({ data }: { data: DeliveriesReportData }) {
@@ -159,7 +191,9 @@ export function DeliveriesReport({ data }: { data: DeliveriesReportData }) {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          ) : <EmptyChart />}
+          ) : (
+            <EmptyChart />
+          )}
         </Card>
 
         <Card>
@@ -174,11 +208,13 @@ export function DeliveriesReport({ data }: { data: DeliveriesReportData }) {
                 <Bar dataKey="deliveries" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyChart />}
+          ) : (
+            <EmptyChart />
+          )}
         </Card>
       </div>
     </div>
-  );
+  )
 }
 
 export function FleetReport({ data }: { data: FleetReportData }) {
@@ -222,7 +258,9 @@ export function FleetReport({ data }: { data: FleetReportData }) {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
-          ) : <EmptyChart />}
+          ) : (
+            <EmptyChart />
+          )}
         </Card>
 
         {/* Maintenance needed list */}
@@ -231,7 +269,10 @@ export function FleetReport({ data }: { data: FleetReportData }) {
           {data.vehiclesNeedingMaintenance.length > 0 ? (
             <div className="space-y-3 max-h-[300px] overflow-y-auto">
               {data.vehiclesNeedingMaintenance.map((v) => (
-                <div key={v.id} className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div
+                  key={v.id}
+                  className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg"
+                >
                   <div>
                     <p className="font-medium text-slate-900">{v.name}</p>
                     <p className="text-sm text-slate-500">
@@ -253,7 +294,7 @@ export function FleetReport({ data }: { data: FleetReportData }) {
         </Card>
       </div>
     </div>
-  );
+  )
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
@@ -261,18 +302,16 @@ function PriorityBadge({ priority }: { priority: string }) {
     high: 'bg-red-100 text-red-700',
     medium: 'bg-amber-100 text-amber-700',
     low: 'bg-green-100 text-green-700',
-  };
+  }
   return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles[priority] || 'bg-slate-100 text-slate-600'}`}>
+    <span
+      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles[priority] || 'bg-slate-100 text-slate-600'}`}
+    >
       {priority}
     </span>
-  );
+  )
 }
 
 function EmptyChart() {
-  return (
-    <div className="flex items-center justify-center h-[300px] text-slate-400 text-sm">
-      No data available
-    </div>
-  );
+  return <div className="flex items-center justify-center h-[300px] text-slate-400 text-sm">No data available</div>
 }

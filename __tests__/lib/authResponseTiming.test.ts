@@ -10,7 +10,7 @@ it('bounds a never-settling provider operation at the configured timeout', async
   const never = new Promise<never>(() => undefined)
   const result = await awaitEmailDeliveryWithinTimeout(never, {
     timeoutMs: 10,
-    sleep: async milliseconds => expect(milliseconds).toBe(10),
+    sleep: async (milliseconds) => expect(milliseconds).toBe(10),
   })
   expect(result).toEqual({ status: 'timeout' })
 })

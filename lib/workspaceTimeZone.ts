@@ -2,8 +2,12 @@ import { prisma } from './prisma'
 import { DEFAULT_TIME_ZONE, normalizeTimeZone } from './dateOnly'
 
 type TimeZoneDb = {
-  team: { findUnique(args: { where: { id: string }; select: { timeZone: true } }): Promise<{ timeZone: string } | null> }
-  user: { findUnique(args: { where: { id: string }; select: { timeZone: true } }): Promise<{ timeZone: string } | null> }
+  team: {
+    findUnique(args: { where: { id: string }; select: { timeZone: true } }): Promise<{ timeZone: string } | null>
+  }
+  user: {
+    findUnique(args: { where: { id: string }; select: { timeZone: true } }): Promise<{ timeZone: string } | null>
+  }
 }
 
 /**
@@ -13,7 +17,7 @@ type TimeZoneDb = {
  */
 export async function getWorkspaceTimeZone(
   tenant: { ownerId: string; teamId: string | null },
-  db: TimeZoneDb = prisma as unknown as TimeZoneDb,
+  db: TimeZoneDb = prisma as unknown as TimeZoneDb
 ): Promise<string> {
   try {
     const row = tenant.teamId

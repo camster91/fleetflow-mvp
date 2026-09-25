@@ -1,19 +1,19 @@
-import React from 'react';
-import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React from 'react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Breadcrumb {
-  label: string;
-  href?: string;
+  label: string
+  href?: string
 }
 
 interface PageHeaderProps {
-  title: string;
-  subtitle?: string;
-  breadcrumbs?: Breadcrumb[];
-  actions?: React.ReactNode;
-  backHref?: string;
-  backLabel?: string;
+  title: string
+  subtitle?: string
+  breadcrumbs?: Breadcrumb[]
+  actions?: React.ReactNode
+  backHref?: string
+  backLabel?: string
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -33,10 +33,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
             <React.Fragment key={index}>
               {index > 0 && <ChevronRight className="h-4 w-4 text-slate-400" />}
               {crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  className="text-slate-500 hover:text-slate-700 transition-colors"
-                >
+                <Link href={crumb.href} className="text-slate-500 hover:text-slate-700 transition-colors">
                   {crumb.label}
                 </Link>
               ) : (
@@ -64,14 +61,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{title}</h1>
           {subtitle && <p className="mt-1 text-slate-500">{subtitle}</p>}
         </div>
-        {actions && (
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {actions}
-          </div>
-        )}
+        {actions && <div className="flex flex-wrap items-center gap-2 sm:gap-3">{actions}</div>}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default PageHeader;
+export default PageHeader

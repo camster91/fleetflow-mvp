@@ -4,59 +4,278 @@ import { AnswerWithSources } from '@/components/assistant/AnswerWithSources'
 import { ActionPreview } from '@/components/assistant/ActionPreview'
 import type { AssistantClaim, AssistantSource } from '@/lib/ai/answerCitations'
 
-const PROMPTS = ['What needs attention today?', 'What maintenance is overdue or due soon?', 'Which vehicles have the highest recorded maintenance cost?', 'Which deliveries are late, incomplete, or unassigned?']
+const PROMPTS = [
+  'What needs attention today?',
+  'What maintenance is overdue or due soon?',
+  'Which vehicles have the highest recorded maintenance cost?',
+  'Which deliveries are late, incomplete, or unassigned?',
+]
 type Result = { empty: boolean; answer: { claims: AssistantClaim[]; summary?: string }; sources: AssistantSource[] }
 
 export default function AssistantPage() {
-  const [question, setQuestion] = useState(''); const [result, setResult] = useState<Result | null>(null)
-  const [loading, setLoading] = useState(false); const [error, setError] = useState(''); const abortRef = useRef<AbortController | null>(null)
-  const [recordType, setRecordType] = useState<'vehicle' | 'delivery' | 'client'>('vehicle'); const [recordId, setRecordId] = useState(''); const [statusMessage, setStatusMessage] = useState(''); const [editDeliveryStatus, setEditDeliveryStatus] = useState<'pending' | 'in-transit' | 'delivered' | 'cancelled'>('in-transit')
-  const [entities, setEntities] = useState<Array<{ id: string; label: string }>>([]); const [entitiesLoading, setEntitiesLoading] = useState(false)
-  const loadEntities = async () => { setEntitiesLoading(true); setRecordId(''); try { const response = await fetch(`/api/assistant/entities?type=${recordType}`); if (!response.ok) throw new Error(); const body = await response.json() as { entities?: Array<{ id: string; label: string }> }; setEntities(Array.isArray(body.entities) ? body.entities.slice(0, 20) : []) } catch { setEntities([]); setError('Authorized records could not be loaded. Retry when you are ready.') } finally { setEntitiesLoading(false) } }
-  const ask = async (value = question) => {
-    const normalized = value.trim(); if (!normalized || loading) return
-    abortRef.current?.abort(); const controller = new AbortController(); abortRef.current = controller
-    setQuestion(normalized); setLoading(true); setError(''); setStatusMessage(''); setResult(null)
+  const [question, setQuestion] = useState('')
+  const [result, setResult] = useState<Result | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const abortRef = useRef<AbortController | null>(null)
+  const [recordType, setRecordType] = useState<'vehicle' | 'delivery' | 'client'>('vehicle')
+  const [recordId, setRecordId] = useState('')
+  const [statusMessage, setStatusMessage] = useState('')
+  const [editDeliveryStatus, setEditDeliveryStatus] = useState<'pending' | 'in-transit' | 'delivered' | 'cancelled'>(
+    'in-transit'
+  )
+  const [entities, setEntities] = useState<Array<{ id: string; label: string }>>([])
+  const [entitiesLoading, setEntitiesLoading] = useState(false)
+  const loadEntities = async () => {
+    setEntitiesLoading(true)
+    setRecordId('')
     try {
-      const selectedEntity = /selected (?:vehicle|client)/i.test(normalized) && recordId.trim() && recordType !== 'delivery' ? { type: recordType, id: recordId.trim() } : undefined
-      const response = await fetch('/api/assistant/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: normalized, ...(selectedEntity ? { selectedEntity } : {}) }), signal: controller.signal })
-      const body = await response.json() as Result & { error?: string }
+      const response = await fetch(`/api/assistant/entities?type=${recordType}`)
+      if (!response.ok) throw new Error()
+      const body = (await response.json()) as { entities?: Array<{ id: string; label: string }> }
+      setEntities(Array.isArray(body.entities) ? body.entities.slice(0, 20) : [])
+    } catch {
+      setEntities([])
+      setError('Authorized records could not be loaded. Retry when you are ready.')
+    } finally {
+      setEntitiesLoading(false)
+    }
+  }
+  const ask = async (value = question) => {
+    const normalized = value.trim()
+    if (!normalized || loading) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setQuestion(normalized)
+    setLoading(true)
+    setError('')
+    setStatusMessage('')
+    setResult(null)
+    try {
+      const selectedEntity =
+        /selected (?:vehicle|client)/i.test(normalized) && recordId.trim() && recordType !== 'delivery'
+          ? { type: recordType, id: recordId.trim() }
+          : undefined
+      const response = await fetch('/api/assistant/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: normalized, ...(selectedEntity ? { selectedEntity } : {}) }),
+        signal: controller.signal,
+      })
+      const body = (await response.json()) as Result & { error?: string }
       if (!response.ok) throw new Error(body.error || 'Request failed')
       if (abortRef.current === controller) setResult(body)
     } catch (caught) {
       if (abortRef.current === controller) {
-        if (caught instanceof DOMException && caught.name === 'AbortError') setStatusMessage('Request cancelled. Your records were not changed.')
+        if (caught instanceof DOMException && caught.name === 'AbortError')
+          setStatusMessage('Request cancelled. Your records were not changed.')
         else setError('Fleetvera could not answer that right now. Retry when you are ready.')
       }
-    } finally { if (abortRef.current === controller) { abortRef.current = null; setLoading(false) } }
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null
+        setLoading(false)
+      }
+    }
   }
-  const submit = (event: FormEvent) => { event.preventDefault(); void ask() }
-  return <DashboardLayout title="Ask Fleetvera" subtitle="Grounded answers from your current workspace records" breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ask Fleetvera' }]}>
-    <div className="mx-auto w-full max-w-3xl space-y-6 overflow-hidden">
-      <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-blue-950 p-5 text-white sm:p-7">
-        <h2 className="text-xl font-semibold">What would you like to check?</h2>
-        <p className="mt-2 text-sm text-blue-100">Fleetvera answers only from records you can access and shows a source for every fact.</p>
-        <form onSubmit={submit} className="mt-5 space-y-3">
-          <label htmlFor="fleet-question" className="sr-only">Ask a fleet question</label>
-          <textarea id="fleet-question" rows={3} maxLength={500} value={question} onChange={event => setQuestion(event.target.value)} className="w-full resize-y rounded-xl border border-white/20 bg-white p-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="Ask a fleet question" />
-          <fieldset className="grid gap-2 rounded-xl border border-white/20 p-3 sm:grid-cols-2"><legend className="px-1 text-xs text-blue-100">Optional selected record</legend><label className="text-xs text-blue-100">Record type<select aria-label="Record type" value={recordType} onChange={event => { setRecordType(event.target.value as typeof recordType); setEntities([]); setRecordId('') }} className="mt-1 min-h-11 w-full rounded-lg bg-white px-3 text-slate-900"><option value="vehicle">Vehicle</option><option value="delivery">Delivery</option><option value="client">Client</option></select></label><button type="button" onClick={() => void loadEntities()} disabled={entitiesLoading} className="min-h-11 self-end rounded-lg border border-white/40 px-3 text-sm disabled:opacity-50">{entitiesLoading ? 'Loading records…' : 'Load authorized records'}</button><label className="text-xs text-blue-100 sm:col-span-2">Authorized record<select aria-label="Authorized record" value={recordId} onChange={event => setRecordId(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg bg-white px-3 text-slate-900"><option value="">Select a {recordType}</option>{entities.map(entity => <option key={entity.id} value={entity.id}>{entity.label}</option>)}</select></label>{recordType !== 'delivery' && <button type="button" disabled={!recordId} onClick={() => void ask(`Summarize the selected ${recordType}`)} className="min-h-11 rounded-lg border border-white/40 px-3 text-sm disabled:opacity-50 sm:col-span-2">Summarize selected {recordType}</button>}</fieldset>
-          <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={loading || !question.trim()} className="min-h-11 rounded-lg bg-blue-500 px-5 py-2 font-medium text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Checking records…' : 'Ask'}</button>
-            {loading && <button type="button" onClick={() => { const current = abortRef.current; abortRef.current = null; current?.abort(); setStatusMessage('Request cancelled. Your records were not changed.'); setLoading(false) }} className="min-h-11 rounded-lg border border-white/40 px-4 py-2">Cancel</button>}
-            {error && <button type="button" onClick={() => void ask()} className="min-h-11 rounded-lg border border-white/40 px-4 py-2">Retry</button>}
+  const submit = (event: FormEvent) => {
+    event.preventDefault()
+    void ask()
+  }
+  return (
+    <DashboardLayout
+      title="Ask Fleetvera"
+      subtitle="Grounded answers from your current workspace records"
+      breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ask Fleetvera' }]}
+    >
+      <div className="mx-auto w-full max-w-3xl space-y-6 overflow-hidden">
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-blue-950 p-5 text-white sm:p-7">
+          <h2 className="text-xl font-semibold">What would you like to check?</h2>
+          <p className="mt-2 text-sm text-blue-100">
+            Fleetvera answers only from records you can access and shows a source for every fact.
+          </p>
+          <form onSubmit={submit} className="mt-5 space-y-3">
+            <label htmlFor="fleet-question" className="sr-only">
+              Ask a fleet question
+            </label>
+            <textarea
+              id="fleet-question"
+              rows={3}
+              maxLength={500}
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              className="w-full resize-y rounded-xl border border-white/20 bg-white p-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="Ask a fleet question"
+            />
+            <fieldset className="grid gap-2 rounded-xl border border-white/20 p-3 sm:grid-cols-2">
+              <legend className="px-1 text-xs text-blue-100">Optional selected record</legend>
+              <label className="text-xs text-blue-100">
+                Record type
+                <select
+                  aria-label="Record type"
+                  value={recordType}
+                  onChange={(event) => {
+                    setRecordType(event.target.value as typeof recordType)
+                    setEntities([])
+                    setRecordId('')
+                  }}
+                  className="mt-1 min-h-11 w-full rounded-lg bg-white px-3 text-slate-900"
+                >
+                  <option value="vehicle">Vehicle</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="client">Client</option>
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => void loadEntities()}
+                disabled={entitiesLoading}
+                className="min-h-11 self-end rounded-lg border border-white/40 px-3 text-sm disabled:opacity-50"
+              >
+                {entitiesLoading ? 'Loading records…' : 'Load authorized records'}
+              </button>
+              <label className="text-xs text-blue-100 sm:col-span-2">
+                Authorized record
+                <select
+                  aria-label="Authorized record"
+                  value={recordId}
+                  onChange={(event) => setRecordId(event.target.value)}
+                  className="mt-1 min-h-11 w-full rounded-lg bg-white px-3 text-slate-900"
+                >
+                  <option value="">Select a {recordType}</option>
+                  {entities.map((entity) => (
+                    <option key={entity.id} value={entity.id}>
+                      {entity.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {recordType !== 'delivery' && (
+                <button
+                  type="button"
+                  disabled={!recordId}
+                  onClick={() => void ask(`Summarize the selected ${recordType}`)}
+                  className="min-h-11 rounded-lg border border-white/40 px-3 text-sm disabled:opacity-50 sm:col-span-2"
+                >
+                  Summarize selected {recordType}
+                </button>
+              )}
+            </fieldset>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                disabled={loading || !question.trim()}
+                className="min-h-11 rounded-lg bg-blue-500 px-5 py-2 font-medium text-white hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? 'Checking records…' : 'Ask'}
+              </button>
+              {loading && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const current = abortRef.current
+                    abortRef.current = null
+                    current?.abort()
+                    setStatusMessage('Request cancelled. Your records were not changed.')
+                    setLoading(false)
+                  }}
+                  className="min-h-11 rounded-lg border border-white/40 px-4 py-2"
+                >
+                  Cancel
+                </button>
+              )}
+              {error && (
+                <button
+                  type="button"
+                  onClick={() => void ask()}
+                  className="min-h-11 rounded-lg border border-white/40 px-4 py-2"
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
+        <section aria-label="Suggested questions">
+          <h2 className="text-sm font-semibold text-slate-700">Suggested questions</h2>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            {PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => void ask(prompt)}
+                className="min-h-11 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-700"
+              >
+                {prompt}
+              </button>
+            ))}
           </div>
-        </form>
+        </section>
+        {loading && (
+          <p role="status" className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">
+            Checking authorized Fleetvera records…
+          </p>
+        )}
+        {statusMessage && (
+          <p role="status" className="rounded-xl bg-slate-100 p-4 text-sm text-slate-700">
+            {statusMessage}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            {error}
+          </p>
+        )}
+        {result?.empty && (
+          <p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+            {result.answer.summary}
+          </p>
+        )}
+        {result && !result.empty && <AnswerWithSources claims={result.answer.claims} sources={result.sources} />}
+        {recordId && recordType === 'vehicle' && (
+          <ActionPreview action={{ type: 'open_edit', entityType: 'vehicle', entityId: recordId, values: {} }} />
+        )}
+        {recordId && recordType === 'delivery' && (
+          <section className="space-y-2">
+            <label className="text-sm font-medium text-slate-700">
+              Prefill delivery status
+              <select
+                value={editDeliveryStatus}
+                onChange={(event) => setEditDeliveryStatus(event.target.value as typeof editDeliveryStatus)}
+                className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3"
+              >
+                <option value="pending">Pending</option>
+                <option value="in-transit">In transit</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </label>
+            <ActionPreview
+              action={{
+                type: 'open_edit',
+                entityType: 'delivery',
+                entityId: recordId,
+                values: { status: editDeliveryStatus },
+              }}
+            />
+          </section>
+        )}
+        <section aria-labelledby="assistant-actions-title" className="space-y-2">
+          <h2 id="assistant-actions-title" className="text-sm font-semibold text-slate-700">
+            Safe suggested actions
+          </h2>
+          <p className="text-xs text-slate-500">
+            Create a non-saved weekly summary draft. Record changes always show a separate before-and-after
+            confirmation.
+          </p>
+          <ActionPreview action={{ type: 'draft_weekly_summary' }} />
+        </section>
+        <p className="text-xs text-slate-500">
+          Answers remain read-only. Fleetvera never changes records or contacts people without your explicit
+          confirmation.
+        </p>
       </div>
-      <section aria-label="Suggested questions"><h2 className="text-sm font-semibold text-slate-700">Suggested questions</h2><div className="mt-2 grid gap-2 sm:grid-cols-2">{PROMPTS.map(prompt => <button key={prompt} type="button" onClick={() => void ask(prompt)} className="min-h-11 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-700">{prompt}</button>)}</div></section>
-      {loading && <p role="status" className="rounded-xl bg-blue-50 p-4 text-sm text-blue-900">Checking authorized Fleetvera records…</p>}
-      {statusMessage && <p role="status" className="rounded-xl bg-slate-100 p-4 text-sm text-slate-700">{statusMessage}</p>}
-      {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-      {result?.empty && <p className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">{result.answer.summary}</p>}
-      {result && !result.empty && <AnswerWithSources claims={result.answer.claims} sources={result.sources} />}
-      {recordId && recordType === 'vehicle' && <ActionPreview action={{ type: 'open_edit', entityType: 'vehicle', entityId: recordId, values: {} }} />}
-      {recordId && recordType === 'delivery' && <section className="space-y-2"><label className="text-sm font-medium text-slate-700">Prefill delivery status<select value={editDeliveryStatus} onChange={event => setEditDeliveryStatus(event.target.value as typeof editDeliveryStatus)} className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3"><option value="pending">Pending</option><option value="in-transit">In transit</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><ActionPreview action={{ type: 'open_edit', entityType: 'delivery', entityId: recordId, values: { status: editDeliveryStatus } }} /></section>}
-      <section aria-labelledby="assistant-actions-title" className="space-y-2"><h2 id="assistant-actions-title" className="text-sm font-semibold text-slate-700">Safe suggested actions</h2><p className="text-xs text-slate-500">Create a non-saved weekly summary draft. Record changes always show a separate before-and-after confirmation.</p><ActionPreview action={{ type: 'draft_weekly_summary' }} /></section>
-      <p className="text-xs text-slate-500">Answers remain read-only. Fleetvera never changes records or contacts people without your explicit confirmation.</p>
-    </div>
-  </DashboardLayout>
+    </DashboardLayout>
+  )
 }

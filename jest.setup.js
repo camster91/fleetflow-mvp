@@ -1,6 +1,6 @@
 // jest.setup.js
-import '@testing-library/jest-dom';
-import { jest } from '@jest/globals';
+import '@testing-library/jest-dom'
+import { jest } from '@jest/globals'
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -16,14 +16,14 @@ jest.mock('next/router', () => ({
       off: jest.fn(),
     },
   }),
-}));
+}))
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
   return ({ children, href }) => {
-    return <a href={href}>{children}</a>;
-  };
-});
+    return <a href={href}>{children}</a>
+  }
+})
 
 // Mock the application's custom session client.
 jest.mock('./lib/session', () => ({
@@ -43,7 +43,7 @@ jest.mock('./lib/session', () => ({
   signIn: jest.fn(),
   signOut: jest.fn(),
   SessionProvider: ({ children }) => children,
-}));
+}))
 
 // Mock localStorage
 const localStorageMock = {
@@ -53,13 +53,13 @@ const localStorageMock = {
   removeItem: jest.fn(),
   length: 0,
   key: jest.fn(),
-};
-global.localStorage = localStorageMock;
+}
+global.localStorage = localStorageMock
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: jest.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -69,21 +69,21 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
   })),
-});
+})
 
 // Mock ResizeObserver
 global.ResizeObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
-}));
+}))
 
 // Mock IntersectionObserver
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
   unobserve: jest.fn(),
   disconnect: jest.fn(),
-}));
+}))
 
 // Mock global fetch
 global.fetch = jest.fn(() =>
@@ -91,9 +91,9 @@ global.fetch = jest.fn(() =>
     ok: true,
     json: () => Promise.resolve({}),
   })
-);
+)
 
 // Clear all mocks after each test
 afterEach(() => {
-  jest.clearAllMocks();
-});
+  jest.clearAllMocks()
+})

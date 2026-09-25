@@ -19,13 +19,30 @@ export async function signIn(page: Page, role: MatrixRole, baseURL: string) {
 
 /** Sign a session for any seeded or test-created user (optionally selecting a team workspace). */
 export async function signInUser(page: Page, userId: string, baseURL: string, teamId?: string) {
-  const row = await db.user.findUnique({ where: { id: userId }, select: { email: true, name: true, role: true, tokenVersion: true } })
+  const row = await db.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true, role: true, tokenVersion: true },
+  })
   if (!row) throw new Error(`E2E user ${userId} is missing; run \`npm run db:seed\` first`)
-  const token = await signToken({ sub: userId, email: row.email, name: row.name, role: row.role, tv: row.tokenVersion }, '1h')
+  const token = await signToken(
+    { sub: userId, email: row.email, name: row.name, role: row.role, tv: row.tokenVersion },
+    '1h'
+  )
   const { hostname } = new URL(baseURL)
   await page.context().addCookies([
     { name: 'token', value: token, domain: hostname, path: '/', httpOnly: true, sameSite: 'Lax' },
-    ...(teamId ? [{ name: 'fleetflow_team', value: teamId, domain: hostname, path: '/', httpOnly: true, sameSite: 'Lax' as const }] : []),
+    ...(teamId
+      ? [
+          {
+            name: 'fleetflow_team',
+            value: teamId,
+            domain: hostname,
+            path: '/',
+            httpOnly: true,
+            sameSite: 'Lax' as const,
+          },
+        ]
+      : []),
   ])
 }
 
@@ -37,7 +54,16 @@ export async function signInUser(page: Page, userId: string, baseURL: string, te
 export async function createSyntheticUser(label: string) {
   const id = `e2e-auth-${label}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
   const email = `${id}@matrix.fleetvera.test`
-  await db.user.create({ data: { id, email, name: `E2E ${label} (synthetic)`, role: 'fleet_manager', emailVerified: new Date(), onboardingCompleted: true } })
+  await db.user.create({
+    data: {
+      id,
+      email,
+      name: `E2E ${label} (synthetic)`,
+      role: 'fleet_manager',
+      emailVerified: new Date(),
+      onboardingCompleted: true,
+    },
+  })
   const cleanup = async () => {
     await db.verificationToken.deleteMany({ where: { identifier: `login:${email}` } })
     await db.user.deleteMany({ where: { id } })
@@ -46,7 +72,10 @@ export async function createSyntheticUser(label: string) {
 }
 
 export async function userSecurityState(userId: string) {
-  return db.user.findUniqueOrThrow({ where: { id: userId }, select: { twoFactorEnabled: true, tokenVersion: true, backupCodes: true } })
+  return db.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { twoFactorEnabled: true, tokenVersion: true, backupCodes: true },
+  })
 }
 
 /**
@@ -90,14 +119,37 @@ export async function disconnectMatrixDb() {
  */
 export async function seedConfirmedDocument(name: string) {
   const id = `e2e-matrix-doc-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-  const extraction = { documentType: 'service_invoice', fields: { vendor: { value: 'E2E Matrix Garage', confidence: 0.95, citationIds: [] } }, services: [], parts: [], citations: [], warnings: [] }
-  await db.documentUpload.create({ data: {
-    id, ownerId: MATRIX_OWNER_ID, teamId: MATRIX_TEAM.id, scopeKey: `team:${MATRIX_TEAM.id}`, uploadedById: MATRIX_OWNER_ID,
-    uploadedBySnapshot: 'owner@matrix.fleetvera.test', originalName: name, mimeType: 'application/pdf', byteSize: 16,
-    contentSha256: id.padEnd(64, '0').slice(0, 64), storageKey: `e2e-matrix/${id}`, status: 'CONFIRMED', scanStatus: 'CLEAN',
-    extraction: JSON.stringify(extraction), revision: 4, expiresAt: new Date(Date.now() + 86_400_000),
-  } })
-  return async () => { await db.documentUpload.deleteMany({ where: { id } }) }
+  const extraction = {
+    documentType: 'service_invoice',
+    fields: { vendor: { value: 'E2E Matrix Garage', confidence: 0.95, citationIds: [] } },
+    services: [],
+    parts: [],
+    citations: [],
+    warnings: [],
+  }
+  await db.documentUpload.create({
+    data: {
+      id,
+      ownerId: MATRIX_OWNER_ID,
+      teamId: MATRIX_TEAM.id,
+      scopeKey: `team:${MATRIX_TEAM.id}`,
+      uploadedById: MATRIX_OWNER_ID,
+      uploadedBySnapshot: 'owner@matrix.fleetvera.test',
+      originalName: name,
+      mimeType: 'application/pdf',
+      byteSize: 16,
+      contentSha256: id.padEnd(64, '0').slice(0, 64),
+      storageKey: `e2e-matrix/${id}`,
+      status: 'CONFIRMED',
+      scanStatus: 'CLEAN',
+      extraction: JSON.stringify(extraction),
+      revision: 4,
+      expiresAt: new Date(Date.now() + 86_400_000),
+    },
+  })
+  return async () => {
+    await db.documentUpload.deleteMany({ where: { id } })
+  }
 }
 
 type Resource = 'vehicles' | 'deliveries' | 'maintenance' | 'clients'
@@ -112,7 +164,12 @@ export interface RoleExpectation {
   viewBilling: boolean
 }
 
-const all = (value: boolean): Record<Resource, boolean> => ({ vehicles: value, deliveries: value, maintenance: value, clients: value })
+const all = (value: boolean): Record<Resource, boolean> => ({
+  vehicles: value,
+  deliveries: value,
+  maintenance: value,
+  clients: value,
+})
 
 /*
  * The intended feature x role matrix, written independently of
@@ -120,25 +177,67 @@ const all = (value: boolean): Record<Resource, boolean> => ({ vehicles: value, d
  * places. docs/testing/e2e-matrix.md mirrors this table.
  */
 export const EXPECTATIONS: Record<MatrixRole, RoleExpectation> = {
-  OWNER: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: true, viewTeam: true, apiKeys: true, viewBilling: true },
-  ADMIN: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: true, viewTeam: true, apiKeys: true, viewBilling: true },
-  MANAGER: { dashboardHeading: 'Owner command centre', view: all(true), create: all(true), manageTeam: false, viewTeam: true, apiKeys: true, viewBilling: true },
+  OWNER: {
+    dashboardHeading: 'Owner command centre',
+    view: all(true),
+    create: all(true),
+    manageTeam: true,
+    viewTeam: true,
+    apiKeys: true,
+    viewBilling: true,
+  },
+  ADMIN: {
+    dashboardHeading: 'Owner command centre',
+    view: all(true),
+    create: all(true),
+    manageTeam: true,
+    viewTeam: true,
+    apiKeys: true,
+    viewBilling: true,
+  },
+  MANAGER: {
+    dashboardHeading: 'Owner command centre',
+    view: all(true),
+    create: all(true),
+    manageTeam: false,
+    viewTeam: true,
+    apiKeys: true,
+    viewBilling: true,
+  },
   DISPATCHER: {
     dashboardHeading: 'Dispatch command centre',
     view: { vehicles: true, deliveries: true, maintenance: false, clients: true },
     create: { vehicles: false, deliveries: true, maintenance: false, clients: false },
-    manageTeam: false, viewTeam: false, apiKeys: false, viewBilling: false,
+    manageTeam: false,
+    viewTeam: false,
+    apiKeys: false,
+    viewBilling: false,
   },
   TECHNICIAN: {
     dashboardHeading: 'Maintenance command centre',
     view: { vehicles: false, deliveries: false, maintenance: true, clients: false },
     create: { vehicles: false, deliveries: false, maintenance: true, clients: false },
-    manageTeam: false, viewTeam: false, apiKeys: false, viewBilling: false,
+    manageTeam: false,
+    viewTeam: false,
+    apiKeys: false,
+    viewBilling: false,
   },
   DRIVER: {
     dashboardHeading: 'Driver command centre',
     view: { vehicles: true, deliveries: true, maintenance: true, clients: false },
-    create: all(false), manageTeam: false, viewTeam: false, apiKeys: false, viewBilling: false,
+    create: all(false),
+    manageTeam: false,
+    viewTeam: false,
+    apiKeys: false,
+    viewBilling: false,
   },
-  VIEWER: { dashboardHeading: 'Fleet overview', view: all(true), create: all(false), manageTeam: false, viewTeam: true, apiKeys: false, viewBilling: false },
+  VIEWER: {
+    dashboardHeading: 'Fleet overview',
+    view: all(true),
+    create: all(false),
+    manageTeam: false,
+    viewTeam: true,
+    apiKeys: false,
+    viewBilling: false,
+  },
 }

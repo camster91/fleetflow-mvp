@@ -1,9 +1,9 @@
-import { defineConfig, devices } from '@playwright/test';
-import { LOCAL_BASE_URL, resolveBaseURL } from './e2e/support/base-url';
-import { E2E_EMAIL_CAPTURE_DIR } from './e2e/support/mail-capture';
+import { defineConfig, devices } from '@playwright/test'
+import { LOCAL_BASE_URL, resolveBaseURL } from './e2e/support/base-url'
+import { E2E_EMAIL_CAPTURE_DIR } from './e2e/support/mail-capture'
 
 // Defaults to a local server; remote/production targets are opt-in (see e2e/support/base-url.ts).
-const { baseURL, remote } = resolveBaseURL();
+const { baseURL, remote } = resolveBaseURL()
 
 /**
  * Read environment variables from file.
@@ -59,11 +59,13 @@ export default defineConfig({
       use: { ...devices['Desktop Safari'] },
     },
     ...(process.env.E2E_ALL_BROWSERS === '1'
-      ? [{
-          name: 'mobile-375',
-          // Chromium at a 375px-wide phone viewport with touch input.
-          use: { ...devices['Pixel 5'], viewport: { width: 375, height: 812 } },
-        }]
+      ? [
+          {
+            name: 'mobile-375',
+            // Chromium at a 375px-wide phone viewport with touch input.
+            use: { ...devices['Pixel 5'], viewport: { width: 375, height: 812 } },
+          },
+        ]
       : []),
   ],
 
@@ -82,4 +84,4 @@ export default defineConfig({
         env: { E2E_EMAIL_CAPTURE_DIR },
       }
     : undefined,
-});
+})

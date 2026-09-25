@@ -1,111 +1,122 @@
 // Email service using Mailgun
-import formData from 'form-data';
-import Mailgun from 'mailgun.js';
-import { configuredMailgun } from '@/lib/emailConfig';
-import { captureEmail, e2eEmailCaptureDir } from '@/lib/emailCapture';
+import formData from 'form-data'
+import Mailgun from 'mailgun.js'
+import { configuredMailgun } from '@/lib/emailConfig'
+import { captureEmail, e2eEmailCaptureDir } from '@/lib/emailCapture'
 
-const mailgun = new Mailgun(formData);
+const mailgun = new Mailgun(formData)
 
 // Initialize Mailgun with API key
-const apiKey = process.env.MAILGUN_API_KEY;
-const domain = process.env.MAILGUN_DOMAIN;
-const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3';
+const apiKey = process.env.MAILGUN_API_KEY
+const domain = process.env.MAILGUN_DOMAIN
+const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net/v3'
 
-
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Fleetvera <notifications@fleetflow.ashbi.ca>'
 
 export function getEmailAppUrl(env: NodeJS.ProcessEnv = process.env): string | null {
-  const configured = (env.NEXTAUTH_URL || env.NEXT_PUBLIC_APP_URL)?.trim();
-  if (!configured) return null;
+  const configured = (env.NEXTAUTH_URL || env.NEXT_PUBLIC_APP_URL)?.trim()
+  if (!configured) return null
   try {
-    const url = new URL(configured);
-    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) return null;
-    return url.origin;
+    const url = new URL(configured)
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) return null
+    return url.origin
   } catch {
-    return null;
+    return null
   }
 }
 
-const CONFIGURED_APP_URL = getEmailAppUrl();
-const APP_URL = CONFIGURED_APP_URL || 'http://localhost:3000';
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera';
-const MAILGUN_DOMAIN = domain || '';
+const CONFIGURED_APP_URL = getEmailAppUrl()
+const APP_URL = CONFIGURED_APP_URL || 'http://localhost:3000'
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Fleetvera'
+const MAILGUN_DOMAIN = domain || ''
 
 export function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[character] || character));
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      })[character] || character
+  )
 }
 
 function safeEmailSubject(value: string): string {
-  return value.replace(/[\r\n]+/g, ' ').trim();
+  return value.replace(/[\r\n]+/g, ' ').trim()
 }
 
 export interface EmailAttachment {
-  filename: string;
-  data: Buffer | string;
-  contentType?: string;
+  filename: string
+  data: Buffer | string
+  contentType?: string
 }
 
-export interface DeliveryMetadata { correlationId?: string }
+export interface DeliveryMetadata {
+  correlationId?: string
+}
 
 export interface SendEmailOptions {
-  to: string | string[];
-  subject: string;
-  html: string;
-  text?: string;
-  from?: string;
-  attachments?: EmailAttachment[];
-  cc?: string | string[];
-  bcc?: string | string[];
-  replyTo?: string;
-  metadata?: DeliveryMetadata;
+  to: string | string[]
+  subject: string
+  html: string
+  text?: string
+  from?: string
+  attachments?: EmailAttachment[]
+  cc?: string | string[]
+  bcc?: string | string[]
+  replyTo?: string
+  metadata?: DeliveryMetadata
 }
 
 export interface EmailResult {
-  success: boolean;
-  messageId?: string;
+  success: boolean
+  messageId?: string
   /** Sanitized compatibility alias; never contains provider response text. */
-  error?: string;
-  errorCode?: 'configuration_error' | 'provider_unavailable' | 'provider_rate_limited' | 'provider_rejected' | 'delivery_exception' | 'delivery_timeout';
+  error?: string
+  errorCode?:
+    | 'configuration_error'
+    | 'provider_unavailable'
+    | 'provider_rate_limited'
+    | 'provider_rejected'
+    | 'delivery_exception'
+    | 'delivery_timeout'
 }
 
-export type EmailReadiness = { ready: boolean; errors: string[] };
+export type EmailReadiness = { ready: boolean; errors: string[] }
 
 /** Validate production delivery configuration without breaking dev/test builds. */
 export function validateEmailReadiness(env: NodeJS.ProcessEnv = process.env): EmailReadiness {
-  const errors: string[] = [];
-  const configuredDomain = env.MAILGUN_DOMAIN?.trim();
-  const verifiedDomain = env.MAILGUN_VERIFIED_DOMAIN?.trim();
-  const sender = env.FROM_EMAIL?.trim();
-  const applicationUrl = (env.NEXTAUTH_URL || env.NEXT_PUBLIC_APP_URL)?.trim();
+  const errors: string[] = []
+  const configuredDomain = env.MAILGUN_DOMAIN?.trim()
+  const verifiedDomain = env.MAILGUN_VERIFIED_DOMAIN?.trim()
+  const sender = env.FROM_EMAIL?.trim()
+  const applicationUrl = (env.NEXTAUTH_URL || env.NEXT_PUBLIC_APP_URL)?.trim()
 
-  if (!env.MAILGUN_API_KEY?.trim()) errors.push('MAILGUN_API_KEY is missing');
-  if (!configuredDomain) errors.push('MAILGUN_DOMAIN is missing');
-  if (!verifiedDomain) errors.push('MAILGUN_VERIFIED_DOMAIN is missing');
+  if (!env.MAILGUN_API_KEY?.trim()) errors.push('MAILGUN_API_KEY is missing')
+  if (!configuredDomain) errors.push('MAILGUN_DOMAIN is missing')
+  if (!verifiedDomain) errors.push('MAILGUN_VERIFIED_DOMAIN is missing')
   if (configuredDomain && verifiedDomain && configuredDomain !== verifiedDomain) {
-    errors.push('MAILGUN_DOMAIN does not match MAILGUN_VERIFIED_DOMAIN');
+    errors.push('MAILGUN_DOMAIN does not match MAILGUN_VERIFIED_DOMAIN')
   }
   if (!sender || !/^[^<>\s]+@[^<>\s]+\.[^<>\s]+$|^.+ <[^<>\s]+@[^<>\s]+\.[^<>\s]+>$/.test(sender)) {
-    errors.push('FROM_EMAIL must contain a valid sender address');
+    errors.push('FROM_EMAIL must contain a valid sender address')
   } else if (configuredDomain) {
-    const address = sender.match(/<([^>]+)>$/)?.[1] || sender;
-    const senderDomain = address.split('@')[1]?.toLowerCase();
+    const address = sender.match(/<([^>]+)>$/)?.[1] || sender
+    const senderDomain = address.split('@')[1]?.toLowerCase()
     if (senderDomain !== configuredDomain.toLowerCase()) {
-      errors.push('FROM_EMAIL must use the configured sending domain');
+      errors.push('FROM_EMAIL must use the configured sending domain')
     }
   }
   if (!applicationUrl) {
-    errors.push('NEXTAUTH_URL or NEXT_PUBLIC_APP_URL is missing');
+    errors.push('NEXTAUTH_URL or NEXT_PUBLIC_APP_URL is missing')
   } else if (!getEmailAppUrl(env)) {
-    errors.push('Production application URL must be a canonical HTTPS origin');
+    errors.push('Production application URL must be a canonical HTTPS origin')
   }
 
-  return { ready: errors.length === 0, errors };
+  return { ready: errors.length === 0, errors }
 }
 
 // Base email template with brand styling
@@ -221,22 +232,31 @@ function getBaseEmailTemplate(content: string): string {
     </div>
   </div>
 </body>
-</html>`;
+</html>`
 }
 
 // Send email wrapper with error handling
 export async function sendEmail({
-  to, subject, html, text = '', from = FROM_EMAIL, attachments, cc, bcc, replyTo, metadata,
+  to,
+  subject,
+  html,
+  text = '',
+  from = FROM_EMAIL,
+  attachments,
+  cc,
+  bcc,
+  replyTo,
+  metadata,
 }: SendEmailOptions): Promise<EmailResult> {
   try {
     // Test-only capture for the local Playwright server; never active on an HTTPS deployment (lib/emailCapture.ts).
-    const captureDir = e2eEmailCaptureDir();
+    const captureDir = e2eEmailCaptureDir()
     if (captureDir) {
-      const captured = await captureEmail(captureDir, { to, subject, text, html });
-      return { success: true, messageId: captured.messageId };
+      const captured = await captureEmail(captureDir, { to, subject, text, html })
+      return { success: true, messageId: captured.messageId }
     }
     if (process.env.NODE_ENV === 'production' && !CONFIGURED_APP_URL) {
-      return { success: false, errorCode: 'configuration_error', error: 'configuration_error' };
+      return { success: false, errorCode: 'configuration_error', error: 'configuration_error' }
     }
     const stored = await configuredMailgun()
     // If Mailgun is not configured, behavior depends on environment:
@@ -254,14 +274,14 @@ export async function sendEmail({
           recipientCount: Array.isArray(to) ? to.length : 1,
           hasAttachments: Boolean(attachments?.length),
           correlationId: metadata?.correlationId,
-        });
-        return { success: true };
+        })
+        return { success: true }
       }
       throw new Error(
         'MAILGUN_API_KEY and MAILGUN_DOMAIN must be set in production. ' +
-        'Emails are silently dropped without these. Set them in Coolify ' +
-        '→ fleetflow-pro → Environment Variables and restart.',
-      );
+          'Emails are silently dropped without these. Set them in Coolify ' +
+          '→ fleetflow-pro → Environment Variables and restart.'
+      )
     }
 
     const client = mailgun.client({ username: 'api', key: stored.apiKey, url: baseUrl.replace('/v3', '') })
@@ -276,19 +296,25 @@ export async function sendEmail({
       'h:Reply-To': replyTo,
       attachment: attachments,
       'v:correlation-id': metadata?.correlationId,
-    } as Parameters<typeof client.messages.create>[1]);
+    } as Parameters<typeof client.messages.create>[1])
 
-    return { success: true, messageId: result.id };
+    return { success: true, messageId: result.id }
   } catch (error: unknown) {
-    const status = typeof error === 'object' && error && 'status' in error
-      ? Number((error as { status?: unknown }).status) : undefined;
+    const status =
+      typeof error === 'object' && error && 'status' in error
+        ? Number((error as { status?: unknown }).status)
+        : undefined
     const errorCode: EmailResult['errorCode'] =
-      status === 429 ? 'provider_rate_limited'
-      : status && status >= 500 ? 'provider_unavailable'
-      : status ? 'provider_rejected'
-      : process.env.NODE_ENV === 'production'
-        ? 'configuration_error' : 'delivery_exception';
-    return { success: false, errorCode, error: errorCode };
+      status === 429
+        ? 'provider_rate_limited'
+        : status && status >= 500
+          ? 'provider_unavailable'
+          : status
+            ? 'provider_rejected'
+            : process.env.NODE_ENV === 'production'
+              ? 'configuration_error'
+              : 'delivery_exception'
+    return { success: false, errorCode, error: errorCode }
   }
 }
 
@@ -298,9 +324,9 @@ export async function sendVerificationEmail(
   name: string,
   token: string
 ): Promise<{ success: boolean; error?: string }> {
-  const verificationUrl = `${APP_URL}/auth/verify-email/${token}`;
-  const safeName = escapeHtml(name || 'there');
-  
+  const verificationUrl = `${APP_URL}/auth/verify-email/${token}`
+  const safeName = escapeHtml(name || 'there')
+
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Verify Your Email Address</h2>
     <p>Hi ${safeName},</p>
@@ -324,7 +350,7 @@ export async function sendVerificationEmail(
     <p style="color: #64748b; font-size: 14px;">
       If you didn't create an account with ${APP_NAME}, please ignore this email.
     </p>
-  `);
+  `)
 
   const text = `
 Verify Your Email Address
@@ -343,14 +369,14 @@ If you didn't create an account with ${APP_NAME}, please ignore this email.
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: `Verify your email address - ${APP_NAME}`,
     html,
     text,
-  });
+  })
 }
 
 // Send password reset email
@@ -359,9 +385,9 @@ export async function sendPasswordResetEmail(
   name: string,
   token: string
 ): Promise<{ success: boolean; error?: string }> {
-  const resetUrl = `${APP_URL}/auth/reset-password/${token}`;
-  const safeName = escapeHtml(name || 'there');
-  
+  const resetUrl = `${APP_URL}/auth/reset-password/${token}`
+  const safeName = escapeHtml(name || 'there')
+
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Password Reset Request</h2>
     <p>Hi ${safeName},</p>
@@ -385,7 +411,7 @@ export async function sendPasswordResetEmail(
     <p style="color: #64748b; font-size: 14px;">
       If you didn't request a password reset, please ignore this email or contact our support team if you have concerns.
     </p>
-  `);
+  `)
 
   const text = `
 Password Reset Request
@@ -404,14 +430,14 @@ If you didn't request a password reset, please ignore this email or contact our 
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: `Password reset request - ${APP_NAME}`,
     html,
     text,
-  });
+  })
 }
 
 // Send welcome email after verification
@@ -420,9 +446,9 @@ export async function sendWelcomeEmail(
   name: string,
   loginUrl: string = `${APP_URL}/auth/login`
 ): Promise<{ success: boolean; error?: string }> {
-  const dashboardUrl = `${APP_URL}/dashboard`;
-  const safeName = escapeHtml(name || 'there');
-  
+  const dashboardUrl = `${APP_URL}/dashboard`
+  const safeName = escapeHtml(name || 'there')
+
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Welcome to ${APP_NAME}!</h2>
     <p>Hi ${safeName},</p>
@@ -447,7 +473,7 @@ export async function sendWelcomeEmail(
     <p style="color: #64748b; font-size: 14px;">
       If you have any questions, feel free to reply to this email or contact us through our support portal.
     </p>
-  `);
+  `)
 
   const text = `
 Welcome to ${APP_NAME}!
@@ -471,14 +497,14 @@ If you have any questions, contact our support team: ${APP_URL}/support
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: `Welcome to ${APP_NAME}!`,
     html,
     text,
-  });
+  })
 }
 
 // Send 2FA backup codes email
@@ -487,13 +513,16 @@ export async function sendBackupCodesEmail(
   name: string,
   backupCodes: string[]
 ): Promise<{ success: boolean; error?: string }> {
-  const safeName = escapeHtml(name || 'there');
-  const codesHtml = backupCodes.map(code => 
-    `<code class="code" style="display: inline-block; margin: 4px; padding: 8px 12px; font-size: 16px;">${escapeHtml(code)}</code>`
-  ).join('');
-  
-  const codesText = backupCodes.join('\n');
-  
+  const safeName = escapeHtml(name || 'there')
+  const codesHtml = backupCodes
+    .map(
+      (code) =>
+        `<code class="code" style="display: inline-block; margin: 4px; padding: 8px 12px; font-size: 16px;">${escapeHtml(code)}</code>`
+    )
+    .join('')
+
+  const codesText = backupCodes.join('\n')
+
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Two-Factor Authentication Backup Codes</h2>
     <p>Hi ${safeName},</p>
@@ -510,7 +539,7 @@ export async function sendBackupCodesEmail(
     <p style="color: #64748b; font-size: 14px;">
       These codes were generated when you set up 2FA. If you didn't enable 2FA or believe your account has been compromised, please contact support immediately.
     </p>
-  `);
+  `)
 
   const text = `
 Two-Factor Authentication Backup Codes
@@ -529,14 +558,14 @@ If you didn't enable 2FA or believe your account has been compromised, please co
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: `Your 2FA Backup Codes - ${APP_NAME}`,
     html,
     text,
-  });
+  })
 }
 
 // Send security alert email
@@ -563,27 +592,29 @@ export async function sendSecurityAlertEmail(
       title: 'Two-Factor Authentication Disabled',
       message: 'Two-factor authentication has been disabled on your account.',
     },
-  };
-
-  const alert = alertMessages[alertType];
-  if (!alert) {
-    return { success: false, error: 'Invalid alert type' };
   }
-  const settingsUrl = `${APP_URL}/settings/security`;
-  const safeName = escapeHtml(name || 'there');
+
+  const alert = alertMessages[alertType]
+  if (!alert) {
+    return { success: false, error: 'Invalid alert type' }
+  }
+  const settingsUrl = `${APP_URL}/settings/security`
+  const safeName = escapeHtml(name || 'there')
   const safeDetails = {
     ip: details.ip && escapeHtml(details.ip),
     location: details.location && escapeHtml(details.location),
     device: details.device && escapeHtml(details.device),
     time: details.time && escapeHtml(details.time),
-  };
-  
+  }
+
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">${alert.title}</h2>
     <p>Hi ${safeName},</p>
     <p>${alert.message}</p>
     
-    ${safeDetails.ip ? `
+    ${
+      safeDetails.ip
+        ? `
     <div class="info-box">
       <h4 style="margin-top: 0; color: #1e40af;">Details</h4>
       <p style="margin: 4px 0;"><strong>IP Address:</strong> ${safeDetails.ip}</p>
@@ -591,7 +622,9 @@ export async function sendSecurityAlertEmail(
       ${safeDetails.device ? `<p style="margin: 4px 0;"><strong>Device:</strong> ${safeDetails.device}</p>` : ''}
       ${safeDetails.time ? `<p style="margin: 4px 0;"><strong>Time:</strong> ${safeDetails.time}</p>` : ''}
     </div>
-    ` : ''}
+    `
+        : ''
+    }
     
     <div class="warning">
       <strong>Not you?</strong> If you don't recognize this activity, please secure your account immediately by changing your password.
@@ -600,7 +633,7 @@ export async function sendSecurityAlertEmail(
     <div style="text-align: center; margin: 32px 0;">
       <a href="${settingsUrl}" class="button">Review Account Security</a>
     </div>
-  `);
+  `)
 
   const text = `
 ${alert.title}
@@ -609,12 +642,16 @@ Hi ${name || 'there'},
 
 ${alert.message}
 
-${details.ip ? `Details:
+${
+  details.ip
+    ? `Details:
 - IP Address: ${details.ip}
 ${details.location ? `- Location: ${details.location}` : ''}
 ${details.device ? `- Device: ${details.device}` : ''}
 ${details.time ? `- Time: ${details.time}` : ''}
-` : ''}
+`
+    : ''
+}
 
 Not you? If you don't recognize this activity, please secure your account immediately:
 ${settingsUrl}
@@ -622,14 +659,14 @@ ${settingsUrl}
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: `Security Alert: ${alert.title} - ${APP_NAME}`,
     html,
     text,
-  });
+  })
 }
 
 // Send account locked notification
@@ -638,10 +675,10 @@ export async function sendAccountLockedEmail(
   name: string,
   lockDuration: string
 ): Promise<{ success: boolean; error?: string }> {
-  const supportUrl = `${APP_URL}/support`;
-  const safeName = escapeHtml(name || 'there');
-  const safeLockDuration = escapeHtml(lockDuration);
-  
+  const supportUrl = `${APP_URL}/support`
+  const safeName = escapeHtml(name || 'there')
+  const safeLockDuration = escapeHtml(lockDuration)
+
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Account Temporarily Locked</h2>
     <p>Hi ${safeName},</p>
@@ -661,7 +698,7 @@ export async function sendAccountLockedEmail(
     <div style="text-align: center; margin: 32px 0;">
       <a href="${supportUrl}" class="button">Contact Support</a>
     </div>
-  `);
+  `)
 
   const text = `
 Account Temporarily Locked
@@ -681,14 +718,14 @@ Need help? Contact our support team: ${supportUrl}
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: `Account Locked - ${APP_NAME}`,
     html,
     text,
-  });
+  })
 }
 
 // Send magic login code email
@@ -698,8 +735,8 @@ export async function sendLoginCodeEmail(
   code: string,
   metadata?: DeliveryMetadata
 ): Promise<EmailResult> {
-  const safeName = escapeHtml(name || 'there');
-  const safeCode = escapeHtml(code);
+  const safeName = escapeHtml(name || 'there')
+  const safeCode = escapeHtml(code)
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">Your Login Code</h2>
     <p>Hi ${safeName},</p>
@@ -718,7 +755,7 @@ export async function sendLoginCodeEmail(
     <p style="color: #64748b; font-size: 14px;">
       For security, never share this code with anyone. ${APP_NAME} will never ask you for this code.
     </p>
-  `);
+  `)
 
   const text = `
 Your Login Code
@@ -734,7 +771,7 @@ If you didn't request this, you can safely ignore this email.
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
@@ -742,7 +779,7 @@ ${APP_URL}
     html,
     text,
     metadata,
-  });
+  })
 }
 
 // Re-export for convenience
@@ -753,12 +790,12 @@ export async function sendTeamInvitationEmail(
   teamName: string,
   invitationId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const inviteUrl = `${APP_URL}/accept-invite/${encodeURIComponent(invitationId)}`;
-  const displayRole = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  const safeInviterName = escapeHtml(invitedByName);
-  const safeTeamName = escapeHtml(teamName);
-  const safeAppName = escapeHtml(APP_NAME);
-  const safeDisplayRole = escapeHtml(displayRole);
+  const inviteUrl = `${APP_URL}/accept-invite/${encodeURIComponent(invitationId)}`
+  const displayRole = role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  const safeInviterName = escapeHtml(invitedByName)
+  const safeTeamName = escapeHtml(teamName)
+  const safeAppName = escapeHtml(APP_NAME)
+  const safeDisplayRole = escapeHtml(displayRole)
 
   const html = getBaseEmailTemplate(`
     <h2 style="margin-top: 0; color: #1e293b;">You've been invited to ${safeAppName}</h2>
@@ -779,7 +816,7 @@ export async function sendTeamInvitationEmail(
     <p style="color: #64748b; font-size: 14px;">
       Sign in with this email address and its one-time login code to accept the invitation. If you weren't expecting this invitation, you can safely ignore this email.
     </p>
-  `);
+  `)
 
   const text = `
 You've been invited to ${APP_NAME}
@@ -796,14 +833,14 @@ If you weren't expecting this invitation, you can safely ignore this email.
 ---
 ${APP_NAME}
 ${APP_URL}
-  `.trim();
+  `.trim()
 
   return sendEmail({
     to: email,
     subject: safeEmailSubject(`${invitedByName} invited you to ${teamName} on ${APP_NAME}`),
     html,
     text,
-  });
+  })
 }
 
-export { FROM_EMAIL, APP_URL, APP_NAME, MAILGUN_DOMAIN };
+export { FROM_EMAIL, APP_URL, APP_NAME, MAILGUN_DOMAIN }

@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!context) return
   const { tenant, session } = context
   if (!canViewBusinessData(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-  if (!await rateLimitMiddleware(req, res, 'api', `search:${session.user.id}`)) return
+  if (!(await rateLimitMiddleware(req, res, 'api', `search:${session.user.id}`))) return
 
   const parsed = parseSearchTerm(req.query.q)
   if (!parsed.ok) return res.status(400).json({ error: parsed.error })
@@ -35,17 +35,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const [vehicles, deliveries, clients, maintenance] = await Promise.all([
       prisma.vehicle.findMany({
-        where: { AND: [tenant.resourceWhere, { OR: [{ name: { contains: q } }, { driver: { contains: q } }, { location: { contains: q } }] }] },
+        where: {
+          AND: [
+            tenant.resourceWhere,
+            { OR: [{ name: { contains: q } }, { driver: { contains: q } }, { location: { contains: q } }] },
+          ],
+        },
         select: { id: true, name: true, driver: true, status: true, location: true },
         take: 5,
       }),
       prisma.delivery.findMany({
-        where: { AND: [tenant.resourceWhere, { OR: [{ customer: { contains: q } }, { address: { contains: q } }, { driver: { contains: q } }] }] },
+        where: {
+          AND: [
+            tenant.resourceWhere,
+            { OR: [{ customer: { contains: q } }, { address: { contains: q } }, { driver: { contains: q } }] },
+          ],
+        },
         select: { id: true, customer: true, address: true, status: true, driver: true },
         take: 5,
       }),
       prisma.client.findMany({
-        where: { AND: [tenant.resourceWhere, { OR: [{ name: { contains: q } }, { address: { contains: q } }, { email: { contains: q } }, { phone: { contains: q } }] }] },
+        where: {
+          AND: [
+            tenant.resourceWhere,
+            {
+              OR: [
+                { name: { contains: q } },
+                { address: { contains: q } },
+                { email: { contains: q } },
+                { phone: { contains: q } },
+              ],
+            },
+          ],
+        },
         select: { id: true, name: true, address: true, type: true },
         take: 5,
       }),
