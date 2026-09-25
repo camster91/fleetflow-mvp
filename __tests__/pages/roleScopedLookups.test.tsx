@@ -18,13 +18,13 @@ jest.mock('@/components/PageHeader', () => ({ PageHeader: ({ actions }: { action
 jest.mock('@/components/DeliveryFormModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/MaintenanceTaskDetailModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/MaintenanceTaskFormModal', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/ConfirmModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/DeliveryTimeline', () => ({ DeliveryTimeline: () => null }))
 
 import * as api from '@/services/apiService'
 import DeliveriesPage from '@/pages/deliveries'
 import MaintenancePage from '@/pages/maintenance'
 import toast from 'react-hot-toast'
+import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog'
 
 const forbidden = () => Promise.reject(new Error('You do not have permission to do that'))
 
@@ -42,7 +42,7 @@ describe('role-scoped lookup lists', () => {
     ;(api.getVehicles as jest.Mock).mockImplementation(forbidden)
     ;(api.getClients as jest.Mock).mockImplementation(forbidden)
 
-    render(<DeliveriesPage />)
+    render(<ConfirmDialogProvider><DeliveriesPage /></ConfirmDialogProvider>)
 
     expect((await screen.findAllByText('Assigned Customer')).length).toBeGreaterThan(0)
     expect(screen.queryByText('You do not have permission to do that')).not.toBeInTheDocument()
@@ -53,7 +53,7 @@ describe('role-scoped lookup lists', () => {
     ;(api.getVehicles as jest.Mock).mockResolvedValue([])
     ;(api.getClients as jest.Mock).mockResolvedValue([])
 
-    render(<DeliveriesPage />)
+    render(<ConfirmDialogProvider><DeliveriesPage /></ConfirmDialogProvider>)
 
     expect(await screen.findByText('You do not have permission to do that')).toBeInTheDocument()
   })
@@ -64,7 +64,7 @@ describe('role-scoped lookup lists', () => {
     }])
     ;(api.getVehicles as jest.Mock).mockImplementation(forbidden)
 
-    render(<MaintenancePage />)
+    render(<ConfirmDialogProvider><MaintenancePage /></ConfirmDialogProvider>)
     fireEvent.click(await screen.findByRole('button', { name: 'List' }))
 
     expect(await screen.findByText('Brake inspection')).toBeInTheDocument()
