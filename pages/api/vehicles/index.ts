@@ -16,9 +16,11 @@ async function vehicleSummary(scope: object) {
     prisma.vehicle.count({ where: scope }),
     prisma.vehicle.count({ where: scopedWhere(scope, [{ status: 'active' }]) }),
     prisma.vehicle.count({ where: scopedWhere(scope, [{ maintenanceDue: true }]) }),
-    prisma.vehicle.aggregate({ where: scope, _avg: { mileage: true } }),
+    prisma.vehicle.aggregate({ where: scope, _sum: { mileage: true } }),
   ])
-  return { total, active, maintenanceDue, averageMileage: Math.round(mileage._avg.mileage ?? 0) }
+  // Average over every vehicle, counting a null mileage as 0 (as dbToVehicle does); `_avg` would skip nulls.
+  const averageMileage = total ? Math.round((mileage._sum.mileage ?? 0) / total) : 0
+  return { total, active, maintenanceDue, averageMileage }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
