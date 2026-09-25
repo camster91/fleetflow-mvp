@@ -1,3 +1,5 @@
+import { startOfTodayInZone, startOfUtcDay } from '../dateOnly'
+
 export const MAINTENANCE_RISK_RUBRIC = {
   version: 'maintenance-risk-v1',
   description: 'Deterministic operational attention indicators; not a failure prediction.',
@@ -66,7 +68,13 @@ function pointsAt(value: number, thresholds: ReadonlyArray<{ min: number; points
 }
 function pushMissing(items: string[], message: string) { if (!items.includes(message)) items.push(message) }
 
-export function scoreMaintenanceRisk(input: MaintenanceRiskInput, options: { now: Date }): MaintenanceRiskResult {
+/**
+ * `timeZone` (the workspace's IANA zone) makes overdue checks calendar-based:
+ * due dates are date-only values at UTC midnight, so a task due today in the
+ * workspace zone is not overdue until that local day ends. Without it, due
+ * dates are compared as exact instants against `now`.
+ */
+export function scoreMaintenanceRisk(input: MaintenanceRiskInput, options: { now: Date; timeZone?: string }): MaintenanceRiskResult {
   if (!Number.isFinite(options.now.getTime())) throw new Error('A valid injected clock is required')
   const now = options.now
   const vehicleId = typeof input.vehicle.id === 'string' && input.vehicle.id ? input.vehicle.id : 'unknown'
@@ -83,9 +91,11 @@ export function scoreMaintenanceRisk(input: MaintenanceRiskInput, options: { now
   const datedOpen = open.map(task => ({ task, id: taskId(task), due: exactDate(task.dueDate) })).filter(row => row.id && row.due) as Array<{ task: TaskInput; id: string; due: Date }>
   if (open.length === 0 || datedOpen.length === open.length) available++
   else pushMissing(missingData, 'One or more open maintenance due dates are invalid or not exact ISO timestamps.')
-  const overdue = datedOpen.filter(row => row.due.getTime() < now.getTime())
+  const referenceMs = options.timeZone ? startOfTodayInZone(options.timeZone, now).getTime() : now.getTime()
+  const dueMs = (due: Date) => options.timeZone ? startOfUtcDay(due).getTime() : due.getTime()
+  const overdue = datedOpen.filter(row => dueMs(row.due) < referenceMs)
   if (overdue.length) {
-    const maxDays = Math.max(...overdue.map(row => Math.floor((now.getTime() - row.due.getTime()) / 86_400_000)))
+    const maxDays = Math.max(...overdue.map(row => Math.floor((referenceMs - dueMs(row.due)) / 86_400_000)))
     const points = pointsAt(maxDays, MAINTENANCE_RISK_RUBRIC.thresholds.overdueDays)
     const ids = overdue.map(row => row.id).sort()
     if (points) factors.push({ code: 'overdue-maintenance', label: 'Overdue maintenance', points, evidence: `${overdue.length} open task${overdue.length === 1 ? '' : 's'}; oldest is ${maxDays} full day${maxDays === 1 ? '' : 's'} overdue.`, sourceIds: ids, links: ids.map(taskLink) })

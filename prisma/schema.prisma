@@ -50,6 +50,9 @@ model User {
   googleId    String? @unique
   microsoftId String? @unique
 
+  // IANA time zone for the personal workspace's server-side "today"
+  timeZone String @default("America/Toronto")
+
   // Onboarding
   onboardingCompleted Boolean @default(false)
   onboardingStep      Int     @default(0)
@@ -211,6 +214,7 @@ model Team {
   phone         String?
   businessHours String?
   branding      String?  // Custom colors, etc. (JSON string)
+  timeZone      String   @default("America/Toronto") // IANA zone for server-side "today"
 
   @@index([ownerId])
 }

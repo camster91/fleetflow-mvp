@@ -8,6 +8,7 @@ import { resolveApiCursorSecret } from '@/lib/publicApi'
 import { constantTimeCompare } from '@/lib/tokens'
 import { assessDataQuality } from '@/lib/intelligence/dataQuality'
 import { generateFindings } from '@/lib/intelligence/generateFindings'
+import { getWorkspaceTimeZone } from '@/lib/workspaceTimeZone'
 import type { Finding, IntelligenceRecords } from '@/lib/intelligence/types'
 import { packFindingEvidence, parseStoredEvidence, presentStoredFinding } from '@/lib/intelligence/presentation'
 export { FINDING_EVIDENCE_BYTES_MAX, FINDING_EVIDENCE_ITEMS_MAX, packFindingEvidence, parseStoredEvidence } from '@/lib/intelligence/presentation'
@@ -228,7 +229,7 @@ async function getFindings(req: NextApiRequest, res: NextApiResponse, tenant: Te
   }
 }
 
-async function generateFindingSnapshot(tx: Prisma.TransactionClient, tenant: TenantContext, now: Date) {
+async function generateFindingSnapshot(tx: Prisma.TransactionClient, tenant: TenantContext, now: Date, timeZone: string) {
   const take = FINDING_SOURCE_LIMIT + 1
   const where = tenant.resourceWhere
   const [vehicleRows, deliveryRows, maintenanceRows, clientRows] = await Promise.all([
@@ -254,7 +255,7 @@ async function generateFindingSnapshot(tx: Prisma.TransactionClient, tenant: Ten
   const records: IntelligenceRecords = { vehicles, deliveries, maintenance, dataQualityIssues }
   const tenantKey = tenant.teamId ? `team:${tenant.teamId}` : `owner:${tenant.ownerId}`
   return {
-    findings: generateFindings({ tenantKey, now, records }),
+    findings: generateFindings({ tenantKey, now, timeZone, records }),
     sourceTruncated,
     recordsScannedByEntity: {
       vehicle: vehicles.length,
@@ -469,12 +470,13 @@ const FINDING_TRANSACTION_OPTIONS = {
 async function regenerate(req: NextApiRequest, res: NextApiResponse, context: Awaited<ReturnType<typeof requireTenantContext>> & {}) {
   if (!canManageVehicles(context.tenant.role)) return res.status(403).json({ error: 'Insufficient permissions' })
   const now = new Date()
+  const timeZone = await getWorkspaceTimeZone(context.tenant)
   try {
     const result = await withFindingRetry(
       () => prisma.$transaction(async tx => {
         // All bounded reads, deterministic calculation, and bulk writes share
         // one serializable workspace snapshot. No external I/O occurs here.
-        const snapshot = await generateFindingSnapshot(tx, context.tenant, now)
+        const snapshot = await generateFindingSnapshot(tx, context.tenant, now, timeZone)
         return persistFindingSnapshot(tx, snapshot, context.session, context.tenant, now)
       }, FINDING_TRANSACTION_OPTIONS),
       true
@@ -498,6 +500,7 @@ async function patchFinding(req: NextApiRequest, res: NextApiResponse, context: 
     return res.status(403).json({ error: 'Insufficient permissions' })
   }
   const now = new Date()
+  const timeZone = await getWorkspaceTimeZone(context.tenant)
   try {
     const result = await withFindingRetry(() => prisma.$transaction(async tx => {
       const finding = await tx.intelligenceFinding.findFirst({

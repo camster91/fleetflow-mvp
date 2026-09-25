@@ -4,6 +4,8 @@ import { subDays } from 'date-fns';
 import { requireTenantContext } from '../../../lib/apiAuth';
 import { canViewReports } from '../../../lib/permissions';
 import { scoreMaintenanceRisk } from '../../../lib/intelligence/maintenanceRisk';
+import { startOfTodayInZone } from '../../../lib/dateOnly';
+import { getWorkspaceTimeZone } from '../../../lib/workspaceTimeZone';
 
 export const MAINTENANCE_RISK_VEHICLE_LIMIT = 100;
 export const MAINTENANCE_RISK_TASK_LIMIT = 2000;
@@ -14,7 +16,7 @@ type RiskDb = {
 };
 
 /** Bounded, read-only risk projection. Scope must come from requireTenantContext. */
-export async function buildMaintenanceRisks(db: RiskDb, resourceWhere: object, now: Date) {
+export async function buildMaintenanceRisks(db: RiskDb, resourceWhere: object, now: Date, timeZone?: string) {
   const vehicleRows = await db.vehicle.findMany({
     where: resourceWhere,
     select: { id: true, name: true, year: true, mileage: true, lastService: true, maintenanceDue: true },
@@ -39,7 +41,7 @@ export async function buildMaintenanceRisks(db: RiskDb, resourceWhere: object, n
     currency,
     costUnit: 'major',
     sourceComplete: tasksComplete,
-  }, { now })).sort((a, b) => b.score - a.score || a.vehicleId.localeCompare(b.vehicleId)).slice(0, 10);
+  }, { now, timeZone })).sort((a, b) => b.score - a.score || a.vehicleId.localeCompare(b.vehicleId)).slice(0, 10);
   return {
     items,
     evaluatedVehicles: vehicles.length,
@@ -57,7 +59,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const days = Math.max(7, Math.min(365, parseInt(req.query.days as string) || 30));
     const fromDate = subDays(new Date(), days);
-    const today = new Date();
+    const now = new Date();
+    const timeZone = await getWorkspaceTimeZone(tenant);
+    // Due dates are date-only values at UTC midnight; "today" is the
+    // workspace's local calendar day in the same representation.
+    const today = startOfTodayInZone(timeZone, now);
     const twoWeeksFromNow = new Date(today.getTime() + 14 * 86400000);
 
     const ownershipFilter = tenant.resourceWhere;
@@ -141,7 +147,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const upcomingItems = upcomingTasks.map(t => ({
       vehicle: t.vehicleName || 'Unknown',
       task: t.type,
-      dueIn: Math.ceil((new Date(t.dueDate).getTime() - today.getTime()) / 86400000),
+      dueIn: Math.round((new Date(t.dueDate).getTime() - today.getTime()) / 86400000),
     }));
 
     // Build activity-per-day chart data
@@ -170,7 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? categoryGroups.map(g => ({ name: g.type || 'General', value: g._count, cost: g._sum.costEstimate || 0 }))
       : [{ name: 'No tasks yet', value: 1, cost: 0 }];
 
-    const maintenanceRisk = await buildMaintenanceRisks(prisma, ownershipFilter, today);
+    const maintenanceRisk = await buildMaintenanceRisks(prisma, ownershipFilter, now, timeZone);
 
     // Vehicle utilization from groupBy counts
     const vehicleNameById = new Map(vehicles.map(v => [v.id, v.name]));
