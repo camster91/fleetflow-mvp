@@ -28,7 +28,13 @@ export default function DeliveriesPage() {
   const router = useRouter();
   const { data: allData, loading: isLoading, error: fetchError, lastUpdated, refetch: loadData } = useDataFetch(
     async () => {
-      const [d, v, c] = await Promise.all([api.getDeliveries(), api.getVehicles(), api.getClients()]);
+      // Vehicles and clients only feed the form pickers. Roles that may not list
+      // them (drivers cannot read clients) must still see their deliveries.
+      const [d, v, c] = await Promise.all([
+        api.getDeliveries(),
+        api.getVehicles().catch(() => [] as Vehicle[]),
+        api.getClients().catch(() => [] as Client[]),
+      ]);
       return { deliveries: d, vehicles: v, clients: c };
     },
     { deliveries: [] as Delivery[], vehicles: [] as Vehicle[], clients: [] as Client[] },

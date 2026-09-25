@@ -85,7 +85,7 @@ jobs:
         run: npm run ci
 
   e2e:
-    name: Playwright smoke (Chromium)
+    name: Playwright smoke and role matrix (Chromium)
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -128,9 +128,10 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Build
         run: npm run build
-      - name: Run smoke suite
+      - name: Run smoke suite and feature x role matrix
         # playwright.config.ts starts `npm run start` on localhost:3000; it never targets production by default.
-        run: npm run test:e2e:smoke -- --reporter=line,html
+        # The matrix signs sessions for the seeded synthetic users with this job's JWT_SECRET (docs/testing/e2e-matrix.md).
+        run: npm run test:e2e:ci -- --reporter=line,html
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

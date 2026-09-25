@@ -23,6 +23,8 @@
     "test:ui": "jest --coverage --coverageReporters=html",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test e2e/smoke.spec.ts --project=chromium",
+    "test:e2e:matrix": "playwright test e2e/matrix --project=chromium",
+    "test:e2e:ci": "playwright test e2e/smoke.spec.ts e2e/matrix --project=chromium",
     "test:e2e:release": "node scripts/run-release-e2e.cjs",
     "test:e2e:intelligence-qa": "node scripts/run-intelligence-integrated-qa.cjs",
     "test:e2e:release:mock": "playwright test e2e/ai-health.spec.ts e2e/assistant.spec.ts e2e/assistant-actions.spec.ts e2e/documents.spec.ts e2e/intelligence-brief.spec.ts e2e/maintenance-risk.spec.ts e2e/release-audit.spec.ts e2e/role-dashboards.spec.ts --project=chromium --project=firefox --project=webkit --workers=1",

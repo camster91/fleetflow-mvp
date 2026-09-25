@@ -36,7 +36,8 @@ export default function MaintenancePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [t, v] = await Promise.all([api.getMaintenanceTasks(), api.getVehicles()]);
+      // Vehicles only feed the form picker; technicians may not list vehicles but must still see their work.
+      const [t, v] = await Promise.all([api.getMaintenanceTasks(), api.getVehicles().catch(() => [] as Vehicle[])]);
       setTasks(t); setVehicles(v);
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to load data'); }
     finally { setIsLoading(false); }
