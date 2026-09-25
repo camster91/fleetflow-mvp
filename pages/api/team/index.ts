@@ -2,70 +2,81 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '../../../lib/prisma';
 import {
   requireSession,
+  requireTenantContext,
   assertSameOrigin,
   getTeamMemberManageContext,
 } from '../../../lib/apiAuth';
-import { canAssignRole } from '../../../lib/permissions';
+import { canAssignRole, canViewTeam } from '../../../lib/permissions';
 import type { TeamRole } from '../../../types';
 import { clearDriverAssignments } from '../../../lib/teamDriverCleanup';
 
 const ASSIGNABLE_ROLES: TeamRole[] = ['ADMIN', 'MANAGER', 'DISPATCHER', 'TECHNICIAN', 'DRIVER', 'MEMBER', 'VIEWER'];
 
+/**
+ * GET lists the members of the caller's active workspace (the same workspace
+ * every other tenant-scoped route resolves). The list carries names and emails,
+ * so it is limited to roles that may view the team (lib/permissions
+ * canViewTeam). Operational roles get driver pickers from /api/drivers instead.
+ */
+async function listMembers(req: NextApiRequest, res: NextApiResponse) {
+  const context = await requireTenantContext(req, res);
+  if (!context) return;
+  const { session, tenant } = context;
+  const userId = session.user.id;
+
+  if (!tenant.teamId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, image: true, createdAt: true },
+    });
+    return res.json([
+      {
+        id: userId,
+        role: 'OWNER',
+        status: 'ACCEPTED',
+        invitedAt: user?.createdAt,
+        joinedAt: user?.createdAt,
+        user,
+        invitedByUser: null,
+        isSelf: true,
+      },
+    ]);
+  }
+
+  if (!canViewTeam(tenant.role)) {
+    return res.status(403).json({ error: 'Your role cannot view the team member list' });
+  }
+
+  const teamMembers = await prisma.teamMember.findMany({
+    where: { teamId: tenant.teamId },
+    include: {
+      user: { select: { id: true, name: true, email: true, image: true, role: true, createdAt: true } },
+    },
+    orderBy: [{ invitedAt: 'asc' }, { id: 'asc' }],
+  });
+
+  const members = teamMembers.map((m) => ({
+    id: m.id,
+    role: m.role,
+    status: m.status,
+    invitedAt: m.invitedAt,
+    joinedAt: m.joinedAt,
+    user: m.user ?? null,
+    invitedByUser: null,
+    isSelf: m.userId === userId,
+    // Ownership is canonical in Team.ownerId, whatever the membership row says.
+    isOwner: m.userId === tenant.ownerId,
+  }));
+
+  return res.json(members);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'GET') return listMembers(req, res);
+
   const session = await requireSession(req, res);
   if (!session) return;
   const userId = session.user.id;
-
-  if (req.method === 'GET') {
-    const membership = await prisma.teamMember.findFirst({
-      where: { userId, status: 'ACCEPTED' },
-      include: {
-        team: {
-          include: {
-            members: {
-              include: {
-                user: {
-                  select: { id: true, name: true, email: true, image: true, role: true, createdAt: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!membership) {
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { id: true, name: true, email: true, image: true, createdAt: true },
-      });
-      return res.json([
-        {
-          id: userId,
-          role: 'OWNER',
-          status: 'ACCEPTED',
-          invitedAt: user?.createdAt,
-          joinedAt: user?.createdAt,
-          user,
-          invitedByUser: null,
-          isSelf: true,
-        },
-      ]);
-    }
-
-    const members = membership.team.members.map((m) => ({
-      id: m.id,
-      role: m.role,
-      status: m.status,
-      invitedAt: m.invitedAt,
-      joinedAt: m.joinedAt,
-      user: m.user ?? null,
-      invitedByUser: null,
-      isSelf: m.userId === userId,
-    }));
-
-    return res.json(members);
-  }
 
   if (req.method === 'PUT') {
     if (!assertSameOrigin(req, res)) return;

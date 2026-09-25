@@ -14,6 +14,7 @@ jest.mock('@/hooks/useFilteredData', () => ({
   }),
 }))
 jest.mock('@/hooks/useRecordQuery', () => ({ useRecordQuery: jest.fn() }))
+jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'OWNER', loading: false }) }))
 jest.mock('@/components/layouts/DashboardLayout', () => ({ DashboardLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }))
 jest.mock('@/components/PageHeader', () => ({ PageHeader: () => null }))
 jest.mock('@/components/VehicleDetailModal', () => ({ __esModule: true, default: () => null }))
@@ -101,6 +102,22 @@ describe('vehicles page delete confirmation', () => {
 })
 
 describe('admin user management delete confirmation', () => {
+  it('keeps the dialog open when the delete fails', async () => {
+    jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    global.fetch = jest.fn((_url: string, init?: RequestInit) =>
+      Promise.resolve(init?.method === 'DELETE'
+        ? { ok: false, json: () => Promise.resolve({ error: 'Cannot delete this user' }) }
+        : { ok: true, json: () => Promise.resolve({ users: [{ id: 'u-1', name: 'Ada', email: 'ada@example.com', role: 'viewer', createdAt: new Date().toISOString() }] }) })
+    ) as unknown as typeof fetch
+    render(<ConfirmDialogProvider><AdminUserManagement /></ConfirmDialogProvider>)
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete user' }))
+    await screen.findByRole('alertdialog', { name: 'Delete User' })
+    fireEvent.click(screen.getByRole('button', { name: 'Delete User' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled())
+    expect(screen.getByRole('alertdialog', { name: 'Delete User' })).toBeInTheDocument()
+    expect(screen.getAllByText('Cannot delete this user').length).toBeGreaterThan(0)
+  })
+
   const user = { id: 'u-1', name: 'Ada', email: 'ada@example.com', role: 'viewer', createdAt: new Date().toISOString() }
 
   beforeEach(() => {

@@ -23,6 +23,8 @@ import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageDeliveries } from '../../lib/permissions';
 
 export default function DeliveriesPage() {
   const router = useRouter();
@@ -44,6 +46,8 @@ export default function DeliveriesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const { openConfirm } = useConfirmDialog();
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageDeliveries(role);
   const [expandedTimeline, setExpandedTimeline] = useState<string | null>(null);
   const lastPolled = lastUpdated ?? new Date();
 
@@ -99,8 +103,9 @@ export default function DeliveriesPage() {
     records: deliveries,
     loading: isLoading,
     resource: 'deliveries',
-    onMatch: handleEdit,
-    onEdit: handleEdit,
+    // Only roles that may update deliveries get the edit form from a deep link.
+    onMatch: canManage ? handleEdit : () => undefined,
+    onEdit: canManage ? handleEdit : undefined,
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
   });
   const handleDelete = (d: Delivery) => {
@@ -113,7 +118,7 @@ export default function DeliveriesPage() {
           await api.deleteDelivery(d.id);
           notify.success(`Delivery for "${d.customer}" deleted`);
           await loadData();
-        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete delivery'); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete delivery'); throw err; }
       },
     });
   };
@@ -143,7 +148,7 @@ export default function DeliveriesPage() {
                 downloadCSV('deliveries', filtered.map(d => ({ Customer: d.customer, Address: d.address, Driver: d.driver, Status: d.status, Progress: d.progress + '%', 'Completed Time': d.completedTime || '' })));
               });
             }}>Export CSV</Button>
-            <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => setIsFormOpen(true)}>New Delivery</Button>
+            {canManage && <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => setIsFormOpen(true)}>New Delivery</Button>}
           </div>
         }
       />
@@ -213,7 +218,7 @@ export default function DeliveriesPage() {
         <Card>
           <EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results found' : 'No deliveries yet'}
             description={searchQuery ? 'Try adjusting your search' : 'Create your first delivery to start tracking'}
-            actionLabel={!searchQuery ? 'Create Delivery' : undefined} onAction={!searchQuery ? () => setIsFormOpen(true) : undefined} />
+            actionLabel={!searchQuery && canManage ? 'Create Delivery' : undefined} onAction={!searchQuery && canManage ? () => setIsFormOpen(true) : undefined} />
         </Card>
       ) : (
         <div className="space-y-4">
@@ -252,10 +257,10 @@ export default function DeliveriesPage() {
                     onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(delivery.address)}`, '_blank')}>
                     Navigate
                   </Button>
-                  <Button variant="outline" size="sm" iconLeft={<Edit className="h-4 w-4" />} onClick={() => handleEdit(delivery)}>
+                  {canManage && <Button variant="outline" size="sm" iconLeft={<Edit className="h-4 w-4" />} onClick={() => handleEdit(delivery)}>
                     Edit
-                  </Button>
-                  {delivery.status !== 'delivered' && (
+                  </Button>}
+                  {canManage && delivery.status !== 'delivered' && (
                     <Button variant="primary" size="sm" onClick={async () => {
                       try {
                         await api.updateDelivery(delivery.id, { status: 'delivered', progress: 100, completedTime: new Date().toISOString() });
@@ -264,9 +269,9 @@ export default function DeliveriesPage() {
                       } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to update delivery'); }
                     }}>Mark Delivered</Button>
                   )}
-                  <button onClick={() => handleDelete(delivery)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  {canManage && <button onClick={() => handleDelete(delivery)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" aria-label="Delete delivery">
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </button>}
                 </div>
               </div>
               {/* Timeline Toggle */}
@@ -288,9 +293,9 @@ export default function DeliveriesPage() {
         </div>
       )}
 
-      <button onClick={() => setIsFormOpen(true)} className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="New delivery" style={{ touchAction: 'manipulation' }}>
+      {canManage && <button onClick={() => setIsFormOpen(true)} className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="New delivery" style={{ touchAction: 'manipulation' }}>
         <Plus className="h-6 w-6" />
-      </button>
+      </button>}
 
       <DeliveryFormModal
         isOpen={isFormOpen}

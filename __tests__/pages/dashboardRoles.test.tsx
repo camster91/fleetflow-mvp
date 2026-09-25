@@ -75,6 +75,18 @@ describe('role dashboards', () => {
     expect(screen.getByRole('button', { name: 'Retry loading dashboard' })).toBeInTheDocument()
   })
 
+  test('a source the role may not view is not reported as a partial outage', async () => {
+    mockRole = 'DISPATCHER'
+    const body = dto('DISPATCHER')
+    body.sources.maintenance = { available: false, error: 'FORBIDDEN', items: [], total: null, truncated: false } as never
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok:true, json:async()=>body })
+    render(<Dashboard />)
+    expect(await screen.findByRole('heading', { name: 'Dispatch command centre' })).toBeInTheDocument()
+    expect(screen.queryByText(/Some dashboard data could not be loaded/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Maintenance', { selector: 'dt' })).not.toBeInTheDocument()
+    expect(screen.getByText('Vehicles', { selector: 'dt' })).toBeInTheDocument()
+  })
+
   test('recovers after retrying a partial response', async () => {
     const partial = dto('DISPATCHER', false); const healthy = dto('DISPATCHER', true)
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({ok:true,json:async()=>partial}).mockResolvedValueOnce({ok:true,json:async()=>healthy})

@@ -20,6 +20,8 @@ import { notify } from '../../services/notifications';
 import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageClients } from '../../lib/permissions';
 
 function StarRating({ value }: { value?: number }) {
   return (
@@ -50,6 +52,8 @@ function TypeBadge({ type }: { type?: string }) {
 
 export default function ClientsPage() {
   const router = useRouter();
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageClients(role);
   const { data: clients, loading: isLoading, error: fetchError, refetch: loadData } = useDataFetch<Client[]>(
     api.getClients, [], []
   );
@@ -80,7 +84,7 @@ export default function ClientsPage() {
       <PageHeader
         title="Clients"
         subtitle="Manage your client accounts and delivery locations"
-        actions={
+        actions={canManage ? (
           <Button
             variant="primary"
             size="sm"
@@ -89,7 +93,7 @@ export default function ClientsPage() {
           >
             Add Client
           </Button>
-        }
+        ) : undefined}
       />
 
       {fetchError && (
@@ -157,8 +161,8 @@ export default function ClientsPage() {
             type={searchQuery ? 'search' : 'data'}
             title={searchQuery ? 'No clients found' : 'No clients yet'}
             description={searchQuery ? 'Try adjusting your search or filter' : 'Add your first client to get started'}
-            actionLabel={!searchQuery ? 'Add Client' : undefined}
-            onAction={!searchQuery ? () => setIsFormOpen(true) : undefined}
+            actionLabel={!searchQuery && canManage ? 'Add Client' : undefined}
+            onAction={!searchQuery && canManage ? () => setIsFormOpen(true) : undefined}
           />
         </Card>
       ) : (
@@ -172,13 +176,13 @@ export default function ClientsPage() {
                 </div>
                 <div className="flex items-center gap-1">
                   <TypeBadge type={client.type} />
-                  <button
+                  {canManage && <button
                     onClick={() => { setEditingClient(client); setIsFormOpen(true); }}
                     className="min-h-11 min-w-11 inline-flex items-center justify-center text-slate-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg ml-1"
                     aria-label={`Edit ${client.name}`}
                   >
                     <Edit className="h-4 w-4" />
-                  </button>
+                  </button>}
                   <button
                     onClick={() => router.push(`/clients/${client.id}`)}
                     className="min-h-11 min-w-11 inline-flex items-center justify-center text-slate-400 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg"
@@ -229,12 +233,13 @@ export default function ClientsPage() {
       )}
 
       {/* FAB */}
-      <button
+      {canManage && <button
         onClick={() => { setEditingClient(null); setIsFormOpen(true); }}
         className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform"
+        aria-label="Add client"
       >
         <Plus className="h-6 w-6" />
-      </button>
+      </button>}
 
       <ClientFormModal
         isOpen={isFormOpen}

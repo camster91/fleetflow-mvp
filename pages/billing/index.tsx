@@ -4,6 +4,8 @@ import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
 import { CreditCard, Zap, Check, AlertTriangle, Loader2, ReceiptText } from 'lucide-react';
 import { confirmAction } from '../../services/notifications';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageBilling, canViewBilling } from '../../lib/permissions';
 
 interface SubscriptionData {
   plan: string;
@@ -46,10 +48,21 @@ export default function BillingPage() {
   const [billingAvailable, setBillingAvailable] = useState(false);
   const [billingCheckFailed, setBillingCheckFailed] = useState(false);
   const [pricing, setPricing] = useState<BillingPricing | null>(null);
+  // Roles that cannot see the workspace subscription get the read-only beta
+  // notice instead of an error; billing-management endpoints are not called.
+  const [notBillingViewer, setNotBillingViewer] = useState(false);
+  const { role, loading: roleLoading } = useWorkspaceRole();
+  const canManage = role !== null && canManageBilling(role);
 
   useEffect(() => {
+    if (roleLoading) return;
+    if (role && !canViewBilling(role)) {
+      setNotBillingViewer(true);
+      setLoading(false);
+      return;
+    }
     Promise.all([
-      fetch('/api/subscription/status').then(r => r.ok ? r.json() : Promise.reject()),
+      fetch('/api/subscription/status').then(r => r.ok ? r.json() : Promise.reject(r.status === 403 ? 'forbidden' : undefined)),
       fetch('/api/stripe/availability').then(r => r.ok ? r.json() : Promise.reject()),
     ])
       .then(([status, availability]) => {
@@ -57,14 +70,15 @@ export default function BillingPage() {
         setBillingAvailable(Boolean(availability.available))
         setPricing(availability.pricing || null)
       })
-      .catch(() => {
+      .catch((reason) => {
         setSub(null)
         setBillingAvailable(false)
-        setBillingCheckFailed(true)
         setPricing(null)
+        if (reason === 'forbidden') setNotBillingViewer(true)
+        else setBillingCheckFailed(true)
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [roleLoading, role]);
 
   const handleSubscribe = async (interval: 'monthly' | 'yearly') => {
     setActionLoading(true);
@@ -119,13 +133,13 @@ export default function BillingPage() {
   // Workspaces with an existing paid subscription are not on the free beta, so
   // never tell them billing is free when Stripe is temporarily unavailable.
   const hasPaidSubscription = Boolean(sub && PAID_STATUSES.has(sub.status));
-  const showPricing = !isActive && billingAvailable;
+  const showPricing = canManage && !isActive && billingAvailable;
   const formatPrice = (value: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value / 100)
   const savings = pricing && pricing.monthly.amount > 0
     ? Math.max(0, Math.round((1 - pricing.yearly.amount / (pricing.monthly.amount * 12)) * 100))
     : 0
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Billing' }]}>
         <div className="flex items-center justify-center py-20">
@@ -139,6 +153,17 @@ export default function BillingPage() {
     <DashboardLayout breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Billing' }]}>
       <PageHeader title="Billing & Subscription" subtitle="Manage your Fleetvera subscription" />
       <div className="max-w-2xl mx-auto space-y-6">
+
+        {notBillingViewer && (
+          <div role="status" className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+            <Check className="h-5 w-5 shrink-0 text-blue-700" />
+            <div><p className="font-semibold">Fleetvera is free during the beta</p><p>No payment details are needed. Billing is managed by your workspace owner or admin.</p></div>
+          </div>
+        )}
+
+        {!notBillingViewer && role !== null && !canManage && !billingCheckFailed && (
+          <p className="text-sm text-slate-600">Billing is managed by your workspace owner or admin. You can view the plan but not change it.</p>
+        )}
 
         {billingCheckFailed && (
           <div role="status" className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -154,7 +179,7 @@ export default function BillingPage() {
           </div>
         )}
 
-        {!billingAvailable && !billingCheckFailed && !hasPaidSubscription && (
+        {!notBillingViewer && !billingAvailable && !billingCheckFailed && !hasPaidSubscription && (
           <div role="status" className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
             <Check className="h-5 w-5 shrink-0 text-blue-700" />
             <div><p className="font-semibold">Fleetvera is free during the beta</p><p>No payment details are needed. We will give beta workspaces advance notice before paid plans start.</p></div>
@@ -189,7 +214,7 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
-            {isActive && !sub.cancelAtPeriodEnd && (
+            {canManage && isActive && !sub.cancelAtPeriodEnd && (
               <button
                 onClick={handleCancel}
                 disabled={actionLoading || !billingAvailable}

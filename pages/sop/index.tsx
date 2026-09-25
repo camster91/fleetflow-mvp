@@ -12,6 +12,8 @@ import * as api from '../../services/apiService';
 import type { SOPCategory } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import toast from 'react-hot-toast';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageSOP } from '../../lib/permissions';
 
 export default function SOPPage() {
   const [categories, setCategories] = useState<SOPCategory[]>([]);
@@ -20,6 +22,8 @@ export default function SOPPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<SOPCategory | null>(null);
   const { openConfirm } = useConfirmDialog();
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageSOP(role);
 
   const loadData = useCallback(async () => {
     try {
@@ -46,7 +50,7 @@ export default function SOPPage() {
           await api.deleteSOPCategory(cat.id);
           notify.success(`Category "${cat.name}" deleted`);
           await loadData();
-        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete category'); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete category'); throw err; }
       },
     });
   };
@@ -56,11 +60,11 @@ export default function SOPPage() {
       <PageHeader
         title="SOPs & Procedures"
         subtitle="Manage standard operating procedures and document categories"
-        actions={
+        actions={canManage ? (
           <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}>
             New Category
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
@@ -80,7 +84,7 @@ export default function SOPPage() {
         <Card>
           <EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results' : 'No SOP categories yet'}
             description={searchQuery ? 'Try adjusting your search' : 'Create your first SOP category to start organizing procedures'}
-            actionLabel={!searchQuery ? 'Create Category' : undefined} onAction={!searchQuery ? () => setIsFormOpen(true) : undefined} />
+            actionLabel={!searchQuery && canManage ? 'Create Category' : undefined} onAction={!searchQuery && canManage ? () => setIsFormOpen(true) : undefined} />
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -88,15 +92,15 @@ export default function SOPPage() {
             <Card key={cat.id} hover className="flex flex-col">
               <div className="flex items-start justify-between mb-3">
                 <div className="p-2.5 bg-blue-50 rounded-xl"><BookOpen className="h-6 w-6 text-blue-600" /></div>
-                <div className="flex gap-1">
+                {canManage && <div className="flex gap-1">
                   <button onClick={() => { setEditingCategory(cat); setIsFormOpen(true); }}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" aria-label={`Edit ${cat.name}`}>
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button onClick={() => handleDelete(cat)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                  <button onClick={() => handleDelete(cat)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" aria-label={`Delete ${cat.name}`}>
                     <Trash2 className="h-4 w-4" />
                   </button>
-                </div>
+                </div>}
               </div>
               <h3 className="font-semibold text-slate-900 mb-1">{cat.name}</h3>
               {cat.description && <p className="text-sm text-slate-500 mb-3 flex-1">{cat.description}</p>}
@@ -109,10 +113,10 @@ export default function SOPPage() {
         </div>
       )}
 
-      <button onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}
-        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform">
+      {canManage && <button onClick={() => { setEditingCategory(null); setIsFormOpen(true); }}
+        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="New category">
         <Plus className="h-6 w-6" />
-      </button>
+      </button>}
 
       <SOPCategoryFormModal
         isOpen={isFormOpen}

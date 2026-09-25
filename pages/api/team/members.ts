@@ -4,6 +4,7 @@ import { prisma } from '../../../lib/prisma';
 import { TeamRole } from '../../../types';
 import { clearDriverAssignments } from '../../../lib/teamDriverCleanup';
 import { assertSameOrigin } from '../../../lib/apiAuth';
+import { canViewTeam } from '../../../lib/permissions';
 
 export default async function handler(
   req: NextApiRequest,
@@ -47,6 +48,13 @@ export default async function handler(
 
         if (!team) {
           return res.status(403).json({ error: 'Access denied' });
+        }
+
+        // The member list carries names and emails; only roles that may view
+        // the team get it (dispatchers, technicians and drivers do not).
+        const callerRole = (team.ownerId === userId ? 'OWNER' : membership?.role) as TeamRole | undefined;
+        if (!callerRole || !canViewTeam(callerRole)) {
+          return res.status(403).json({ error: 'Your role cannot view the team member list' });
         }
 
         const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);

@@ -90,6 +90,8 @@ export default function AdminUserManagement() {
       await fetchUsers()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user')
+      // Rethrow so the confirm dialog stays open for retry or cancel.
+      throw err
     }
   }
 

@@ -22,7 +22,8 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { notify, confirmAction } from '../../services/notifications';
-import { canManageTeam } from '../../lib/permissions';
+import { canManageTeam, canViewTeam, getAssignableRoles, getRoleDisplayName } from '../../lib/permissions';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
 
 interface TeamMember {
   id: string;
@@ -40,6 +41,8 @@ interface TeamMember {
     name: string | null;
     email: string;
   } | null;
+  isSelf?: boolean;
+  isOwner?: boolean;
 }
 
 export default function TeamPage() {
@@ -49,16 +52,32 @@ export default function TeamPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<InvitationStatus | 'all'>('all');
+  const [listForbidden, setListForbidden] = useState(false);
 
-  const currentUserRole: TeamRole = 'OWNER';
-  const canManage = canManageTeam(currentUserRole);
+  // Controls follow the caller's real role in the active workspace; the APIs
+  // enforce the same rules. Nothing is offered until the role is known.
+  const { role: currentUserRole, loading: roleLoading } = useWorkspaceRole();
+  const canManage = currentUserRole !== null && canManageTeam(currentUserRole);
+  const assignableRoles = currentUserRole ? getAssignableRoles(currentUserRole) : [];
+  // Ownership needs a dedicated transfer, and admins are peers: only the owner
+  // may change or remove an admin.
+  const canEditMember = (member: TeamMember) =>
+    canManage && member.role !== 'OWNER' && !member.isOwner && (currentUserRole === 'OWNER' || member.role !== 'ADMIN');
+  const roleOptions = (member: TeamMember) =>
+    assignableRoles.includes(member.role) ? assignableRoles : [member.role, ...assignableRoles];
 
-  useEffect(() => { fetchMembers(); }, []);
+  useEffect(() => {
+    if (roleLoading) return;
+    // Roles without team visibility are not sent the member list at all.
+    if (currentUserRole && !canViewTeam(currentUserRole)) { setListForbidden(true); setIsLoading(false); return; }
+    fetchMembers();
+  }, [roleLoading, currentUserRole]);
 
   const fetchMembers = async () => {
     try {
       const r = await fetch('/api/team');
       if (r.ok) setMembers(await r.json());
+      else if (r.status === 403) setListForbidden(true);
       else notify.error('Failed to load team members');
     } catch { notify.error('Failed to load team members'); }
     finally { setIsLoading(false); }
@@ -131,6 +150,19 @@ export default function TeamPage() {
         )}
       />
 
+      {listForbidden ? (
+        <Card>
+          <div role="status" className="flex items-start gap-4">
+            <div className="p-3 bg-slate-100 rounded-lg"><Shield className="h-6 w-6 text-slate-600" /></div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Team list not available for your role</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                {currentUserRole ? `As a ${getRoleDisplayName(currentUserRole)}, you` : 'You'} can’t view team members or their contact details. Ask a workspace owner or admin if you need changes to the team.
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : (<>
       {/* Stats — horizontal scroll on mobile */}
       <div className="mb-6">
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x sm:hidden">
@@ -212,13 +244,10 @@ export default function TeamPage() {
                       </Badge>
                     </div>
                     <div className="mt-2 flex items-center flex-wrap gap-2">
-                      {canManage && member.role !== 'OWNER' ? (
+                      {canEditMember(member) ? (
                         <div className="relative inline-block">
-                          <select value={member.role} onChange={e => handleChangeRole(member.id, e.target.value as TeamRole)} className="appearance-none bg-slate-100 pr-6 pl-2 py-1 text-xs font-medium text-slate-700 rounded cursor-pointer">
-                            <option value="ADMIN">Admin</option>
-                            <option value="MANAGER">Manager</option>
-                            <option value="MEMBER">Member</option>
-                            <option value="VIEWER">Viewer</option>
+                          <select aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`} value={member.role} onChange={e => handleChangeRole(member.id, e.target.value as TeamRole)} className="appearance-none bg-slate-100 pr-6 pl-2 py-1 text-xs font-medium text-slate-700 rounded cursor-pointer">
+                            {roleOptions(member).map(option => <option key={option} value={option}>{getRoleDisplayName(option)}</option>)}
                           </select>
                           <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400 pointer-events-none" />
                         </div>
@@ -235,7 +264,7 @@ export default function TeamPage() {
                           <RefreshCw className="h-4 w-4" />
                         </button>
                       )}
-                      {member.role !== 'OWNER' && (
+                      {canEditMember(member) && (
                         <button onClick={() => handleRemoveMember(member.id)} className="p-2 min-h-[36px] border border-red-200 text-red-600 rounded-lg hover:bg-red-50" title="Remove">
                           <UserX className="h-4 w-4" />
                         </button>
@@ -273,13 +302,10 @@ export default function TeamPage() {
                         </div>
                       </td>
                       <td className="py-4 px-4">
-                        {canManage && member.role !== 'OWNER' ? (
+                        {canEditMember(member) ? (
                           <div className="relative inline-block">
-                            <select value={member.role} onChange={e => handleChangeRole(member.id, e.target.value as TeamRole)} className="appearance-none bg-transparent pr-8 py-1 text-sm font-medium text-slate-700 cursor-pointer">
-                              <option value="ADMIN">Admin</option>
-                              <option value="MANAGER">Manager</option>
-                              <option value="MEMBER">Member</option>
-                              <option value="VIEWER">Viewer</option>
+                            <select aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`} value={member.role} onChange={e => handleChangeRole(member.id, e.target.value as TeamRole)} className="appearance-none bg-transparent pr-8 py-1 text-sm font-medium text-slate-700 cursor-pointer">
+                              {roleOptions(member).map(option => <option key={option} value={option}>{getRoleDisplayName(option)}</option>)}
                             </select>
                             <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                           </div>
@@ -298,7 +324,7 @@ export default function TeamPage() {
                             {member.status === 'PENDING' && (
                               <button onClick={() => handleResendInvite(member.id)} className="p-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50" title="Resend invitation"><RefreshCw className="h-4 w-4" /></button>
                             )}
-                            {member.role !== 'OWNER' && (
+                            {canEditMember(member) && (
                               <button onClick={() => handleRemoveMember(member.id)} className="p-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50" title="Remove member"><UserX className="h-4 w-4" /></button>
                             )}
                           </div>
@@ -312,6 +338,8 @@ export default function TeamPage() {
           </>
         )}
       </Card>
+
+      </>)}
 
       {/* Permissions info card */}
       {canManage && (

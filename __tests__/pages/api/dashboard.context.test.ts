@@ -52,6 +52,49 @@ describe('/api/dashboard/context', () => {
     const {req,res}=createMocks({method:'GET'}); await handler(req as never,res as never)
     expect(res._getStatusCode()).toBe(503); expect(res._getJSONData()).toEqual({error:'Dashboard data unavailable'}); expect(res._getData()).not.toContain('private')
   })
+  // Same view helpers as the list routes: a source the role cannot list is not queried at all.
+  it.each([
+    ['OWNER', { vehicles: true, deliveries: true, maintenance: true }],
+    ['ADMIN', { vehicles: true, deliveries: true, maintenance: true }],
+    ['MANAGER', { vehicles: true, deliveries: true, maintenance: true }],
+    ['DISPATCHER', { vehicles: true, deliveries: true, maintenance: false }],
+    ['TECHNICIAN', { vehicles: false, deliveries: false, maintenance: true }],
+    ['DRIVER', { vehicles: true, deliveries: true, maintenance: true }],
+    ['MEMBER', { vehicles: true, deliveries: true, maintenance: true }],
+    ['VIEWER', { vehicles: true, deliveries: true, maintenance: true }],
+  ] as const)('%s sees only the sources its list permissions allow', async (role, allowed) => {
+    ;(requireTenantContext as jest.Mock).mockResolvedValue({ session:{user:{id:'u1'}}, tenant:{ownerId:'o1',teamId:'t1',role,resourceWhere:{teamId:'t1'}} })
+    ;(prisma.vehicle.findMany as jest.Mock).mockResolvedValue([{ id: 'v1', name: 'Van SENTINEL_VEHICLE', status: 'ACTIVE' }])
+    ;(prisma.delivery.findMany as jest.Mock).mockResolvedValue([{ id: 'd1', customer: 'SENTINEL_CUSTOMER', address: '1 Main', status: 'PENDING' }])
+    ;(prisma.maintenanceTask.findMany as jest.Mock).mockResolvedValue([{ id: 'm1', title: 'SENTINEL_TASK', dueDate: new Date('2030-01-01'), priority: 'HIGH', completed: false, vehicle: { name: 'Van' } }])
+    for (const model of [prisma.vehicle,prisma.delivery,prisma.maintenanceTask]) (model.count as jest.Mock).mockResolvedValue(1)
+    const {req,res}=createMocks({method:'GET'}); await handler(req as never,res as never)
+    expect(res._getStatusCode()).toBe(200)
+    const { sources } = res._getJSONData()
+    const models = { vehicles: prisma.vehicle, deliveries: prisma.delivery, maintenance: prisma.maintenanceTask }
+    for (const key of ['vehicles', 'deliveries', 'maintenance'] as const) {
+      if (allowed[key]) {
+        expect(sources[key]).toEqual(expect.objectContaining({ available: true, total: 1 }))
+        expect(sources[key].items).toHaveLength(1)
+      } else {
+        expect(sources[key]).toEqual({ available: false, error: 'FORBIDDEN', items: [], total: null, truncated: false })
+        expect(models[key].findMany).not.toHaveBeenCalled()
+        expect(models[key].count).not.toHaveBeenCalled()
+      }
+    }
+    const serialized = JSON.stringify(sources)
+    if (!allowed.vehicles) expect(serialized).not.toContain('SENTINEL_VEHICLE')
+    if (!allowed.deliveries) expect(serialized).not.toContain('SENTINEL_CUSTOMER')
+    if (!allowed.maintenance) expect(serialized).not.toContain('SENTINEL_TASK')
+  })
+  it('keeps a restricted role dashboard up when its permitted sources load, and 503s only when they all fail', async () => {
+    ;(requireTenantContext as jest.Mock).mockResolvedValue({ session:{user:{id:'u1'}}, tenant:{ownerId:'o1',teamId:'t1',role:'TECHNICIAN',resourceWhere:{teamId:'t1'}} })
+    let call = createMocks({method:'GET'}); await handler(call.req as never, call.res as never)
+    expect(call.res._getStatusCode()).toBe(200)
+    ;(prisma.maintenanceTask.findMany as jest.Mock).mockRejectedValue(new Error('down'))
+    call = createMocks({method:'GET'}); await handler(call.req as never, call.res as never)
+    expect(call.res._getStatusCode()).toBe(503)
+  })
   it('rejects non-GET before authentication', async () => {
     const { req, res } = createMocks({ method: 'POST' })
     await handler(req as never, res as never)

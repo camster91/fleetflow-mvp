@@ -12,6 +12,8 @@ import * as api from '../../services/apiService';
 import type { VendingMachine } from '../../services/apiService';
 import { notify } from '../../services/notifications';
 import toast from 'react-hot-toast';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageVendingMachines } from '../../lib/permissions';
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'active') return <Badge variant="success">Active</Badge>;
@@ -27,6 +29,8 @@ export default function VendingMachinesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMachine, setEditingMachine] = useState<VendingMachine | null>(null);
   const { openConfirm } = useConfirmDialog();
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageVendingMachines(role);
 
   const loadData = useCallback(async () => {
     try {
@@ -55,7 +59,7 @@ export default function VendingMachinesPage() {
           await api.deleteVendingMachine(m.id);
           notify.success(`"${m.name}" deleted`);
           await loadData();
-        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete machine'); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete machine'); throw err; }
       },
     });
   };
@@ -81,11 +85,11 @@ export default function VendingMachinesPage() {
       <PageHeader
         title="Vending Machines"
         subtitle="Monitor and manage all vending machine locations"
-        actions={
+        actions={canManage ? (
           <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => { setEditingMachine(null); setIsFormOpen(true); }}>
             Add Machine
           </Button>
-        }
+        ) : undefined}
       />
 
       <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -115,8 +119,8 @@ export default function VendingMachinesPage() {
           <EmptyState type={searchQuery ? 'search' : 'data'}
             title={searchQuery ? 'No results found' : 'No vending machines yet'}
             description={searchQuery ? 'Try adjusting your search' : 'Add your first vending machine to start tracking'}
-            actionLabel={!searchQuery ? 'Add Machine' : undefined}
-            onAction={!searchQuery ? () => setIsFormOpen(true) : undefined} />
+            actionLabel={!searchQuery && canManage ? 'Add Machine' : undefined}
+            onAction={!searchQuery && canManage ? () => setIsFormOpen(true) : undefined} />
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -126,13 +130,13 @@ export default function VendingMachinesPage() {
                 <div className="p-2.5 bg-blue-50 rounded-xl"><ShoppingCart className="h-6 w-6 text-blue-600" /></div>
                 <div className="flex items-center gap-2">
                   <StatusBadge status={m.status} />
-                  <button onClick={() => { setEditingMachine(m); setIsFormOpen(true); }}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg">
+                  {canManage && <button onClick={() => { setEditingMachine(m); setIsFormOpen(true); }}
+                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" aria-label={`Edit ${m.name}`}>
                     <Edit className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(m)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                  </button>}
+                  {canManage && <button onClick={() => handleDelete(m)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg" aria-label={`Delete ${m.name}`}>
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </button>}
                 </div>
               </div>
               <h3 className="font-semibold text-slate-900 mb-1">{m.name}</h3>
@@ -141,7 +145,7 @@ export default function VendingMachinesPage() {
               </div>
               {m.machineType && <p className="text-xs text-slate-400 mb-3">Type: {m.machineType}</p>}
               {m.notes && <p className="text-sm text-slate-600 mb-3 line-clamp-2">{m.notes}</p>}
-              <div className="mt-auto pt-3 border-t border-slate-100 flex gap-2">
+              {canManage && <div className="mt-auto pt-3 border-t border-slate-100 flex gap-2">
                 <button onClick={() => handleStatusToggle(m)}
                   className={`flex-1 text-sm py-1.5 rounded-lg font-medium transition-colors ${
                     m.status === 'active'
@@ -150,19 +154,19 @@ export default function VendingMachinesPage() {
                   }`}>
                   {m.status === 'active' ? 'Set Maintenance' : 'Set Active'}
                 </button>
-              </div>
+              </div>}
             </Card>
           ))}
         </div>
       )}
 
-      <button onClick={() => { setEditingMachine(null); setIsFormOpen(true); }}
-        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg">
+      {canManage && <button onClick={() => { setEditingMachine(null); setIsFormOpen(true); }}
+        className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg" aria-label="Add machine">
         <Plus className="h-6 w-6" />
-      </button>
+      </button>}
 
       {/* VendingMachine form modal - inline simple form since no dedicated modal exists */}
-      {isFormOpen && (
+      {canManage && isFormOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">

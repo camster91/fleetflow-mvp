@@ -12,6 +12,7 @@ jest.mock('@/services/apiService', () => ({
 jest.mock('@/services/notifications', () => ({ notify: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }))
 jest.mock('@/hooks/useDataFetch', () => ({ useDataFetch: jest.fn() }))
+jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'OWNER', loading: false }) }))
 jest.mock('@/hooks/useFilteredData', () => ({
   useFilteredData: ({ data }: { data: unknown[] }) => ({
     filtered: data, searchQuery: '', setSearchQuery: jest.fn(), filters: {}, setFilter: jest.fn(),

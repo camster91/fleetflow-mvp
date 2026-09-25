@@ -23,6 +23,8 @@ import toast from 'react-hot-toast';
 import { useDataFetch } from '../../hooks/useDataFetch';
 import { useFilteredData } from '../../hooks/useFilteredData';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
+import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
+import { canManageVehicles } from '../../lib/permissions';
 
 export default function VehiclesPage() {
   const router = useRouter();
@@ -35,6 +37,8 @@ export default function VehiclesPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const { openConfirm } = useConfirmDialog();
+  const { role } = useWorkspaceRole();
+  const canManage = role !== null && canManageVehicles(role);
 
   const {
     filtered: filteredVehicles,
@@ -71,7 +75,7 @@ export default function VehiclesPage() {
     loading: isLoading,
     resource: 'vehicles',
     onMatch: handleView,
-    onEdit: handleEdit,
+    onEdit: canManage ? handleEdit : undefined,
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
   });
 
@@ -85,7 +89,7 @@ export default function VehiclesPage() {
           await api.deleteVehicle(vehicle.id);
           notify.success(`Vehicle "${vehicle.name}" deleted`);
           await loadVehicles();
-        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete vehicle'); }
+        } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to delete vehicle'); throw err; }
       },
     });
   };
@@ -108,7 +112,7 @@ export default function VehiclesPage() {
                 downloadCSV('vehicles', filteredVehicles.map(v => ({ Name: v.name, Driver: v.driver || '', Status: v.status, Location: v.location || '', Mileage: v.mileage || 0 })));
               });
             }}>Export CSV</Button>
-            <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={handleAdd}>Add Vehicle</Button>
+            {canManage && <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={handleAdd}>Add Vehicle</Button>}
           </div>
         }
       />
@@ -169,7 +173,7 @@ export default function VehiclesPage() {
       {isLoading ? <SkeletonTable rows={5} columns={6} /> : filteredVehicles.length === 0 ? (
         <Card><EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results found' : 'No vehicles yet'}
           description={searchQuery ? 'Try adjusting your search' : 'Add your first vehicle to start tracking your fleet'}
-          actionLabel={!searchQuery ? 'Add Vehicle' : undefined} onAction={!searchQuery ? handleAdd : undefined} /></Card>
+          actionLabel={!searchQuery && canManage ? 'Add Vehicle' : undefined} onAction={!searchQuery && canManage ? handleAdd : undefined} /></Card>
       ) : viewMode === 'table' ? (
         <Card padding="none">
           {/* Mobile cards */}
@@ -194,8 +198,8 @@ export default function VehiclesPage() {
                 </div>
                 <div className="mt-3 flex gap-2">
                   <button onClick={() => handleView(vehicle)} className="flex-1 py-2 border border-slate-300 rounded-lg text-sm font-medium min-h-11 text-slate-700 hover:bg-slate-50 touch-target" style={{ touchAction: 'manipulation' }}>View</button>
-                  <button onClick={() => handleEdit(vehicle)} className="flex-1 py-2 bg-emerald-800 text-white rounded-lg text-sm font-medium min-h-11 touch-target" style={{ touchAction: 'manipulation' }}>Edit</button>
-                  <button onClick={() => handleDelete(vehicle)} className="p-2 border border-red-200 text-red-600 rounded-lg min-h-11 min-w-11 flex items-center justify-center hover:bg-red-50 touch-target" style={{ touchAction: 'manipulation' }} aria-label="Delete vehicle"><Trash2 className="h-4 w-4" /></button>
+                  {canManage && <button onClick={() => handleEdit(vehicle)} className="flex-1 py-2 bg-emerald-800 text-white rounded-lg text-sm font-medium min-h-11 touch-target" style={{ touchAction: 'manipulation' }}>Edit</button>}
+                  {canManage && <button onClick={() => handleDelete(vehicle)} className="p-2 border border-red-200 text-red-600 rounded-lg min-h-11 min-w-11 flex items-center justify-center hover:bg-red-50 touch-target" style={{ touchAction: 'manipulation' }} aria-label="Delete vehicle"><Trash2 className="h-4 w-4" /></button>}
                 </div>
               </FadeIn>
             ))}
@@ -228,8 +232,8 @@ export default function VehiclesPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end space-x-2">
                         <Button variant="ghost" size="sm" onClick={() => handleView(vehicle)}>View</Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleEdit(vehicle)} aria-label="Edit vehicle"><Edit className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(vehicle)} aria-label="Delete vehicle"><Trash2 className="h-4 w-4" /></Button>
+                        {canManage && <Button variant="ghost" size="sm" onClick={() => handleEdit(vehicle)} aria-label="Edit vehicle"><Edit className="h-4 w-4" /></Button>}
+                        {canManage && <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(vehicle)} aria-label="Delete vehicle"><Trash2 className="h-4 w-4" /></Button>}
                       </div>
                     </td>
                   </tr>
@@ -259,7 +263,7 @@ export default function VehiclesPage() {
               {vehicle.maintenanceDue && <div className="mt-4 p-3 bg-amber-50 rounded-lg"><p className="text-sm text-amber-800 font-medium">Maintenance Due</p></div>}
               <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-sm text-slate-500">ETA: {vehicle.eta}</span>
-                <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(vehicle); }} aria-label="Edit"><Edit className="h-4 w-4" /></Button>
+                {canManage && <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleEdit(vehicle); }} aria-label="Edit"><Edit className="h-4 w-4" /></Button>}
               </div>
             </Card>
           ))}
@@ -267,9 +271,9 @@ export default function VehiclesPage() {
       )}
 
       {/* FAB */}
-      <button onClick={handleAdd} className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="Add vehicle" style={{ touchAction: 'manipulation' }}>
+      {canManage && <button onClick={handleAdd} className="fixed bottom-20 right-4 z-30 lg:hidden flex items-center justify-center w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg active:scale-95 transition-transform" aria-label="Add vehicle" style={{ touchAction: 'manipulation' }}>
         <Plus className="h-6 w-6" />
-      </button>
+      </button>}
 
       <VehicleFormModal
         isOpen={isFormOpen}

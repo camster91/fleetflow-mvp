@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   MATRIX_CLIENTS, MATRIX_DELIVERIES, MATRIX_MAINTENANCE, MATRIX_ROLES, MATRIX_TEAM, MATRIX_VEHICLES, matrixUser,
 } from '../../prisma/matrix-fixtures'
-import { EXPECTATIONS, api, disconnectMatrixDb, expectStatus, signIn } from './support'
+import { EXPECTATIONS, api, disconnectMatrixDb, expectStatus, seedConfirmedDocument, signIn } from './support'
 
 /*
  * Feature x role acceptance matrix against the local server and the seeded
@@ -14,25 +14,25 @@ const runId = () => `${Date.now().toString(36)}${Math.random().toString(36).slic
 
 const RESOURCES = {
   vehicles: {
-    api: '/api/vehicles', page: '/vehicles', heading: 'Vehicles',
+    api: '/api/vehicles', page: '/vehicles', heading: 'Vehicles', addButton: 'Add Vehicle',
     seeded: MATRIX_VEHICLES.map((row) => row.name), label: (row: Record<string, unknown>) => row.name,
     body: (id: string) => ({ name: `E2E Matrix Vehicle ${id}`, status: 'active' }),
     remove: (id: string) => `/api/vehicles/${id}`,
   },
   deliveries: {
-    api: '/api/deliveries', page: '/deliveries', heading: 'Delivery Management',
+    api: '/api/deliveries', page: '/deliveries', heading: 'Delivery Management', addButton: 'New Delivery',
     seeded: MATRIX_DELIVERIES.map((row) => row.customer), label: (row: Record<string, unknown>) => row.customer,
     body: (id: string) => ({ customer: `E2E Matrix Customer ${id}`, address: '300 Example Road, Testville' }),
     remove: (id: string) => `/api/deliveries/${id}`,
   },
   maintenance: {
-    api: '/api/maintenance', page: '/maintenance', heading: 'Maintenance Calendar',
+    api: '/api/maintenance', page: '/maintenance', heading: 'Maintenance Calendar', addButton: 'Add Task',
     seeded: MATRIX_MAINTENANCE.map((row) => row.title), label: (row: Record<string, unknown>) => row.type,
     body: (id: string) => ({ vehicle: 'E2E Van Bravo', type: `E2E Matrix Service ${id}`, dueDate: '2030-02-01', priority: 'low' }),
     remove: (id: string) => `/api/maintenance/${id}`,
   },
   clients: {
-    api: '/api/clients', page: '/clients', heading: 'Clients',
+    api: '/api/clients', page: '/clients', heading: 'Clients', addButton: 'Add Client',
     seeded: MATRIX_CLIENTS.map((row) => row.name), label: (row: Record<string, unknown>) => row.name,
     body: (id: string) => ({ name: `E2E Matrix Client ${id}`, address: '400 Example Lane, Testville', type: 'other' }),
     remove: (id: string) => `/api/clients/${id}`,
@@ -40,10 +40,17 @@ const RESOURCES = {
 } as const
 type ResourceName = keyof typeof RESOURCES
 
+/** Navigate and wait until the page has resolved the caller's workspace role (role-gated controls). */
+async function gotoWithRole(page: Page, path: string) {
+  const roleResolved = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/team/workspaces')
+  const response = await page.goto(path)
+  expect(response?.ok()).toBe(true)
+  await roleResolved
+}
+
 async function openList(page: Page, resource: ResourceName) {
   const config = RESOURCES[resource]
-  const response = await page.goto(config.page)
-  expect(response?.ok()).toBe(true)
+  await gotoWithRole(page, config.page)
   await expect(page.getByRole('heading', { level: 1, name: config.heading })).toBeVisible()
   if (resource === 'maintenance') await page.getByRole('button', { name: 'List', exact: true }).click()
 }
@@ -81,6 +88,16 @@ for (const role of MATRIX_ROLES) {
           await expect(page.getByText('You do not have permission to do that').first()).toBeVisible()
           await expect(firstSeeded).toHaveCount(0)
         }
+
+        // Create, edit and delete controls match what the API allows (#173).
+        const rowActions = page.getByRole('button', { name: /^(Edit|Delete)\b/ })
+        if (expected.create[resource]) {
+          await expect(page.getByRole('button', { name: config.addButton, exact: true })).toBeVisible()
+          if (canView) await expect(rowActions.filter({ visible: true }).first()).toBeVisible()
+        } else {
+          await expect(page.getByRole('button', { name: config.addButton })).toHaveCount(0)
+          await expect(rowActions).toHaveCount(0)
+        }
       })
 
       const canCreate = expected.create[resource]
@@ -97,11 +114,37 @@ for (const role of MATRIX_ROLES) {
     }
 
     test(`team: page loads, member management ${expected.manageTeam ? 'allowed' : 'forbidden'}`, async ({ page, baseURL }) => {
-      const response = await page.goto('/team')
-      expect(response?.ok()).toBe(true)
+      await gotoWithRole(page, '/team')
       await expect(page.getByRole('heading', { level: 1, name: 'Team Management' })).toBeVisible()
 
       const client = api(page, baseURL!)
+
+      // The member list (names and emails) is only returned to roles that may view the team (#173).
+      const list = await client.get('/api/team')
+      await expectStatus(list, expected.viewTeam ? 200 : 403)
+      const viewerName = matrixUser('VIEWER').name
+      if (expected.viewTeam) {
+        const emails = ((await list.json()) as Array<{ user: { email: string } | null }>).map((member) => member.user?.email)
+        expect(emails).toEqual(expect.arrayContaining(MATRIX_ROLES.map((matrixRole) => matrixUser(matrixRole).email)))
+        await expect(page.getByText(viewerName, { exact: true }).filter({ visible: true }).first()).toBeVisible()
+      } else {
+        expect(await list.text()).not.toContain('@matrix.fleetvera.test')
+        await expect(page.getByText('Team list not available for your role')).toBeVisible()
+        // The layout may show the caller's own email; no other member's contact details appear.
+        for (const other of MATRIX_ROLES.filter((matrixRole) => matrixRole !== role)) {
+          await expect(page.getByText(matrixUser(other).email)).toHaveCount(0)
+        }
+      }
+      // Invite, change-role and remove controls follow the caller's real role.
+      const roleSelect = page.getByRole('combobox', { name: `Role for ${viewerName}` })
+      if (expected.manageTeam) {
+        await expect(page.getByRole('button', { name: 'Invite Member', exact: true })).toBeVisible()
+        await expect(roleSelect.filter({ visible: true })).toHaveCount(1)
+      } else {
+        await expect(page.getByRole('button', { name: /Invite/ })).toHaveCount(0)
+        await expect(page.getByRole('combobox', { name: /^Role for / })).toHaveCount(0)
+        await expect(page.getByTitle(/Remove/)).toHaveCount(0)
+      }
       const invite = await client.post('/api/team/invite', { teamId: MATRIX_TEAM.id, emails: [`invitee-${runId()}@matrix.fleetvera.test`], role: 'VIEWER' })
       await expectStatus(invite, expected.manageTeam ? 200 : 403)
       if (expected.manageTeam) {
@@ -146,10 +189,32 @@ for (const role of MATRIX_ROLES) {
       const response = await page.goto('/billing')
       expect(response?.ok()).toBe(true)
       await expect(page.getByRole('heading', { level: 1, name: 'Billing & Subscription' })).toBeVisible()
-      if (expected.viewBilling) {
-        await expect(page.getByText('Fleetvera is free during the beta')).toBeVisible()
-        await expect(page.getByText('No payment details are needed.', { exact: false })).toBeVisible()
+      // Every role sees the free-beta notice; roles without billing access get it read-only, not an error (#173).
+      await expect(page.getByText('Fleetvera is free during the beta')).toBeVisible()
+      await expect(page.getByText('No payment details are needed.', { exact: false })).toBeVisible()
+      await expect(page.getByText('Billing status could not be verified')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /Subscribe|Cancel Subscription/ })).toHaveCount(0)
+      if (!expected.viewBilling) await expect(page.getByText(/Billing is managed by your workspace owner or admin/)).toBeVisible()
+    })
+
+    test('dashboard data follows list permissions and totals', async ({ page, baseURL }) => {
+      const client = api(page, baseURL!)
+      const context = await client.get('/api/dashboard/context')
+      await expectStatus(context, 200)
+      const { sources } = await context.json()
+      for (const resource of ['vehicles', 'deliveries', 'maintenance'] as const) {
+        if (!expected.view[resource]) {
+          expect(sources[resource], resource).toEqual({ available: false, error: 'FORBIDDEN', items: [], total: null, truncated: false })
+          continue
+        }
+        const list = await client.get(`${RESOURCES[resource].api}?limit=200`)
+        await expectStatus(list, 200)
+        expect(sources[resource].available, resource).toBe(true)
+        expect(sources[resource].total, resource).toBe((await list.json()).total)
       }
+      await page.goto('/dashboard')
+      await expect(page.getByRole('heading', { name: expected.dashboardHeading })).toBeVisible()
+      await expect(page.getByText('Some dashboard data could not be loaded', { exact: false })).toHaveCount(0)
     })
   })
 }
@@ -196,5 +261,22 @@ test.describe('DRIVER assignment scope', () => {
       await expect(page.getByText(row.customer, { exact: true })).toHaveCount(0)
     }
     await expect(page.getByText('E2E Van Bravo', { exact: true })).toHaveCount(0)
+  })
+})
+
+test.describe('documents: a CONFIRMED document offers no second record', () => {
+  let cleanup: (() => Promise<void>) | undefined
+  const name = `e2e-matrix-confirmed-${Date.now().toString(36)}.pdf`
+  test.beforeAll(async () => { cleanup = await seedConfirmedDocument(name) })
+  test.afterAll(async () => { await cleanup?.() })
+
+  test('review actions are replaced by an explanation', async ({ page, baseURL }) => {
+    await signIn(page, 'OWNER', baseURL!)
+    await page.goto('/documents')
+    await page.getByRole('button', { name: new RegExp(name) }).click()
+    await expect(page.getByText('already created a fleet record, so it cannot create another', { exact: false })).toBeVisible()
+    for (const action of ['Extract', 'Save reviewed draft', 'Preview maintenance task', 'Preview expense']) {
+      await expect(page.getByRole('button', { name: action, exact: true })).toHaveCount(0)
+    }
   })
 })
