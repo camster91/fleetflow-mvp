@@ -11,7 +11,7 @@ const config = [
       '@typescript-eslint/no-unused-vars': 'off',
       'react/no-unescaped-entities': 'off',
       'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/rules-of-hooks': 'error',
       // React 19 compiler-oriented diagnostics are not part of this Pages
       // Router app's current compilation model. Enable them incrementally
       // when the project adopts the React compiler.

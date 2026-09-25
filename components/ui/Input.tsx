@@ -96,7 +96,8 @@ export const Input = React.forwardRef<HTMLDivElement, InputProps>(
     ...props 
   }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false);
-    const inputId = id || React.useId();
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
     const hasError = !!error;
     const isPassword = type === 'password';
     // Support both iconLeft/leftIcon for backward compatibility
@@ -246,7 +247,8 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
     id,
     ...props 
   }, ref) => {
-    const textareaId = id || React.useId();
+    const generatedId = React.useId();
+    const textareaId = id || generatedId;
     const hasError = !!error;
 
     return (
@@ -352,7 +354,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     id,
     ...props 
   }, ref) => {
-    const selectId = id || React.useId();
+    const generatedId = React.useId();
+    const selectId = id || generatedId;
     const hasError = !!error;
 
     return (
