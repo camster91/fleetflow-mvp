@@ -60,6 +60,27 @@ describe('GET /api/team per role', () => {
     expect(res._getJSONData()[0]).toEqual(expect.objectContaining({ isOwner: true }))
   })
 
+  it('includes the canonical owner when Team.ownerId has no membership row', async () => {
+    asRole('ADMIN')
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'owner', name: 'Owner', email: 'real-owner@example.test', image: null, role: 'user', createdAt: new Date('2026-01-01'),
+    })
+    const res = await get()
+    const body = res._getJSONData()
+    expect(body[0]).toEqual(expect.objectContaining({ id: 'owner:owner', role: 'OWNER', isOwner: true, status: 'ACCEPTED' }))
+    expect(body.map((row: { user: { email: string } }) => row.user.email)).toEqual([
+      'real-owner@example.test', 'owner@example.test', 'driver@example.test',
+    ])
+  })
+
+  it('does not duplicate the owner who already has a membership row', async () => {
+    asRole('ADMIN')
+    ;(prisma.teamMember.findMany as jest.Mock).mockResolvedValue([{ ...member('m1', 'OWNER', 'owner@example.test'), userId: 'owner' }])
+    const res = await get()
+    expect(res._getJSONData()).toHaveLength(1)
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
+  })
+
   it.each(['DISPATCHER', 'TECHNICIAN', 'DRIVER'])('%s is refused and no member data is read', async (role) => {
     asRole(role)
     const res = await get()

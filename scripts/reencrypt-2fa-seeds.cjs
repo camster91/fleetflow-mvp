@@ -29,6 +29,8 @@ function loadKeys(env = process.env) {
     throw new Error('TOKEN_ENCRYPTION_KEY must be set explicitly before re-encrypting 2FA seeds')
   }
   const previous = []
+  // Seeds written while a padded current key was still trimmed.
+  if (current.trim() !== current) previous.push(keyFromMaterial(current.trim()))
   for (const entry of (env.TOKEN_ENCRYPTION_KEY_PREVIOUS || '').split(',')) {
     if (!entry.trim()) continue
     previous.push(keyFromMaterial(entry))
