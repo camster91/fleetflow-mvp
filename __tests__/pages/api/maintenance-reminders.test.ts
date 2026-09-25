@@ -9,7 +9,9 @@ type Row = {
   completed: boolean
   reminderSentAt: Date | null
   overdueReminderSentAt: Date | null
-  owner: { id: string; email: string | null; name: string }
+  teamId: string | null
+  team: { timeZone: string } | null
+  owner: { id: string; email: string | null; name: string; timeZone: string }
   vehicle: { name: string } | null
 }
 
@@ -28,9 +30,20 @@ const compare = (value: Date | null, filter: unknown, row: Row): boolean => {
   if (f.lt && !(value < resolve(f.lt))) return false
   return true
 }
+const zoneMatches = (zone: string | undefined, filter: unknown): boolean => {
+  const f = (filter as { timeZone: { in?: string[]; notIn?: string[] } }).timeZone
+  if (zone === undefined) return false
+  if (f.in) return f.in.includes(zone)
+  if (f.notIn) return !f.notIn.includes(zone)
+  throw new Error('unsupported timeZone filter')
+}
 const mockMatches = (row: Row, where: Where): boolean =>
   Object.entries(where).every(([key, filter]) => {
     if (key === 'OR') return (filter as Where[]).some((w) => mockMatches(row, w))
+    if (key === 'AND') return (filter as Where[]).every((w) => mockMatches(row, w))
+    if (key === 'teamId') return row.teamId === filter
+    if (key === 'team') return zoneMatches(row.team?.timeZone, filter)
+    if (key === 'owner') return zoneMatches(row.owner.timeZone, filter)
     if (key === 'id') return row.id === filter
     if (key === 'completed') return row.completed === filter
     if (key === 'dueDate') return compare(row.dueDate, filter, row)
@@ -52,8 +65,13 @@ const mockTx = {
   notification: { create: notificationCreate },
 }
 
+const mockDistinctZones = (pick: (row: Row) => string | undefined) =>
+  [...new Set(mockRows.map(pick).filter((zone): zone is string => !!zone))].map((timeZone) => ({ timeZone }))
+
 jest.mock('@/lib/prisma', () => ({
   prisma: {
+    team: { findMany: jest.fn(async () => mockDistinctZones((row) => row.team?.timeZone)) },
+    user: { findMany: jest.fn(async () => mockDistinctZones((row) => row.owner.timeZone)) },
     maintenanceTask: {
       get fields() { return { dueDate: mockDueDateRef } },
       findMany: jest.fn(async ({ where, take }: { where: Where; take: number }) =>
@@ -95,7 +113,9 @@ const makeRow = (id: string, dueDate: Date, extra: Partial<Row> = {}): Row => ({
   completed: false,
   reminderSentAt: null,
   overdueReminderSentAt: null,
-  owner: { id: 'owner-1', email: 'owner@example.com', name: 'Owner' },
+  teamId: null,
+  team: null,
+  owner: { id: 'owner-1', email: 'owner@example.com', name: 'Owner', timeZone: 'America/Toronto' },
   vehicle: { name: 'Van 1' },
   ...extra,
 })
@@ -217,5 +237,42 @@ describe('POST /api/cron/maintenance-reminders', () => {
     expect(mockState.max).toBeLessThanOrEqual(10)
     expect(mockState.max).toBeGreaterThan(1)
     expect(body).toMatchObject({ remindersSent: 149, failed: 1 })
+  })
+
+  describe('per-workspace time zone', () => {
+    const inTeam = (zone: string) => ({ teamId: `team-${zone}`, team: { timeZone: zone } })
+
+    it('treats a Vancouver task due today as due today at 23:30 local (07:30 UTC the next day)', async () => {
+      // 2026-12-01 23:30 PST is 2026-12-02 07:30 UTC.
+      jest.setSystemTime(new Date('2026-12-02T07:30:00.000Z'))
+      mockRows.push(
+        makeRow('vancouver-today', day('2026-12-01'), inTeam('America/Vancouver')),
+        makeRow('utc-yesterday', day('2026-12-01'), inTeam('UTC')),
+      )
+      const { body } = await runCron()
+      expect(body).toMatchObject({ remindersSent: 2, dueSoonSent: 1, overdueSent: 1 })
+      const byTask = Object.fromEntries(notificationCreate.mock.calls.map(([arg]) => [JSON.parse(arg.data.data).taskId, arg.data.title]))
+      expect(byTask).toEqual({ 'vancouver-today': 'Maintenance Reminder', 'utc-yesterday': 'Maintenance Overdue' })
+    })
+
+    it('uses the owner zone for personal tasks and Toronto for the default', async () => {
+      // 2026-09-25 02:00 UTC is still 2026-09-24 22:00 in Toronto.
+      jest.setSystemTime(new Date('2026-09-25T02:00:00.000Z'))
+      mockRows.push(
+        makeRow('toronto-personal', day('2026-09-24')),
+        makeRow('utc-personal', day('2026-09-24'), { owner: { id: 'owner-2', email: 'utc@example.com', name: 'UTC', timeZone: 'UTC' } }),
+      )
+      const { body } = await runCron()
+      expect(body).toMatchObject({ dueSoonSent: 1, overdueSent: 1 })
+      const overdueTask = notificationCreate.mock.calls.find(([arg]) => arg.data.title === 'Maintenance Overdue')![0]
+      expect(JSON.parse(overdueTask.data.data).taskId).toBe('utc-personal')
+    })
+
+    it('treats an invalid stored zone as the default zone', async () => {
+      jest.setSystemTime(new Date('2026-09-25T02:00:00.000Z'))
+      mockRows.push(makeRow('bad-zone', day('2026-09-24'), inTeam('Mars/Olympus')))
+      const { body } = await runCron()
+      expect(body).toMatchObject({ remindersSent: 1, dueSoonSent: 1, overdueSent: 0 })
+    })
   })
 })

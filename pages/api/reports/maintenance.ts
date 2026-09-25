@@ -4,6 +4,8 @@ import { requireTenantContext } from '../../../lib/apiAuth';
 import { canViewReports } from '../../../lib/permissions';
 import { rateLimitMiddleware } from '../../../lib/rateLimit';
 import { parseReportDateRange, REPORT_ROW_LIMIT } from '../../../lib/reporting';
+import { startOfTodayInZone } from '../../../lib/dateOnly';
+import { getWorkspaceTimeZone } from '../../../lib/workspaceTimeZone';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') { res.setHeader('Allow', 'GET'); return res.status(405).json({ error: 'Method not allowed' }); }
@@ -42,11 +44,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, cost]) => ({ month, cost: Math.round(cost * 100) / 100 }));
 
-    // Upcoming tasks (next 30 days)
-    const now = new Date();
-    const thirtyDaysOut = new Date(Date.now() + 30 * 86400000);
+    // Upcoming tasks (today through the next 30 days in the workspace zone;
+    // due dates are date-only values at UTC midnight)
+    const today = startOfTodayInZone(await getWorkspaceTimeZone(tenant));
+    const thirtyDaysOut = new Date(today.getTime() + 30 * 86400000);
     const upcomingTasks = await prisma.maintenanceTask.findMany({
-      where: { AND: [tenant.resourceWhere, { completed: false, dueDate: { gte: now, lte: thirtyDaysOut } }] },
+      where: { AND: [tenant.resourceWhere, { completed: false, dueDate: { gte: today, lte: thirtyDaysOut } }] },
       include: { vehicle: { select: { name: true } } },
       orderBy: { dueDate: 'asc' },
       take: 20,

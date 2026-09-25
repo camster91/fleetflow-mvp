@@ -97,6 +97,12 @@ export interface GenerateFindingsInput {
   /** Opaque, non-PII tenant identifier used only to namespace stable IDs. */
   tenantKey: string
   now: Date
+  /**
+   * Workspace IANA time zone. When set, maintenance due dates are treated as
+   * date-only values (UTC midnight) and "overdue" means due before today in
+   * this zone; otherwise due dates are compared as exact instants.
+   */
+  timeZone?: string
   records: IntelligenceRecords
 }
 

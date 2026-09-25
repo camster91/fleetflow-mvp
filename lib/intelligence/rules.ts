@@ -8,6 +8,7 @@ import type {
   IntelligenceVehicle,
   UnrankedFinding,
 } from './types'
+import { startOfTodayInZone, startOfUtcDay } from '../dateOnly'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const HOUR_MS = 60 * 60 * 1000
@@ -186,13 +187,18 @@ function cents(value: unknown): number | null {
 
 export function maintenanceScheduleFindings(input: GenerateFindingsInput): UnrankedFinding[] {
   const nowMs = validNow(input.now)
+  // With a workspace zone, compare calendar days: today's date-only value
+  // (UTC midnight) against each due date's UTC day.
+  const referenceMs = input.timeZone ? startOfTodayInZone(input.timeZone, input.now).getTime() : nowMs
   const findings: UnrankedFinding[] = []
   for (const task of input.records.maintenance ?? []) {
     if (!task || task.completed || !isValidOpaqueId(task.id)) continue
-    const dueMs = timestamp(task.dueDate)
-    if (dueMs === null || dueMs > nowMs + INTELLIGENCE_THRESHOLDS.maintenanceDueSoonMs) continue
-    const overdue = dueMs < nowMs
-    const ageMs = overdue ? nowMs - dueMs : 0
+    const rawDueMs = timestamp(task.dueDate)
+    if (rawDueMs === null) continue
+    const dueMs = input.timeZone ? startOfUtcDay(new Date(rawDueMs)).getTime() : rawDueMs
+    if (dueMs > referenceMs + INTELLIGENCE_THRESHOLDS.maintenanceDueSoonMs) continue
+    const overdue = dueMs < referenceMs
+    const ageMs = overdue ? referenceMs - dueMs : 0
     const severity: FindingSeverity = overdue ? 'high' : 'medium'
     findings.push({
       id: stableId(input.tenantKey, overdue ? 'maintenance-overdue' : 'maintenance-due-soon', 'maintenance', task.id),

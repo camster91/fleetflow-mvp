@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
 import { notifyMaintenanceDue } from '../../../lib/email.server'
 import { isAuthorizedCronRequest } from '../../../lib/cronAuth'
-import { startOfUtcDay, toDateOnly } from '../../../lib/dateOnly'
+import { DEFAULT_TIME_ZONE, normalizeTimeZone, startOfTodayInZone, toDateOnly } from '../../../lib/dateOnly'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DUE_SOON_DAYS = 7
@@ -17,15 +17,17 @@ type ReminderKind = 'due_soon' | 'overdue'
 
 /**
  * Dedupe rules (at most one reminder of each kind per task):
- * - due soon: due between the start of today (UTC) and the end of the 7th day
- *   ahead, and reminderSentAt is unset. Claiming sets reminderSentAt.
- * - overdue: due before the start of today (UTC) and no overdue reminder since
+ * - due soon: due between today and the end of the 7th day ahead, and
+ *   reminderSentAt is unset. Claiming sets reminderSentAt.
+ * - overdue: due before today and no overdue reminder since
  *   the due date (overdueReminderSentAt unset, or older than a rescheduled due
  *   date). Claiming sets overdueReminderSentAt. A separate column means a task
  *   reminded on its due day still gets its one overdue reminder later.
  *
- * Date-only due dates are stored at UTC midnight (lib/dateOnly.ts), so "today"
- * is the current UTC day. A per-workspace time zone is a follow-up.
+ * Date-only due dates are stored at UTC midnight (lib/dateOnly.ts). "Today" is
+ * the calendar day in each task's workspace time zone (Team.timeZone, or the
+ * owner's User.timeZone for personal tasks), so tasks are grouped by the local
+ * day their zone is currently on.
  */
 function reminderConditions(kind: ReminderKind): Prisma.MaintenanceTaskWhereInput {
   if (kind === 'due_soon') return { reminderSentAt: null }
@@ -71,6 +73,54 @@ async function claimAndNotify(
   })
 }
 
+/**
+ * Tasks whose workspace zone is one of `zones`. `unknownZonesExcept`, when set,
+ * also matches stored zones outside that list (invalid values), which are
+ * treated as the default zone.
+ */
+function workspaceZoneScope(zones: string[], unknownZonesExcept: string[] | null): Prisma.MaintenanceTaskWhereInput {
+  const scopes: Prisma.MaintenanceTaskWhereInput[] = [
+    { team: { timeZone: { in: zones } } },
+    { teamId: null, owner: { timeZone: { in: zones } } },
+  ]
+  if (unknownZonesExcept) {
+    scopes.push(
+      { team: { timeZone: { notIn: unknownZonesExcept } } },
+      { teamId: null, owner: { timeZone: { notIn: unknownZonesExcept } } },
+    )
+  }
+  return { OR: scopes }
+}
+
+/**
+ * Group the zones in use by the calendar day each is currently on. At any
+ * instant all zones span at most three local days, so this is a handful of
+ * queries rather than one per workspace.
+ */
+async function zoneGroupsByToday(now: Date) {
+  const [teamZones, userZones] = await Promise.all([
+    prisma.team.findMany({ distinct: ['timeZone'], select: { timeZone: true } }),
+    prisma.user.findMany({ distinct: ['timeZone'], select: { timeZone: true } }),
+  ])
+  const validZones = new Set<string>([DEFAULT_TIME_ZONE])
+  for (const { timeZone } of [...teamZones, ...userZones]) {
+    if (normalizeTimeZone(timeZone) === timeZone) validZones.add(timeZone)
+  }
+  const allValid = [...validZones]
+
+  const groups = new Map<number, { startOfToday: Date; zones: string[] }>()
+  for (const zone of allValid) {
+    const startOfToday = startOfTodayInZone(zone, now)
+    const group = groups.get(startOfToday.getTime()) ?? { startOfToday, zones: [] }
+    group.zones.push(zone)
+    groups.set(startOfToday.getTime(), group)
+  }
+  return [...groups.values()].map(({ startOfToday, zones }) => ({
+    startOfToday,
+    scope: workspaceZoneScope(zones, zones.includes(DEFAULT_TIME_ZONE) ? allValid : null),
+  }))
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -82,33 +132,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const now = new Date()
-    const startOfToday = startOfUtcDay(now)
-    const dueSoonEnd = new Date(startOfToday.getTime() + (DUE_SOON_DAYS + 1) * DAY_MS)
     const include = {
       owner: { select: { id: true, email: true, name: true } },
       vehicle: { select: { name: true } },
     } as const
 
-    const overdue = await prisma.maintenanceTask.findMany({
-      where: {
-        completed: false,
-        dueDate: { lt: startOfToday },
-        ...reminderConditions('overdue'),
-      },
-      include,
-      take: CANDIDATE_LIMIT,
-      orderBy: { dueDate: 'asc' },
-    })
-    const dueSoon = await prisma.maintenanceTask.findMany({
-      where: {
-        completed: false,
-        dueDate: { gte: startOfToday, lt: dueSoonEnd },
-        ...reminderConditions('due_soon'),
-      },
-      include,
-      take: CANDIDATE_LIMIT,
-      orderBy: { dueDate: 'asc' },
-    })
+    const overdue = []
+    const dueSoon = []
+    for (const { startOfToday, scope } of await zoneGroupsByToday(now)) {
+      const dueSoonEnd = new Date(startOfToday.getTime() + (DUE_SOON_DAYS + 1) * DAY_MS)
+      overdue.push(...await prisma.maintenanceTask.findMany({
+        where: {
+          AND: [scope, reminderConditions('overdue')],
+          completed: false,
+          dueDate: { lt: startOfToday },
+        },
+        include,
+        take: CANDIDATE_LIMIT,
+        orderBy: { dueDate: 'asc' },
+      }))
+      dueSoon.push(...await prisma.maintenanceTask.findMany({
+        where: {
+          AND: [scope, reminderConditions('due_soon')],
+          completed: false,
+          dueDate: { gte: startOfToday, lt: dueSoonEnd },
+        },
+        include,
+        take: CANDIDATE_LIMIT,
+        orderBy: { dueDate: 'asc' },
+      }))
+    }
 
     const candidates = [
       ...overdue.map((task) => ({ task, kind: 'overdue' as const })),
