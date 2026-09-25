@@ -7,6 +7,19 @@ import { canAssignDrivers, canManageVehicles, canViewVehicles } from '../../../l
 import { resolveDriverAssignment } from '../../../lib/driverAssignment'
 import { assignedResourceWhere, driverVehicleDto, isDriverRole } from '../../../lib/driverScope'
 import { beginIdempotentRequest } from '../../../lib/idempotency'
+import { parseListQuery, scopedWhere, VEHICLE_LIST_SPEC } from '../../../lib/listQuery'
+import type { Prisma } from '@prisma/client'
+
+/** Whole-scope counts for the list page stat cards (independent of search/filters/page). */
+async function vehicleSummary(scope: object) {
+  const [total, active, maintenanceDue, mileage] = await Promise.all([
+    prisma.vehicle.count({ where: scope }),
+    prisma.vehicle.count({ where: scopedWhere(scope, [{ status: 'active' }]) }),
+    prisma.vehicle.count({ where: scopedWhere(scope, [{ maintenanceDue: true }]) }),
+    prisma.vehicle.aggregate({ where: scope, _avg: { mileage: true } }),
+  ])
+  return { total, active, maintenanceDue, averageMileage: Math.round(mileage._avg.mileage ?? 0) }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -17,16 +30,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     if (!canViewVehicles(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
-    const skip = (page - 1) * limit
+    const parsed = parseListQuery(req.query, VEHICLE_LIST_SPEC)
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error })
+    const { page, limit, skip, conditions, orderBy } = parsed.value
 
-    const where=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
-    const [vehicles, total] = await Promise.all([
-      prisma.vehicle.findMany({ where, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], skip, take: limit }),
+    const scope=assignedResourceWhere(tenant.resourceWhere,tenant.role,userId)
+    const where = scopedWhere(scope, conditions)
+    const [vehicles, total, summary] = await Promise.all([
+      prisma.vehicle.findMany({ where, orderBy: orderBy as Prisma.VehicleOrderByWithRelationInput[], skip, take: limit }),
       prisma.vehicle.count({ where }),
+      parsed.value.summary ? vehicleSummary(scope) : undefined,
     ])
-    return res.json({ data: vehicles.map(item=>isDriverRole(tenant.role)?driverVehicleDto(item):dbToVehicle(item)), total, page, limit, hasMore: skip + limit < total })
+    return res.json({ data: vehicles.map(item=>isDriverRole(tenant.role)?driverVehicleDto(item):dbToVehicle(item)), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
   }
 
   if (req.method === 'POST') {

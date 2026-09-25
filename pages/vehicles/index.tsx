@@ -20,17 +20,29 @@ import VehicleFormModal from '../../components/VehicleFormModal';
 import VehicleDetailModal from '../../components/VehicleDetailModal';
 import { useConfirmDialog } from '../../components/ui/ConfirmDialog';
 import toast from 'react-hot-toast';
-import { useDataFetch } from '../../hooks/useDataFetch';
-import { useFilteredData } from '../../hooks/useFilteredData';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { Pagination, SortSelect, type SortOption } from '../../components/ui/Pagination';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
 import { canManageVehicles } from '../../lib/permissions';
 
+const SORT_OPTIONS: SortOption[] = [
+  { value: '', label: 'Date added' },
+  { value: 'name', label: 'Name (A–Z)', order: 'asc' },
+  { value: 'name', label: 'Name (Z–A)', order: 'desc' },
+  { value: 'status', label: 'Status', order: 'asc' },
+  { value: 'mileage', label: 'Mileage (highest)', order: 'desc' },
+  { value: 'mileage', label: 'Mileage (lowest)', order: 'asc' },
+];
+
 export default function VehiclesPage() {
   const router = useRouter();
-  const { data: vehicles, loading: isLoading, error: fetchError, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
-    api.getVehicles, [], []
-  );
+  const list = usePaginatedList<Vehicle, api.VehicleSummary>({
+    fetchPage: (params, signal) => api.getVehiclePage({ ...params, summary: 1 }, signal),
+    filterKeys: ['status'],
+    sortKeys: ['name', 'status', 'mileage', 'createdAt'],
+  });
+  const { rows: vehicles, loading: isLoading, error: fetchError, refetch: loadVehicles, summary } = list;
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
@@ -40,25 +52,28 @@ export default function VehiclesPage() {
   const { role } = useWorkspaceRole();
   const canManage = role !== null && canManageVehicles(role);
 
-  const {
-    filtered: filteredVehicles,
-    searchQuery,
-    setSearchQuery,
-    setFilter,
-    filters,
-  } = useFilteredData<Vehicle>({
-    data: vehicles,
-    searchFields: ['name', 'driver', 'location'],
-    filterFn: (v, f) => !f.status || f.status === 'all' || v.status === f.status,
-  });
+  const filteredVehicles = vehicles;
+  const { searchInput: searchQuery, setSearchInput: setSearchQuery, setFilter, filters, isFiltered } = list;
   const statusFilter = filters.status || 'all';
 
+  // Stat cards cover the whole fleet, not just the current page or search.
   const stats = [
-    { title: 'Total Vehicles', value: vehicles.length, icon: <Truck className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
-    { title: 'Active', value: vehicles.filter((v) => v.status === 'active').length, icon: <div className="h-2 w-2 rounded-full bg-emerald-500" />, iconBgColor: 'bg-emerald-50' },
-    { title: 'Maintenance Due', value: vehicles.filter((v) => v.maintenanceDue).length, icon: <div className="h-2 w-2 rounded-full bg-amber-500" />, iconBgColor: 'bg-amber-50' },
-    { title: 'Avg Mileage', value: vehicles.length > 0 ? Math.round(vehicles.reduce((s, v) => s + v.mileage, 0) / vehicles.length).toLocaleString() : '0', icon: <span className="text-sm font-bold text-slate-600">mi</span>, iconBgColor: 'bg-slate-100' },
+    { title: 'Total Vehicles', value: summary?.total ?? 0, icon: <Truck className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
+    { title: 'Active', value: summary?.active ?? 0, icon: <div className="h-2 w-2 rounded-full bg-emerald-500" />, iconBgColor: 'bg-emerald-50' },
+    { title: 'Maintenance Due', value: summary?.maintenanceDue ?? 0, icon: <div className="h-2 w-2 rounded-full bg-amber-500" />, iconBgColor: 'bg-amber-50' },
+    { title: 'Avg Mileage', value: (summary?.averageMileage ?? 0).toLocaleString(), icon: <span className="text-sm font-bold text-slate-600">mi</span>, iconBgColor: 'bg-slate-100' },
   ];
+  const pagination = (
+    <Pagination
+      label="vehicles"
+      page={list.page}
+      pageSize={list.pageSize}
+      total={list.total}
+      onPageChange={list.setPage}
+      onPageSizeChange={list.setPageSize}
+      disabled={isLoading}
+    />
+  );
 
   const handleAdd = () => { setEditingVehicle(null); setIsFormOpen(true); };
   const handleEdit = (v: Vehicle) => {
@@ -77,6 +92,8 @@ export default function VehiclesPage() {
     onMatch: handleView,
     onEdit: canManage ? handleEdit : undefined,
     onUnavailable: () => toast.error('This record is unavailable or you no longer have access.'),
+    // Edit links carry form prefills under list-filter names; drop them with the link.
+    editPrefillKeys: ['status', 'mileage'],
   });
 
   const handleDelete = (vehicle: Vehicle) => {
@@ -108,9 +125,9 @@ export default function VehiclesPage() {
         actions={
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" iconLeft={<Download className="h-4 w-4" />} onClick={() => {
-              import('../../lib/csvExport').then(({ downloadCSV }) => {
-                downloadCSV('vehicles', filteredVehicles.map(v => ({ Name: v.name, Driver: v.driver || '', Status: v.status, Location: v.location || '', Mileage: v.mileage || 0 })));
-              });
+              Promise.all([import('../../lib/csvExport'), api.getAllMatching<Vehicle>('/api/vehicles', list.queryParams)]).then(([{ downloadCSV }, rows]) => {
+                downloadCSV('vehicles', rows.map(v => ({ Name: v.name, Driver: v.driver || '', Status: v.status, Location: v.location || '', Mileage: v.mileage || 0 })));
+              }).catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Failed to export vehicles'));
             }}>Export CSV</Button>
             {canManage && <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={handleAdd}>Add Vehicle</Button>}
           </div>
@@ -151,16 +168,17 @@ export default function VehiclesPage() {
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input type="text" placeholder="Search vehicles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" />
+              <input type="search" aria-label="Search vehicles" placeholder="Search vehicles..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full min-h-11 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent" />
             </div>
-            <select value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent">
+            <select aria-label="Filter by status" value={statusFilter} onChange={(e) => setFilter('status', e.target.value)}
+              className="min-h-11 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent">
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
               <option value="delayed">Delayed</option>
             </select>
+            <SortSelect id="vehicle-sort" options={SORT_OPTIONS} sort={list.sort} order={list.order} onChange={list.setSort} />
           </div>
           <div className="flex items-center space-x-2">
             <button type="button" aria-label="Table view" onClick={() => setViewMode('table')} className={`min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg ${viewMode === 'table' ? 'bg-emerald-100 text-emerald-900' : 'text-slate-400 hover:text-slate-600'}`}><List className="h-5 w-5" /></button>
@@ -170,10 +188,10 @@ export default function VehiclesPage() {
       </Card>
 
       {/* Content */}
-      {isLoading ? <SkeletonTable rows={5} columns={6} /> : filteredVehicles.length === 0 ? (
-        <Card><EmptyState type={searchQuery ? 'search' : 'data'} title={searchQuery ? 'No results found' : 'No vehicles yet'}
-          description={searchQuery ? 'Try adjusting your search' : 'Add your first vehicle to start tracking your fleet'}
-          actionLabel={!searchQuery && canManage ? 'Add Vehicle' : undefined} onAction={!searchQuery && canManage ? handleAdd : undefined} /></Card>
+      {isLoading && vehicles.length === 0 ? <SkeletonTable rows={5} columns={6} /> : filteredVehicles.length === 0 ? (
+        <Card><EmptyState type={isFiltered ? 'search' : 'data'} title={isFiltered ? 'No results found' : 'No vehicles yet'}
+          description={isFiltered ? 'Try adjusting your search or filters' : 'Add your first vehicle to start tracking your fleet'}
+          actionLabel={!isFiltered && canManage ? 'Add Vehicle' : undefined} onAction={!isFiltered && canManage ? handleAdd : undefined} /></Card>
       ) : viewMode === 'table' ? (
         <Card padding="none">
           {/* Mobile cards */}
@@ -241,11 +259,10 @@ export default function VehiclesPage() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
-            <p className="text-sm text-slate-500">Showing {filteredVehicles.length} of {vehicles.length} vehicles</p>
-          </div>
+          <div className="px-4 sm:px-6 py-4 border-t border-slate-200">{pagination}</div>
         </Card>
       ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredVehicles.map((vehicle) => (
             <Card key={vehicle.id} hover className="cursor-pointer" onClick={() => handleView(vehicle)}>
@@ -268,6 +285,8 @@ export default function VehiclesPage() {
             </Card>
           ))}
         </div>
+        <Card className="mt-4">{pagination}</Card>
+        </>
       )}
 
       {/* FAB */}

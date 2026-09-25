@@ -8,6 +8,11 @@ interface UseRecordQueryOptions<T extends { id: string }> {
   onEdit?: (record: T) => void
   resource: 'vehicles' | 'deliveries' | 'maintenance'
   onUnavailable: () => void
+  /**
+   * Query keys an `?edit=` link carries as form prefills (e.g. `status`).
+   * They are removed with the link so they do not linger as list filters.
+   */
+  editPrefillKeys?: readonly string[]
 }
 
 /**
@@ -23,6 +28,7 @@ export function useRecordQuery<T extends { id: string }>({
   onEdit,
   resource,
   onUnavailable,
+  editPrefillKeys = [],
 }: UseRecordQueryOptions<T>): void {
   const router = useRouter()
   const processed = useRef<string | null>(null)
@@ -40,6 +46,7 @@ export function useRecordQuery<T extends { id: string }>({
   const raw = router.query.edit ?? router.query.record
   const recordId = Array.isArray(raw) ? raw[0] : raw
   const editMode = Boolean(router.query.edit)
+  const prefillKeys = editPrefillKeys.join(',')
 
   useEffect(() => {
     if (!router.isReady || loading) return
@@ -54,6 +61,7 @@ export function useRecordQuery<T extends { id: string }>({
 
     const consumeQuery = async () => {
       const { record: _record, edit: _edit, ...remainingQuery } = router.query
+      if (editMode && prefillKeys) for (const key of prefillKeys.split(',')) delete remainingQuery[key]
       try {
         await router.replace(
           { pathname: router.pathname, query: remainingQuery },
@@ -114,5 +122,5 @@ export function useRecordQuery<T extends { id: string }>({
       controller.abort()
       if (inFlight.current === recordId) inFlight.current = null
     }
-  }, [editMode, loading, recordId, records, resource, router])
+  }, [editMode, loading, prefillKeys, recordId, records, resource, router])
 }

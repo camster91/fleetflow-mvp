@@ -7,11 +7,9 @@ jest.mock('next/router', () => ({ useRouter: () => mockRouter }))
 jest.mock('@/services/apiService', () => ({ getVehicles: jest.fn(), deleteVehicle: jest.fn() }))
 jest.mock('@/services/notifications', () => ({ notify: { success: jest.fn(), error: jest.fn() } }))
 jest.mock('react-hot-toast', () => ({ __esModule: true, default: { error: jest.fn() } }))
-jest.mock('@/hooks/useDataFetch', () => ({ useDataFetch: jest.fn() }))
-jest.mock('@/hooks/useFilteredData', () => ({
-  useFilteredData: ({ data }: { data: unknown[] }) => ({
-    filtered: data, searchQuery: '', setSearchQuery: jest.fn(), filters: {}, setFilter: jest.fn(),
-  }),
+jest.mock('@/hooks/usePaginatedList', () => ({
+  ...jest.requireActual('@/hooks/usePaginatedList'),
+  usePaginatedList: jest.fn(),
 }))
 jest.mock('@/hooks/useRecordQuery', () => ({ useRecordQuery: jest.fn() }))
 jest.mock('@/hooks/useWorkspaceRole', () => ({ useWorkspaceRole: () => ({ role: 'OWNER', loading: false }) }))
@@ -20,7 +18,7 @@ jest.mock('@/components/PageHeader', () => ({ PageHeader: () => null }))
 jest.mock('@/components/VehicleDetailModal', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/VehicleFormModal', () => ({ __esModule: true, default: () => null }))
 
-import { useDataFetch } from '@/hooks/useDataFetch'
+import { usePaginatedList } from '@/hooks/usePaginatedList'
 import * as api from '@/services/apiService'
 import { notify } from '@/services/notifications'
 import VehiclesPage from '@/pages/vehicles'
@@ -42,7 +40,12 @@ describe('vehicles page delete confirmation', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(useDataFetch as jest.Mock).mockReturnValue({ data: [vehicle], loading: false, refetch })
+    ;(usePaginatedList as jest.Mock).mockReturnValue({
+      rows: [vehicle], total: 1, summary: undefined, loading: false, error: null, refetch,
+      page: 1, pageSize: 25, pageCount: 1, setPage: jest.fn(), setPageSize: jest.fn(),
+      searchInput: '', setSearchInput: jest.fn(), q: '', filters: {}, setFilter: jest.fn(),
+      sort: '', order: '', setSort: jest.fn(), queryParams: {}, isFiltered: false,
+    })
   })
 
   const renderPage = () => render(<ConfirmDialogProvider><VehiclesPage /></ConfirmDialogProvider>)

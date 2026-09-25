@@ -5,6 +5,18 @@ import { parseBody, clientBodySchema } from '../../../lib/validation'
 import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageClients, canViewClients } from '../../../lib/permissions'
 import { beginIdempotentRequest } from '../../../lib/idempotency'
+import { CLIENT_LIST_SPEC, parseListQuery, scopedWhere } from '../../../lib/listQuery'
+import type { Prisma } from '@prisma/client'
+
+/** Whole-workspace counts for the list page stat cards. */
+async function clientSummary(scope: object) {
+  const [total, restaurantHotel, highRating] = await Promise.all([
+    prisma.client.count({ where: scope }),
+    prisma.client.count({ where: scopedWhere(scope, [{ type: { in: ['restaurant', 'hotel'] } }]) }),
+    prisma.client.count({ where: scopedWhere(scope, [{ rating: { gte: 4 } }]) }),
+  ])
+  return { total, restaurantHotel, highRating }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -15,15 +27,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     if (!canViewClients(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
-    const skip = (page - 1) * limit
+    const parsed = parseListQuery(req.query, CLIENT_LIST_SPEC)
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error })
+    const { page, limit, skip, conditions, orderBy } = parsed.value
 
-    const [clients, total] = await Promise.all([
-      prisma.client.findMany({ where: tenant.resourceWhere, orderBy: [{ name: 'asc' }, { id: 'asc' }], skip, take: limit }),
-      prisma.client.count({ where: tenant.resourceWhere }),
+    const where = scopedWhere(tenant.resourceWhere, conditions)
+    const [clients, total, summary] = await Promise.all([
+      prisma.client.findMany({ where, orderBy: orderBy as Prisma.ClientOrderByWithRelationInput[], skip, take: limit }),
+      prisma.client.count({ where }),
+      parsed.value.summary ? clientSummary(tenant.resourceWhere) : undefined,
     ])
-    return res.json({ data: clients.map(dbToClient), total, page, limit, hasMore: skip + limit < total })
+    return res.json({ data: clients.map(dbToClient), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
   }
 
   if (req.method === 'POST') {

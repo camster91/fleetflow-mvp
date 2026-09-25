@@ -69,6 +69,38 @@ export const getCollection = async <T>(url: string): Promise<T[]> => {
 }
 const post = <T>(url: string, body: unknown) => apiFetch<T>(url, { method: 'POST', body: JSON.stringify(body) })
 
+// ─── Server-side list pages ───────────────────────────────────────────────────
+
+/** Query parameters for a list route; empty values are omitted from the URL. */
+export type ListParams = Record<string, string | number | boolean | null | undefined>
+export interface ListPage<T, S = undefined> {
+  data: T[]
+  total: number
+  page: number
+  limit: number
+  hasMore: boolean
+  summary?: S
+}
+export const withListParams = (url: string, params: ListParams = {}): string => {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue
+    search.set(key, String(value))
+  }
+  const qs = search.toString()
+  return qs ? `${url}${url.includes('?') ? '&' : '?'}${qs}` : url
+}
+/** Every row matching the list params (search/filters/sort), e.g. for CSV export. */
+export const getAllMatching = <T>(url: string, params: ListParams) => getCollection<T>(withListParams(url, params))
+/** One page of a list route with server-side search, filters and sort. */
+export const getListPage = <T, S = undefined>(url: string, params: ListParams, signal?: AbortSignal) =>
+  apiFetch<ListPage<T, S>>(withListParams(url, params), signal ? { signal } : undefined)
+
+export interface VehicleSummary { total: number; active: number; maintenanceDue: number; averageMileage: number }
+export interface DeliverySummary { total: number; byStatus: Record<string, number> }
+export interface MaintenanceSummary { total: number; overdue: number; dueThisWeek: number; completed: number }
+export interface ClientSummary { total: number; restaurantHotel: number; highRating: number }
+
 // ─── Idempotent creates ───────────────────────────────────────────────────────
 
 export const CREATE_NETWORK_RETRIES = 2
@@ -107,6 +139,8 @@ const del = <T>(url: string) => apiFetch<T>(url, { method: 'DELETE' })
 // ─── Vehicles ─────────────────────────────────────────────────────────────────
 
 export const getVehicles = () => getCollection<Vehicle>('/api/vehicles')
+export const getVehiclePage = (params: ListParams, signal?: AbortSignal) =>
+  getListPage<Vehicle, VehicleSummary>('/api/vehicles', params, signal)
 export const addVehicle = (v: Omit<Vehicle, 'id'>) => create<Vehicle>('/api/vehicles', v)
 export const updateVehicle = (id: string, v: Partial<Vehicle>) => put<Vehicle>(`/api/vehicles/${id}`, v)
 export const deleteVehicle = (id: string) => del<{ success: boolean }>(`/api/vehicles/${id}`)
@@ -116,6 +150,8 @@ export const getDrivers = async () => (await get<{drivers:DriverOption[]}>('/api
 // ─── Deliveries ───────────────────────────────────────────────────────────────
 
 export const getDeliveries = () => getCollection<Delivery>('/api/deliveries')
+export const getDeliveryPage = (params: ListParams, signal?: AbortSignal) =>
+  getListPage<Delivery, DeliverySummary>('/api/deliveries', params, signal)
 export const addDelivery = (d: Omit<Delivery, 'id'>) => create<Delivery>('/api/deliveries', d)
 export const updateDelivery = (id: string, d: Partial<Delivery>) => put<Delivery>(`/api/deliveries/${id}`, d)
 export const deleteDelivery = (id: string) => del<{ success: boolean }>(`/api/deliveries/${id}`)
@@ -123,6 +159,11 @@ export const deleteDelivery = (id: string) => del<{ success: boolean }>(`/api/de
 // ─── Maintenance ──────────────────────────────────────────────────────────────
 
 export const getMaintenanceTasks = () => getCollection<MaintenanceTask>('/api/maintenance')
+export const getMaintenancePage = (params: ListParams, signal?: AbortSignal) =>
+  getListPage<MaintenanceTask, MaintenanceSummary>('/api/maintenance', params, signal)
+/** Every task due in an inclusive `YYYY-MM-DD` range (calendar view). */
+export const getMaintenanceTasksDue = (dueFrom: string, dueTo: string) =>
+  getCollection<MaintenanceTask>(withListParams('/api/maintenance', { dueFrom, dueTo }))
 export const addMaintenanceTask = (t: Omit<MaintenanceTask, 'id'>) => create<MaintenanceTask>('/api/maintenance', t)
 export const updateMaintenanceTask = (id: string, t: Partial<MaintenanceTask>) =>
   put<MaintenanceTask>(`/api/maintenance/${id}`, t)
@@ -131,6 +172,8 @@ export const deleteMaintenanceTask = (id: string) => del<{ success: boolean }>(`
 // ─── Clients ──────────────────────────────────────────────────────────────────
 
 export const getClients = () => getCollection<Client>('/api/clients')
+export const getClientPage = (params: ListParams, signal?: AbortSignal) =>
+  getListPage<Client, ClientSummary>('/api/clients', params, signal)
 export const addClient = (c: Omit<Client, 'id' | 'created' | 'updated'>) => create<Client>('/api/clients', c)
 export const updateClient = (id: string, c: Partial<Client>) => put<Client>(`/api/clients/${id}`, c)
 export const deleteClient = (id: string) => del<{ success: boolean }>(`/api/clients/${id}`)

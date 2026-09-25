@@ -6,6 +6,19 @@ import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canManageMaintenance, canViewMaintenance } from '../../../lib/permissions'
 import { assignedMaintenanceWhere, driverMaintenanceDto, isDriverRole } from '../../../lib/driverScope'
 import { beginIdempotentRequest } from '../../../lib/idempotency'
+import { addDays, MAINTENANCE_LIST_SPEC, parseDueRange, parseListQuery, scopedWhere } from '../../../lib/listQuery'
+import type { Prisma } from '@prisma/client'
+
+/** Whole-scope counts for the list page stat cards, relative to the caller's `today`. */
+async function maintenanceSummary(scope: object, today: Date) {
+  const [total, overdue, dueThisWeek, completed] = await Promise.all([
+    prisma.maintenanceTask.count({ where: scope }),
+    prisma.maintenanceTask.count({ where: scopedWhere(scope, [{ completed: false, dueDate: { lt: today } }]) }),
+    prisma.maintenanceTask.count({ where: scopedWhere(scope, [{ completed: false, dueDate: { gte: today, lt: addDays(today, 8) } }]) }),
+    prisma.maintenanceTask.count({ where: scopedWhere(scope, [{ completed: true }]) }),
+  ])
+  return { total, overdue, dueThisWeek, completed }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const context = await requireTenantContext(req, res)
@@ -16,22 +29,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     if (!canViewMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50))
-    const skip = (page - 1) * limit
+    const parsed = parseListQuery(req.query, MAINTENANCE_LIST_SPEC)
+    if (!parsed.ok) return res.status(400).json({ error: parsed.error })
+    const range = parseDueRange(req.query)
+    if (!range.ok) return res.status(400).json({ error: range.error })
+    const { page, limit, skip, conditions, orderBy, today } = parsed.value
 
-    const where=assignedMaintenanceWhere(tenant.resourceWhere,tenant.role,userId)
-    const [tasks, total] = await Promise.all([
+    const scope=assignedMaintenanceWhere(tenant.resourceWhere,tenant.role,userId)
+    const where = scopedWhere(scope, range.value ? [...conditions, range.value] : conditions)
+    const [tasks, total, summary] = await Promise.all([
       prisma.maintenanceTask.findMany({
         where,
-        orderBy: [{ dueDate: 'asc' }, { id: 'asc' }],
+        orderBy: orderBy as Prisma.MaintenanceTaskOrderByWithRelationInput[],
         include: { vehicle: { select: { name: true } } },
         skip,
         take: limit,
       }),
       prisma.maintenanceTask.count({ where }),
+      parsed.value.summary ? maintenanceSummary(scope, today) : undefined,
     ])
-    return res.json({ data: tasks.map(task=>isDriverRole(tenant.role)?driverMaintenanceDto(task):dbToMaintenanceTask(task)), total, page, limit, hasMore: skip + limit < total })
+    return res.json({ data: tasks.map(task=>isDriverRole(tenant.role)?driverMaintenanceDto(task):dbToMaintenanceTask(task)), total, page, limit, hasMore: skip + limit < total, ...(summary ? { summary } : {}) })
   }
 
   if (req.method === 'POST') {

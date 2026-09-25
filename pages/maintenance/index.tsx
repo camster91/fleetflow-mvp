@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Wrench, Plus, AlertTriangle, CheckCircle, Clock, Download,
-  ChevronLeft, ChevronRight, List, Grid,
+  ChevronLeft, ChevronRight, List, Grid, Search,
 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layouts/DashboardLayout';
 import { PageHeader } from '../../components/PageHeader';
@@ -10,6 +10,8 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { SkeletonTable } from '../../components/ui/Skeleton';
+import { InlineAlert } from '../../components/ui/Alert';
+import { Pagination, SortSelect, type SortOption } from '../../components/ui/Pagination';
 import * as api from '../../services/apiService';
 import type { MaintenanceTask, Vehicle } from '../../services/apiService';
 import { notify } from '../../services/notifications';
@@ -20,15 +22,23 @@ import toast from 'react-hot-toast';
 import { downloadCSV } from '../../lib/csvExport';
 import { localDateOnly } from '../../lib/dateOnly';
 import { useRecordQuery } from '../../hooks/useRecordQuery';
+import { useDataFetch } from '../../hooks/useDataFetch';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole';
 import { canManageMaintenance } from '../../lib/permissions';
 
+const SORT_OPTIONS: SortOption[] = [
+  { value: '', label: 'Due date (soonest)' },
+  { value: 'dueDate', label: 'Due date (latest)', order: 'desc' },
+  { value: 'vehicle', label: 'Vehicle (A–Z)', order: 'asc' },
+  { value: 'title', label: 'Task (A–Z)', order: 'asc' },
+  { value: 'createdAt', label: 'Recently added', order: 'desc' },
+];
+const FILTERS = ['all', 'overdue', 'upcoming', 'completed'] as const;
+const pad = (value: number) => String(value).padStart(2, '0');
+
 export default function MaintenancePage() {
   const parseDateOnly = (value: string) => new Date(`${value.split('T')[0]}T12:00:00`);
-  const [tasks, setTasks] = useState<MaintenanceTask[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'overdue' | 'completed'>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
@@ -38,35 +48,49 @@ export default function MaintenancePage() {
   const { role } = useWorkspaceRole();
   const canManage = role !== null && canManageMaintenance(role);
 
-  const loadData = useCallback(async () => {
-    try {
-      // Vehicles only feed the form picker; technicians may not list vehicles but must still see their work.
-      const [t, v] = await Promise.all([api.getMaintenanceTasks(), api.getVehicles().catch(() => [] as Vehicle[])]);
-      setTasks(t); setVehicles(v);
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed to load data'); }
-    finally { setIsLoading(false); }
-  }, []);
+  // Overdue/upcoming and the stat cards are relative to the viewer's calendar day.
+  const todayKey = localDateOnly();
+  const list = usePaginatedList<MaintenanceTask, api.MaintenanceSummary>({
+    fetchPage: (params, signal) => api.getMaintenancePage({ ...params, summary: 1 }, signal),
+    filterKeys: ['state'],
+    sortKeys: ['dueDate', 'vehicle', 'title', 'createdAt'],
+    extraParams: { today: todayKey },
+  });
+  const { rows: filteredTasks, summary, filters, setFilter, isFiltered } = list;
+  const filter = (filters.state || 'all') as typeof FILTERS[number];
 
-  useEffect(() => { loadData(); }, [loadData]);
+  // The calendar shows every task due in the visible month (unfiltered, as before).
+  const monthStart = `${currentMonth.getFullYear()}-${pad(currentMonth.getMonth() + 1)}-01`;
+  const monthEnd = `${currentMonth.getFullYear()}-${pad(currentMonth.getMonth() + 1)}-${pad(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate())}`;
+  const calendar = useDataFetch<MaintenanceTask[]>(
+    () => viewMode === 'calendar' ? api.getMaintenanceTasksDue(monthStart, monthEnd) : Promise.resolve([]),
+    [],
+    [viewMode, monthStart, monthEnd]
+  );
+  const tasks = calendar.data;
+  const isLoading = list.loading || (viewMode === 'calendar' && calendar.loading);
+  const fetchError = list.error ?? (viewMode === 'calendar' ? calendar.error : null);
+
+  // Vehicles only feed the form picker; technicians may not list vehicles but must still see their work.
+  const { data: vehicles, refetch: loadVehicles } = useDataFetch<Vehicle[]>(
+    () => canManage ? api.getVehicles().catch(() => [] as Vehicle[]) : Promise.resolve([]),
+    [],
+    [canManage]
+  );
+
+  const { refetch: loadList } = list;
+  const { refetch: loadCalendar } = calendar;
+  const loadData = useCallback(async () => {
+    await Promise.all([loadList(), loadCalendar(), loadVehicles()]);
+  }, [loadList, loadCalendar, loadVehicles]);
 
   const today = new Date();
-  const filteredTasks = tasks.filter((task) => {
-    const dueDate = parseDateOnly(task.dueDate);
-    const isOverdue = dueDate < today && !task.completed;
-    const isUpcoming = dueDate >= today && !task.completed;
-    switch (filter) {
-      case 'overdue': return isOverdue;
-      case 'upcoming': return isUpcoming;
-      case 'completed': return task.completed;
-      default: return true;
-    }
-  });
 
   const stats = [
-    { title: 'Total Tasks', value: tasks.length, icon: <Wrench className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
-    { title: 'Overdue', value: tasks.filter((t) => parseDateOnly(t.dueDate) < today && !t.completed).length, icon: <AlertTriangle className="h-6 w-6 text-red-600" />, iconBgColor: 'bg-red-50' },
-    { title: 'Due This Week', value: tasks.filter((t) => { const d = parseDateOnly(t.dueDate); return d >= today && d <= new Date(today.getTime() + 7 * 86400000) && !t.completed; }).length, icon: <Clock className="h-6 w-6 text-amber-600" />, iconBgColor: 'bg-amber-50' },
-    { title: 'Completed', value: tasks.filter((t) => t.completed).length, icon: <CheckCircle className="h-6 w-6 text-emerald-600" />, iconBgColor: 'bg-emerald-50' },
+    { title: 'Total Tasks', value: summary?.total ?? 0, icon: <Wrench className="h-6 w-6 text-blue-600" />, iconBgColor: 'bg-blue-50' },
+    { title: 'Overdue', value: summary?.overdue ?? 0, icon: <AlertTriangle className="h-6 w-6 text-red-600" />, iconBgColor: 'bg-red-50' },
+    { title: 'Due This Week', value: summary?.dueThisWeek ?? 0, icon: <Clock className="h-6 w-6 text-amber-600" />, iconBgColor: 'bg-amber-50' },
+    { title: 'Completed', value: summary?.completed ?? 0, icon: <CheckCircle className="h-6 w-6 text-emerald-600" />, iconBgColor: 'bg-emerald-50' },
   ];
 
   const getPriorityBadge = (priority: string) => {
@@ -90,8 +114,9 @@ export default function MaintenancePage() {
     });
   };
 
+  const loadedTasks = useMemo(() => [...filteredTasks, ...tasks], [filteredTasks, tasks]);
   useRecordQuery({
-    records: tasks,
+    records: loadedTasks,
     loading: isLoading,
     resource: 'maintenance',
     onMatch: (task) => { setSelectedTask(task); setIsDetailOpen(true); },
@@ -122,7 +147,7 @@ export default function MaintenancePage() {
               <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 text-sm flex items-center gap-1.5 border-l border-slate-200 ${ viewMode === 'list' ? 'bg-blue-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50' }`}><List className="h-4 w-4" />List</button>
             </div>
             <Button variant="outline" size="sm" iconLeft={<Download className="h-4 w-4" />} onClick={() => {
-              downloadCSV('maintenance-tasks', tasks.map(t => ({
+              api.getAllMatching<MaintenanceTask>('/api/maintenance', { ...list.queryParams, today: todayKey }).then((rows) => downloadCSV('maintenance-tasks', rows.map(t => ({
                 Vehicle: t.vehicle,
                 Type: t.type,
                 'Due Date': t.dueDate,
@@ -130,7 +155,7 @@ export default function MaintenancePage() {
                 Completed: t.completed ? 'Yes' : 'No',
                 'Cost Estimate': t.costEstimate || '',
                 Notes: t.notes || '',
-              })));
+              })))).catch((err: unknown) => toast.error(err instanceof Error ? err.message : 'Failed to export maintenance tasks'));
             }}>Export CSV</Button>
             {canManage && <Button variant="primary" size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => setIsFormOpen(true)}>Add Task</Button>}
           </div>
@@ -151,11 +176,23 @@ export default function MaintenancePage() {
         </div>
       </div>
 
+      {fetchError && (
+        <InlineAlert
+          type="error"
+          title="Couldn’t load maintenance tasks"
+          className="mb-4"
+          actionLabel="Try again"
+          onAction={() => void loadData()}
+        >
+          {fetchError}
+        </InlineAlert>
+      )}
+
       {/* Filters */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-4 px-4">
-        {(['all', 'overdue', 'upcoming', 'completed'] as const).map((f) => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === f ? 'bg-blue-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}>
+        {FILTERS.map((f) => (
+          <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter('state', f)}
+            className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === f ? 'bg-blue-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}>
             {f === 'all' ? 'All Tasks' : f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
         ))}
@@ -165,9 +202,18 @@ export default function MaintenancePage() {
       {viewMode === 'list' ? (
         // LIST VIEW
         <Card>
-          {isLoading ? <SkeletonTable rows={5} columns={5} /> : filteredTasks.length === 0 ? (
-            <EmptyState type="data" title="No tasks" description="No maintenance tasks match your filter" />
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input type="search" aria-label="Search maintenance tasks" placeholder="Search by task or vehicle..." value={list.searchInput} onChange={(e) => list.setSearchInput(e.target.value)}
+                className="w-full min-h-11 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-900" />
+            </div>
+            <SortSelect id="maintenance-sort" options={SORT_OPTIONS} sort={list.sort} order={list.order} onChange={list.setSort} />
+          </div>
+          {list.loading && filteredTasks.length === 0 ? <SkeletonTable rows={5} columns={5} /> : filteredTasks.length === 0 ? (
+            <EmptyState type={isFiltered ? 'search' : 'data'} title="No tasks" description={isFiltered ? 'No maintenance tasks match your search or filter' : 'No maintenance tasks yet'} />
           ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-slate-100">
@@ -209,6 +255,18 @@ export default function MaintenancePage() {
                 </tbody>
               </table>
             </div>
+            <div className="pt-4 mt-2 border-t border-slate-100">
+              <Pagination
+                label="tasks"
+                page={list.page}
+                pageSize={list.pageSize}
+                total={list.total}
+                onPageChange={list.setPage}
+                onPageSizeChange={list.setPageSize}
+                disabled={list.loading}
+              />
+            </div>
+            </>
           )}
         </Card>
       ) : (
@@ -230,7 +288,7 @@ export default function MaintenancePage() {
             </div>
           </div>
 
-          {isLoading ? <SkeletonTable rows={5} columns={7} /> : (
+          {calendar.loading ? <SkeletonTable rows={5} columns={7} /> : (
             <div className="max-w-full overflow-x-auto">
             <div className="grid grid-cols-7 gap-px bg-slate-200 border border-slate-200 rounded-lg overflow-hidden min-w-[640px]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (

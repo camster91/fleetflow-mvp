@@ -14,6 +14,8 @@ jest.mock('next/router', () => ({ useRouter: () => mockRouter }))
 jest.mock('@/lib/session', () => ({ useSession: () => ({ data: { user: { id: 'u1', name: 'Casey', role: 'user' } }, status: 'authenticated' }) }))
 jest.mock('@/services/apiService', () => ({
   getVehicles: jest.fn(), getDeliveries: jest.fn(), getClients: jest.fn(), getMaintenanceTasks: jest.fn(),
+  getVehiclePage: jest.fn(), getDeliveryPage: jest.fn(), getClientPage: jest.fn(), getMaintenancePage: jest.fn(),
+  getMaintenanceTasksDue: jest.fn(),
   getSOPCategories: jest.fn(), getVendingMachines: jest.fn(),
   deleteVehicle: jest.fn(), deleteDelivery: jest.fn(), updateDelivery: jest.fn(), updateMaintenanceTask: jest.fn(),
   deleteSOPCategory: jest.fn(), deleteVendingMachine: jest.fn(),
@@ -60,6 +62,12 @@ beforeEach(() => {
   ;(api.getDeliveries as jest.Mock).mockResolvedValue([delivery])
   ;(api.getClients as jest.Mock).mockResolvedValue([client])
   ;(api.getMaintenanceTasks as jest.Mock).mockResolvedValue([task])
+  const page = (row: unknown) => ({ data: [row], total: 1, page: 1, limit: 25, hasMore: false })
+  ;(api.getVehiclePage as jest.Mock).mockResolvedValue(page(vehicle))
+  ;(api.getDeliveryPage as jest.Mock).mockResolvedValue(page(delivery))
+  ;(api.getClientPage as jest.Mock).mockResolvedValue(page(client))
+  ;(api.getMaintenancePage as jest.Mock).mockResolvedValue(page(task))
+  ;(api.getMaintenanceTasksDue as jest.Mock).mockResolvedValue([task])
   ;(api.getSOPCategories as jest.Mock).mockResolvedValue([{ id: 's1', name: 'Safety', description: '', count: 1 }])
   ;(api.getVendingMachines as jest.Mock).mockResolvedValue([{ id: 'vm1', name: 'Lobby', location: 'HQ', status: 'active' }])
   global.fetch = jest.fn(() => jsonResponse({})) as unknown as typeof fetch
