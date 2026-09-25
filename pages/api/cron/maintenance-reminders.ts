@@ -16,13 +16,13 @@ const CLAIM_BATCH_SIZE = 10
 type ReminderKind = 'due_soon' | 'overdue'
 
 /**
- * Dedupe rules (at most one reminder per task per day, using reminderSentAt):
+ * Dedupe rules (at most one reminder of each kind per task):
  * - due soon: due between the start of today (UTC) and the end of the 7th day
- *   ahead, and never reminded.
- * - overdue: due before the start of today (UTC) and not reminded since the
- *   due date (never reminded, or only an earlier "due soon" reminder). Claiming
- *   sets reminderSentAt after the due date, so each task gets one overdue
- *   reminder.
+ *   ahead, and reminderSentAt is unset. Claiming sets reminderSentAt.
+ * - overdue: due before the start of today (UTC) and no overdue reminder since
+ *   the due date (overdueReminderSentAt unset, or older than a rescheduled due
+ *   date). Claiming sets overdueReminderSentAt. A separate column means a task
+ *   reminded on its due day still gets its one overdue reminder later.
  *
  * Date-only due dates are stored at UTC midnight (lib/dateOnly.ts), so "today"
  * is the current UTC day. A per-workspace time zone is a follow-up.
@@ -31,8 +31,8 @@ function reminderConditions(kind: ReminderKind): Prisma.MaintenanceTaskWhereInpu
   if (kind === 'due_soon') return { reminderSentAt: null }
   return {
     OR: [
-      { reminderSentAt: null },
-      { reminderSentAt: { lt: prisma.maintenanceTask.fields.dueDate } },
+      { overdueReminderSentAt: null },
+      { overdueReminderSentAt: { lt: prisma.maintenanceTask.fields.dueDate } },
     ],
   }
 }
@@ -45,7 +45,7 @@ async function claimAndNotify(
   return prisma.$transaction(async (tx) => {
     const claimed = await tx.maintenanceTask.updateMany({
       where: { id: task.id, completed: false, ...reminderConditions(kind) },
-      data: { reminderSentAt: now },
+      data: kind === 'overdue' ? { overdueReminderSentAt: now } : { reminderSentAt: now },
     })
     if (claimed.count !== 1) return false
 

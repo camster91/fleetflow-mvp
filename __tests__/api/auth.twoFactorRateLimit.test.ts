@@ -2,7 +2,7 @@ import { createMocks } from 'node-mocks-http'
 
 // Real limiter (lib/rateLimit is intentionally NOT mocked here).
 jest.mock('@/lib/prisma', () => ({
-  prisma: { user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() } },
+  prisma: { user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn(async () => ({ count: 1 })) } },
 }))
 jest.mock('@/lib/cryptoSecrets', () => ({ decryptSecret: jest.fn(() => 'secret') }))
 jest.mock('@/lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }))

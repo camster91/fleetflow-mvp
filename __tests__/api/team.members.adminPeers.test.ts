@@ -13,10 +13,12 @@ jest.mock('@/lib/prisma', () => {
     update: jest.fn(),
     delete: jest.fn(),
   }
+  const user = { update: jest.fn() }
   return {
     prisma: {
       teamMember,
-      $transaction: jest.fn((callback: (client: unknown) => unknown) => callback({ teamMember })),
+      user,
+      $transaction: jest.fn((callback: (client: unknown) => unknown) => callback({ teamMember, user })),
     },
   }
 })
@@ -73,6 +75,27 @@ describe('/api/team/members — admins are peers', () => {
     await handler(del.req as never, del.res as never)
     expect(del.res._getStatusCode()).toBe(200)
     expect(prisma.teamMember.delete).toHaveBeenCalled()
+    // Removal revokes the removed member's sessions in the same transaction.
+    expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'member-1' }, data: { tokenVersion: { increment: 1 } } })
+  })
+
+  it('keeps the sessions of a member who leaves the team themselves', async () => {
+    actAs('member-1', 'MEMBER')
+    target('MEMBER', 'member-1')
+    const del = createMocks({ method: 'DELETE', query: { memberId: 'm-target' } })
+    await handler(del.req as never, del.res as never)
+    expect(del.res._getStatusCode()).toBe(200)
+    expect(prisma.teamMember.delete).toHaveBeenCalled()
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
+
+  it('does not touch any user when removing a pending invite with no account', async () => {
+    actAs('owner-1', null)
+    target('MEMBER', null as unknown as string)
+    const del = createMocks({ method: 'DELETE', query: { memberId: 'm-target' } })
+    await handler(del.req as never, del.res as never)
+    expect(del.res._getStatusCode()).toBe(200)
+    expect(prisma.user.update).not.toHaveBeenCalled()
   })
 
   it('lets the owner change and remove an admin', async () => {

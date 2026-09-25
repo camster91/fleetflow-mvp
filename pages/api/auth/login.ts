@@ -5,9 +5,10 @@ import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 import { hashToken } from '../../../lib/tokens'
 import { assertSameOrigin } from '../../../lib/apiAuth'
 import { beginTwoFactorCookies, establishSessionCookies } from '../../../lib/authCookies'
-import { isAccountLocked, nextFailedAttemptState } from '../../../lib/loginLockout'
+import { isAccountLocked, notLockedWhere, recordFailedAttempt } from '../../../lib/loginLockout'
 
 class LoginCodeAlreadyConsumedError extends Error {}
+class AccountLockedError extends Error {}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -55,17 +56,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   })
 
   if (!tokenRecord || new Date(tokenRecord.expires) < new Date()) {
-    // Invalid or expired code — update attempts + clean up token atomically
-    // An expired lock restarts the counter (see nextFailedAttemptState).
-    await prisma.$transaction([
-      prisma.user.update({
-        where: { id: user.id },
-        data: nextFailedAttemptState(user),
-      }),
-      ...(tokenRecord
-        ? [prisma.verificationToken.deleteMany({ where: { identifier: `login:${normalizedEmail}` } })]
-        : []),
-    ])
+    // Invalid or expired code: count the failure atomically in the database
+    // (never from the stale snapshot above) and discard an expired code.
+    await recordFailedAttempt(prisma, user.id)
+    if (tokenRecord) {
+      await prisma.verificationToken.deleteMany({ where: { identifier: `login:${normalizedEmail}` } })
+    }
     return res.status(401).json({ error: 'Invalid or expired code' })
   }
 
@@ -83,8 +79,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       if (consumed.count !== 1) throw new LoginCodeAlreadyConsumedError()
 
-      await tx.user.update({
-        where: { id: user.id },
+      // Only clear the counter while the account is still unlocked; a lock set
+      // concurrently after the snapshot above must win.
+      const signedIn = await tx.user.updateMany({
+        where: { id: user.id, ...notLockedWhere() },
         data: {
           failedLoginAttempts: 0,
           lockedUntil: null,
@@ -92,10 +90,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           emailVerified: user.emailVerified ?? new Date(),
         },
       })
+      if (signedIn.count !== 1) throw new AccountLockedError()
     })
   } catch (error) {
     if (error instanceof LoginCodeAlreadyConsumedError) {
       return res.status(401).json({ error: 'Invalid or expired code' })
+    }
+    if (error instanceof AccountLockedError) {
+      return res.status(423).json({ error: 'Account temporarily locked. Try again later.' })
     }
     throw error
   }

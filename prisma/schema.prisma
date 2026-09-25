@@ -542,7 +542,8 @@ model MaintenanceTask {
   priority          String   @default("medium") // high, medium, low
   completed         Boolean  @default(false)
   completedDate     DateTime?
-  reminderSentAt    DateTime?
+  reminderSentAt    DateTime? // "due soon" reminder
+  overdueReminderSentAt DateTime? // one-time overdue reminder (separate so a due-day reminder does not suppress it)
 
   // Details
   notes             String?

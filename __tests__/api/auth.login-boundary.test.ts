@@ -2,7 +2,7 @@ import { createMocks } from 'node-mocks-http'
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 jest.mock('@/lib/prisma', () => ({ prisma: {
-  user: { findUnique: jest.fn(), update: jest.fn() },
+  user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
   verificationToken: { findFirst: jest.fn(), deleteMany: jest.fn() },
   $transaction: jest.fn(),
 } }))
@@ -35,9 +35,10 @@ describe('POST /api/auth/login boundary', () => {
       if (typeof operation !== 'function') return Promise.all(operation)
       return operation({
         verificationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) },
-        user: { update: jest.fn().mockResolvedValue(user) },
+        user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       })
     })
+    ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
   })
 
   it('rejects cross-origin login before rate limit or database work', async () => {
@@ -61,7 +62,7 @@ describe('POST /api/auth/login boundary', () => {
     const deleteMany = jest.fn().mockResolvedValue({ count: 0 })
     const update = jest.fn()
     ;(prisma.$transaction as jest.Mock).mockImplementationOnce(async (operation) =>
-      operation({ verificationToken: { deleteMany }, user: { update } })
+      operation({ verificationToken: { deleteMany }, user: { updateMany: update } })
     )
 
     const { req, res } = request('https://fleetvera.example')
@@ -106,31 +107,47 @@ describe('POST /api/auth/login boundary', () => {
       ...user, failedLoginAttempts: 5, lockedUntil: new Date(Date.now() - 1000),
     })
     ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.user.update as jest.Mock).mockImplementation((args) => args)
 
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)
 
     expect(res._getStatusCode()).toBe(401)
-    // One wrong code after an expired lock must not re-lock the account.
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'u1' },
-      data: { failedLoginAttempts: 1, lockedUntil: null },
+    // The expired lock is cleared (guarded on it having lapsed) before counting.
+    const calls = (prisma.user.updateMany as jest.Mock).mock.calls.map(([args]) => args)
+    expect(calls[0]).toEqual({
+      where: { id: 'u1', lockedUntil: { lte: expect.any(Date) } },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
     })
+    expect(calls[1]).toEqual({ where: { id: 'u1' }, data: { failedLoginAttempts: { increment: 1 } } })
+    expect(prisma.user.update).not.toHaveBeenCalled()
   })
 
   it('locks on the fifth consecutive failure', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...user, failedLoginAttempts: 4 })
     ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.user.update as jest.Mock).mockImplementation((args) => args)
 
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'u1' },
-      data: { failedLoginAttempts: 5, lockedUntil: expect.any(Date) },
+    // The lock is a conditional write on the stored count, and revokes sessions.
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'u1', lockedUntil: null, failedLoginAttempts: { gte: 5 } },
+      data: { lockedUntil: expect.any(Date), tokenVersion: { increment: 1 } },
     })
+  })
+
+  it('refuses the session when the account was locked after the snapshot', async () => {
+    const updateMany = jest.fn().mockResolvedValue({ count: 0 })
+    ;(prisma.$transaction as jest.Mock).mockImplementationOnce(async (operation) =>
+      operation({ verificationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) }, user: { updateMany } })
+    )
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'u1', OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }] },
+    }))
+    expect(res._getStatusCode()).toBe(423)
+    expect(signToken).not.toHaveBeenCalled()
   })
 
   it('still refuses an account whose lock has not expired', async () => {

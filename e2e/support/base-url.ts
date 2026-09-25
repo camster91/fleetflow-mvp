@@ -1,5 +1,7 @@
 export const LOCAL_BASE_URL = 'http://localhost:3000';
-const PRODUCTION_HOSTS = ['fleet.ashbi.ca'];
+// Every hostname that serves production (see docs/product-control.md and
+// docs/release/task16-readiness-report.md). Subdomains are covered too.
+export const PRODUCTION_HOSTS = ['fleet.ashbi.ca', 'fleetflow.ashbi.ca'] as const;
 
 /**
  * Resolve the Playwright target. Without PLAYWRIGHT_TEST_BASE_URL the suite

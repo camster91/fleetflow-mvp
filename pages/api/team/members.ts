@@ -194,7 +194,16 @@ export default async function handler(
           return res.status(403).json({ error: 'Cannot remove owner' });
         }
 
-        await prisma.$transaction(async tx=>{await clearDriverAssignments(tx,member.teamId,member.userId,{actorId:userId,actorName:session.user.name,actorRole:isOwner?'OWNER':'ADMIN'});await tx.teamMember.delete({where:{id:memberId}})});
+        await prisma.$transaction(async tx=>{
+          await clearDriverAssignments(tx,member.teamId,member.userId,{actorId:userId,actorName:session.user.name,actorRole:isOwner?'OWNER':'ADMIN'});
+          await tx.teamMember.delete({where:{id:memberId}});
+          // A member removed by someone else loses every issued session, so no
+          // token minted while they belonged to the team outlives the removal.
+          // Leaving a team yourself keeps your own sessions.
+          if (member.userId && !isSelf) {
+            await tx.user.update({ where: { id: member.userId }, data: { tokenVersion: { increment: 1 } } });
+          }
+        });
 
         return res.status(200).json({ success: true });
       } catch (error) {

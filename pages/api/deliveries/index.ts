@@ -1,9 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { dbToDelivery, deliveryToDb, logActivity } from '../../../lib/fleet'
+import type { Delivery } from '../../../lib/fleet'
 import { createNotification } from '../../../lib/notifications'
 import { notifyDeliveryAssigned } from '../../../lib/email.server'
-import { parseBody, deliveryBodySchema } from '../../../lib/validation'
+import { deliveryCreateSchema, invalidDeliveryFields } from '../../../lib/deliveryTransitions'
 import { requireTenantContext, assertSameOrigin } from '../../../lib/apiAuth'
 import { canAssignDrivers, canManageDeliveries, canViewDeliveries } from '../../../lib/permissions'
 import { resolveDriverAssignment } from '../../../lib/driverAssignment'
@@ -32,12 +33,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'POST') {
     if (!canManageDeliveries(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
-    const parsed = parseBody(deliveryBodySchema, req.body)
-    if ('error' in parsed) return res.status(400).json({ error: parsed.error })
-    if (Object.prototype.hasOwnProperty.call(req.body, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+    const parsed = deliveryCreateSchema.safeParse(req.body ?? {})
+    if (!parsed.success) return res.status(400).json({ error: 'Invalid delivery', fields: invalidDeliveryFields(parsed.error) })
+    // Only validated fields reach the database; the driver name is derived from the assignment.
+    const { driver: _driver, ...body } = parsed.data
+    if (Object.prototype.hasOwnProperty.call(body, 'assignedDriverId') && !canAssignDrivers(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
     let assignment
-    try { assignment = await resolveDriverAssignment(prisma, tenant, parsed.data.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
-    const mapped = deliveryToDb({ ...req.body, ...parsed.data, driver: assignment.driver }, tenant.ownerId)
+    try { assignment = await resolveDriverAssignment(prisma, tenant, body.assignedDriverId) } catch { return res.status(400).json({ error: 'Invalid driver assignment' }) }
+    const mapped = deliveryToDb({ ...body, driver: assignment.driver } as Omit<Delivery, 'id'>, tenant.ownerId)
     const data = { ...mapped, ...assignment, ownerId: tenant.ownerId, teamId: tenant.teamId }
     const delivery = await prisma.$transaction(async (tx) => {
       const created = await tx.delivery.create({ data })

@@ -34,6 +34,12 @@ const enabledUser = {
   tokenVersion: 0, lastTotpStep: null, failedLoginAttempts: 0, lockedUntil: null,
 }
 
+const incrementCall = { where: { id: 'u1' }, data: { failedLoginAttempts: { increment: 1 } } }
+const lockCall = {
+  where: { id: 'u1', lockedUntil: null, failedLoginAttempts: { gte: 5 } },
+  data: { lockedUntil: expect.any(Date), tokenVersion: { increment: 1 } },
+}
+
 function validateRequest(code: string) {
   return createMocks({
     method: 'POST',
@@ -84,7 +90,9 @@ describe('POST /api/auth/2fa/validate', () => {
       where: {
         id: 'u1',
         twoFactorEnabled: true,
-        OR: [{ lastTotpStep: null }, { lastTotpStep: { lt: expect.any(Number) } }],
+        tokenVersion: 4,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }],
+        AND: [{ OR: [{ lastTotpStep: null }, { lastTotpStep: { lt: expect.any(Number) } }] }],
       },
       data: expect.objectContaining({ lastTotpStep: expect.any(Number), failedLoginAttempts: 0 }),
     })
@@ -112,10 +120,8 @@ describe('POST /api/auth/2fa/validate', () => {
 
     expect(res._getStatusCode()).toBe(400)
     expect(signToken).not.toHaveBeenCalled()
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'u1' },
-      data: { failedLoginAttempts: 1, lockedUntil: null },
-    })
+    expect(prisma.user.updateMany).toHaveBeenCalledWith(incrementCall)
+    expect(prisma.user.update).not.toHaveBeenCalled()
   })
 
   it('does not run bcrypt for a wrong 6-digit code and counts the failure', async () => {
@@ -130,10 +136,9 @@ describe('POST /api/auth/2fa/validate', () => {
     expect(res._getStatusCode()).toBe(400)
     expect(bcrypt.compare).not.toHaveBeenCalled()
     expect(bcrypt.compareSync).not.toHaveBeenCalled()
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'u1' },
-      data: { failedLoginAttempts: 1, lockedUntil: null },
-    })
+    // Counted in the database, never as an absolute value from the snapshot.
+    expect(prisma.user.updateMany).toHaveBeenCalledWith(incrementCall)
+    expect(prisma.user.update).not.toHaveBeenCalled()
   })
 
   it('rejects malformed input without trying TOTP or backup codes', async () => {
@@ -158,10 +163,8 @@ describe('POST /api/auth/2fa/validate', () => {
 
     await handler(req as never, res as never)
 
-    expect(prisma.user.update).toHaveBeenCalledWith({
-      where: { id: 'u1' },
-      data: { failedLoginAttempts: 5, lockedUntil: expect.any(Date) },
-    })
+    expect(prisma.user.updateMany).toHaveBeenCalledWith(incrementCall)
+    expect(prisma.user.updateMany).toHaveBeenCalledWith(lockCall)
     expect(res._getStatusCode()).toBe(400)
   })
 
@@ -200,9 +203,14 @@ describe('POST /api/auth/2fa/validate', () => {
     expect(speakeasy.totp.verifyDelta).not.toHaveBeenCalled()
     expect(bcrypt.compareSync).not.toHaveBeenCalled()
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
-      where: { id: 'u1', backupCodes: '["h1","h2"]', twoFactorEnabled: true },
-      data: { backupCodes: '["h1"]' },
+      where: {
+        id: 'u1', twoFactorEnabled: true, tokenVersion: 0,
+        OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }],
+        backupCodes: '["h1","h2"]',
+      },
+      data: expect.objectContaining({ backupCodes: '["h1"]', failedLoginAttempts: 0, lockedUntil: null }),
     })
+    expect(prisma.user.update).not.toHaveBeenCalled()
     expect(res._getStatusCode()).toBe(200)
     expect(JSON.parse(res._getData())).toEqual(expect.objectContaining({ isBackupCode: true }))
   })
@@ -234,14 +242,38 @@ describe('POST /api/auth/2fa/validate', () => {
     await handler(req as never, res as never)
 
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
-      where: {
+      where: expect.objectContaining({
         id: 'u1',
         backupCodes: '["hashed-backup-code"]',
         twoFactorEnabled: true,
-      },
-      data: { backupCodes: '[]' },
+      }),
+      data: expect.objectContaining({ backupCodes: '[]' }),
     })
     expect(res._getStatusCode()).toBe(400)
     expect(signToken).not.toHaveBeenCalled()
+  })
+
+  it('does not issue a session or clear a lock set concurrently after the snapshot', async () => {
+    // Snapshot says unlocked; by the time the success write runs, another
+    // request has locked the account (and bumped tokenVersion), so the guarded
+    // write matches no row.
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(enabledUser)
+    ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
+    const { req, res } = validateRequest('123456')
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(400)
+    expect(signToken).not.toHaveBeenCalled()
+    const successWrite = (prisma.user.updateMany as jest.Mock).mock.calls[0][0]
+    expect(successWrite.where).toEqual(expect.objectContaining({
+      tokenVersion: 0,
+      OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }],
+    }))
+    // Every write that clears lockedUntil is conditioned on the stored lock.
+    for (const [args] of (prisma.user.updateMany as jest.Mock).mock.calls) {
+      if (args.data.lockedUntil === null) expect('OR' in args.where || 'lockedUntil' in args.where).toBe(true)
+    }
+    expect(prisma.user.update).not.toHaveBeenCalled()
   })
 })

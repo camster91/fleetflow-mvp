@@ -42,6 +42,7 @@ describe('notifications API contracts', () => {
     })
     expect(prisma.notification.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { userId: 'user-1' }, take: 3,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     }))
   })
 

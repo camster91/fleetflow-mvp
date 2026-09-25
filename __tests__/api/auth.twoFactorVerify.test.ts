@@ -16,7 +16,7 @@ jest.mock('@/lib/cryptoSecrets', () => ({ decryptSecret: jest.fn(() => 'BASE32SE
 jest.mock('@/lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }))
 jest.mock('speakeasy', () => ({
   __esModule: true,
-  default: { totp: { verify: jest.fn(() => true) } },
+  default: { totp: { verifyDelta: jest.fn(() => ({ delta: -1 })) } },
 }))
 jest.mock('bcryptjs', () => ({
   compareSync: jest.fn((value: string, hash: string) => hash === `hash(${value})`),
@@ -49,7 +49,9 @@ describe('POST /api/auth/2fa/verify setup', () => {
       method: 'POST',
       body: { code: '123456', backupCodes, isSetup: true },
     })
+    const before = Math.floor(Date.now() / 1000 / 30) - 1
     await handler(req as never, res as never)
+    const after = Math.floor(Date.now() / 1000 / 30) - 1
 
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: {
@@ -58,8 +60,13 @@ describe('POST /api/auth/2fa/verify setup', () => {
         twoFactorSecret: 'encrypted-secret',
         backupCodes: JSON.stringify(storedBackupCodes),
       },
-      data: { twoFactorEnabled: true, tokenVersion: { increment: 1 } },
+      data: { twoFactorEnabled: true, lastTotpStep: expect.any(Number), tokenVersion: { increment: 1 } },
     })
+    // The matched setup step (current step + delta) is stored atomically with
+    // enabling 2FA, so /api/auth/2fa/validate rejects a replay of this code.
+    const recordedStep = (prisma.user.updateMany as jest.Mock).mock.calls[0][0].data.lastTotpStep
+    expect(recordedStep).toBeGreaterThanOrEqual(before)
+    expect(recordedStep).toBeLessThanOrEqual(after)
     // Enabling 2FA revokes other sessions and re-issues this one at the new version.
     expect(signToken).toHaveBeenCalledWith(expect.objectContaining({ sub: 'u1', tv: 3 }))
     expect(res.getHeader('set-cookie')).toEqual(expect.stringContaining('token=rotated-session'))
