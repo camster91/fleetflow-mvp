@@ -5,7 +5,12 @@ import { PlanBanner } from '@/components/PlanBanner'
 const DAY = 86_400_000
 const inDays = (days: number) => new Date(Date.now() + days * DAY).toISOString()
 
-function mockEntitlement(entitlement: Record<string, unknown>, canManageBilling = true, ok = true) {
+function mockEntitlement(
+  entitlement: Record<string, unknown>,
+  canManageBilling = true,
+  ok = true,
+  deletionAt: string | null = null
+) {
   global.fetch = jest.fn(() =>
     Promise.resolve({
       ok,
@@ -21,6 +26,7 @@ function mockEntitlement(entitlement: Record<string, unknown>, canManageBilling 
             readOnlySince: null,
             ...entitlement,
           },
+          deletionAt,
           canManageBilling,
         }),
     })
@@ -86,6 +92,14 @@ describe('PlanBanner', () => {
     expect(banner).toHaveTextContent(`${lead} This workspace is read-only: you can still view and export your data.`)
     expect(screen.getByRole('link', { name: 'Subscribe' })).toHaveAttribute('href', '/billing')
     expect(screen.queryByRole('button', { name: 'Dismiss plan notice' })).toBeNull()
+  })
+
+  it('announces the deletion date once deletion is switched on', async () => {
+    mockEntitlement({ access: 'READ_ONLY', reason: 'CANCELLED' }, true, true, '2027-09-01T12:00:00.000Z')
+    await renderBanner()
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      /Unless it is reactivated, its data will be deleted on or after .*2027/
+    )
   })
 
   it('tells members without billing access who can fix a read-only workspace', async () => {

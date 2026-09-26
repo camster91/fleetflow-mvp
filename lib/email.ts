@@ -843,4 +843,56 @@ ${APP_URL}
   })
 }
 
+/** Lapsed-workspace deletion notice (#150), sent 30 and 7 days before deletion. */
+export async function sendWorkspaceDeletionWarningEmail(
+  to: string,
+  workspaceName: string,
+  deletionDate: Date
+): Promise<EmailResult> {
+  const billingUrl = `${APP_URL}/billing`
+  const exportUrl = `${APP_URL}/reports`
+  const date = deletionDate.toLocaleDateString('en-CA', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+  const safeWorkspace = escapeHtml(workspaceName)
+  const safeAppName = escapeHtml(APP_NAME)
+
+  const html = getBaseEmailTemplate(`
+    <h2 style="margin-top: 0; color: #1e293b;">Your ${safeAppName} data will be deleted on ${escapeHtml(date)}</h2>
+    <p>${safeWorkspace} has been read-only because its subscription is not active.</p>
+    <p>Unless it is reactivated, all of its fleet data (vehicles, deliveries, maintenance, clients, documents and settings) will be <strong>permanently deleted on or after ${escapeHtml(date)}</strong>. Your sign-in and billing history are kept.</p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${billingUrl}" class="button">Reactivate subscription</a>
+    </div>
+
+    <p>To keep a copy instead, export your data from <a href="${exportUrl}" style="color: #1e40af;">Reports</a> before that date.</p>
+  `)
+
+  const text = `
+Your ${APP_NAME} data will be deleted on ${date}
+
+${workspaceName} has been read-only because its subscription is not active.
+
+Unless it is reactivated, all of its fleet data (vehicles, deliveries, maintenance, clients, documents and settings) will be permanently deleted on or after ${date}. Your sign-in and billing history are kept.
+
+Reactivate: ${billingUrl}
+Export your data: ${exportUrl}
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim()
+
+  return sendEmail({
+    to,
+    subject: safeEmailSubject(`Your ${APP_NAME} data will be deleted on ${date}`),
+    html,
+    text,
+  })
+}
+
 export { FROM_EMAIL, APP_URL, APP_NAME, MAILGUN_DOMAIN }

@@ -151,9 +151,13 @@ export const NOT_ENFORCED: Entitlement = {
 }
 
 /** Load the workspace owner's subscription and evaluate it. Team members inherit the owner's state. */
-export async function getWorkspaceEntitlement(ownerId: string, now = new Date()): Promise<Entitlement> {
+export async function getWorkspaceEntitlement(
+  ownerId: string,
+  now = new Date(),
+  db: Pick<typeof prisma, 'user'> = prisma
+): Promise<Entitlement> {
   if (!billingEnforced()) return NOT_ENFORCED
-  const owner = await prisma.user.findUnique({
+  const owner = await db.user.findUnique({
     where: { id: ownerId },
     select: {
       createdAt: true,

@@ -21,6 +21,8 @@ interface EntitlementResponse {
     graceEndsAt: string | null
     accessEndsAt: string | null
   }
+  /** Set only when lapsed-workspace deletion is switched on. */
+  deletionAt?: string | null
   canManageBilling: boolean
 }
 
@@ -81,6 +83,8 @@ export function PlanBanner() {
       if (!readOnly) return null
       message =
         `${READ_ONLY_LEAD[entitlement.reason] ?? ''} This workspace is read-only: you can still view and export your data.`.trim()
+      if (data.deletionAt)
+        message += ` Unless it is reactivated, its data will be deleted on or after ${formatDate(data.deletionAt)}.`
       action = 'Subscribe'
   }
 

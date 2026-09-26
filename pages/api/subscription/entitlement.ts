@@ -3,6 +3,7 @@ import { requireTenantContext } from '../../../lib/apiAuth'
 import { canManageBilling } from '../../../lib/permissions'
 import { rateLimitMiddleware } from '../../../lib/rateLimit'
 import { getWorkspaceEntitlement, serializeEntitlement } from '../../../lib/entitlements'
+import { deletionDueAt, workspaceDeletionEnabled } from '../../../lib/workspaceRetention'
 
 /**
  * GET: the selected workspace's plan access (full or read-only, and why), for every member so the
@@ -19,8 +20,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const entitlement = await getWorkspaceEntitlement(context.tenant.ownerId)
   res.setHeader('Cache-Control', 'private, no-store')
+  // Only announce a deletion date once deletion is actually switched on.
+  const deletionAt =
+    entitlement.access === 'READ_ONLY' && entitlement.readOnlySince && workspaceDeletionEnabled()
+      ? deletionDueAt(entitlement.readOnlySince).toISOString()
+      : null
   return res.status(200).json({
     entitlement: serializeEntitlement(entitlement),
+    deletionAt,
     canManageBilling: canManageBilling(context.tenant.role),
   })
 }

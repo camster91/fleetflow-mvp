@@ -61,10 +61,32 @@ describe('GET /api/subscription/entitlement', () => {
           accessEndsAt: null,
           readOnlySince: '2027-01-15T00:00:00.000Z',
         },
+        deletionAt: null,
         canManageBilling,
       })
     }
     expect(getWorkspaceEntitlement).toHaveBeenCalledWith('owner')
+  })
+
+  it('includes the deletion date for a read-only workspace only when deletion is enabled', async () => {
+    asRole('VIEWER')
+    ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue({
+      ...NOT_ENFORCED,
+      enforced: true,
+      access: 'READ_ONLY',
+      reason: 'CANCELLED',
+      readOnlySince: new Date('2027-01-01T00:00:00Z'),
+    })
+    const saved = process.env.WORKSPACE_DELETION_ENABLED
+    try {
+      delete process.env.WORKSPACE_DELETION_ENABLED
+      expect((await get())._getJSONData().deletionAt).toBeNull()
+      process.env.WORKSPACE_DELETION_ENABLED = 'true'
+      expect((await get())._getJSONData().deletionAt).toBe('2027-04-01T00:00:00.000Z')
+    } finally {
+      if (saved === undefined) delete process.env.WORKSPACE_DELETION_ENABLED
+      else process.env.WORKSPACE_DELETION_ENABLED = saved
+    }
   })
 
   it('reports not enforced during the beta', async () => {
