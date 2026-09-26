@@ -407,6 +407,85 @@ describe('Stripe webhook compatibility', () => {
     expect(prisma.invoice.upsert).toHaveBeenCalled()
   })
 
+  describe('past-due grace start (pastDueSince)', () => {
+    function failedPayment(created: number) {
+      const { retrieveSubscriptionSnapshot, retrieveInvoiceSnapshot } = jest.requireMock('../../lib/stripe')
+      retrieveSubscriptionSnapshot.mockResolvedValueOnce({
+        id: 'sub_123',
+        status: 'PAST_DUE',
+        priceId: 'price_monthly',
+        currentPeriodStart: 100,
+        currentPeriodEnd: 200,
+        cancelAtPeriodEnd: false,
+      })
+      retrieveInvoiceSnapshot.mockResolvedValueOnce({
+        id: 'in_123',
+        status: 'open',
+        amountPaid: 0,
+        amountDue: 4900,
+        currency: 'usd',
+        invoicePdf: null,
+        periodStart: 100,
+        periodEnd: 200,
+      })
+      ;(constructWebhookEvent as jest.Mock).mockReturnValue({
+        id: `evt_failed_${created}`,
+        created,
+        type: 'invoice.payment_failed',
+        data: { object: invoiceFixture('open') },
+      })
+    }
+    const updatedData = () => (prisma.subscription.update as jest.Mock).mock.calls[0][0].data
+
+    test('starts the grace clock at the first failed payment', async () => {
+      failedPayment(1_000)
+      ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+        id: 'local-sub',
+        userId: 'owner-1',
+        status: 'ACTIVE',
+        pastDueSince: null,
+      })
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(res._getStatusCode()).toBe(200)
+      expect(updatedData()).toMatchObject({ status: 'PAST_DUE', pastDueSince: new Date(1_000_000) })
+    })
+
+    test('keeps the original start across Stripe retries', async () => {
+      failedPayment(5_000)
+      const firstFailure = new Date(1_000_000)
+      ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+        id: 'local-sub',
+        userId: 'owner-1',
+        status: 'PAST_DUE',
+        pastDueSince: firstFailure,
+        stripeLastEventCreated: 1_000,
+      })
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(updatedData().pastDueSince).toEqual(firstFailure)
+    })
+
+    test('clears it when the payment recovers', async () => {
+      ;(constructWebhookEvent as jest.Mock).mockReturnValue({
+        id: 'evt_recovered',
+        created: 6_000,
+        type: 'invoice.paid',
+        data: { object: invoiceFixture('paid') },
+      })
+      ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+        id: 'local-sub',
+        userId: 'owner-1',
+        status: 'PAST_DUE',
+        pastDueSince: new Date(1_000_000),
+        stripeLastEventCreated: 5_000,
+      })
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(updatedData()).toMatchObject({ status: 'ACTIVE', pastDueSince: null })
+    })
+  })
+
   test.each([
     ['invoice.paid', 'paid', 0, 999, 0],
     ['invoice.payment_failed', 'failed', 999, 0, 0],

@@ -122,6 +122,9 @@ function evaluateEnvironment(env, mode = 'pilot') {
   if (present(env, 'E2E_EMAIL_CAPTURE_DIR'))
     missing.push('E2E_EMAIL_CAPTURE_DIR must not be set outside local end-to-end tests')
   if (!['pilot', 'public'].includes(mode)) missing.push('FLEETVERA_RELEASE_MODE must be pilot or public')
+  // Plan enforcement (lib/entitlements.ts): beta workspaces keep full access until this date.
+  if (present(env, 'FLEETVERA_BETA_ENDS_AT') && Number.isNaN(new Date(env.FLEETVERA_BETA_ENDS_AT).getTime()))
+    missing.push('FLEETVERA_BETA_ENDS_AT must be an ISO 8601 date')
 
   const warnings = []
   if (env.AI_PROVIDER && env.AI_PROVIDER !== 'disabled' && !secretAtLeast(env, 'OPENAI_API_KEY'))
@@ -135,6 +138,10 @@ function evaluateEnvironment(env, mode = 'pilot') {
   if (env.GOOGLE_MAPS_SERVER_API_KEY || env.QUICKBOOKS_CLIENT_ID) {
     if (!integrationRingIsValid(env)) missing.push('INTEGRATION_ENCRYPTION_KEYS must contain AES-256-GCM keys')
   }
+  if (mode === 'public' && !present(env, 'FLEETVERA_BETA_ENDS_AT'))
+    warnings.push(
+      'FLEETVERA_BETA_ENDS_AT is unset: workspaces older than the 14-day trial become read-only as soon as public mode starts'
+    )
   return { mode, ready: missing.length === 0, missing, warnings }
 }
 

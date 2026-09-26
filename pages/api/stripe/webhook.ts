@@ -75,11 +75,25 @@ function eventOrder(event: Stripe.Event) {
   }
 }
 
-function snapshotState(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event) {
+type PastDueState = { status: string; pastDueSince?: Date | null } | null
+
+/**
+ * Keep the start of a past-due run stable across retries so the 7-day grace (lib/entitlements.ts)
+ * is measured from the first failure; any recovery or cancellation clears it.
+ */
+function pastDueSinceFor(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event, previous: PastDueState) {
+  if (snapshot.status !== 'PAST_DUE' && snapshot.status !== 'UNPAID') return null
+  const wasOverdue = previous?.status === 'PAST_DUE' || previous?.status === 'UNPAID'
+  if (wasOverdue && previous?.pastDueSince) return previous.pastDueSince
+  return Number.isSafeInteger(event.created) && event.created > 0 ? new Date(event.created * 1000) : new Date()
+}
+
+function snapshotState(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event, previous: PastDueState) {
   const plan = snapshot.priceId ? resolvePricePlan(snapshot.priceId) : null
   if (snapshot.status !== 'CANCELLED' && (!snapshot.priceId || !plan)) throw new Error('Unknown Stripe price')
   return {
     status: snapshot.status,
+    pastDueSince: pastDueSinceFor(snapshot, event, previous),
     ...(snapshot.priceId ? { stripePriceId: snapshot.priceId } : {}),
     ...(plan ? { plan } : {}),
     currentPeriodStart: snapshot.currentPeriodStart ? new Date(snapshot.currentPeriodStart * 1000) : null,
@@ -125,7 +139,7 @@ async function syncInvoice(
     },
   })
   if (eventTiming(event, local) === 'older') return
-  const data = snapshotState(subscriptionSnapshot, event)
+  const data = snapshotState(subscriptionSnapshot, event, local)
   await db.subscription.update({ where: { stripeSubscriptionId }, data })
   await auditTransition(db, local.userId, local.id, local.status, subscriptionSnapshot.status)
 }
@@ -144,7 +158,7 @@ async function processEvent(
         throw new Error('Invalid checkout mapping')
       const previous = await db.subscription.findUnique({ where: { userId } })
       if (previous && eventTiming(event, previous) === 'older') break
-      const data = snapshotState(snapshot, event)
+      const data = snapshotState(snapshot, event, previous)
       const record = await db.subscription.upsert({
         where: { userId },
         update: {
@@ -170,7 +184,7 @@ async function processEvent(
       if (!local || eventTiming(event, local) === 'older') break
       await db.subscription.update({
         where: { stripeSubscriptionId: subscription.id },
-        data: snapshotState(snapshot, event),
+        data: snapshotState(snapshot, event, local),
       })
       await auditTransition(db, local.userId, local.id, local.status, snapshot.status)
       break
@@ -181,7 +195,7 @@ async function processEvent(
       if (!local || !snapshot || eventTiming(event, local) === 'older') break
       await db.subscription.update({
         where: { stripeSubscriptionId: subscription.id },
-        data: snapshotState(snapshot, event),
+        data: snapshotState(snapshot, event, local),
       })
       await auditTransition(db, local.userId, local.id, local.status, snapshot.status)
       break
