@@ -104,6 +104,27 @@ describe('computeEntitlement: the #150 policy', () => {
     expect(result).toMatchObject({ enforced: true, access, reason })
   })
 
+  it('ends access with the payment grace period when Stripe cancels after failed payments', () => {
+    const cancelled = paid({ status: 'CANCELLED', pastDueSince: daysAgo(14), currentPeriodEnd: daysFromNow(16) })
+    expect(computeEntitlement(cancelled, daysAgo(400), now)).toMatchObject({
+      access: 'READ_ONLY',
+      reason: 'CANCELLED',
+      readOnlySince: daysAgo(14 - PAST_DUE_GRACE_DAYS),
+    })
+    // Still inside the grace period: full access until the grace ends, not the unpaid period end.
+    const recent = paid({ status: 'CANCELLED', pastDueSince: daysAgo(2), currentPeriodEnd: daysFromNow(28) })
+    expect(computeEntitlement(recent, daysAgo(400), now)).toMatchObject({
+      access: 'FULL',
+      accessEndsAt: daysFromNow(PAST_DUE_GRACE_DAYS - 2),
+    })
+  })
+
+  it('keeps the trial while a first payment is incomplete (e.g. awaiting 3-D Secure)', () => {
+    const incomplete = paid({ status: 'INCOMPLETE' })
+    expect(computeEntitlement(incomplete, daysAgo(3), now)).toMatchObject({ access: 'FULL', reason: 'TRIAL' })
+    expect(computeEntitlement(incomplete, daysAgo(30), now)).toMatchObject({ reason: 'TRIAL_EXPIRED' })
+  })
+
   it('reports when the trial ended as the read-only start', () => {
     const created = daysAgo(30)
     const result = computeEntitlement(null, created, now)
@@ -161,10 +182,24 @@ describe('isWriteSubjectToEntitlement', () => {
     '/api/settings/api-keys',
     '/api/team/invite',
     '/api/admin/email/settings',
-    '/api/integrations/quickbooks/disconnect',
     '/api/assistant/query',
-  ])('keeps billing, settings, team and admin writable: POST %s', (url) => {
+    '/api/assistant/entities',
+    '/api/ai/query',
+  ])('keeps billing, settings, team, admin and assistant questions writable: POST %s', (url) => {
     expect(isWriteSubjectToEntitlement(request('POST', url), 'OWNER')).toBe(false)
+  })
+
+  it.each([
+    ['POST', '/api/assistant/actions/execute'],
+    ['POST', '/api/integrations/quickbooks/connect'],
+    ['POST', '/api/integrations/quickbooks/sync'],
+    ['PATCH', '/api/integrations/records'],
+  ])('blocks assistant actions and integration writes: %s %s', (method, url) => {
+    expect(isWriteSubjectToEntitlement(request(method, url), 'OWNER')).toBe(true)
+  })
+
+  it('still allows disconnecting an integration', () => {
+    expect(isWriteSubjectToEntitlement(request('DELETE', '/api/integrations/quickbooks/connect'), 'OWNER')).toBe(false)
   })
 
   it('lets drivers keep updating their assigned deliveries, and only that', () => {

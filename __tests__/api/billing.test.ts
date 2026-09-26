@@ -136,6 +136,19 @@ describe('POST /api/stripe/checkout-session', () => {
     expect(stripe.createCheckoutSession).not.toHaveBeenCalled()
   })
 
+  it('allows retrying checkout after an incomplete first payment', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'owner-1',
+      email: 'owner@example.com',
+      subscription: { stripeCustomerId: 'cus_1', stripeSubscriptionId: 'sub_1', status: 'INCOMPLETE' },
+    })
+    const { req, res } = request()
+    await handler(req, res)
+
+    expect(res._getStatusCode()).toBe(200)
+    expect(stripe.createCheckoutSession).toHaveBeenCalled()
+  })
+
   it('returns a safe unavailable response when Stripe configuration is missing', async () => {
     stripe.getBillingAvailability.mockReturnValue({ available: false, missing: ['STRIPE_SECRET_KEY'] })
     const { req, res } = request()
