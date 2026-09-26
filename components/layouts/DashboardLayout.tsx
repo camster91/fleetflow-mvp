@@ -27,7 +27,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { TrialBanner } from '@/components/TrialBanner'
+import { PlanBanner } from '@/components/PlanBanner'
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
 
 interface NavItem {
@@ -416,7 +416,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen flex flex-col">
-        <TrialBanner />
+        <PlanBanner />
         {/* Top header */}
         <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
           <div className="h-16 flex items-center justify-between px-4 sm:px-6 lg:px-8">

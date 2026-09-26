@@ -9,6 +9,7 @@ import type { TeamRole } from '../types'
 import { parse as parseCookie } from 'cookie'
 import { constantTimeCompare, hashToken } from './tokens'
 import { consumePublicApiQuota } from './apiRateLimit'
+import { getWorkspaceEntitlement, isWriteSubjectToEntitlement, READ_ONLY_MESSAGE } from './entitlements'
 
 export type AuthedSession = Session & { user: Session['user'] & { id: string } }
 
@@ -222,6 +223,18 @@ export async function requireTenantContext(
   const selectedTeamId = headerTeamId || parseCookie(req.headers.cookie || '').fleetflow_team
   try {
     const tenant = await resolveTenantContext(session.user.id, selectedTeamId)
+    // Plan entitlements (#150): a lapsed workspace is read-only. Only writes pay for the lookup.
+    if (isWriteSubjectToEntitlement(req, tenant.role)) {
+      const entitlement = await getWorkspaceEntitlement(tenant.ownerId)
+      if (entitlement.access === 'READ_ONLY') {
+        res.status(402).json({
+          error: READ_ONLY_MESSAGE,
+          code: 'SUBSCRIPTION_REQUIRED',
+          reason: entitlement.reason,
+        })
+        return null
+      }
+    }
     return { session, tenant }
   } catch (error) {
     if (error instanceof TenantContextError) {

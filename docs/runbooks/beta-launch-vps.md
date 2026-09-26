@@ -11,7 +11,9 @@ Never paste secret values, database URLs, or customer data into GitHub, logs, or
       Pick one canonical origin. `NEXTAUTH_URL`, email links, the CSP origin, and any OAuth or Stripe
       endpoints must all use it, and the other hostname should redirect to it.
 - [ ] **Release mode.** Use `FLEETVERA_RELEASE_MODE=pilot` for the free beta. Stripe is not
-      required in pilot mode, and `/billing` shows the free-beta notice while Stripe is unconfigured.
+      required in pilot mode, `/billing` shows the free-beta notice while Stripe is unconfigured, and
+      plans are not enforced. Switching to `public` later turns on trials and read-only mode; see
+      "Plan enforcement" in `docs/runbooks/stripe-launch.md` and set `FLEETVERA_BETA_ENDS_AT` first.
 - [ ] **Gate.** `.github/workflows/deploy-coolify.yml` only deploys a SHA with a successful
       `Ashbi Local CI` check, so that check must be green. Also require the GitHub Actions
       `quality` and `e2e` jobs if they are enabled. They add coverage but do not replace
@@ -60,7 +62,7 @@ Set these in Coolify, never in git:
 
 ## 3. Database
 
-`master` adds five migrations that run automatically on deploy (`prisma migrate deploy` in the
+`master` adds six migrations that run automatically on deploy (`prisma migrate deploy` in the
 entrypoint):
 
 - `20260925000000_auth_hardening`: adds `tokenVersion` and `lastTotpStep`, stores share tokens
@@ -72,6 +74,8 @@ entrypoint):
   create requests, cleaned up by `cleanup-audit-logs`).
 - `20260925040000_workspace_time_zone`: adds `timeZone` to teams and users, defaulting to
   `America/Toronto`. Owners and admins can change it under Settings › Company.
+- `20260926000000_subscription_past_due_since`: adds `pastDueSince` to subscriptions (the start of
+  the 7-day failed-payment grace period). Existing past-due rows are backfilled from their billing period.
 
 - [ ] Take a verified backup (`docs/runbooks/backup-restore.md`) and record its ID and timestamp.
 - [ ] Rehearse the migrations on a **restored copy** of production (#72):

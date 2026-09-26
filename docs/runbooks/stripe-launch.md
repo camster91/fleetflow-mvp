@@ -49,8 +49,31 @@ Record the event ID, application result, database result, and screenshot where r
 9. Retry: temporarily make database processing fail, verify HTTP 500, restore it, resend the same event, and verify it completes once.
 10. Cleanup: cancel sandbox subscriptions, remove test customers if policy allows, restore test-clock state, and delete disposable local records only through an approved, tenant-bounded cleanup procedure.
 
+## Plan enforcement
+
+Enforcement lives in `lib/entitlements.ts`. It is active only when `FLEETVERA_RELEASE_MODE=public` **and** checkout is configured (`/api/stripe/availability` reports `available`). In pilot mode, or whenever any Stripe setting is missing, every workspace keeps full access. A workspace can never be locked out while nobody can pay.
+
+| Situation | Access |
+|---|---|
+| No paid subscription | Full access for 14 days from the owner's sign-up, or until `FLEETVERA_BETA_ENDS_AT` if that is later; read-only after |
+| `ACTIVE` | Full access (pending cancellation: until the end of the paid period) |
+| `PAST_DUE` | Full access for 7 days from the first failed payment (`Subscription.pastDueSince`), read-only after |
+| `UNPAID` (Stripe stopped retrying) | Read-only |
+| `CANCELLED` | Full access until `currentPeriodEnd`, read-only after |
+
+- **Read-only:** reads, exports, billing, settings, team management, disconnecting an integration, asking the assistant questions, and sign-in keep working. Assistant actions, integration connect/sync/review and shared task links are blocked, since they change data. Other writes return `402` with code `SUBSCRIPTION_REQUIRED` and a message saying the data can still be viewed and exported. Drivers can still update the status of deliveries assigned to them. The public `/api/v1` is read-only by design, so it is unaffected.
+- **Scope:** team members inherit the workspace owner's subscription.
+- **Banner:** the dashboard shows the state to every member via `/api/subscription/entitlement`: trial countdown in the last 14 days, payment-failed deadline, pending cancellation, or read-only. Only owners and admins see the billing link.
+- **Before switching to public mode:** announce the paid launch and set `FLEETVERA_BETA_ENDS_AT` (ISO 8601) at least 30 days out. If it is unset, every workspace older than 14 days becomes read-only immediately; the readiness check warns about this.
+
+Additional sandbox evidence for enforcement:
+
+1. With a test clock, let a new workspace pass 14 days: the banner turns read-only, `POST /api/vehicles` returns 402, and exports still download. Subscribe: writes work again as soon as the webhook records the subscription.
+2. Fail a renewal: the banner shows the payment-failed deadline and writes still work. Advance 7 days: read-only. Pay the invoice: full access returns and `pastDueSince` is cleared.
+3. Cancel at period end, advance past `currentPeriodEnd`: read-only.
+
 ## Launch and rollback
 
 Before launch, confirm the database migration containing `StripeWebhookEvent` is applied, backups and restore instructions are current, webhook delivery health is green, and the deployed Price IDs exactly match the approved live products. Repeat the purchase, invoice, failure, cancellation, authorization, and duplicate-delivery checks in live mode only with an approved low-value internal transaction.
 
-If billing synchronization is unhealthy, remove or unset one Stripe configuration value and restart to disable checkout, while leaving existing account access unchanged. Preserve webhook delivery history for replay. Roll back the application to the last known-good image only after confirming its schema compatibility; do not drop `StripeWebhookEvent` during rollback. After recovery, replay failed Stripe events and reconcile subscriptions and invoices against the Stripe Dashboard before re-enabling checkout.
+If billing synchronization is unhealthy, remove or unset one Stripe configuration value and restart to disable checkout. This also suspends plan enforcement, so every workspace keeps (or regains) full access until billing is healthy again. Preserve webhook delivery history for replay. Roll back the application to the last known-good image only after confirming its schema compatibility; do not drop `StripeWebhookEvent` during rollback. After recovery, replay failed Stripe events and reconcile subscriptions and invoices against the Stripe Dashboard before re-enabling checkout.
