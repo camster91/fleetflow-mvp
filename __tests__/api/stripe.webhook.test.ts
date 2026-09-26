@@ -466,6 +466,39 @@ describe('Stripe webhook compatibility', () => {
       expect(updatedData().pastDueSince).toEqual(firstFailure)
     })
 
+    test.each([
+      ['PAST_DUE', new Date(1_000_000), new Date(1_000_000)],
+      ['CANCELLED', new Date(1_000_000), new Date(1_000_000)],
+      ['ACTIVE', null, null],
+    ])('a cancellation after %s keeps the grace start: %s', async (previousStatus, previousSince, expected) => {
+      const { retrieveSubscriptionSnapshot } = jest.requireMock('../../lib/stripe')
+      retrieveSubscriptionSnapshot.mockResolvedValueOnce({
+        id: 'sub_123',
+        status: 'CANCELLED',
+        priceId: 'price_monthly',
+        currentPeriodStart: 100,
+        currentPeriodEnd: 9_999_999_999,
+        cancelAtPeriodEnd: false,
+      })
+      ;(constructWebhookEvent as jest.Mock).mockReturnValue({
+        id: `evt_deleted_${previousStatus}`,
+        created: 7_000,
+        type: 'customer.subscription.deleted',
+        data: { object: { id: 'sub_123' } },
+      })
+      ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+        id: 'local-sub',
+        userId: 'owner-1',
+        status: previousStatus,
+        pastDueSince: previousSince,
+        stripeLastEventCreated: 5_000,
+      })
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(res._getStatusCode()).toBe(200)
+      expect(updatedData()).toMatchObject({ status: 'CANCELLED', pastDueSince: expected })
+    })
+
     test('clears it when the payment recovers', async () => {
       ;(constructWebhookEvent as jest.Mock).mockReturnValue({
         id: 'evt_recovered',

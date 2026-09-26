@@ -79,11 +79,15 @@ type PastDueState = { status: string; pastDueSince?: Date | null } | null
 
 /**
  * Keep the start of a past-due run stable across retries so the 7-day grace (lib/entitlements.ts)
- * is measured from the first failure; any recovery or cancellation clears it.
+ * is measured from the first failure. Recovery clears it; a cancellation after failed payments keeps
+ * it, so access ends with the grace period rather than at the end of the unpaid billing period.
  */
 function pastDueSinceFor(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event, previous: PastDueState) {
-  if (snapshot.status !== 'PAST_DUE' && snapshot.status !== 'UNPAID') return null
   const wasOverdue = previous?.status === 'PAST_DUE' || previous?.status === 'UNPAID'
+  // Stripe cancelling after failed payments keeps the start, so access ends with the grace period.
+  if (snapshot.status === 'CANCELLED')
+    return wasOverdue || previous?.status === 'CANCELLED' ? (previous?.pastDueSince ?? null) : null
+  if (snapshot.status !== 'PAST_DUE' && snapshot.status !== 'UNPAID') return null
   if (wasOverdue && previous?.pastDueSince) return previous.pastDueSince
   return Number.isSafeInteger(event.created) && event.created > 0 ? new Date(event.created * 1000) : new Date()
 }

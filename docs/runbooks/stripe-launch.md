@@ -61,7 +61,7 @@ Enforcement lives in `lib/entitlements.ts`. It is active only when `FLEETVERA_RE
 | `UNPAID` (Stripe stopped retrying) | Read-only |
 | `CANCELLED` | Full access until `currentPeriodEnd`, read-only after |
 
-- **Read-only:** reads, exports, billing, settings, team management, integrations admin and sign-in keep working. Other writes return `402` with code `SUBSCRIPTION_REQUIRED` and a message saying the data can still be viewed and exported. Drivers can still update the status of deliveries assigned to them. The public `/api/v1` is read-only by design, so it is unaffected.
+- **Read-only:** reads, exports, billing, settings, team management, disconnecting an integration, asking the assistant questions, and sign-in keep working. Assistant actions, integration connect/sync/review and shared task links are blocked, since they change data. Other writes return `402` with code `SUBSCRIPTION_REQUIRED` and a message saying the data can still be viewed and exported. Drivers can still update the status of deliveries assigned to them. The public `/api/v1` is read-only by design, so it is unaffected.
 - **Scope:** team members inherit the workspace owner's subscription.
 - **Banner:** the dashboard shows the state to every member via `/api/subscription/entitlement`: trial countdown in the last 14 days, payment-failed deadline, pending cancellation, or read-only. Only owners and admins see the billing link.
 - **Before switching to public mode:** announce the paid launch and set `FLEETVERA_BETA_ENDS_AT` (ISO 8601) at least 30 days out. If it is unset, every workspace older than 14 days becomes read-only immediately; the readiness check warns about this.

@@ -57,21 +57,24 @@ export interface SubscriptionFacts {
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
-/** API areas that stay writable while read-only: billing, settings, team, integrations admin, sign-in. */
+/** API areas that stay writable while read-only: billing, settings, team, admin and sign-in. */
 const READ_ONLY_EXEMPT_PREFIXES = [
   '/api/stripe/',
   '/api/subscription/',
   '/api/settings/',
   '/api/team/',
   '/api/admin/',
-  '/api/integrations/',
   '/api/auth/',
   '/api/pilot/',
-  // Asking the assistant a question reads data; it does not change it.
-  '/api/assistant/',
-  '/api/ai/',
 ]
+/**
+ * Exact POST endpoints that only read: asking the assistant a question. Assistant *actions*
+ * (/api/assistant/actions/execute) create and change records, so they are not exempt.
+ */
+const READ_ONLY_EXEMPT_PATHS = new Set(['/api/assistant/query', '/api/assistant/entities', '/api/ai/query'])
 const DRIVER_STATUS_PATH = /^\/api\/deliveries\/[^/]+\/status\/?$/
+/** Disconnecting an integration stays possible (it revokes access); connecting, syncing and reviewing write data. */
+const INTEGRATION_DISCONNECT_PATH = /^\/api\/integrations\/[^/]+\/connect\/?$/
 
 export function billingEnforced(): boolean {
   return process.env.FLEETVERA_RELEASE_MODE === 'public' && getBillingAvailability().available
@@ -119,7 +122,11 @@ export function computeEntitlement(
         }
       }
       case 'CANCELLED': {
-        const end = subscription.currentPeriodEnd
+        // Cancelled by Stripe after failed payments: the unpaid period was never paid for, so access
+        // ends with the payment grace period, not at the (future) end of that period.
+        const graceEnd = subscription.pastDueSince ? addDays(subscription.pastDueSince, PAST_DUE_GRACE_DAYS) : null
+        const paidEnd = subscription.currentPeriodEnd
+        const end = graceEnd && (!paidEnd || graceEnd < paidEnd) ? graceEnd : paidEnd
         if (end && now < end) return { ...base, access: 'FULL', reason: 'CANCELLING', accessEndsAt: end }
         return {
           ...base,
@@ -186,8 +193,11 @@ function requestPath(req: NextApiRequest): string {
 /** Whether this request must pass the read-only check at all. */
 export function isWriteSubjectToEntitlement(req: NextApiRequest, role: TeamRole): boolean {
   if (!MUTATING_METHODS.has((req.method || 'GET').toUpperCase())) return false
-  const path = requestPath(req)
+  const method = (req.method || 'GET').toUpperCase()
+  const path = requestPath(req).replace(/\/$/, '')
   if (READ_ONLY_EXEMPT_PREFIXES.some((prefix) => path.startsWith(prefix))) return false
+  if (READ_ONLY_EXEMPT_PATHS.has(path)) return false
+  if (method === 'DELETE' && INTEGRATION_DISCONNECT_PATH.test(path)) return false
   // Never strand a truck mid-route: drivers can keep updating deliveries assigned to them.
   if (role === 'DRIVER' && DRIVER_STATUS_PATH.test(path)) return false
   return true
