@@ -1,8 +1,8 @@
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     workspaceRetention: { findUnique: jest.fn(), delete: jest.fn(), upsert: jest.fn() },
-    team: { findMany: jest.fn() },
-    teamMember: { findMany: jest.fn() },
+    team: { findMany: jest.fn(), count: jest.fn() },
+    teamMember: { findMany: jest.fn(), count: jest.fn() },
     user: { findUnique: jest.fn() },
     documentUpload: { count: jest.fn(), updateMany: jest.fn() },
     $transaction: jest.fn(),
@@ -16,6 +16,7 @@ import {
   earliestDeletionAt,
   planRetention,
   processOwner,
+  promisedDeletionAt,
   DELETION_AFTER_DAYS,
 } from '@/lib/workspaceRetention'
 import { prisma } from '@/lib/prisma'
@@ -28,24 +29,43 @@ const ago = (days: number) => new Date(now.getTime() - days * DAY)
 const db = prisma as unknown as Record<string, Record<string, jest.Mock>> & { $transaction: jest.Mock }
 
 describe('planRetention (90 days read-only, warnings at 30 and 7)', () => {
+  const m = (warned30: number | null, warned7: number | null) => ({
+    warned30At: warned30 === null ? null : ago(warned30),
+    warned7At: warned7 === null ? null : ago(warned7),
+  })
   it.each([
     ['day 10 read-only', 10, null, 'NONE'],
     ['30-day warning due', 60, null, 'WARN_30'],
-    ['30-day warning already sent', 70, { warned30At: ago(10), warned7At: null }, 'NONE'],
-    ['7-day warning due', 83, { warned30At: ago(23), warned7At: null }, 'WARN_7'],
-    ['missed the 30-day window: goes straight to the 7-day warning', 85, null, 'WARN_7'],
-    ['warned 7 days ago on day 83, now day 90', 90, { warned30At: ago(30), warned7At: ago(7) }, 'DELETE'],
-    ['day 95 but no 7-day warning was ever delivered', 95, { warned30At: ago(35), warned7At: null }, 'WARN_7'],
-    ['day 95, 7-day warning only 3 days ago', 95, { warned30At: ago(35), warned7At: ago(3) }, 'WAIT'],
+    ['30-day warning already sent', 70, m(10, null), 'NONE'],
+    ['7-day warning due', 83, m(23, null), 'WARN_7'],
+    ['lapsed long ago with no warning yet: the 30-day warning still comes first', 200, null, 'WARN_30'],
+    ['30-day warning only 10 days ago: the 7-day warning waits', 200, m(10, null), 'NONE'],
+    ['30-day warning 23 days ago', 200, m(23, null), 'WARN_7'],
+    ['warned 30 and 7 days ago, day 90', 90, m(30, 7), 'DELETE'],
+    ['day 95 but no 7-day warning was ever delivered', 95, m(35, null), 'WARN_7'],
+    ['day 95, 7-day warning only 3 days ago', 95, m(35, 3), 'WAIT'],
   ] as const)('%s', (_label, daysReadOnly, markers, expected) => {
     expect(planRetention(ago(daysReadOnly), markers, now)).toBe(expected)
   })
 
-  it('never deletes less than 7 days after the 7-day warning', () => {
-    const readOnlySince = ago(120)
-    expect(earliestDeletionAt(readOnlySince, ago(2))).toEqual(new Date(ago(2).getTime() + 7 * DAY))
-    expect(earliestDeletionAt(readOnlySince, null)).toBeNull()
+  it('never deletes less than 30 days after the 30-day warning or 7 days after the 7-day warning', () => {
+    const readOnlySince = ago(300)
+    expect(earliestDeletionAt(readOnlySince, { warned30At: ago(25), warned7At: ago(2) })).toEqual(
+      new Date(ago(25).getTime() + 30 * DAY)
+    )
+    expect(earliestDeletionAt(readOnlySince, { warned30At: ago(40), warned7At: ago(2) })).toEqual(
+      new Date(ago(2).getTime() + 7 * DAY)
+    )
+    expect(earliestDeletionAt(readOnlySince, { warned30At: ago(40), warned7At: null })).toBeNull()
     expect(deletionDueAt(readOnlySince)).toEqual(new Date(readOnlySince.getTime() + DELETION_AFTER_DAYS * DAY))
+  })
+
+  it('promises a date the schedule will honour', () => {
+    expect(promisedDeletionAt(ago(200), null, 'WARN_30', now)).toEqual(new Date(now.getTime() + 30 * DAY))
+    expect(promisedDeletionAt(ago(60), null, 'WARN_30', now)).toEqual(deletionDueAt(ago(60)))
+    expect(promisedDeletionAt(ago(200), { warned30At: ago(23), warned7At: null }, 'WARN_7', now)).toEqual(
+      new Date(now.getTime() + 7 * DAY)
+    )
   })
 })
 
@@ -61,6 +81,8 @@ describe('processOwner', () => {
       { user: { email: 'owner@acme.test' } },
     ])
     db.user.findUnique.mockResolvedValue({ email: 'owner@acme.test' })
+    db.team.count.mockResolvedValue(1)
+    db.teamMember.count.mockResolvedValue(0)
     ;(sendWorkspaceDeletionWarningEmail as jest.Mock).mockResolvedValue({ success: true })
   })
 
@@ -104,8 +126,34 @@ describe('processOwner', () => {
 
   it('a late 7-day warning promises at least 7 more days', async () => {
     ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue(readOnly(95))
+    db.workspaceRetention.findUnique.mockResolvedValue({
+      readOnlySince: ago(95),
+      warned30At: ago(25),
+      warned7At: null,
+      deletedAt: null,
+    })
     expect((await processOwner('o1', now, false)).action).toBe('WARN_7')
     expect((sendWorkspaceDeletionWarningEmail as jest.Mock).mock.calls[0][2]).toEqual(new Date(now.getTime() + 7 * DAY))
+  })
+
+  it('gives a workspace that lapsed long ago the full 30-day notice first', async () => {
+    ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue(readOnly(200))
+    expect((await processOwner('o1', now, false)).action).toBe('WARN_30')
+    expect((sendWorkspaceDeletionWarningEmail as jest.Mock).mock.calls[0][2]).toEqual(
+      new Date(now.getTime() + 30 * DAY)
+    )
+  })
+
+  it("leaves a team member's unreachable personal workspace alone", async () => {
+    ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue(readOnly(200))
+    db.team.count.mockResolvedValue(0)
+    db.teamMember.count.mockResolvedValue(1)
+    expect((await processOwner('o1', now, false)).action).toBe('NONE')
+    expect(db.teamMember.count).toHaveBeenCalledWith({
+      where: { userId: 'o1', status: 'ACCEPTED', team: { ownerId: { not: 'o1' } } },
+    })
+    expect(sendWorkspaceDeletionWarningEmail).not.toHaveBeenCalled()
+    expect(db.$transaction).not.toHaveBeenCalled()
   })
 
   it('never re-warns a workspace already deleted for this lapse', async () => {
@@ -115,21 +163,26 @@ describe('processOwner', () => {
     expect(sendWorkspaceDeletionWarningEmail).not.toHaveBeenCalled()
   })
 
-  it('waits for stored documents to be cleaned up (files included) before deleting', async () => {
+  it('waits for stored documents to be cleaned up (files included), deciding under the lock', async () => {
     ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue(readOnly(100))
-    db.workspaceRetention.findUnique.mockResolvedValue({
-      readOnlySince: ago(100),
-      warned30At: ago(40),
-      warned7At: ago(8),
-      deletedAt: null,
-    })
-    db.documentUpload.count.mockResolvedValue(2)
+    const marker = { readOnlySince: ago(100), warned30At: ago(40), warned7At: ago(8), deletedAt: null }
+    db.workspaceRetention.findUnique.mockResolvedValue(marker)
+    const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      workspaceRetention: { findUnique: jest.fn().mockResolvedValue(marker) },
+      team: { count: jest.fn().mockResolvedValue(1), findMany: jest.fn().mockResolvedValue([{ id: 't1' }]) },
+      teamMember: { count: jest.fn().mockResolvedValue(0) },
+      documentUpload: { count: jest.fn().mockResolvedValue(2), updateMany: jest.fn() },
+    }
+    db.$transaction.mockImplementation(async (fn: (client: unknown) => unknown) => fn(tx))
     expect((await processOwner('o1', now, false)).action).toBe('WAIT_DOCUMENTS')
-    expect(db.documentUpload.updateMany).toHaveBeenCalledWith({
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(2)
+    expect(tx.documentUpload.updateMany).toHaveBeenCalledWith({
       where: { OR: [{ ownerId: 'o1' }, { teamId: { in: ['t1'] } }], deletedAt: null, expiresAt: { gt: now } },
       data: { expiresAt: now },
     })
-    expect(db.$transaction).not.toHaveBeenCalled()
+    // Nothing outside the locked transaction touches documents.
+    expect(db.documentUpload.updateMany).not.toHaveBeenCalled()
   })
 
   it('re-checks inside the locked transaction and skips a workspace reactivated at the last moment', async () => {
@@ -142,13 +195,14 @@ describe('processOwner', () => {
       warned7At: ago(8),
       deletedAt: null,
     })
-    db.documentUpload.count.mockResolvedValue(0)
     const tx = {
       $queryRaw: jest.fn().mockResolvedValue([]),
       workspaceRetention: { findUnique: jest.fn().mockResolvedValue({ warned7At: ago(8), deletedAt: null }) },
+      documentUpload: { count: jest.fn(), updateMany: jest.fn() },
     }
     db.$transaction.mockImplementation(async (fn: (client: unknown) => unknown) => fn(tx))
     expect((await processOwner('o1', now, false)).action).toBe('SKIPPED_REACTIVATED')
     expect(tx.$queryRaw).toHaveBeenCalledTimes(2)
+    expect(tx.documentUpload.updateMany).not.toHaveBeenCalled()
   })
 })

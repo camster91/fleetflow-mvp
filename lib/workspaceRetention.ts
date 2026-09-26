@@ -37,24 +37,40 @@ export function deletionDueAt(readOnlySince: Date): Date {
   return new Date(readOnlySince.getTime() + DELETION_AFTER_DAYS * DAY_MS)
 }
 
-/** Earliest moment deletion may run: 90 days read-only, and at least 7 days after the 7-day warning. */
-export function earliestDeletionAt(readOnlySince: Date, warned7At: Date | null): Date | null {
-  if (!warned7At) return null
-  const afterWarning = new Date(warned7At.getTime() + 7 * DAY_MS)
-  const due = deletionDueAt(readOnlySince)
-  return afterWarning > due ? afterWarning : due
+const addDays = (date: Date | number, days: number) => new Date(new Date(date).getTime() + days * DAY_MS)
+const latest = (...dates: Date[]) => new Date(Math.max(...dates.map((date) => date.getTime())))
+
+/**
+ * When the workspace may be deleted: 90 days read-only, at least 30 days after the 30-day warning and
+ * at least 7 days after the 7-day warning. Null until both warnings were delivered.
+ */
+export function earliestDeletionAt(readOnlySince: Date, markers: RetentionMarkers | null): Date | null {
+  if (!markers?.warned30At || !markers.warned7At) return null
+  return latest(deletionDueAt(readOnlySince), addDays(markers.warned30At, 30), addDays(markers.warned7At, 7))
 }
 
-/** Pure schedule: what today's run should do for a read-only workspace. */
+/**
+ * Pure schedule: what today's run should do for a read-only workspace. The 30-day warning always comes
+ * first, so a workspace that lapsed long ago (e.g. before plans were enforced) still gets full notice.
+ */
 export function planRetention(readOnlySince: Date, markers: RetentionMarkers | null, now: Date): RetentionAction {
-  const due = deletionDueAt(readOnlySince).getTime()
-  if (now.getTime() >= due - 7 * DAY_MS) {
-    if (!markers?.warned7At) return 'WARN_7'
-    const earliest = earliestDeletionAt(readOnlySince, markers.warned7At)!
-    return now >= earliest ? 'DELETE' : 'WAIT'
-  }
-  if (now.getTime() >= due - 30 * DAY_MS && !markers?.warned30At) return 'WARN_30'
-  return 'NONE'
+  const due = deletionDueAt(readOnlySince)
+  if (!markers?.warned30At) return now >= addDays(due, -30) ? 'WARN_30' : 'NONE'
+  const noticeEnds = latest(due, addDays(markers.warned30At, 30))
+  if (!markers.warned7At) return now >= addDays(noticeEnds, -7) ? 'WARN_7' : 'NONE'
+  return now >= earliestDeletionAt(readOnlySince, markers)! ? 'DELETE' : 'WAIT'
+}
+
+/** The deletion date a warning sent `now` can honestly promise. */
+export function promisedDeletionAt(
+  readOnlySince: Date,
+  markers: RetentionMarkers | null,
+  action: 'WARN_30' | 'WARN_7',
+  now: Date
+): Date {
+  const due = deletionDueAt(readOnlySince)
+  if (action === 'WARN_30') return latest(due, addDays(now, 30))
+  return latest(due, addDays(markers?.warned30At ?? now, 30), addDays(now, 7))
 }
 
 /** Owners whose workspaces hold anything: every team owner, plus personal workspaces with records. */
@@ -69,6 +85,14 @@ export async function findWorkspaceOwners(): Promise<string[]> {
     prisma.sOPCategory.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
     prisma.vendingMachine.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
     prisma.documentUpload.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
+    prisma.expenseRecord.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
+    prisma.announcement.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
+    prisma.integrationConnection.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
+    prisma.intelligenceFinding.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
+    prisma.intelligenceRun.findMany({ where: personal, select: { ownerId: true }, distinct: ['ownerId'] }),
+    prisma.userData
+      .findMany({ select: { userId: true }, distinct: ['userId'] })
+      .then((rows) => rows.map((row) => ({ ownerId: row.userId }))),
   ])
   return [...new Set(groups.flat().map((row) => row.ownerId))].sort()
 }
@@ -143,36 +167,51 @@ async function warn(ownerId: string, teams: { id: string; name: string }[], dele
   return ownerResult.success
 }
 
+/**
+ * A user who owns no team but belongs to someone else's team cannot reach (or pay for) their personal
+ * workspace: tenant resolution only offers teams once a user has one. Their leftover personal data is not
+ * deleted on a timer they cannot see or act on.
+ */
+async function personalWorkspaceUnreachable(db: Pick<Tx, 'team' | 'teamMember'>, ownerId: string) {
+  const [owned, memberships] = await Promise.all([
+    db.team.count({ where: { ownerId } }),
+    db.teamMember.count({ where: { userId: ownerId, status: 'ACCEPTED', team: { ownerId: { not: ownerId } } } }),
+  ])
+  return owned === 0 && memberships > 0
+}
+
 /** Process one owner. Exported for tests; the cron calls it for every owner with workspace data. */
 export async function processOwner(ownerId: string, now: Date, dryRun: boolean): Promise<RetentionResult> {
   const entitlement = await getWorkspaceEntitlement(ownerId, now)
   const row = await prisma.workspaceRetention.findUnique({ where: { ownerId } })
 
-  if (entitlement.access !== 'READ_ONLY' || !entitlement.readOnlySince) {
-    if (row && !dryRun) await prisma.workspaceRetention.delete({ where: { ownerId } })
-    return { ownerId, action: row ? 'RESET' : 'NONE' }
+  if (
+    entitlement.access !== 'READ_ONLY' ||
+    !entitlement.readOnlySince ||
+    (await personalWorkspaceUnreachable(prisma, ownerId))
+  ) {
+    if (row && !row.deletedAt && !dryRun) await prisma.workspaceRetention.delete({ where: { ownerId } })
+    return { ownerId, action: row && !row.deletedAt ? 'RESET' : 'NONE' }
   }
 
   const readOnlySince = entitlement.readOnlySince
   const samePeriod = row?.readOnlySince.getTime() === readOnlySince.getTime()
-  // Already deleted for this lapse: nothing left to warn about. (A workspace cannot gain data while read-only.)
+  // Already deleted for this lapse: nothing left to warn about.
   if (row?.deletedAt && samePeriod) return { ownerId, action: 'NONE' }
   const current = row && !row.deletedAt && samePeriod ? row : null
   const action = planRetention(readOnlySince, current, now)
-  const due = deletionDueAt(readOnlySince)
+  const scheduled =
+    action === 'WARN_30' || action === 'WARN_7' ? promisedDeletionAt(readOnlySince, current, action, now) : null
+  const due = scheduled ?? earliestDeletionAt(readOnlySince, current) ?? deletionDueAt(readOnlySince)
   const result: RetentionResult = { ownerId, action, deletionDueAt: due.toISOString() }
   if (dryRun || action === 'NONE' || action === 'WAIT') return result
 
-  const teams = await prisma.team.findMany({ where: { ownerId }, select: { id: true, name: true } })
-
   if (action === 'WARN_30' || action === 'WARN_7') {
-    const deletionDate = action === 'WARN_7' ? new Date(Math.max(due.getTime(), now.getTime() + 7 * DAY_MS)) : due
-    if (!(await warn(ownerId, teams, deletionDate))) return { ...result, action: 'EMAIL_FAILED' }
+    const teams = await prisma.team.findMany({ where: { ownerId }, select: { id: true, name: true } })
+    if (!(await warn(ownerId, teams, scheduled!))) return { ...result, action: 'EMAIL_FAILED' }
     // A stale row (earlier read-only period, or already deleted) is reset rather than reused.
     const markers =
-      action === 'WARN_7'
-        ? { warned30At: current?.warned30At ?? now, warned7At: now }
-        : { warned30At: now, warned7At: null }
+      action === 'WARN_7' ? { warned30At: current!.warned30At, warned7At: now } : { warned30At: now, warned7At: null }
     await prisma.workspaceRetention.upsert({
       where: { ownerId },
       create: { ownerId, readOnlySince, ...markers },
@@ -181,18 +220,10 @@ export async function processOwner(ownerId: string, now: Date, dryRun: boolean):
     return result
   }
 
-  // DELETE. Stored documents must go through document-retention so their files are removed too.
-  const teamIds = teams.map((team) => team.id)
-  const docScope = { OR: [{ ownerId }, ...(teamIds.length ? [{ teamId: { in: teamIds } }] : [])], deletedAt: null }
-  const liveDocuments = await prisma.documentUpload.count({ where: docScope })
-  if (liveDocuments > 0) {
-    await prisma.documentUpload.updateMany({ where: { ...docScope, expiresAt: { gt: now } }, data: { expiresAt: now } })
-    return { ...result, action: 'WAIT_DOCUMENTS' }
-  }
-
+  // DELETE: everything is decided again under the lock, so a reactivation cannot interleave.
   const outcome = await prisma.$transaction(
     async (tx) => {
-      // Same lock as checkout, plus the subscription row, so a reactivation cannot interleave.
+      // Same lock as checkout, plus the subscription row.
       await tx.$queryRaw`SELECT 1 AS acquired FROM (SELECT pg_advisory_xact_lock(hashtextextended(${ownerId}, 0))) AS billing_lock`
       await tx.$queryRaw`SELECT id FROM "Subscription" WHERE "userId" = ${ownerId} FOR UPDATE`
       const fresh = await getWorkspaceEntitlement(ownerId, now, tx)
@@ -202,9 +233,17 @@ export async function processOwner(ownerId: string, now: Date, dryRun: boolean):
         fresh.readOnlySince?.getTime() !== readOnlySince.getTime() ||
         !marker ||
         marker.deletedAt ||
-        planRetention(readOnlySince, marker, now) !== 'DELETE'
+        planRetention(readOnlySince, marker, now) !== 'DELETE' ||
+        (await personalWorkspaceUnreachable(tx, ownerId))
       )
-        return null
+        return { kind: 'skipped' as const }
+      const teamIds = (await tx.team.findMany({ where: { ownerId }, select: { id: true } })).map((team) => team.id)
+      // Stored documents go through document-retention first so their files are removed too.
+      const docScope = { OR: [{ ownerId }, ...(teamIds.length ? [{ teamId: { in: teamIds } }] : [])], deletedAt: null }
+      if ((await tx.documentUpload.count({ where: docScope })) > 0) {
+        await tx.documentUpload.updateMany({ where: { ...docScope, expiresAt: { gt: now } }, data: { expiresAt: now } })
+        return { kind: 'documents' as const }
+      }
       const deleted = await deleteOwnerWorkspaceData(tx, ownerId, teamIds)
       await tx.workspaceRetention.update({ where: { ownerId }, data: { deletedAt: now } })
       await tx.auditLog.create({
@@ -217,11 +256,13 @@ export async function processOwner(ownerId: string, now: Date, dryRun: boolean):
           metadata: JSON.stringify({ readOnlySince: readOnlySince.toISOString(), teams: teamIds.length, deleted }),
         },
       })
-      return deleted
+      return { kind: 'deleted' as const, deleted }
     },
     { maxWait: 10_000, timeout: 120_000 }
   )
-  return outcome ? { ...result, deleted: outcome } : { ...result, action: 'SKIPPED_REACTIVATED' }
+  if (outcome.kind === 'documents') return { ...result, action: 'WAIT_DOCUMENTS' }
+  if (outcome.kind === 'skipped') return { ...result, action: 'SKIPPED_REACTIVATED' }
+  return { ...result, deleted: outcome.deleted }
 }
 
 export async function runWorkspaceRetention(now = new Date()) {
