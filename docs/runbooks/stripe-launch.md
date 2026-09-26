@@ -72,6 +72,19 @@ Additional sandbox evidence for enforcement:
 2. Fail a renewal: the banner shows the payment-failed deadline and writes still work. Advance 7 days: read-only. Pay the invoice: full access returns and `pastDueSince` is cleared.
 3. Cancel at period end, advance past `currentPeriodEnd`: read-only.
 
+## Lapsed-workspace deletion
+
+`/api/cron/workspace-retention` (daily, `lib/workspaceRetention.ts`) handles workspaces that stay read-only:
+
+- **Warnings:** a 30-day and then a 7-day warning go to the owner, with admins of the owner's teams copied. A warning counts only if the owner's email was accepted. Deletion never happens sooner than 90 days read-only, 30 days after the 30-day warning, and 7 days after the 7-day warning. So a workspace that lapsed long ago (for example before public launch) still gets the full notice, and a failed or missed warning postpones deletion.
+- **Deletion:** after 90 days read-only, every business record in the owner's workspaces (personal and team), the owned teams and their memberships are deleted in one transaction. The owner's subscription row is locked and access re-checked first, so a workspace reactivated at the last moment is never deleted.
+- **Kept:** user accounts and sign-in, the subscription, invoices, API keys and audit logs. A `WORKSPACE_DELETED` audit entry records the counts.
+- **Not touched:** a user who owns no team but belongs to someone else's team cannot open or pay for their old personal workspace, so leftover personal data is never warned about or deleted.
+- **Stored documents:** they are first expired, so `document-retention` removes their files. Deletion completes on a later run, once no live documents remain.
+- **Reactivation:** subscribing clears the timeline. A later lapse starts a new 90 days.
+- **Dry run by default:** unless `WORKSPACE_DELETION_ENABLED=true`, the job sends nothing and deletes nothing. It returns each affected owner ID with the action it would take and the due date. Review the first dry runs after going public, then enable it. While deletion is off, the banner does not announce a deletion date.
+- **Beta:** it does nothing while plans are not enforced (pilot mode or Stripe unconfigured).
+
 ## Launch and rollback
 
 Before launch, confirm the database migration containing `StripeWebhookEvent` is applied, backups and restore instructions are current, webhook delivery health is green, and the deployed Price IDs exactly match the approved live products. Repeat the purchase, invoice, failure, cancellation, authorization, and duplicate-delivery checks in live mode only with an approved low-value internal transaction.

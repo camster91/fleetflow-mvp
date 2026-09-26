@@ -77,6 +77,10 @@ describe('verify-production-readiness', () => {
     expect(evaluateEnvironment({ ...billing, FLEETVERA_BETA_ENDS_AT: 'next month' }, 'public').missing).toContain(
       'FLEETVERA_BETA_ENDS_AT must be an ISO 8601 date'
     )
+    expect(evaluateEnvironment({ ...billing, WORKSPACE_DELETION_ENABLED: 'yes' }, 'public').missing).toContain(
+      'WORKSPACE_DELETION_ENABLED must be true or false'
+    )
+    expect(evaluateEnvironment({ ...billing, WORKSPACE_DELETION_ENABLED: 'false' }, 'public').ready).toBe(true)
 
     const invalid = evaluateEnvironment({ ...billing, STRIPE_PRICE_YEARLY: 'price_monthly' }, 'public')
     expect(invalid.ready).toBe(false)
