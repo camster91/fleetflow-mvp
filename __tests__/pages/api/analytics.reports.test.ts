@@ -1,4 +1,6 @@
 import { createMocks } from 'node-mocks-http'
+
+const SAME_ORIGIN = { host: 'app.test', origin: 'http://app.test' }
 import handler from '../../../pages/api/analytics/reports'
 
 jest.mock('../../../lib/prisma', () => ({
@@ -59,7 +61,7 @@ describe('GET /api/analytics/reports', () => {
 describe('POST /api/analytics/reports', () => {
   it('returns 400 when required fields missing', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
-    const { req, res } = createMocks({ method: 'POST', body: { name: 'X' } })
+    const { req, res } = createMocks({ method: 'POST', headers: SAME_ORIGIN, body: { name: 'X' } })
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(400)
   })
@@ -70,6 +72,7 @@ describe('POST /api/analytics/reports', () => {
     ;(prisma.user.update as jest.Mock).mockResolvedValue({})
     const { req, res } = createMocks({
       method: 'POST',
+      headers: SAME_ORIGIN,
       body: { name: 'Fleet Report', type: 'fleet', schedule: 'weekly', format: 'pdf' },
     })
     await handler(req as any, res as any)
@@ -84,7 +87,7 @@ describe('POST /api/analytics/reports', () => {
 describe('DELETE /api/analytics/reports', () => {
   it('returns 400 when id missing', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
-    const { req, res } = createMocks({ method: 'DELETE', body: {} })
+    const { req, res } = createMocks({ method: 'DELETE', headers: SAME_ORIGIN, body: {} })
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(400)
   })
@@ -94,7 +97,7 @@ describe('DELETE /api/analytics/reports', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
       notificationPreferences: JSON.stringify({ saved_reports: [] }),
     })
-    const { req, res } = createMocks({ method: 'DELETE', body: { id: 'nonexistent' } })
+    const { req, res } = createMocks({ method: 'DELETE', headers: SAME_ORIGIN, body: { id: 'nonexistent' } })
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(404)
   })
@@ -115,7 +118,7 @@ describe('DELETE /api/analytics/reports', () => {
       notificationPreferences: JSON.stringify({ saved_reports: saved }),
     })
     ;(prisma.user.update as jest.Mock).mockResolvedValue({})
-    const { req, res } = createMocks({ method: 'DELETE', body: { id: 'rpt_1' } })
+    const { req, res } = createMocks({ method: 'DELETE', headers: SAME_ORIGIN, body: { id: 'rpt_1' } })
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(200)
     const d = JSON.parse(res._getData())
@@ -124,5 +127,16 @@ describe('DELETE /api/analytics/reports', () => {
     const updateCall = (prisma.user.update as jest.Mock).mock.calls[0][0]
     const updatedPrefs = JSON.parse(updateCall.data.notificationPreferences)
     expect(updatedPrefs.saved_reports).toHaveLength(0)
+  })
+  it('refuses cross-site changes to saved reports', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'u1' } })
+    const { req, res } = createMocks({
+      method: 'DELETE',
+      headers: { host: 'app.test', origin: 'https://evil.test' },
+      body: { id: 'rpt_1' },
+    })
+    await handler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(403)
+    expect(prisma.user.update).not.toHaveBeenCalled()
   })
 })

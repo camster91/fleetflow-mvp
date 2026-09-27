@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession, authOptions } from '../../../lib/auth'
 import { prisma } from '../../../lib/prisma'
+import { assertSameOrigin } from '../../../lib/apiAuth'
 
 const REPORTS_KEY = 'saved_reports'
 
@@ -41,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const session = await getServerSession(req, res, authOptions)
   if (!session?.user) return res.status(401).json({ error: 'Unauthorized' })
   const userId = session.user.id
+  if (req.method !== 'GET' && !assertSameOrigin(req, res)) return
 
   if (req.method === 'GET') {
     try {

@@ -1,5 +1,7 @@
 import { createMocks } from 'node-mocks-http'
 
+const SAME_ORIGIN = { host: 'app.test', origin: 'http://app.test' }
+
 jest.mock('@/lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }))
 jest.mock('@/lib/prisma', () => ({
   prisma: { team: { findMany: jest.fn() } },
@@ -37,7 +39,7 @@ describe('/api/team/workspaces', () => {
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
       { id: 'joined', name: 'Joined', ownerId: 'u2', members: [{ role: 'MEMBER' }] },
     ])
-    const { req, res } = createMocks({ method: 'POST', body: { teamId: 'joined' } })
+    const { req, res } = createMocks({ method: 'POST', headers: SAME_ORIGIN, body: { teamId: 'joined' } })
 
     await handler(req as never, res as never)
 
@@ -47,11 +49,25 @@ describe('/api/team/workspaces', () => {
 
   it('rejects selecting a workspace outside the user membership', async () => {
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([])
-    const { req, res } = createMocks({ method: 'POST', body: { teamId: 'other' } })
+    const { req, res } = createMocks({ method: 'POST', headers: SAME_ORIGIN, body: { teamId: 'other' } })
 
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(403)
     expect(res.getHeader('set-cookie')).toBeUndefined()
+  })
+
+  it('refuses a cross-site workspace switch', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      headers: { host: 'app.test', origin: 'https://evil.test' },
+      body: { teamId: 'joined' },
+    })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(403)
+    expect(res.getHeader('set-cookie')).toBeUndefined()
+    expect(prisma.team.findMany).not.toHaveBeenCalled()
   })
 })
