@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { serialize } from 'cookie'
 import { parse as parseCookie } from 'cookie'
 import { prisma } from '../../../lib/prisma'
-import { requireSession, resolveTenantContext, TenantContextError } from '../../../lib/apiAuth'
+import { assertSameOrigin, requireSession, resolveTenantContext, TenantContextError } from '../../../lib/apiAuth'
 
 const COOKIE_NAME = 'fleetflow_team'
 
@@ -41,6 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
+    if (!assertSameOrigin(req, res)) return
     const teamId = typeof req.body?.teamId === 'string' ? req.body.teamId : ''
     if (!teamId) return res.status(400).json({ error: 'teamId is required' })
 
