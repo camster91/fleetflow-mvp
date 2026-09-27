@@ -62,7 +62,7 @@ Set these in Coolify, never in git:
 
 ## 3. Database
 
-`master` adds six migrations that run automatically on deploy (`prisma migrate deploy` in the
+`master` adds seven migrations that run automatically on deploy (`prisma migrate deploy` in the
 entrypoint):
 
 - `20260925000000_auth_hardening`: adds `tokenVersion` and `lastTotpStep`, stores share tokens
@@ -76,6 +76,8 @@ entrypoint):
   `America/Toronto`. Owners and admins can change it under Settings › Company.
 - `20260926000000_subscription_past_due_since`: adds `pastDueSince` to subscriptions (the start of
   the 7-day failed-payment grace period). Existing past-due rows are backfilled from their billing period.
+- `20260926010000_workspace_retention`: adds the `WorkspaceRetention` table (warning and deletion
+  timeline for lapsed workspaces). Empty until plans are enforced.
 
 - [ ] Take a verified backup (`docs/runbooks/backup-restore.md`) and record its ID and timestamp.
 - [ ] Rehearse the migrations on a **restored copy** of production (#72):
@@ -108,6 +110,7 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 | `integration-retention` | Daily |
 | `maintenance-risk-retention` | Daily |
 | `pilot-retention` | Daily |
+| `workspace-retention` | Daily. A no-op during the beta; after going public it warns, then deletes lapsed workspaces (dry run until `WORKSPACE_DELETION_ENABLED=true`, see `stripe-launch.md`) |
 
 - [ ] Each job alerts on a non-2xx response (see `docs/runbooks/monitoring.md`).
 

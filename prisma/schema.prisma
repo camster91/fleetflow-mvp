@@ -80,6 +80,7 @@ model User {
 
   // Subscription
   subscription Subscription?
+  workspaceRetention WorkspaceRetention?
   invoices Invoice[]
 
   // User data (vehicles, deliveries, etc.)
@@ -1169,4 +1170,18 @@ model PilotIncident {
 
   @@index([scopeKey, occurredAt])
   @@index([expiresAt])
+}
+
+/// Deletion timeline for a lapsed (read-only) workspace owner (#150): warnings at 30 and 7 days,
+/// deletion after 90 days read-only. Reset whenever the owner's read-only period changes.
+model WorkspaceRetention {
+  id            String    @id @default(cuid())
+  ownerId       String    @unique
+  owner         User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  readOnlySince DateTime
+  warned30At    DateTime?
+  warned7At     DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

@@ -125,6 +125,8 @@ function evaluateEnvironment(env, mode = 'pilot') {
   // Plan enforcement (lib/entitlements.ts): beta workspaces keep full access until this date.
   if (present(env, 'FLEETVERA_BETA_ENDS_AT') && Number.isNaN(new Date(env.FLEETVERA_BETA_ENDS_AT).getTime()))
     missing.push('FLEETVERA_BETA_ENDS_AT must be an ISO 8601 date')
+  if (present(env, 'WORKSPACE_DELETION_ENABLED') && !['true', 'false'].includes(env.WORKSPACE_DELETION_ENABLED))
+    missing.push('WORKSPACE_DELETION_ENABLED must be true or false')
 
   const warnings = []
   if (env.AI_PROVIDER && env.AI_PROVIDER !== 'disabled' && !secretAtLeast(env, 'OPENAI_API_KEY'))
