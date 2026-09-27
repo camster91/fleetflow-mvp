@@ -294,6 +294,7 @@ model Subscription {
   currentPeriodStart    DateTime?
   currentPeriodEnd      DateTime?
   cancelAtPeriodEnd     Boolean   @default(false)
+  pastDueSince          DateTime? // first failed payment in the current past-due run; starts the 7-day grace (#150)
   stripeLastEventId     String?
   stripeLastEventCreated Int?
   createdAt             DateTime  @default(now())

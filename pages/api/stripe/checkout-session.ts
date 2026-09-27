@@ -57,7 +57,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           include: { subscription: true },
         })
         if (!user) throw billingError('User not found', 404)
-        if (user.subscription?.stripeSubscriptionId && user.subscription.status !== 'CANCELLED') {
+        if (
+          user.subscription?.stripeSubscriptionId &&
+          !['CANCELLED', 'INCOMPLETE'].includes(user.subscription.status)
+        ) {
           throw billingError('A subscription already exists for this workspace', 409)
         }
 

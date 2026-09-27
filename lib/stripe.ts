@@ -18,7 +18,7 @@ export interface BillingPricing {
 
 export interface StripeSubscriptionSnapshot {
   id: string
-  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'UNPAID' | 'TRIAL'
+  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' | 'UNPAID' | 'TRIAL' | 'INCOMPLETE'
   priceId: string | null
   currentPeriodStart: number | null
   currentPeriodEnd: number | null
@@ -272,8 +272,10 @@ export async function retrieveSubscriptionSnapshot(subscriptionId: string): Prom
       canceled: 'CANCELLED',
       unpaid: 'UNPAID',
       trialing: 'TRIAL',
-      incomplete: 'UNPAID',
-      incomplete_expired: 'UNPAID',
+      // The first payment never completed (e.g. awaiting 3-D Secure): not a paid subscription, so the
+      // app-side trial still applies (lib/entitlements.ts) and checkout may be retried.
+      incomplete: 'INCOMPLETE',
+      incomplete_expired: 'INCOMPLETE',
       paused: 'UNPAID',
     }
     return {

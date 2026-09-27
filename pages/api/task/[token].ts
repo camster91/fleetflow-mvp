@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { rateLimitMiddleware, getClientIP } from '../../../lib/rateLimit'
 import { hashToken } from '../../../lib/tokens'
+import { getWorkspaceEntitlement, READ_ONLY_MESSAGE } from '../../../lib/entitlements'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const ip = getClientIP(req)
@@ -53,6 +54,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     if (completionNotes === undefined && parsedCost === undefined && markComplete !== true) {
       return res.status(400).json({ error: 'No report fields supplied' })
+    }
+
+    // A lapsed (read-only) workspace's share links cannot change its data either (#150).
+    if ((await getWorkspaceEntitlement(link.ownerId)).access === 'READ_ONLY') {
+      return res.status(402).json({ error: READ_ONLY_MESSAGE, code: 'SUBSCRIPTION_REQUIRED' })
     }
 
     const accepted = await prisma.$transaction(async (transaction) => {

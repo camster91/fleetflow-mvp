@@ -17,8 +17,14 @@ jest.mock('@/lib/rateLimit', () => ({
   rateLimitMiddleware: jest.fn(async () => true),
 }))
 
+jest.mock('@/lib/entitlements', () => ({
+  ...jest.requireActual('@/lib/entitlements'),
+  getWorkspaceEntitlement: jest.fn(async () => ({ access: 'FULL' })),
+}))
+
 import handler from '@/pages/api/task/[token]'
 import { prisma } from '@/lib/prisma'
+import { getWorkspaceEntitlement } from '@/lib/entitlements'
 
 const activeLink = {
   id: 'link-1',
@@ -115,6 +121,20 @@ describe('public task share API', () => {
     await handler(req as never, res as never)
 
     expect(res._getStatusCode()).toBe(410)
+    expect(mockTx.maintenanceTask.update).not.toHaveBeenCalled()
+  })
+
+  it('cannot change a read-only (lapsed) workspace, and does not burn the single-use link', async () => {
+    ;(prisma.taskShareLink.findUnique as jest.Mock).mockResolvedValue(activeLink)
+    ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValueOnce({ access: 'READ_ONLY' })
+    const { req, res } = createMocks({ method: 'PUT', query: { token: 'secret' }, body: { markComplete: true } })
+
+    await handler(req as never, res as never)
+
+    expect(res._getStatusCode()).toBe(402)
+    expect(res._getJSONData()).toMatchObject({ code: 'SUBSCRIPTION_REQUIRED' })
+    expect(getWorkspaceEntitlement).toHaveBeenCalledWith('owner-1')
+    expect(mockTx.taskShareLink.updateMany).not.toHaveBeenCalled()
     expect(mockTx.maintenanceTask.update).not.toHaveBeenCalled()
   })
 })

@@ -68,6 +68,15 @@ describe('verify-production-readiness', () => {
       STRIPE_PRICE_CURRENCY: 'cad',
     }
     expect(evaluateEnvironment(billing, 'public').ready).toBe(true)
+    expect(evaluateEnvironment(billing, 'public').warnings).toEqual([
+      expect.stringContaining('FLEETVERA_BETA_ENDS_AT is unset'),
+    ])
+    expect(
+      evaluateEnvironment({ ...billing, FLEETVERA_BETA_ENDS_AT: '2027-01-31T00:00:00Z' }, 'public').warnings
+    ).toEqual([])
+    expect(evaluateEnvironment({ ...billing, FLEETVERA_BETA_ENDS_AT: 'next month' }, 'public').missing).toContain(
+      'FLEETVERA_BETA_ENDS_AT must be an ISO 8601 date'
+    )
 
     const invalid = evaluateEnvironment({ ...billing, STRIPE_PRICE_YEARLY: 'price_monthly' }, 'public')
     expect(invalid.ready).toBe(false)
