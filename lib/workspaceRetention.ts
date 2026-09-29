@@ -16,6 +16,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { billingEnforced, getWorkspaceEntitlement } from './entitlements'
 import { sendWorkspaceDeletionWarningEmail } from './email'
+import { hasLiveStripeSubscription } from './stripe'
 
 export const DELETION_AFTER_DAYS = 90
 const DAY_MS = 86_400_000
@@ -107,6 +108,31 @@ export async function deleteOwnerWorkspaceData(tx: Tx, ownerId: string, teamIds:
   const counts: Record<string, number> = {}
   const run = async (name: string, op: Promise<{ count: number }>) => {
     counts[name] = (await op).count
+  }
+  // Notifications carry copies of fleet details (task titles, vehicles, customers) with no workspace key:
+  // remove the ones that point at records being deleted, for the owner and every member of the teams.
+  const [deliveries, tasks, vehicles, members] = await Promise.all([
+    tx.delivery.findMany({ where: scope, select: { id: true } }),
+    tx.maintenanceTask.findMany({ where: scope, select: { id: true } }),
+    tx.vehicle.findMany({ where: scope, select: { id: true } }),
+    teamIds.length
+      ? tx.teamMember.findMany({ where: { teamId: { in: teamIds }, userId: { not: null } }, select: { userId: true } })
+      : Promise.resolve([] as { userId: string | null }[]),
+  ])
+  const recipients = [ownerId, ...members.map((member) => member.userId).filter((id): id is string => !!id)]
+  const entityIds = [...deliveries, ...tasks, ...vehicles].map((row) => row.id)
+  counts.notifications = (
+    await tx.notification.deleteMany({
+      where: { userId: ownerId, type: { in: ['MAINTENANCE_DUE', 'VEHICLE_ALERT'] } },
+    })
+  ).count
+  for (let index = 0; index < entityIds.length; index += 100) {
+    const chunk = entityIds.slice(index, index + 100)
+    counts.notifications += (
+      await tx.notification.deleteMany({
+        where: { userId: { in: recipients }, OR: chunk.map((id) => ({ data: { contains: id } })) },
+      })
+    ).count
   }
   await run('taskShareLinks', tx.taskShareLink.deleteMany({ where: { ownerId } }))
   await run('expenses', tx.expenseRecord.deleteMany({ where: scope }))
@@ -236,6 +262,14 @@ export async function processOwner(ownerId: string, now: Date, dryRun: boolean):
         planRetention(readOnlySince, marker, now) !== 'DELETE' ||
         (await personalWorkspaceUnreachable(tx, ownerId))
       )
+        return { kind: 'skipped' as const }
+      // Ask Stripe directly: a payment can complete before its webhook reaches us. If Stripe cannot be
+      // reached, do not delete (the next daily run retries).
+      const billing = await tx.subscription.findUnique({
+        where: { userId: ownerId },
+        select: { stripeCustomerId: true },
+      })
+      if (billing?.stripeCustomerId && (await hasLiveStripeSubscription(billing.stripeCustomerId).catch(() => true)))
         return { kind: 'skipped' as const }
       const teamIds = (await tx.team.findMany({ where: { ownerId }, select: { id: true } })).map((team) => team.id)
       // Stored documents go through document-retention first so their files are removed too.

@@ -107,6 +107,23 @@ export default function BillingPage() {
     }
   }
 
+  // Replacing a failed card (or any payment detail) happens in the Stripe customer portal.
+  const handlePortal = async () => {
+    setActionLoading(true)
+    try {
+      const r = await fetch('/api/stripe/portal-session', { method: 'POST' })
+      const data = await r.json()
+      if (r.ok && data.url) {
+        window.location.href = data.url
+        return
+      }
+      toast.error(data.error || 'Could not open payment settings')
+    } catch {
+      toast.error('Something went wrong.')
+    }
+    setActionLoading(false)
+  }
+
   const handleCancel = async () => {
     const ok = await confirmAction(
       'You will retain access until the end of the current billing period.',
@@ -140,7 +157,10 @@ export default function BillingPage() {
   // Workspaces with an existing paid subscription are not on the free beta, so
   // never tell them billing is free when Stripe is temporarily unavailable.
   const hasPaidSubscription = Boolean(sub && PAID_STATUSES.has(sub.status))
-  const showPricing = canManage && !isActive && billingAvailable
+  // An existing paid subscription (including one whose payment failed) is fixed in the customer portal;
+  // checkout would only be rejected for it.
+  const showPricing = canManage && !hasPaidSubscription && billingAvailable
+  const paymentFailed = sub?.status === 'PAST_DUE' || sub?.status === 'UNPAID'
   const formatPrice = (value: number, currency: string) =>
     new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(value / 100)
   const savings =
@@ -259,6 +279,20 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
+            {canManage && hasPaidSubscription && billingAvailable && (
+              <button
+                type="button"
+                onClick={handlePortal}
+                disabled={actionLoading}
+                className={`mt-4 mr-3 min-h-11 px-4 py-2 text-sm rounded-lg transition disabled:opacity-50 ${
+                  paymentFailed
+                    ? 'bg-blue-900 text-white hover:bg-blue-800'
+                    : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {paymentFailed ? 'Update payment method' : 'Manage payment method'}
+              </button>
+            )}
             {canManage && isActive && !sub.cancelAtPeriodEnd && (
               <button
                 onClick={handleCancel}

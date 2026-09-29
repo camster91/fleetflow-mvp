@@ -212,6 +212,18 @@ export async function findOpenCheckoutSessions(customerId: string, userId: strin
   )
 }
 
+/**
+ * Whether Stripe itself has a subscription for this customer that is paid, being paid or still being set up.
+ * Authoritative even when our webhook copy lags behind (used before deleting a lapsed workspace).
+ */
+export async function hasLiveStripeSubscription(customerId: string): Promise<boolean> {
+  requireStripeSecret('STRIPE_SECRET_KEY')
+  const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 })
+  return subscriptions.data.some((subscription) =>
+    ['active', 'trialing', 'past_due', 'incomplete'].includes(subscription.status)
+  )
+}
+
 export async function expireCheckoutSession(sessionId: string) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   return stripe.checkout.sessions.expire(sessionId)

@@ -11,6 +11,7 @@ import { prisma } from '../../lib/prisma'
 jest.mock('../../lib/prisma', () => ({
   prisma: {
     $transaction: jest.fn(),
+    $queryRaw: jest.fn(),
     stripeWebhookEvent: { create: jest.fn(), findUnique: jest.fn() },
     subscription: {
       findUnique: jest.fn(),
@@ -35,6 +36,7 @@ describe('Stripe webhook compatibility', () => {
   beforeEach(() => {
     jest.resetAllMocks()
     ;(prisma.$transaction as jest.Mock).mockImplementation(async (callback) => callback(prisma))
+    ;(prisma.$queryRaw as jest.Mock).mockResolvedValue([])
     ;(prisma.stripeWebhookEvent.create as jest.Mock).mockResolvedValue({})
     ;(prisma.stripeWebhookEvent.findUnique as jest.Mock).mockResolvedValue(null)
     const { resolvePricePlan } = jest.requireMock('../../lib/stripe')
@@ -497,6 +499,83 @@ describe('Stripe webhook compatibility', () => {
       await handler(req, res)
       expect(res._getStatusCode()).toBe(200)
       expect(updatedData()).toMatchObject({ status: 'CANCELLED', pastDueSince: expected })
+    })
+
+    function lateFailure(invoiceStatus: 'open' | 'paid') {
+      const { retrieveSubscriptionSnapshot, retrieveInvoiceSnapshot } = jest.requireMock('../../lib/stripe')
+      retrieveSubscriptionSnapshot.mockResolvedValueOnce({
+        id: 'sub_123',
+        status: 'CANCELLED',
+        priceId: 'price_monthly',
+        currentPeriodStart: 100,
+        currentPeriodEnd: 9_999_999_999,
+        cancelAtPeriodEnd: false,
+      })
+      retrieveInvoiceSnapshot.mockResolvedValueOnce({
+        id: 'in_123',
+        status: invoiceStatus,
+        amountPaid: invoiceStatus === 'paid' ? 4900 : 0,
+        amountDue: 4900,
+        currency: 'usd',
+        invoicePdf: null,
+        periodStart: 100,
+        periodEnd: 200,
+      })
+      ;(constructWebhookEvent as jest.Mock).mockReturnValue({
+        id: `evt_late_${invoiceStatus}`,
+        created: 1_000,
+        type: 'invoice.payment_failed',
+        data: { object: invoiceFixture('open') },
+      })
+      // The cancellation (created 5_000) was already reconciled before this older failure arrived.
+      ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+        id: 'local-sub',
+        userId: 'owner-1',
+        status: 'CANCELLED',
+        pastDueSince: null,
+        stripeLastEventCreated: 5_000,
+      })
+    }
+
+    test('a failure delivered after the cancellation still starts the grace clock', async () => {
+      lateFailure('open')
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(res._getStatusCode()).toBe(200)
+      expect(prisma.subscription.update).toHaveBeenCalledTimes(1)
+      expect(prisma.subscription.update).toHaveBeenCalledWith({
+        where: { stripeSubscriptionId: 'sub_123' },
+        data: { pastDueSince: new Date(1_000_000) },
+      })
+    })
+
+    test('a late failure for an invoice that was since paid changes nothing', async () => {
+      lateFailure('paid')
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(res._getStatusCode()).toBe(200)
+      expect(prisma.subscription.update).not.toHaveBeenCalled()
+    })
+
+    test("takes the owner's lock before changing the subscription", async () => {
+      failedPayment(1_000)
+      ;(prisma.subscription.findUnique as jest.Mock).mockResolvedValue({
+        id: 'local-sub',
+        userId: 'owner-1',
+        status: 'ACTIVE',
+        pastDueSince: null,
+      })
+      const { req, res } = webhookRequest()
+      await handler(req, res)
+      expect(res._getStatusCode()).toBe(200)
+      const lockCall = (prisma.$queryRaw as jest.Mock).mock.calls.find((call) =>
+        String(call[0].join('?')).includes('pg_advisory_xact_lock')
+      )
+      expect(lockCall).toBeDefined()
+      expect(lockCall!.slice(1)).toEqual(['owner-1'])
+      expect((prisma.$queryRaw as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+        (prisma.subscription.update as jest.Mock).mock.invocationCallOrder[0]
+      )
     })
 
     test('clears it when the payment recovers', async () => {
