@@ -6,6 +6,7 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Badge } from '../../components/ui/Badge'
+import { resolveActiveTeamId } from '../../hooks/useWorkspaceRole'
 import { getAllRoles, getRoleDescription } from '../../lib/permissions'
 import { Mail, Plus, X, Send, Users, ChevronDown, Check } from 'lucide-react'
 import { notify } from '../../services/notifications'
@@ -32,9 +33,10 @@ export default function InvitePage() {
         return response.json()
       })
       .then((data) => {
-        // Invitations always go to the active team workspace, never to a different team by default.
-        setTeamId(data.activeTeamId || null)
-        setNoTeam(!data.activeTeamId)
+        // Invitations go to the team the server treats as active (see resolveActiveTeamId).
+        const active = resolveActiveTeamId(data)
+        setTeamId(active)
+        setNoTeam(!active)
       })
       .catch(() => notify.error('Unable to load your active workspace'))
   }, [])

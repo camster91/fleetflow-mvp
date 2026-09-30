@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { clearEmailsFor, waitForEmail, waitForLoginCode } from '../support/mail-capture'
 import {
+  api,
   createSyntheticUser,
   disconnectMatrixDb,
   matrixDb,
@@ -66,6 +67,10 @@ test('customer onboarding: admin invite → sign in → create team → invite t
     await customerPage.goto('/team')
     await expect(customerPage.getByRole('heading', { name: 'Work with your team' })).toBeVisible()
 
+    // A record added before the team exists must come with them into the team.
+    const created = await api(customerPage, baseURL!).post('/api/vehicles', { name: 'E2E Van 1', status: 'active' })
+    expect(created.status()).toBeLessThan(300)
+
     // 3. They create their team, which becomes the active workspace.
     await customerPage.getByLabel('Team name').fill('E2E Northside')
     await customerPage.getByRole('button', { name: 'Create team' }).click()
@@ -75,6 +80,10 @@ test('customer onboarding: admin invite → sign in → create team → invite t
       select: { id: true, name: true },
     })
     expect(team.name).toBe('E2E Northside')
+    const vehicles = await (await customerPage.request.get('/api/vehicles')).json()
+    const list = Array.isArray(vehicles) ? vehicles : vehicles.data
+    expect(list.map((vehicle: { name: string }) => vehicle.name)).toContain('E2E Van 1')
+    expect(await matrixDb.vehicle.count({ where: { teamId: team.id, name: 'E2E Van 1' } })).toBe(1)
 
     // 4. They invite a teammate into the team.
     await customerPage.getByRole('button', { name: /Invite Member/ }).click()
@@ -102,6 +111,8 @@ test('customer onboarding: admin invite → sign in → create team → invite t
   } finally {
     const emails = [customerEmail, teammateEmail]
     await Promise.all([...emails, admin.email].map((email) => clearEmailsFor(email)))
+    // Vehicles reference their team without cascading, so remove them before the team.
+    await matrixDb.vehicle.deleteMany({ where: { owner: { email: customerEmail } } })
     await matrixDb.team.deleteMany({ where: { owner: { email: customerEmail } } })
     await matrixDb.verificationToken.deleteMany({ where: { identifier: { in: emails.map((e) => `login:${e}`) } } })
     const created = await matrixDb.user.findMany({ where: { email: { in: emails } }, select: { id: true } })

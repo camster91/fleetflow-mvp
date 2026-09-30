@@ -8,6 +8,7 @@ const mockTx = {
 }
 
 jest.mock('@/lib/auth', () => ({ getServerSession: jest.fn(), authOptions: {} }))
+jest.mock('@/lib/teamWorkspace', () => ({ movePersonalWorkspaceIntoTeam: jest.fn() }))
 jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn().mockResolvedValue(true) }))
 jest.mock('@/lib/prisma', () => ({
   prisma: { $transaction: jest.fn((fn: (client: unknown) => unknown) => fn(mockTx)) },
@@ -16,6 +17,7 @@ jest.mock('@/lib/prisma', () => ({
 import handler from '@/pages/api/team/create'
 import { getServerSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { movePersonalWorkspaceIntoTeam } from '@/lib/teamWorkspace'
 
 async function call(body: unknown, method = 'POST', headers: Record<string, string> = SAME_ORIGIN) {
   const { req, res } = createMocks({ method: method as never, headers, body: body as never })
@@ -29,6 +31,7 @@ describe('POST /api/team/create', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'u1', name: 'Pat' } })
     mockTx.team.count.mockResolvedValue(0)
     mockTx.team.create.mockResolvedValue({ id: 'team-new', name: 'Northside' })
+    ;(movePersonalWorkspaceIntoTeam as jest.Mock).mockResolvedValue({ vehicle: 2 })
   })
 
   it('accepts only POST', async () => {
@@ -64,8 +67,16 @@ describe('POST /api/team/create', () => {
       data: { name: 'Northside', ownerId: 'u1' },
       select: { id: true, name: true },
     })
+    // The personal workspace's records move into the team in the same transaction.
+    expect(movePersonalWorkspaceIntoTeam).toHaveBeenCalledWith(mockTx, 'u1', 'team-new')
     expect(mockTx.auditLog.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ userId: 'u1', teamId: 'team-new', entityType: 'team', action: 'created' }),
+      data: expect.objectContaining({
+        userId: 'u1',
+        teamId: 'team-new',
+        entityType: 'team',
+        action: 'created',
+        metadata: JSON.stringify({ movedFromPersonalWorkspace: { vehicle: 2 } }),
+      }),
     })
     expect(String(res.getHeader('Set-Cookie'))).toMatch(/^fleetflow_team=team-new;.*HttpOnly/)
     expect(res._getJSONData()).toEqual({ team: { id: 'team-new', name: 'Northside' } })
@@ -76,6 +87,15 @@ describe('POST /api/team/create', () => {
     const res = await call({ name: 'Second team' })
     expect(res._getStatusCode()).toBe(409)
     expect(mockTx.team.create).not.toHaveBeenCalled()
+    expect(res.getHeader('Set-Cookie')).toBeUndefined()
+  })
+
+  it('returns a JSON error and no cookie when the transaction fails', async () => {
+    ;(movePersonalWorkspaceIntoTeam as jest.Mock).mockRejectedValue(new Error('db down'))
+    jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    const res = await call({ name: 'Northside' })
+    expect(res._getStatusCode()).toBe(500)
+    expect(res._getJSONData()).toEqual({ error: 'The team could not be created. Please try again.' })
     expect(res.getHeader('Set-Cookie')).toBeUndefined()
   })
 })

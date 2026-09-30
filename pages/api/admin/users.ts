@@ -6,6 +6,7 @@ import { rateLimit } from '../../../lib/security'
 import { sendPrismaError } from '../../../lib/prismaErrors'
 import { getClientIP } from '../../../lib/rateLimit'
 import { sendAccountInvitationEmail } from '../../../lib/email'
+import { awaitEmailDeliveryWithinTimeout } from '../../../lib/authResponseTiming'
 import { emailSchema } from '../../../lib/validation'
 import { z } from 'zod'
 
@@ -107,8 +108,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
       if (!created) return res.status(409).json({ error: 'An account with this email already exists', field: 'email' })
       const inviter = session.user.name || session.user.email || 'The Fleetvera team'
-      const sent = await sendAccountInvitationEmail(email, inviter).catch(() => ({ success: false }))
-      return res.status(201).json({ user: created, emailSent: sent.success })
+      // Bounded like login codes: a slow email provider must not hold the admin's request open.
+      const outcome = await awaitEmailDeliveryWithinTimeout(sendAccountInvitationEmail(email, inviter))
+      const emailSent = outcome.status === 'delivered' && outcome.value.success
+      return res.status(201).json({ user: created, emailSent })
     } catch (error) {
       if (sendPrismaError(res, error, { unique: 'An account with this email already exists' })) return
       console.error('Error inviting customer:', error)

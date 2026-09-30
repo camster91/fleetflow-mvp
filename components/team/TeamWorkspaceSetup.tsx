@@ -16,8 +16,9 @@ interface Props {
 const reloadPage = () => window.location.reload()
 
 /**
- * Shown on /team while the personal workspace is active. Teammates can only be invited to a team
- * workspace, so this offers to create one, or to switch to a team the person already belongs to.
+ * Shown on /team when no team workspace is active: either the person has no team yet (their personal
+ * workspace), or they belong to several teams and none is selected. Teammates can only be invited to a
+ * team, so this offers to open one of their teams or to create their own.
  */
 export function TeamWorkspaceSetup({ workspaces, onDone = reloadPage }: Props) {
   const [name, setName] = useState('')
@@ -64,12 +65,14 @@ export function TeamWorkspaceSetup({ workspaces, onDone = reloadPage }: Props) {
           </div>
           <div className="flex-1">
             <h2 id="team-setup-title" className="text-lg font-semibold text-slate-900">
-              {ownsTeam ? 'You’re in your personal workspace' : 'Work with your team'}
+              {workspaces.length > 0 ? 'Choose a workspace' : 'Work with your team'}
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              {ownsTeam
-                ? 'Teammates belong to a team workspace. Switch to your team to see and invite members.'
-                : 'Create a team workspace to invite dispatchers, drivers and mechanics and share vehicles, deliveries and maintenance. Your personal workspace stays as it is.'}
+              {workspaces.length > 0
+                ? ownsTeam
+                  ? 'Open one of your team workspaces to see and invite members.'
+                  : 'Open a team you belong to, or create your own team workspace.'
+                : 'Create a team workspace to invite dispatchers, drivers and mechanics. Everything you have added so far moves into the team, so nothing is lost.'}
             </p>
           </div>
         </div>

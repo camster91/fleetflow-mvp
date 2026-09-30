@@ -16,6 +16,20 @@ const TEAM_ROLES: TeamRole[] = ['OWNER', 'ADMIN', 'MANAGER', 'DISPATCHER', 'TECH
  * callers hide role-gated controls until the role is known. The APIs remain
  * the authority; this only keeps the UI from offering actions they refuse.
  */
+/**
+ * The team the server treats as active (lib/apiAuth.ts resolveTenantContext): the selected team, or
+ * the only team when there is exactly one. null means the personal workspace (no teams) or that a
+ * workspace still has to be chosen (several teams, none selected).
+ */
+export function resolveActiveTeamId(
+  data: { activeTeamId?: string | null; workspaces?: WorkspaceSummary[] } | null
+): string | null {
+  if (!data || !Array.isArray(data.workspaces)) return null
+  if (data.activeTeamId && data.workspaces.some((workspace) => workspace.id === data.activeTeamId))
+    return data.activeTeamId
+  return data.workspaces.length === 1 ? data.workspaces[0].id : null
+}
+
 export function resolveWorkspaceRole(
   data: { activeTeamId?: string | null; workspaces?: WorkspaceSummary[] } | null
 ): TeamRole | null {

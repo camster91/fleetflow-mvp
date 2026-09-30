@@ -307,6 +307,31 @@ describe('/team controls follow the caller role', () => {
     expect(screen.queryByRole('button', { name: /Invite Member/ })).not.toBeInTheDocument()
   })
 
+  it('treats the only team as active even without a selected-workspace cookie (as the server does)', async () => {
+    mockRole = 'ADMIN'
+    global.fetch = jest.fn((url: string) =>
+      url === '/api/team/workspaces'
+        ? jsonResponse({ activeTeamId: null, workspaces: [{ id: 'team-1', name: 'Acme', role: 'ADMIN' }] })
+        : jsonResponse(members)
+    ) as unknown as typeof fetch
+    renderPage(TeamPage)
+    expect((await screen.findAllByText('Dee Driver')).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /Invite Member/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Team name')).not.toBeInTheDocument()
+  })
+
+  it('offers a retry, not team creation, when workspaces cannot be loaded', async () => {
+    mockRole = 'OWNER'
+    global.fetch = jest.fn((url: string) =>
+      url === '/api/team/workspaces'
+        ? Promise.resolve({ ok: false, status: 500, json: async () => ({}) })
+        : jsonResponse(members)
+    ) as unknown as typeof fetch
+    renderPage(TeamPage)
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be loaded')
+    expect(screen.queryByLabelText('Team name')).not.toBeInTheDocument()
+  })
+
   it('the owner may also manage admins', async () => {
     mockRole = 'OWNER'
     renderPage(TeamPage)
