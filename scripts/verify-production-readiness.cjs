@@ -26,6 +26,33 @@ const REQUIRED_BILLING = [
 ]
 const REQUIRED_MONITORING = ['NEXT_PUBLIC_SENTRY_DSN']
 
+const crypto = require('crypto')
+
+// SHA-256 of secret values that were committed to this repository's history (#30). They are
+// burned: anyone can read them from git history and forge sessions or decrypt data.
+const BURNED_SECRET_SHA256 = new Set([
+  '195f5e78d6b924abf7d1eb7b91f0d675d09f4286cdb6f5b90000c09597d2794a',
+  'f2d7564d0d825e3dff964684abe2b9143e667bee9f912948aa824a9a5c10f36c',
+  '8e4b22e4b27ba94d1a4c90f990e6230ad21308243976ce0e1dc1cc51475d16ad',
+])
+const SECRET_NAMES = [
+  'JWT_SECRET',
+  'NEXTAUTH_SECRET',
+  'TOKEN_ENCRYPTION_KEY',
+  'API_CURSOR_SECRET',
+  'CRON_SECRET',
+  'EMAIL_CONFIG_ENCRYPTION_KEY',
+  'DOCUMENT_STORAGE_SECRET',
+]
+
+function burnedSecretNames(env) {
+  return SECRET_NAMES.filter(
+    (name) =>
+      typeof env[name] === 'string' &&
+      BURNED_SECRET_SHA256.has(crypto.createHash('sha256').update(env[name].trim(), 'utf8').digest('hex'))
+  )
+}
+
 function present(env, name) {
   return typeof env[name] === 'string' && env[name].trim().length > 0
 }
@@ -98,6 +125,8 @@ function integrationRingIsValid(env) {
 
 function evaluateEnvironment(env, mode = 'pilot') {
   const missing = []
+  for (const name of burnedSecretNames(env))
+    missing.push(`${name} is a leaked value from the repository history (#30); generate a new one`)
   for (const name of REQUIRED_CORE) if (!present(env, name)) missing.push(name)
   if (!canonicalAppUrlIsValid(env)) missing.push('NEXTAUTH_URL must be a canonical https origin')
   for (const name of ['JWT_SECRET', 'API_CURSOR_SECRET', 'CRON_SECRET'])
@@ -166,4 +195,4 @@ if (require.main === module) {
   process.exitCode = result.ready ? 0 : 1
 }
 
-module.exports = { evaluateEnvironment }
+module.exports = { evaluateEnvironment, BURNED_SECRET_SHA256 }

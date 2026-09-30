@@ -30,6 +30,7 @@ Never paste secret values, database URLs, or customer data into GitHub, logs, or
       and locks them out.
 - [ ] **#30:** generate a new `JWT_SECRET` (at least 32 random bytes) in the Coolify secret store
       and treat every previously committed value as burned. Rotating it logs out existing sessions.
+      The preflight refuses to start if any secret variable still holds one of the leaked values.
       (If the old value is now serving as `TOKEN_ENCRYPTION_KEY`, move it to
       `TOKEN_ENCRYPTION_KEY_PREVIOUS`, set a fresh `TOKEN_ENCRYPTION_KEY`, deploy, then run
       `docker exec <app-container> node reencrypt-2fa-seeds.cjs` (dry run) and again with

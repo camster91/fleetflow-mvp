@@ -1,8 +1,11 @@
-const { evaluateEnvironment } = require('../../scripts/verify-production-readiness.cjs') as {
+import { createHash } from 'crypto'
+
+const { evaluateEnvironment, BURNED_SECRET_SHA256 } = require('../../scripts/verify-production-readiness.cjs') as {
   evaluateEnvironment: (
     env: Record<string, string>,
     mode?: string
   ) => { ready: boolean; missing: string[]; warnings: string[] }
+  BURNED_SECRET_SHA256: Set<string>
 }
 
 const core = {
@@ -61,6 +64,26 @@ describe('verify-production-readiness', () => {
     expect(evaluateEnvironment({ ...core, CRON_SECRET: 'short' }).missing).toContain(
       'CRON_SECRET must be at least 32 characters'
     )
+  })
+
+  it('refuses secrets that were leaked in the repository history (#30)', () => {
+    // The real burned values stay out of the codebase: register a synthetic one by its hash.
+    const burned = 'synthetic-burned-secret-value-at-least-32-chars'
+    const hash = createHash('sha256').update(burned).digest('hex')
+    BURNED_SECRET_SHA256.add(hash)
+    try {
+      for (const name of ['JWT_SECRET', 'TOKEN_ENCRYPTION_KEY', 'NEXTAUTH_SECRET']) {
+        const result = evaluateEnvironment({ ...core, [name]: ` ${burned} ` })
+        expect(result.ready).toBe(false)
+        expect(result.missing).toContain(
+          `${name} is a leaked value from the repository history (#30); generate a new one`
+        )
+        expect(JSON.stringify(result)).not.toContain(burned)
+      }
+    } finally {
+      BURNED_SECRET_SHA256.delete(hash)
+    }
+    expect(BURNED_SECRET_SHA256.size).toBe(3)
   })
 
   it('accepts only the billing configuration consumed by checkout', () => {
