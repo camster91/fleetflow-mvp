@@ -1,6 +1,7 @@
 import { useRouter } from 'next/router'
 import { ShieldAlert, Home, LogOut } from 'lucide-react'
 import { signOut } from '@/lib/session'
+import { SUPPORT_EMAIL } from '@/lib/support'
 
 export default function UnauthorizedPage() {
   const router = useRouter()
@@ -50,7 +51,10 @@ export default function UnauthorizedPage() {
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-sm text-gray-500">
-            Need help? Contact your system administrator or email support@fleetflow.com
+            Need help? Contact your workspace administrator or email{' '}
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="underline">
+              {SUPPORT_EMAIL}
+            </a>
           </p>
         </div>
       </div>

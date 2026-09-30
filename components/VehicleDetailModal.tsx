@@ -362,7 +362,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                         {!driverUser && (
                           <div className="text-center py-4 text-gray-500">
                             <p className="text-sm">
-                              Driver <strong>{vehicle.driver}</strong> is not linked to a FleetFlow account.
+                              Driver <strong>{vehicle.driver}</strong> is not linked to a Fleetvera account.
                             </p>
                             <p className="text-xs mt-1">Invite them via Team Settings to see contact info here.</p>
                           </div>

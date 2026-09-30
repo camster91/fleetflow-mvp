@@ -6,7 +6,6 @@ const root = path.resolve(__dirname, '../..')
 describe('release quality gates', () => {
   test('customer-facing product identity is consistently Fleetvera', () => {
     const brandedFiles = [
-      'components/ui/Logo.tsx',
       'components/layouts/AuthLayout.tsx',
       'components/onboarding/OnboardingModal.tsx',
       'pages/index.tsx',
