@@ -782,6 +782,57 @@ ${APP_URL}
   })
 }
 
+/** A platform admin created an account for a new customer: tell them how to sign in. */
+export async function sendAccountInvitationEmail(
+  email: string,
+  invitedByName: string
+): Promise<{ success: boolean; error?: string }> {
+  const loginUrl = `${APP_URL}/auth/login`
+  const safeAppName = escapeHtml(APP_NAME)
+  const safeInviterName = escapeHtml(invitedByName)
+  const safeEmail = escapeHtml(email)
+
+  const html = getBaseEmailTemplate(`
+    <h2 style="margin-top: 0; color: #1e293b;">Your ${safeAppName} account is ready</h2>
+    <p>Hi there,</p>
+    <p><strong>${safeInviterName}</strong> created a ${safeAppName} account for <strong>${safeEmail}</strong> so you can organize your fleet's vehicles, deliveries, maintenance and team in one place.</p>
+
+    <div style="text-align: center; margin: 32px 0;">
+      <a href="${loginUrl}" class="button">Sign in to ${safeAppName}</a>
+    </div>
+
+    <p>Sign in with this email address. We'll send you a one-time code, so there is no password to remember. From there you can set up your workspace and invite your team.</p>
+
+    <p style="color: #64748b; font-size: 14px;">
+      If you weren't expecting this, you can safely ignore this email.
+    </p>
+  `)
+
+  const text = `
+Your ${APP_NAME} account is ready
+
+Hi there,
+
+${invitedByName} created a ${APP_NAME} account for ${email} so you can organize your fleet's vehicles, deliveries, maintenance and team in one place.
+
+Sign in with this email address (we'll send you a one-time code):
+${loginUrl}
+
+If you weren't expecting this, you can safely ignore this email.
+
+---
+${APP_NAME}
+${APP_URL}
+  `.trim()
+
+  return sendEmail({
+    to: email,
+    subject: safeEmailSubject(`Your ${APP_NAME} account is ready`),
+    html,
+    text,
+  })
+}
+
 // Re-export for convenience
 export async function sendTeamInvitationEmail(
   email: string,

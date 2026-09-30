@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import FormModal from './FormModal'
 import { useConfirmDialog } from './ui/ConfirmDialog'
+import InviteCustomerForm from './admin/InviteCustomerForm'
 
 interface User {
   id: string
@@ -158,6 +159,8 @@ export default function AdminUserManagement() {
           </button>
         </div>
       )}
+
+      <InviteCustomerForm onInvited={fetchUsers} />
 
       {/* Search */}
       <div className="relative">

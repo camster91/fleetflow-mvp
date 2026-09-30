@@ -23,7 +23,8 @@ import {
 } from 'lucide-react'
 import { notify, confirmAction } from '../../services/notifications'
 import { canManageTeam, canViewTeam, getAssignableRoles, getRoleDisplayName } from '../../lib/permissions'
-import { useWorkspaceRole } from '../../hooks/useWorkspaceRole'
+import { resolveActiveTeamId, useWorkspaceRole } from '../../hooks/useWorkspaceRole'
+import { TeamWorkspaceSetup } from '../../components/team/TeamWorkspaceSetup'
 
 interface TeamMember {
   id: string
@@ -53,6 +54,21 @@ export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<InvitationStatus | 'all'>('all')
   const [listForbidden, setListForbidden] = useState(false)
+  // null while loading. teamId follows the server's rule (resolveActiveTeamId): null means the
+  // personal workspace (no teams yet) or that one of several teams still has to be chosen.
+  const [workspace, setWorkspace] = useState<{
+    teamId: string | null
+    workspaces: { id: string; name: string; role?: string }[]
+  } | null>(null)
+  const [workspaceError, setWorkspaceError] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/team/workspaces')
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error('failed'))))
+      .then((data) => setWorkspace({ teamId: resolveActiveTeamId(data), workspaces: data.workspaces ?? [] }))
+      .catch(() => setWorkspaceError(true))
+  }, [])
+  const needsWorkspaceSetup = workspace !== null && workspace.teamId === null
 
   // Controls follow the caller's real role in the active workspace; the APIs
   // enforce the same rules. Nothing is offered until the role is known.
@@ -163,7 +179,8 @@ export default function TeamPage() {
         title="Team Management"
         subtitle="Manage your team members and their permissions"
         actions={
-          canManage && (
+          canManage &&
+          workspace?.teamId && (
             <Button
               variant="primary"
               onClick={() => router.push('/team/invite')}
@@ -175,7 +192,22 @@ export default function TeamPage() {
         }
       />
 
-      {listForbidden ? (
+      {workspaceError ? (
+        <Card>
+          <p role="alert" className="text-sm text-slate-700">
+            Your workspaces could not be loaded.{' '}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="font-medium text-emerald-800 underline"
+            >
+              Try again
+            </button>
+          </p>
+        </Card>
+      ) : needsWorkspaceSetup ? (
+        <TeamWorkspaceSetup workspaces={workspace.workspaces} />
+      ) : listForbidden ? (
         <Card>
           <div role="status" className="flex items-start gap-4">
             <div className="p-3 bg-slate-100 rounded-lg">

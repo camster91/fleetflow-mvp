@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { FtueWizard } from '@/components/onboarding/FtueWizard'
 
 export default function OnboardingPage() {
-  const { data: session, status } = useSession()
+  const { data: session, status, update } = useSession()
   const router = useRouter()
 
   if (status === 'loading') {
@@ -27,11 +27,14 @@ export default function OnboardingPage() {
   const firstName = session?.user?.name?.split(' ')[0] || 'there'
 
   const completeOnboarding = async () => {
-    try {
-      await fetch('/api/auth/complete-onboarding', { method: 'POST' })
-    } catch {
-      // non-critical
+    const response = await fetch('/api/auth/complete-onboarding', { method: 'POST' }).catch(() => null)
+    if (!response?.ok) {
+      toast.error('Setup could not be saved. Please try again.')
+      return
     }
+    // Refresh the cached session first: the onboarding guard in _app reads it and would otherwise
+    // send the user straight back here.
+    await update()
     router.push('/dashboard')
   }
 

@@ -58,3 +58,8 @@ export function beginTwoFactorCookies(challenge: string) {
 export function establishSessionCookies(token: string) {
   return [sessionCookie(token), expiredCookie(TWO_FACTOR_COOKIE_NAME), expiredCookie(TEAM_COOKIE_NAME)]
 }
+
+/** Selects the active team workspace (see /api/team/workspaces). */
+export function teamCookie(teamId: string) {
+  return serialize(TEAM_COOKIE_NAME, teamId, { ...baseOptions(), maxAge: 365 * 24 * 60 * 60 })
+}
