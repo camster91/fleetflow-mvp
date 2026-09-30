@@ -68,7 +68,7 @@ candidate; they do not establish a new live release.
 
 ## SaaS behavior
 
-Users operate in a personal or accepted team workspace. API authorization scopes business records to that workspace and applies owner/admin/manager/member/viewer permissions. A team workspace uses its owner as the Stripe customer of record; owners and team admins may manage billing, managers may view it, and other roles cannot access billing data. FleetFlow Pro is currently a flat workspace subscription at $49 USD monthly or $490 USD yearly; team invitations reserve one of ten workspace seats.
+Users operate in a personal or accepted team workspace. API authorization scopes business records to that workspace and applies owner/admin/manager/member/viewer permissions. A team workspace uses its owner as the Stripe customer of record; owners and team admins may manage billing, managers may view it, and other roles cannot access billing data. Fleetvera Pro is planned as a flat workspace subscription (free during the beta) at $49 USD monthly or $490 USD yearly; team invitations reserve one of ten workspace seats.
 
 Public maintenance links expire after seven days, may be revoked in storage, and accept one atomic report submission. Authentication uses signed HTTP-only cookies; optional TOTP requires a short-lived challenge before a session is issued.
 
