@@ -40,19 +40,26 @@ describe('verify-production-readiness', () => {
     expect(evaluateEnvironment(core)).toEqual({ mode: 'pilot', ready: true, missing: [], warnings: [] })
   })
 
-  it('requires live billing configuration for a public launch', () => {
+  it('lets a public launch start without Stripe in the environment, with a warning to finish it in admin settings', () => {
     const result = evaluateEnvironment(core, 'public')
-    expect(result.ready).toBe(false)
-    expect(result.missing).toEqual(
+    expect(result.ready).toBe(true)
+    expect(result.warnings).toEqual(
       expect.arrayContaining([
-        'STRIPE_SECRET_KEY',
-        'STRIPE_WEBHOOK_SECRET',
-        'STRIPE_PRICE_MONTHLY',
-        'STRIPE_PRICE_YEARLY',
-        'STRIPE_PRICE_MONTHLY_AMOUNT',
-        'STRIPE_PRICE_YEARLY_AMOUNT',
-        'STRIPE_PRICE_CURRENCY',
+        expect.stringContaining('Stripe billing is incomplete in the environment (STRIPE_SECRET_KEY'),
       ])
+    )
+    expect(evaluateEnvironment({ ...core, STRIPE_SECRET_KEY: 'sk_test_x' }, 'public').warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('/admin/settings')])
+    )
+  })
+
+  it('warns instead of failing when CRON_SECRET comes from admin settings, but still checks its length', () => {
+    const { CRON_SECRET: _unused, ...withoutCron } = core
+    const result = evaluateEnvironment(withoutCron)
+    expect(result.ready).toBe(true)
+    expect(result.warnings).toEqual([expect.stringContaining('CRON_SECRET is not in the environment')])
+    expect(evaluateEnvironment({ ...core, CRON_SECRET: 'short' }).missing).toContain(
+      'CRON_SECRET must be at least 32 characters'
     )
   })
 

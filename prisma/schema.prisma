@@ -1112,6 +1112,16 @@ model EmailDeliveryConfig {
   updatedAt         DateTime @updatedAt
 }
 
+/// Deployment-wide provider settings a platform admin sets in /admin/settings. Each value is
+/// AES-256-GCM encrypted and bound to its key; admin values override the environment.
+model PlatformSetting {
+  key         String   @id
+  envelope    String
+  updatedById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 /// Consent and status for the limited, controlled Fleetvera pilot. This model
 /// intentionally stores no operational payloads or prompts.
 model PilotEnrollment {

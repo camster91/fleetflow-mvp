@@ -19,6 +19,10 @@ Set these server-only environment variables in each environment:
 
 Verify both Price IDs, amounts, and currency together against the Stripe Dashboard during every configuration change. Restart the service, request `GET /api/stripe/availability`, and confirm it returns `available: true` plus the reviewed monthly/yearly minor-unit prices and currency. The response intentionally never identifies missing variable names or returns secret values. Confirm the UI displays those returned prices and calculated savings, and checkout controls are disabled with a clear message when any required value is missing or invalid.
 
+Every value above can also be entered at `/admin/settings` by a platform admin instead of the environment
+(admin value wins, applied within a minute, encrypted at rest, audit-logged without the value). The page shows
+whether the key is a test or live key. Billing stays off until all seven values are set in either place.
+
 ## Webhook setup
 
 Create one Stripe endpoint for `https://<host>/api/stripe/webhook` and subscribe to:

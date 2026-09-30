@@ -9,8 +9,9 @@ const REQUIRED_CORE = [
   'API_CURSOR_SECRET',
   'ACTION_PREVIEW_KEYS',
   'ACTION_PREVIEW_CURRENT_KID',
-  'CRON_SECRET',
 ]
+// Stripe billing, CRON_SECRET and provider keys may instead be entered by a platform admin in
+// /admin/settings (stored encrypted, applied at runtime), so their absence here is only a warning.
 const REQUIRED_EMAIL = ['EMAIL_CONFIG_ENCRYPTION_KEY']
 // Encrypts TOTP 2FA seeds. Must be explicit so rotating JWT_SECRET cannot strand them.
 const REQUIRED_ENCRYPTION = ['TOKEN_ENCRYPTION_KEY']
@@ -112,12 +113,8 @@ function evaluateEnvironment(env, mode = 'pilot') {
   for (const name of REQUIRED_MONITORING)
     if (!validHttpsUrl(env, name)) missing.push(`${name} must be a valid https URL`)
 
-  if (mode === 'public') {
-    for (const name of REQUIRED_BILLING) if (!present(env, name)) missing.push(name)
-    if (REQUIRED_BILLING.every((name) => present(env, name)) && !billingConfigIsValid(env)) {
-      missing.push('Stripe price IDs, integer minor-unit amounts, and currency must be valid')
-    }
-  }
+  if (REQUIRED_BILLING.every((name) => present(env, name)) && !billingConfigIsValid(env))
+    missing.push('Stripe price IDs, integer minor-unit amounts, and currency must be valid')
   // Test-only mail capture (lib/emailCapture.ts) must never be configured on a deployment.
   if (present(env, 'E2E_EMAIL_CAPTURE_DIR'))
     missing.push('E2E_EMAIL_CAPTURE_DIR must not be set outside local end-to-end tests')
@@ -129,6 +126,15 @@ function evaluateEnvironment(env, mode = 'pilot') {
     missing.push('WORKSPACE_DELETION_ENABLED must be true or false')
 
   const warnings = []
+  if (!present(env, 'CRON_SECRET'))
+    warnings.push(
+      'CRON_SECRET is not in the environment: scheduled jobs are refused until it is set in /admin/settings'
+    )
+  const billingMissing = REQUIRED_BILLING.filter((name) => !present(env, name))
+  if (mode === 'public' && billingMissing.length)
+    warnings.push(
+      `Stripe billing is incomplete in the environment (${billingMissing.join(', ')}): checkout and plan enforcement stay off until these are set in /admin/settings`
+    )
   if (env.AI_PROVIDER && env.AI_PROVIDER !== 'disabled' && !secretAtLeast(env, 'OPENAI_API_KEY'))
     warnings.push('AI is enabled without a configured provider key')
   if (
