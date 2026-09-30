@@ -30,6 +30,7 @@ Never paste secret values, database URLs, or customer data into GitHub, logs, or
       and locks them out.
 - [ ] **#30:** generate a new `JWT_SECRET` (at least 32 random bytes) in the Coolify secret store
       and treat every previously committed value as burned. Rotating it logs out existing sessions.
+      The preflight refuses to start if any secret variable still holds one of the leaked values.
       (If the old value is now serving as `TOKEN_ENCRYPTION_KEY`, move it to
       `TOKEN_ENCRYPTION_KEY_PREVIOUS`, set a fresh `TOKEN_ENCRYPTION_KEY`, deploy, then run
       `docker exec <app-container> node reencrypt-2fa-seeds.cjs` (dry run) and again with
@@ -140,6 +141,9 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 
 - [ ] `GET /api/health` returns 200.
 - [ ] Log in with an email code and complete 2FA. "Log out everywhere" signs out another browser.
+- [ ] From `/admin/users`, invite a synthetic customer. They receive the "account is ready" email,
+      sign in, create a team at `/team`, and invite a teammate who accepts from the email link.
+      (`e2e/matrix/onboarding.spec.ts` covers the same journey locally.)
 - [ ] Switch workspaces. Create, edit and delete a vehicle, delivery, maintenance task and client.
       Deleting a vehicle that has expenses returns a clear 409.
 - [ ] Driver account: sees only assigned deliveries. Viewer/technician: cannot create API keys.
@@ -159,4 +163,6 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 ## 10. Go / no-go
 
 - [ ] Record the SHA, image digest, deploy time, backup ID, smoke-test results, and approver in #76.
-- [ ] Invite the first beta workspaces (`docs/runbooks/controlled-pilot.md`).
+- [ ] Invite the first beta customers from `/admin/users` ("Invite a customer"). Each creates their
+      own team at `/team` and invites their people. For a tracked pilot cohort, also follow
+      `docs/runbooks/controlled-pilot.md`.

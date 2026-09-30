@@ -1,6 +1,6 @@
 # Data deletion policy
 
-This page records how FleetFlow deletes records and why. The database enforces
+This page records how Fleetvera deletes records and why. The database enforces
 these rules through foreign keys (`prisma/schema.prisma`). API routes turn a
 blocked delete into a readable response through `lib/prismaErrors.ts`, so it
 never shows up as a raw 500.
@@ -53,7 +53,7 @@ VendingMachine, ExpenseRecord and Announcement (migration
 We chose to refuse rather than cascade because a cascade would also delete
 expense history, and `ExpenseRecord.vehicle` is restricted anyway. Refusing is
 the smallest change that can never destroy data or move it to the wrong scope.
-FleetFlow has no team-delete endpoint yet. When one is added, it should archive
+Fleetvera has no team-delete endpoint yet. When one is added, it should archive
 or explicitly remove team records first, and use the mapper for the 409.
 
 ## Users

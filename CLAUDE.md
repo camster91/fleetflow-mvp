@@ -1,7 +1,12 @@
-# CLAUDE.md — FleetFlow MVP
+# CLAUDE.md — Fleetvera (repo: fleetflow-mvp)
 
 ## What This Is
-A fleet management SaaS app. Live at fleet.ashbi.ca. Next.js with pages router (not app router).
+A fleet management SaaS app, branded **Fleetvera** in everything users see (the repo and some internal identifiers keep the old FleetFlow name). Intended host: fleet.ashbi.ca (Coolify on the Ashbi VPS). Next.js with pages router (not app router).
+
+## How people get in
+- Invitation-only beta. The first platform admin is created with `create-admin.js`; admins invite customers at `/admin/users`; customers create their team at `/team` and invite teammates.
+- Provider secrets (Stripe, Maps, QuickBooks, AI, cron) can be set by platform admins at `/admin/settings` (see `lib/platformSettings.ts`); Mailgun at `/admin/email-delivery`.
+- Plans: `FLEETVERA_RELEASE_MODE=pilot` is the free beta (no enforcement); `public` enables trials, read-only lapsed workspaces and retention (`lib/entitlements.ts`, `lib/workspaceRetention.ts`, `docs/runbooks/stripe-launch.md`).
 
 ## Stack
 - Next.js (Pages Router)

@@ -8,7 +8,7 @@ Requirements: Node.js 22.12.0 or newer, npm, and PostgreSQL 16 (or Docker).
 
 ```bash
 npm ci
-copy .env.example .env.local
+cp .env.example .env.local   # Windows: copy .env.example .env.local
 npx prisma generate
 npx prisma migrate deploy
 npm run dev
@@ -19,12 +19,10 @@ Set a unique database password and a cryptographically random `JWT_SECRET` of at
 For a brand-new database, bootstrap the first administrator once. This intentionally refuses to run after any user exists:
 
 ```bash
-set ADMIN_EMAIL=owner@example.com
-set CONFIRM_ADMIN_BOOTSTRAP=yes
-npm run admin:bootstrap
+ADMIN_EMAIL=owner@example.com CONFIRM_ADMIN_BOOTSTRAP=yes npm run admin:bootstrap
 ```
 
-The administrator signs in with the one-time code sent to that email. Subsequent users are provisioned through team invitations.
+The administrator signs in with the one-time code sent to that email. Accounts are invitation-only after that; see "Onboarding customers" below.
 
 For the production Docker container, run the same guarded operation against the running application image:
 
@@ -33,6 +31,26 @@ docker exec -e ADMIN_EMAIL=owner@example.com -e CONFIRM_ADMIN_BOOTSTRAP=yes <con
 ```
 
 Do not use `prisma db push` for production. Production startup runs the committed PostgreSQL migrations before starting the server.
+
+## Onboarding customers
+
+Sign-up is invitation-only during the beta:
+
+1. A platform administrator invites a customer from **Admin → Users** (`/admin/users`, "Invite a customer"). This creates the account and emails sign-in instructions.
+2. The customer signs in with an emailed one-time code, runs through (or skips) the setup wizard, and starts in their personal workspace.
+3. On **Team** (`/team`) they create their team workspace (one per person during the beta); anything they already added moves into it. They then invite dispatchers, drivers, mechanics and other roles, who accept from the email link.
+
+Platform administration pages (role `admin` only):
+
+| Page | Purpose |
+| --- | --- |
+| `/admin/users` | Invite customers, change platform roles, remove accounts |
+| `/admin/settings` | Stripe, Google Maps, QuickBooks, AI provider and cron secret, encrypted, overriding the environment |
+| `/admin/email-delivery` | Mailgun credentials for login codes and invitations |
+| `/admin/pilot` | Controlled pilot enrollment and metrics |
+| `/admin/ai-health` | AI provider status and controls |
+
+The support address shown to users defaults to `support@ashbi.ca`; set `NEXT_PUBLIC_SUPPORT_EMAIL` to change it.
 
 ## Mandatory checks
 
