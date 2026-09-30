@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import BillingPage from '@/pages/billing/index'
 import PricingPage from '@/pages/pricing'
 
@@ -87,5 +87,31 @@ describe('free beta billing', () => {
     render(<BillingPage />)
     expect(await screen.findByRole('button', { name: 'Subscribe Monthly' })).toBeEnabled()
     expect(screen.queryByText('Fleetvera is free during the beta')).not.toBeInTheDocument()
+  })
+
+  it('a failed payment is fixed through the payment portal, not a new checkout', async () => {
+    const pricing = { monthly: { amount: 4900, currency: 'USD' }, yearly: { amount: 49000, currency: 'USD' } }
+    mockFetch({
+      '/api/subscription/status': {
+        ok: true,
+        body: {
+          subscription: {
+            plan: 'PRO',
+            status: 'PAST_DUE',
+            trialEndsAt: null,
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+          },
+        },
+      },
+      '/api/stripe/availability': { ok: true, body: { available: true, pricing } },
+      '/api/stripe/portal-session': { ok: true, body: { url: 'https://billing.stripe.test/session' } },
+    })
+    render(<BillingPage />)
+    const button = await screen.findByRole('button', { name: 'Update payment method' })
+    // Checkout would be rejected for an existing subscription, so it is not offered.
+    expect(screen.queryByRole('button', { name: 'Subscribe Monthly' })).not.toBeInTheDocument()
+    fireEvent.click(button)
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/stripe/portal-session', { method: 'POST' }))
   })
 })

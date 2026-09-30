@@ -82,6 +82,26 @@ type PastDueState = { status: string; pastDueSince?: Date | null } | null
  * is measured from the first failure. Recovery clears it; a cancellation after failed payments keeps
  * it, so access ends with the grace period rather than at the end of the unpaid billing period.
  */
+function eventDate(event: Stripe.Event) {
+  return Number.isSafeInteger(event.created) && event.created > 0 ? new Date(event.created * 1000) : new Date()
+}
+
+/**
+ * Serialize with work on the same owner's workspace (checkout and lapsed-workspace deletion take the same
+ * advisory lock), so an activation can never interleave with a deletion in progress.
+ */
+async function lockOwner(db: WebhookDb, userId: string) {
+  await db.$queryRaw`SELECT 1 AS acquired FROM (SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))) AS billing_lock`
+}
+
+/** Read a subscription by Stripe ID after taking its owner's lock. */
+async function lockedSubscription(db: WebhookDb, stripeSubscriptionId: string) {
+  const found = await db.subscription.findUnique({ where: { stripeSubscriptionId }, select: { userId: true } })
+  if (!found) return null
+  await lockOwner(db, found.userId)
+  return db.subscription.findUnique({ where: { stripeSubscriptionId } })
+}
+
 function pastDueSinceFor(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event, previous: PastDueState) {
   const wasOverdue = previous?.status === 'PAST_DUE' || previous?.status === 'UNPAID'
   // Stripe cancelling after failed payments keeps the start, so access ends with the grace period.
@@ -89,7 +109,7 @@ function pastDueSinceFor(snapshot: StripeSubscriptionSnapshot, event: Stripe.Eve
     return wasOverdue || previous?.status === 'CANCELLED' ? (previous?.pastDueSince ?? null) : null
   if (snapshot.status !== 'PAST_DUE' && snapshot.status !== 'UNPAID') return null
   if (wasOverdue && previous?.pastDueSince) return previous.pastDueSince
-  return Number.isSafeInteger(event.created) && event.created > 0 ? new Date(event.created * 1000) : new Date()
+  return eventDate(event)
 }
 
 function snapshotState(snapshot: StripeSubscriptionSnapshot, event: Stripe.Event, previous: PastDueState) {
@@ -116,6 +136,9 @@ async function syncInvoice(
 ) {
   const stripeSubscriptionId = getInvoiceSubscriptionId(invoice)
   if (!stripeSubscriptionId) return
+  const found = await db.subscription.findUnique({ where: { stripeSubscriptionId }, select: { userId: true } })
+  if (!found) return
+  await lockOwner(db, found.userId)
   const local = await db.subscription.findUnique({ where: { stripeSubscriptionId } })
   if (!local) return
   const amount = invoiceSnapshot.status === 'paid' ? invoiceSnapshot.amountPaid : invoiceSnapshot.amountDue
@@ -142,10 +165,29 @@ async function syncInvoice(
       periodEnd: new Date(invoiceSnapshot.periodEnd * 1000),
     },
   })
-  if (eventTiming(event, local) === 'older') return
-  const data = snapshotState(subscriptionSnapshot, event, local)
-  await db.subscription.update({ where: { stripeSubscriptionId }, data })
-  await auditTransition(db, local.userId, local.id, local.status, subscriptionSnapshot.status)
+  if (eventTiming(event, local) !== 'older') {
+    const data = snapshotState(subscriptionSnapshot, event, local)
+    await db.subscription.update({ where: { stripeSubscriptionId }, data })
+    await auditTransition(db, local.userId, local.id, local.status, subscriptionSnapshot.status)
+  }
+  // A payment failure delivered late (e.g. after a webhook outage, once the cancellation was already
+  // reconciled) still starts the grace clock, as long as that invoice is still unpaid.
+  if (
+    event.type === 'invoice.payment_failed' &&
+    (invoiceSnapshot.status === 'open' || invoiceSnapshot.status === 'failed')
+  ) {
+    const current = await db.subscription.findUnique({
+      where: { stripeSubscriptionId },
+      select: { status: true, pastDueSince: true },
+    })
+    const failedAt = eventDate(event)
+    if (
+      current &&
+      ['PAST_DUE', 'UNPAID', 'CANCELLED'].includes(current.status) &&
+      (!current.pastDueSince || failedAt < current.pastDueSince)
+    )
+      await db.subscription.update({ where: { stripeSubscriptionId }, data: { pastDueSince: failedAt } })
+  }
 }
 
 async function processEvent(
@@ -160,6 +202,7 @@ async function processEvent(
       const userId = session.metadata?.userId
       if (!userId || !session.subscription || !session.customer || !snapshot)
         throw new Error('Invalid checkout mapping')
+      await lockOwner(db, userId)
       const previous = await db.subscription.findUnique({ where: { userId } })
       if (previous && eventTiming(event, previous) === 'older') break
       const data = snapshotState(snapshot, event, previous)
@@ -184,7 +227,7 @@ async function processEvent(
     case 'customer.subscription.updated': {
       const subscription = event.data.object as Stripe.Subscription
       if (!snapshot) throw new Error('Missing Stripe subscription state')
-      const local = await db.subscription.findUnique({ where: { stripeSubscriptionId: subscription.id } })
+      const local = await lockedSubscription(db, subscription.id)
       if (!local || eventTiming(event, local) === 'older') break
       await db.subscription.update({
         where: { stripeSubscriptionId: subscription.id },
@@ -195,7 +238,7 @@ async function processEvent(
     }
     case 'customer.subscription.deleted': {
       const subscription = event.data.object as Stripe.Subscription
-      const local = await db.subscription.findUnique({ where: { stripeSubscriptionId: subscription.id } })
+      const local = await lockedSubscription(db, subscription.id)
       if (!local || !snapshot || eventTiming(event, local) === 'older') break
       await db.subscription.update({
         where: { stripeSubscriptionId: subscription.id },
