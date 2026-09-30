@@ -38,7 +38,7 @@ Sign-up is invitation-only during the beta:
 
 1. A platform administrator invites a customer from **Admin → Users** (`/admin/users`, "Invite a customer"). This creates the account and emails sign-in instructions.
 2. The customer signs in with an emailed one-time code, runs through (or skips) the setup wizard, and starts in their personal workspace.
-3. On **Team** (`/team`) they create their team workspace (one per person during the beta) and invite dispatchers, drivers, mechanics and other roles. Invitees accept from the email link.
+3. On **Team** (`/team`) they create their team workspace (one per person during the beta); anything they already added moves into it. They then invite dispatchers, drivers, mechanics and other roles, who accept from the email link.
 
 Platform administration pages (role `admin` only):
 
