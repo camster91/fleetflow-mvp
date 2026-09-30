@@ -10,7 +10,7 @@ jest.mock('@/lib/prisma', () => ({
 }))
 jest.mock('@/lib/entitlements', () => ({ getWorkspaceEntitlement: jest.fn(), billingEnforced: jest.fn() }))
 jest.mock('@/lib/email', () => ({ sendWorkspaceDeletionWarningEmail: jest.fn() }))
-jest.mock('@/lib/stripe', () => ({ hasLiveStripeSubscription: jest.fn() }))
+jest.mock('@/lib/stripe', () => ({ hasLiveStripeSubscription: jest.fn(), expireOpenCheckoutSessions: jest.fn() }))
 
 import {
   deletionDueAt,
@@ -23,7 +23,7 @@ import {
 import { prisma } from '@/lib/prisma'
 import { getWorkspaceEntitlement } from '@/lib/entitlements'
 import { sendWorkspaceDeletionWarningEmail } from '@/lib/email'
-import { hasLiveStripeSubscription } from '@/lib/stripe'
+import { expireOpenCheckoutSessions, hasLiveStripeSubscription } from '@/lib/stripe'
 
 const DAY = 86_400_000
 const now = new Date('2027-06-01T00:00:00Z')
@@ -86,6 +86,8 @@ describe('processOwner', () => {
     db.team.count.mockResolvedValue(1)
     db.teamMember.count.mockResolvedValue(0)
     ;(sendWorkspaceDeletionWarningEmail as jest.Mock).mockResolvedValue({ success: true })
+    ;(expireOpenCheckoutSessions as jest.Mock).mockResolvedValue(0)
+    ;(hasLiveStripeSubscription as jest.Mock).mockResolvedValue(false)
   })
 
   it('does nothing for a workspace with full access, and clears a stale timeline', async () => {
@@ -189,9 +191,15 @@ describe('processOwner', () => {
   })
 
   it.each([
-    ['Stripe reports a live subscription (payment done, webhook not yet received)', () => Promise.resolve(true)],
-    ['Stripe cannot be reached', () => Promise.reject(new Error('network'))],
-  ])('does not delete when %s', async (_label, stripeAnswer) => {
+    ['Stripe reports a live subscription (payment done, webhook not yet received)', () => Promise.resolve(true), null],
+    ['Stripe cannot be reached', () => Promise.reject(new Error('network')), null],
+    [
+      'an open Checkout session cannot be expired (it just completed)',
+      () => Promise.resolve(false),
+      () => Promise.reject(new Error('session is complete')),
+    ],
+  ])('does not delete when %s', async (_label, stripeAnswer, expireAnswer: (() => Promise<number>) | null) => {
+    if (expireAnswer) (expireOpenCheckoutSessions as jest.Mock).mockImplementation(expireAnswer)
     ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue(readOnly(100))
     const marker = { readOnlySince: ago(100), warned30At: ago(40), warned7At: ago(8), deletedAt: null }
     db.workspaceRetention.findUnique.mockResolvedValue(marker)
@@ -206,7 +214,14 @@ describe('processOwner', () => {
     }
     db.$transaction.mockImplementation(async (fn: (client: unknown) => unknown) => fn(tx))
     expect((await processOwner('o1', now, false)).action).toBe('SKIPPED_REACTIVATED')
-    expect(hasLiveStripeSubscription).toHaveBeenCalledWith('cus_1')
+    expect(expireOpenCheckoutSessions).toHaveBeenCalledWith('cus_1')
+    if (!expireAnswer) {
+      expect(hasLiveStripeSubscription).toHaveBeenCalledWith('cus_1')
+      // Open sessions are expired before the check, so none can complete after it.
+      expect((expireOpenCheckoutSessions as jest.Mock).mock.invocationCallOrder[0]).toBeLessThan(
+        (hasLiveStripeSubscription as jest.Mock).mock.invocationCallOrder[0]
+      )
+    } else expect(hasLiveStripeSubscription).not.toHaveBeenCalled()
     expect(tx.team.findMany).not.toHaveBeenCalled()
     expect(tx.workspaceRetention.update).not.toHaveBeenCalled()
   })

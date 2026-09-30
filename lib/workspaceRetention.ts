@@ -16,7 +16,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './prisma'
 import { billingEnforced, getWorkspaceEntitlement } from './entitlements'
 import { sendWorkspaceDeletionWarningEmail } from './email'
-import { hasLiveStripeSubscription } from './stripe'
+import { expireOpenCheckoutSessions, hasLiveStripeSubscription } from './stripe'
 
 export const DELETION_AFTER_DAYS = 90
 const DAY_MS = 86_400_000
@@ -121,11 +121,8 @@ export async function deleteOwnerWorkspaceData(tx: Tx, ownerId: string, teamIds:
   ])
   const recipients = [ownerId, ...members.map((member) => member.userId).filter((id): id is string => !!id)]
   const entityIds = [...deliveries, ...tasks, ...vehicles].map((row) => row.id)
-  counts.notifications = (
-    await tx.notification.deleteMany({
-      where: { userId: ownerId, type: { in: ['MAINTENANCE_DUE', 'VEHICLE_ALERT'] } },
-    })
-  ).count
+  // Match by record ID only: the owner may belong to other teams whose alerts must survive.
+  counts.notifications = 0
   for (let index = 0; index < entityIds.length; index += 100) {
     const chunk = entityIds.slice(index, index + 100)
     counts.notifications += (
@@ -263,14 +260,20 @@ export async function processOwner(ownerId: string, now: Date, dryRun: boolean):
         (await personalWorkspaceUnreachable(tx, ownerId))
       )
         return { kind: 'skipped' as const }
-      // Ask Stripe directly: a payment can complete before its webhook reaches us. If Stripe cannot be
-      // reached, do not delete (the next daily run retries).
+      // Ask Stripe directly: a payment can complete before its webhook reaches us. First expire any open
+      // Checkout session so none can complete after the check (new sessions need the lock we hold), then
+      // look for a live subscription. If Stripe cannot be reached, do not delete (the next daily run retries).
       const billing = await tx.subscription.findUnique({
         where: { userId: ownerId },
         select: { stripeCustomerId: true },
       })
-      if (billing?.stripeCustomerId && (await hasLiveStripeSubscription(billing.stripeCustomerId).catch(() => true)))
-        return { kind: 'skipped' as const }
+      if (billing?.stripeCustomerId) {
+        const customerId = billing.stripeCustomerId
+        const live = await expireOpenCheckoutSessions(customerId)
+          .then(() => hasLiveStripeSubscription(customerId))
+          .catch(() => true)
+        if (live) return { kind: 'skipped' as const }
+      }
       const teamIds = (await tx.team.findMany({ where: { ownerId }, select: { id: true } })).map((team) => team.id)
       // Stored documents go through document-retention first so their files are removed too.
       const docScope = { OR: [{ ownerId }, ...(teamIds.length ? [{ teamId: { in: teamIds } }] : [])], deletedAt: null }
