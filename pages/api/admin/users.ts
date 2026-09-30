@@ -5,6 +5,17 @@ import { assertSameOrigin } from '../../../lib/apiAuth'
 import { rateLimit } from '../../../lib/security'
 import { sendPrismaError } from '../../../lib/prismaErrors'
 import { getClientIP } from '../../../lib/rateLimit'
+import { sendAccountInvitationEmail } from '../../../lib/email'
+import { emailSchema } from '../../../lib/validation'
+import { z } from 'zod'
+
+const inviteCustomerSchema = z
+  .object({
+    email: emailSchema,
+    name: z.string().trim().max(120).optional(),
+    company: z.string().trim().max(120).optional(),
+  })
+  .strict()
 
 function requestMetadata(req: NextApiRequest) {
   // Audit metadata uses the same proxy-aware client address as rate limiting.
@@ -17,7 +28,7 @@ function requestMetadata(req: NextApiRequest) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (['PATCH', 'DELETE'].includes(req.method || '') && !assertSameOrigin(req, res)) return
+  if (['POST', 'PATCH', 'DELETE'].includes(req.method || '') && !assertSameOrigin(req, res)) return
 
   const allowed = await rateLimit(req, res, 'admin')
   if (!allowed) return
@@ -57,6 +68,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (error) {
       console.error('Error fetching users:', error)
       return res.status(500).json({ error: 'Failed to fetch users' })
+    }
+  }
+
+  // Invite a new customer: create their account (they own their personal workspace and can create a
+  // team from it) and email them how to sign in. Accounts are otherwise only created by team invites.
+  if (req.method === 'POST') {
+    const parsed = inviteCustomerSchema.safeParse(req.body)
+    if (!parsed.success) return res.status(400).json({ error: 'Enter a valid email address', field: 'email' })
+    const email = parsed.data.email.toLowerCase()
+    try {
+      const created = await prisma.$transaction(async (tx) => {
+        if (await tx.user.findUnique({ where: { email }, select: { id: true } })) return null
+        const user = await tx.user.create({
+          data: { email, name: parsed.data.name || null, company: parsed.data.company || null },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            company: true,
+            createdAt: true,
+            updatedAt: true,
+            emailVerified: true,
+          },
+        })
+        await tx.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: 'USER_INVITED',
+            entityType: 'user',
+            entityId: user.id,
+            description: `USER_INVITED for user ${user.id}`,
+            metadata: JSON.stringify(requestMetadata(req)),
+          },
+        })
+        return user
+      })
+      if (!created) return res.status(409).json({ error: 'An account with this email already exists', field: 'email' })
+      const inviter = session.user.name || session.user.email || 'The Fleetvera team'
+      const sent = await sendAccountInvitationEmail(email, inviter).catch(() => ({ success: false }))
+      return res.status(201).json({ user: created, emailSent: sent.success })
+    } catch (error) {
+      if (sendPrismaError(res, error, { unique: 'An account with this email already exists' })) return
+      console.error('Error inviting customer:', error)
+      return res.status(500).json({ error: 'Failed to invite customer' })
     }
   }
 

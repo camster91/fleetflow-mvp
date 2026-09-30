@@ -53,9 +53,9 @@ export const SetupChecklist: React.FC<SetupChecklistProps> = ({ onDismiss, class
     {
       id: 'teamMemberInvited',
       label: 'Invite a team member',
-      description: 'Collaborate with your team by inviting members',
+      description: 'Create your team workspace and invite the people you work with',
       icon: <Users className="h-5 w-5" />,
-      route: '/team/invite',
+      route: '/team',
       actionLabel: 'Invite Team',
     },
     {

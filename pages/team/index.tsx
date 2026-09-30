@@ -24,6 +24,7 @@ import {
 import { notify, confirmAction } from '../../services/notifications'
 import { canManageTeam, canViewTeam, getAssignableRoles, getRoleDisplayName } from '../../lib/permissions'
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole'
+import { TeamWorkspaceSetup } from '../../components/team/TeamWorkspaceSetup'
 
 interface TeamMember {
   id: string
@@ -53,6 +54,19 @@ export default function TeamPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<InvitationStatus | 'all'>('all')
   const [listForbidden, setListForbidden] = useState(false)
+  // null while loading; teamId is null when the personal workspace is active.
+  const [workspace, setWorkspace] = useState<{
+    teamId: string | null
+    workspaces: { id: string; name: string; role?: string }[]
+  } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/team/workspaces')
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error('failed'))))
+      .then((data) => setWorkspace({ teamId: data.activeTeamId ?? null, workspaces: data.workspaces ?? [] }))
+      .catch(() => setWorkspace({ teamId: null, workspaces: [] }))
+  }, [])
+  const personalWorkspace = workspace !== null && workspace.teamId === null
 
   // Controls follow the caller's real role in the active workspace; the APIs
   // enforce the same rules. Nothing is offered until the role is known.
@@ -163,7 +177,8 @@ export default function TeamPage() {
         title="Team Management"
         subtitle="Manage your team members and their permissions"
         actions={
-          canManage && (
+          canManage &&
+          workspace?.teamId && (
             <Button
               variant="primary"
               onClick={() => router.push('/team/invite')}
@@ -175,7 +190,9 @@ export default function TeamPage() {
         }
       />
 
-      {listForbidden ? (
+      {personalWorkspace ? (
+        <TeamWorkspaceSetup workspaces={workspace.workspaces} />
+      ) : listForbidden ? (
         <Card>
           <div role="status" className="flex items-start gap-4">
             <div className="p-3 bg-slate-100 rounded-lg">

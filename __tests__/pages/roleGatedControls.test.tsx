@@ -273,7 +273,11 @@ describe('/team controls follow the caller role', () => {
     },
   ]
   beforeEach(() => {
-    global.fetch = jest.fn(() => jsonResponse(members)) as unknown as typeof fetch
+    global.fetch = jest.fn((url: string) =>
+      url === '/api/team/workspaces'
+        ? jsonResponse({ activeTeamId: 'team-1', workspaces: [{ id: 'team-1', name: 'Acme', role: 'ADMIN' }] })
+        : jsonResponse(members)
+    ) as unknown as typeof fetch
   })
 
   it('an admin can invite and manage non-admin members with only assignable roles', async () => {
@@ -290,6 +294,17 @@ describe('/team controls follow the caller role', () => {
     // Admins are peers and the owner needs a dedicated transfer.
     expect(screen.queryByRole('combobox', { name: /Role for Ada Admin/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /Role for Olive Owner/ })).not.toBeInTheDocument()
+  })
+
+  it('in the personal workspace it offers to create a team instead of inviting', async () => {
+    mockRole = 'OWNER'
+    global.fetch = jest.fn((url: string) =>
+      url === '/api/team/workspaces' ? jsonResponse({ activeTeamId: null, workspaces: [] }) : jsonResponse(members)
+    ) as unknown as typeof fetch
+    renderPage(TeamPage)
+    expect(await screen.findByRole('heading', { name: 'Work with your team' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Team name')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Invite Member/ })).not.toBeInTheDocument()
   })
 
   it('the owner may also manage admins', async () => {

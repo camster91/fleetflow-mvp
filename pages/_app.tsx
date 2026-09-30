@@ -16,8 +16,15 @@ function OnboardingGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (status !== 'authenticated' || !session?.user) return
     const path = router.pathname
-    // Skip redirect for onboarding page itself, auth pages, and API routes
-    if (path === '/onboarding' || path.startsWith('/auth') || path.startsWith('/api')) return
+    // Skip redirect for onboarding itself, auth pages, API routes, and invitation acceptance (a new
+    // teammate must be able to accept before being walked through setup).
+    if (
+      path === '/onboarding' ||
+      path.startsWith('/auth') ||
+      path.startsWith('/api') ||
+      path.startsWith('/accept-invite')
+    )
+      return
     if (session.user.onboardingCompleted === false) {
       router.replace('/onboarding')
     }

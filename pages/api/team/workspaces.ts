@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { serialize } from 'cookie'
 import { parse as parseCookie } from 'cookie'
 import { prisma } from '../../../lib/prisma'
 import { assertSameOrigin, requireSession, resolveTenantContext, TenantContextError } from '../../../lib/apiAuth'
-import { secureCookiesEnabled } from '../../../lib/authCookies'
+import { TEAM_COOKIE_NAME, teamCookie } from '../../../lib/authCookies'
 
-const COOKIE_NAME = 'fleetflow_team'
+const COOKIE_NAME = TEAM_COOKIE_NAME
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await requireSession(req, res)
@@ -55,16 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw error
     }
 
-    res.setHeader(
-      'Set-Cookie',
-      serialize(COOKIE_NAME, teamId, {
-        httpOnly: true,
-        secure: secureCookiesEnabled(),
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 365 * 24 * 60 * 60,
-      })
-    )
+    res.setHeader('Set-Cookie', teamCookie(teamId))
     return res.json({ ok: true, teamId })
   }
 
