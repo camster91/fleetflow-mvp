@@ -1,7 +1,7 @@
 /**
- * FleetFlow UI Component Library
+ * Fleetvera UI Component Library
  *
- * A comprehensive set of reusable UI components for the FleetFlow
+ * A comprehensive set of reusable UI components for the Fleetvera
  * fleet management application.
  *
  * @example

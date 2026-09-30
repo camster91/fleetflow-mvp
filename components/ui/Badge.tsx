@@ -2,7 +2,7 @@
  * Badge Component
  *
  * Status badges for indicating state, category, or type.
- * Used throughout FleetFlow for vehicle status, delivery status, etc.
+ * Used throughout Fleetvera for vehicle status, delivery status, etc.
  *
  * @example
  * ```tsx

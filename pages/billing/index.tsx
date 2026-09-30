@@ -6,6 +6,7 @@ import { CreditCard, Zap, Check, AlertTriangle, Loader2, ReceiptText } from 'luc
 import { confirmAction } from '../../services/notifications'
 import { useWorkspaceRole } from '../../hooks/useWorkspaceRole'
 import { canManageBilling, canViewBilling } from '../../lib/permissions'
+import { SUPPORT_EMAIL } from '../../lib/support'
 
 interface SubscriptionData {
   plan: string
@@ -222,7 +223,7 @@ export default function BillingPage() {
             <AlertTriangle className="h-5 w-5 shrink-0" />
             <div>
               <p className="font-semibold">Online billing is temporarily unavailable</p>
-              <p>Your existing subscription is unaffected. Please try again later or contact support@ashbi.ca.</p>
+              <p>Your existing subscription is unaffected. Please try again later or contact {SUPPORT_EMAIL}.</p>
             </div>
           </div>
         )}
@@ -367,7 +368,7 @@ export default function BillingPage() {
                 </button>
               </div>
             </div>
-            <a href="mailto:support@ashbi.ca" className="text-sm text-slate-500 hover:text-slate-700 transition">
+            <a href={`mailto:${SUPPORT_EMAIL}`} className="text-sm text-slate-500 hover:text-slate-700 transition">
               Questions? Contact Sales
             </a>
           </div>
