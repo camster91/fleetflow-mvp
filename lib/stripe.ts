@@ -233,6 +233,25 @@ export async function hasLiveStripeSubscription(customerId: string): Promise<boo
   )
 }
 
+/**
+ * Expire every open subscription Checkout session for a customer, so none can complete afterwards.
+ * Throws if any cannot be expired (for example, one completed a moment ago).
+ */
+export async function expireOpenCheckoutSessions(customerId: string): Promise<number> {
+  requireStripeSecret('STRIPE_SECRET_KEY')
+  let expired = 0
+  for await (const session of getStripe().checkout.sessions.list({
+    customer: customerId,
+    status: 'open',
+    limit: 100,
+  })) {
+    if (session.mode !== 'subscription') continue
+    await getStripe().checkout.sessions.expire(session.id)
+    expired += 1
+  }
+  return expired
+}
+
 export async function expireCheckoutSession(sessionId: string) {
   requireStripeSecret('STRIPE_SECRET_KEY')
   return getStripe().checkout.sessions.expire(sessionId)
