@@ -134,6 +134,12 @@ export default function AiHealthPage() {
             >
               Configure transactional email
             </a>
+            <a
+              href="/admin/settings"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-blue-700 underline"
+            >
+              Platform settings and API keys
+            </a>
           </div>
         </div>
         <div className="rounded-lg border bg-white p-4">

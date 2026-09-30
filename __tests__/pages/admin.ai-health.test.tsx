@@ -36,6 +36,10 @@ test('AI health page exposes accessible status, usage, fallback, errors, and eva
     'href',
     '/admin/email-delivery'
   )
+  expect(screen.getByRole('link', { name: 'Platform settings and API keys' })).toHaveAttribute(
+    'href',
+    '/admin/settings'
+  )
   expect(screen.getByText('openai / gpt@v1 / config v2')).toBeInTheDocument()
   expect(container.textContent).not.toMatch(
     /(?:\u00c3[\u0080-\u00bf]|\u00c2[\u0080-\u00bf]|\u00e2[\u0080-\u00bf]{2}|\ufffd)/u

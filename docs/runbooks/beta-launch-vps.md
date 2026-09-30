@@ -57,6 +57,15 @@ Set these in Coolify, never in git:
 | `TRUSTED_PROXY_HOPS` | `1` behind Traefik, so rate limits and audit IPs use the real client IP |
 | `AI_PROVIDER`, `DOCUMENT_SCANNER_PROVIDER` | Leave `disabled` until #74 and #73 are complete |
 
+**Entering provider keys in the app instead.** Stripe billing, Google Maps, QuickBooks, the AI provider and
+`CRON_SECRET` can be left out of Coolify and entered by a platform admin (a user whose `role` is `admin`) at
+`/admin/settings`. Values there are encrypted with `EMAIL_CONFIG_ENCRYPTION_KEY`, override the Coolify value within
+a minute, are never shown again, and every change is audit-logged without the value. "Remove" falls back to the
+Coolify value. Keep in Coolify: `DATABASE_URL`, `JWT_SECRET`, `TOKEN_ENCRYPTION_KEY`, `EMAIL_CONFIG_ENCRYPTION_KEY`,
+`INTEGRATION_ENCRYPTION_KEYS` (required before Maps/QuickBooks can be saved) and the rest of the table above. If
+you set `CRON_SECRET` in the app, put the same value in the Coolify scheduled tasks (§5), which send it as a header.
+The readiness check then warns, rather than fails, about the missing Stripe/cron variables.
+
 - [ ] In the app container, run `node verify-production-readiness.cjs` (the entrypoint also runs it). It must report `ready: true`. It
       prints only the names of missing settings, never their values.
 

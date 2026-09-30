@@ -4,7 +4,7 @@ import {
   getConfiguredPricing,
   retrieveInvoiceSnapshot,
   retrieveSubscriptionSnapshot,
-  stripe,
+  getStripe,
 } from '@/lib/stripe'
 
 const NAMES = [
@@ -27,6 +27,14 @@ describe('Stripe launch configuration', () => {
       if (original[name] === undefined) delete process.env[name]
       else process.env[name] = original[name]
     })
+  })
+
+  it('rebuilds the Stripe client when the secret key changes at runtime', () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_first'
+    const first = getStripe()
+    expect(getStripe()).toBe(first)
+    process.env.STRIPE_SECRET_KEY = 'sk_test_second'
+    expect(getStripe()).not.toBe(first)
   })
 
   it.each([
@@ -74,7 +82,7 @@ describe('Stripe launch configuration', () => {
 
   it('returns a provider-neutral subscription snapshot', async () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test'
-    jest.spyOn(stripe.subscriptions, 'retrieve').mockResolvedValueOnce({
+    jest.spyOn(getStripe().subscriptions, 'retrieve').mockResolvedValueOnce({
       id: 'sub_123',
       status: 'past_due',
       cancel_at_period_end: true,
@@ -93,7 +101,7 @@ describe('Stripe launch configuration', () => {
   it('represents a provider resource_missing response as cancelled', async () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test'
     jest
-      .spyOn(stripe.subscriptions, 'retrieve')
+      .spyOn(getStripe().subscriptions, 'retrieve')
       .mockRejectedValueOnce(Object.assign(new Error('raw provider message'), { code: 'resource_missing' }))
     await expect(retrieveSubscriptionSnapshot('sub_missing')).resolves.toEqual({
       id: 'sub_missing',
@@ -113,7 +121,7 @@ describe('Stripe launch configuration', () => {
     [{ paid: false, status: 'void' }, 'void'],
   ])('maps authoritative invoice state %# to %s', async (state, expected) => {
     process.env.STRIPE_SECRET_KEY = 'sk_test'
-    jest.spyOn(stripe.invoices, 'retrieve').mockResolvedValueOnce({
+    jest.spyOn(getStripe().invoices, 'retrieve').mockResolvedValueOnce({
       id: 'in_123',
       ...state,
       amount_paid: 0,
@@ -130,7 +138,7 @@ describe('Stripe launch configuration', () => {
 
   it('sanitizes invoice reconciliation failures', async () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test'
-    jest.spyOn(stripe.invoices, 'retrieve').mockRejectedValueOnce(new Error('raw provider secret'))
+    jest.spyOn(getStripe().invoices, 'retrieve').mockRejectedValueOnce(new Error('raw provider secret'))
     await expect(retrieveInvoiceSnapshot('in_123')).rejects.toThrow('Stripe invoice reconciliation failed')
   })
 })
