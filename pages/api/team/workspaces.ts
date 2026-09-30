@@ -3,6 +3,7 @@ import { serialize } from 'cookie'
 import { parse as parseCookie } from 'cookie'
 import { prisma } from '../../../lib/prisma'
 import { assertSameOrigin, requireSession, resolveTenantContext, TenantContextError } from '../../../lib/apiAuth'
+import { secureCookiesEnabled } from '../../../lib/authCookies'
 
 const COOKIE_NAME = 'fleetflow_team'
 
@@ -58,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       'Set-Cookie',
       serialize(COOKIE_NAME, teamId, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: secureCookiesEnabled(),
         sameSite: 'lax',
         path: '/',
         maxAge: 365 * 24 * 60 * 60,
