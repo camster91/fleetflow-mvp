@@ -1,0 +1,5 @@
+node_modules/
+__pycache__/
+checked-images/
+fleetvera-browser-*.png
+fleetvera-browser-verification.json
