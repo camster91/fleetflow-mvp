@@ -82,7 +82,7 @@ Business records are scoped to a personal workspace or an accepted team workspac
 
 ## Deployment
 
-The Docker entrypoint runs `prisma migrate deploy` and then starts the standalone Next.js server. GitHub Actions CI builds but does not publish or deploy. Production deployment is a manual, environment-protected workflow that requires the exact approved `master` commit SHA.
+The Docker entrypoint runs `prisma migrate deploy` and then starts the standalone Next.js server. GitHub Actions CI builds but does not publish or deploy. Production deployment is a manual, environment-protected workflow that requires the exact approved `main` commit SHA. `main` is the production branch; Coolify builds the root `Dockerfile` from it (the separate rebuild in `replacement/` has its own disabled release pipeline).
 
 See [product control](docs/product-control.md), [release readiness](docs/release-readiness.md), [deploy and rollback](docs/runbooks/deploy-and-rollback.md), and [backup and restore](docs/runbooks/backup-restore.md). No production deployment, DNS change, or live account change is implied by a passing local build.
 

@@ -12,3 +12,5 @@ README.md
 LICENSE
 *.tar.gz
 *.tar
+# The separate Fleetvera rebuild has its own images and release pipeline.
+replacement

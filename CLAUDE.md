@@ -27,7 +27,7 @@ A fleet management SaaS app, branded **Fleetvera** in everything users see (the 
 ## Coolify
 - UUID: p804488s4gs0k0kwc4080wg0
 - URL: https://fleet.ashbi.ca
-- Branch: master (not main!)
+- Branch: `main` is the production branch (Coolify deploys it); `master` is a mirror kept until retired
 
 ## Release Keystore (Android)
 - N/A — FleetFlow is a web-only application, no Android keystore needed
@@ -35,4 +35,4 @@ A fleet management SaaS app, branded **Fleetvera** in everything users see (the 
 ## DO NOT
 - Do not change the database URL — it points to VPS Postgres
 - Do not switch from pages router to app router without a full migration plan
-- Branch is `master` not `main`
+- Open PRs against `main`

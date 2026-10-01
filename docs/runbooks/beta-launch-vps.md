@@ -72,7 +72,7 @@ The readiness check then warns, rather than fails, about the missing Stripe/cron
 
 ## 3. Database
 
-`master` adds seven migrations that run automatically on deploy (`prisma migrate deploy` in the
+`main` adds the migrations that run automatically on deploy (`prisma migrate deploy` in the
 entrypoint):
 
 - `20260925000000_auth_hardening`: adds `tokenVersion` and `lastTotpStep`, stores share tokens
@@ -134,7 +134,7 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 
 ## 7. Deploy
 
-- [ ] Confirm the approved CI check is green on the exact `master` SHA.
+- [ ] Confirm the approved CI check is green on the exact `main` SHA (`main` is the production branch).
 - [ ] Run the **Deploy to Coolify** workflow with that full SHA (`docs/runbooks/deploy-and-rollback.md`).
       Alternatively, once the Coolify deploy webhook and API token are saved in `/admin/settings`,
       press **Redeploy** on `/admin/launch`. It does not check CI, so confirm the green check first.
