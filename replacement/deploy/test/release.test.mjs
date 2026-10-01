@@ -38,6 +38,7 @@ test('tracked production Compose matches the reviewed image-only isolated databa
   assert.deepEqual(compose, productionCompose());
   assert.deepEqual(Object.keys(compose.services).sort(), ['app', 'migrate', 'postgres', 'runtime-role']);
   assert.equal(compose.services.app.image, compose.services.migrate.image);
+  assert.deepEqual(compose.services.app.expose, ['3001']);
   for (const service of Object.values(compose.services)) { assert.equal(service.build, undefined); assert.equal(service.ports, undefined); }
 });
 
