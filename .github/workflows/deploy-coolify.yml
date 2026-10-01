@@ -23,14 +23,15 @@ jobs:
     timeout-minutes: 10
     environment: production
     steps:
-      - name: Verify approved SHA is current master
+      # main is the production branch (master is kept only as a mirror until it is retired).
+      - name: Verify approved SHA is current main
         env:
           GH_TOKEN: ${{ github.token }}
           CONFIRMED_SHA: ${{ inputs.confirmed_sha }}
         run: |
-          master_sha=$(gh api repos/${{ github.repository }}/commits/master --jq .sha)
-          if [ "$CONFIRMED_SHA" != "$master_sha" ]; then
-            echo "Confirmed SHA does not match current master."
+          main_sha=$(gh api repos/${{ github.repository }}/commits/main --jq .sha)
+          if [ "$CONFIRMED_SHA" != "$main_sha" ]; then
+            echo "Confirmed SHA does not match current main."
             exit 1
           fi
       - name: Verify Ashbi Local CI succeeded for approved SHA

@@ -17,7 +17,7 @@ For a new database, `prisma migrate deploy` applies the committed PostgreSQL bas
 
 ## Deploy
 
-1. Manually run `Deploy to Coolify` with the full approved `master` SHA.
+1. Manually run `Deploy to Coolify` with the full approved `main` SHA. `main` is the production branch; the Coolify application builds the root `Dockerfile` from `main`.
    Alternative: **Redeploy** on `/admin/launch` (needs the Coolify deploy webhook and API token in `/admin/settings`). Coolify then builds the branch it is configured for, and the button does not check CI or require the GitHub environment approval, so confirm the green exact-head check yourself first. Every press is in the audit log.
 2. Approve the protected production environment.
 3. Observe the entrypoint preflight, migration, and application startup logs without printing secret values. The preflight must succeed before `prisma migrate deploy` begins.
