@@ -64,6 +64,11 @@ test('legacy database, shared owner password and insecure cookie override cannot
     const f = fixture(); mutate(f); await assert.rejects(release(f.env, f.options)); assert.equal(mutations(f).length, 0);
   }
 });
+test('custom build/start hooks, routing labels and extra destinations cannot bypass checked images', async () => {
+  for (const [key, value] of [['docker_compose_custom_build_command', 'docker compose build'], ['docker_compose_custom_start_command', 'docker compose up --build'], ['pre_deployment_command', 'arbitrary'], ['post_deployment_command', 'arbitrary'], ['custom_labels', 'traefik.enable=true'], ['additional_servers_count', 1], ['additional_networks_count', 1]]) {
+    const f = fixture(); f.app[key] = value; await assert.rejects(release(f.env, f.options)); assert.equal(mutations(f).length, 0);
+  }
+});
 test('missing, stale, foreign or unverified backup cannot change release pins', async () => {
   for (const [field, value] of [['nonce', 'c'.repeat(32)], ['releaseSha', 'e'.repeat(40)], ['database', 'fleetvera_rebuild_staging'], ['workflowRunId', '999'], ['completedAt', new Date(Date.now() - 600000).toISOString()], ['manifestVerified', false], ['contentRestoreVerified', false], ['runtimeRestoreVerified', false], ['offServerCopyVerified', false]]) {
     const f = fixture(); f.proof[field] = value; await assert.rejects(release(f.env, f.options)); assert.equal(mutations(f).length, 0);

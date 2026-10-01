@@ -79,7 +79,9 @@ export async function release(env, { receipts, fetchImpl = fetch, backup = verif
       || ![repository, 'https://github.com/' + repository].includes(app.git_repository) || app.git_branch !== 'main'
       || app.docker_compose_location !== '/docker-compose.rebuild-production.json'
       || (app.is_auto_deploy_enabled ?? app.settings?.is_auto_deploy_enabled) !== false
-      || (app.is_preview_deployments_enabled ?? app.settings?.is_preview_deployments_enabled) !== false || app.ports_mappings || app.fqdn) throw new Error('Production resource identity or release ownership differs');
+      || (app.is_preview_deployments_enabled ?? app.settings?.is_preview_deployments_enabled) !== false || app.ports_mappings || app.fqdn
+      || ['docker_compose_custom_start_command', 'docker_compose_custom_build_command', 'pre_deployment_command', 'post_deployment_command', 'custom_labels'].some(key => app[key])
+      || Number(app.additional_servers_count || 0) !== 0 || Number(app.additional_networks_count || 0) !== 0) throw new Error('Production resource identity or release ownership differs');
     let compose, domains;
     try { compose = JSON.parse(app.docker_compose_raw); domains = typeof app.docker_compose_domains === 'string' ? JSON.parse(app.docker_compose_domains) : app.docker_compose_domains; } catch { throw new Error('Reviewed JSON Compose required'); }
     if (!same(compose, productionCompose()) || !same(domains, { app: { domain: env.PUBLIC_ORIGIN } })) throw new Error('Production Compose or public route differs');
