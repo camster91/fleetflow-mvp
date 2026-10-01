@@ -99,3 +99,11 @@ marks the result as staging. Such a proof cannot pass the production consumer or
 be downloaded through the production forced-command protocol. Staging's older
 source-built migration image can differ in ID while sharing the same verified
 revision; production requires the migration/app image ID to match.
+
+Artifacts now include their workflow attempt in their names, including checked
+images, browser evidence, release receipts and pre-release recovery copies. A
+complete workflow rerun creates new evidence instead of overwriting the previous
+attempt. Browser/publication jobs consume the same checked build attempt, and
+the release workflow selects the exact completed producer attempt. Rerun the
+complete Rebuild checks workflow when retrying image/browser/publication work; a
+partial rerun cannot silently substitute another attempt's checked images.

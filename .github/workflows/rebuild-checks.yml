@@ -57,7 +57,7 @@ jobs:
           python3 deploy/checked-image.py export --kind role-init --image fleetvera-role-init-ci --directory checked-images/role-init
       - uses: actions/upload-artifact@v4
         with:
-          name: fleetvera-checked-images-${{ github.sha }}
+          name: fleetvera-checked-images-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: replacement/checked-images/
           if-no-files-found: error
           compression-level: 0
@@ -94,7 +94,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - uses: actions/download-artifact@v4
         with:
-          name: fleetvera-checked-images-${{ github.sha }}
+          name: fleetvera-checked-images-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: replacement/checked-images/
       - name: Verify and import the preserved images
         run: |
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: fleetvera-browser-qa
+          name: fleetvera-browser-qa-attempt-${{ github.run_attempt }}
           path: |
             replacement/fleetvera-browser-verification.json
             replacement/fleetvera-browser-report.png
@@ -147,7 +147,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
-          name: fleetvera-checked-images-${{ github.sha }}
+          name: fleetvera-checked-images-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: replacement/checked-images/
       - name: Authenticate image publication
         env:
@@ -162,7 +162,7 @@ jobs:
           python3 deploy/checked-image.py publish --kind role-init --directory checked-images/role-init
       - uses: actions/upload-artifact@v4
         with:
-          name: fleetvera-release-receipts-${{ github.sha }}
+          name: fleetvera-release-receipts-${{ github.sha }}-attempt-${{ github.run_attempt }}
           path: replacement/checked-images/*/release-receipt.json
           if-no-files-found: error
           retention-days: 30
