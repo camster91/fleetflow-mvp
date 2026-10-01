@@ -1,0 +1,39 @@
+name: Rebuild checks
+on:
+  pull_request:
+    branches: [master, main]
+  push:
+    branches: [master, main, codex/fresh-rebuild]
+permissions:
+  contents: read
+jobs:
+  fresh-rebuild:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: qa-disposable-only
+          POSTGRES_DB: fleetvera_rebuild_qa_ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fleetvera_rebuild_qa_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:qa-disposable-only@localhost:5432/fleetvera_rebuild_qa_ci
+      REBUILD_DATABASE_NAME: fleetvera_rebuild_qa_ci
+    defaults:
+      run:
+        working-directory: replacement
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: replacement/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run migrate && npm run migrate
+      - run: npm test
+      - run: docker build --target runtime --build-arg SOURCE_COMMIT=${{ github.sha }} -t fleetvera-rebuild-ci .
