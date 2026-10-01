@@ -17,6 +17,10 @@ Monitoring is a release gate for both controlled-pilot and public deployments. A
 - Send alerts to the approved on-call destination and record the named responder, escalation path, and quiet-hours policy.
 - Set retention and data-scrubbing rules before inviting pilot users. Do not send authentication cookies, authorization headers, document contents, customer payloads, or secrets as event context.
 
+## In-app alerts
+
+Set **Alert email** in `/admin/settings`. Scheduled jobs that throw or answer 5xx, and server requests that throw, then email that address (`lib/opsAlerts.ts`): only the route template or job name, the error class and the time — never request bodies, error messages or customer data. Each problem is emailed at most once every 30 minutes per server process. **Send test alert** on `/admin/launch` checks delivery. These alerts complement, and do not replace, Sentry and the external health check.
+
 ## Verify the exact deployment
 
 After deployment, generate one controlled client error and one controlled server error using the provider's approved test procedure. Do not add an unauthenticated error-generation route to the application.
@@ -31,4 +35,4 @@ Record:
 - health-check ID, interval, region, and owner
 - acknowledgement time and responding operator
 
-Remove or disable any temporary test-only mechanism immediately after verification. Monitoring is not cleared until both events arrive, the alert reaches its destination, and the responder acknowledges it.
+Record the result as a **Monitoring test** on `/admin/launch` (link to the evidence; never paste event payloads). Remove or disable any temporary test-only mechanism immediately after verification. Monitoring is not cleared until both events arrive, the alert reaches its destination, and the responder acknowledges it.

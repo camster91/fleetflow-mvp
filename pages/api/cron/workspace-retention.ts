@@ -1,3 +1,4 @@
+import { withCronAlerts } from '@/lib/opsAlerts'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { isAuthorizedCronRequest } from '@/lib/cronAuth'
 import { runWorkspaceRetention } from '@/lib/workspaceRetention'
@@ -7,7 +8,7 @@ import { runWorkspaceRetention } from '@/lib/workspaceRetention'
  * read-only (lib/workspaceRetention.ts). A dry run unless WORKSPACE_DELETION_ENABLED=true, and a
  * no-op while plans are not enforced (the free beta).
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
     return res.status(405).json({ error: 'Method not allowed' })
@@ -21,3 +22,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Workspace retention failed' })
   }
 }
+
+export default withCronAlerts('workspace-retention', handler)

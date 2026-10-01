@@ -1,9 +1,10 @@
+import { withCronAlerts } from '@/lib/opsAlerts'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { isAuthorizedCronRequest } from '../../../lib/cronAuth'
 import { integrationRetentionCutoffs } from '../../../lib/integrations/retention'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   if (!isAuthorizedCronRequest(req)) return res.status(401).json({ error: 'Unauthorized' })
   const now = new Date(),
@@ -28,3 +29,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   })
   return res.status(200).json({ deleted, cutoffs })
 }
+
+export default withCronAlerts('integration-retention', handler)

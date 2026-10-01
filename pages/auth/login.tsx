@@ -17,6 +17,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   const codeRefs = useRef<(HTMLInputElement | null)[]>([])
+  // The latest digits, updated synchronously: digits that arrive faster than React re-renders (quick
+  // typing, one-time-code autofill) must build on each other instead of on a stale render's state.
+  const latestCode = useRef(code)
+  const updateCode = (next: string[]) => {
+    latestCode.current = next
+    setCode(next)
+  }
 
   // Resend cooldown timer
   useEffect(() => {
@@ -43,15 +50,18 @@ export default function LoginPage() {
     setStep('code')
     setResendCooldown(60)
     // Focus first code input
-    setTimeout(() => codeRefs.current[0]?.focus(), 100)
+    // Unless the user has already started entering the code.
+    setTimeout(() => {
+      if (!latestCode.current.some(Boolean)) codeRefs.current[0]?.focus()
+    }, 100)
   }
 
   const handleCodeChange = (index: number, value: string) => {
     // Only allow digits
     const digit = value.replace(/\D/g, '').slice(-1)
-    const newCode = [...code]
+    const newCode = [...latestCode.current]
     newCode[index] = digit
-    setCode(newCode)
+    updateCode(newCode)
 
     // Auto-advance to next input
     if (digit && index < 5) {
@@ -65,7 +75,7 @@ export default function LoginPage() {
   }
 
   const handleCodeKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !code[index] && index > 0) {
+    if (e.key === 'Backspace' && !latestCode.current[index] && index > 0) {
       codeRefs.current[index - 1]?.focus()
     }
   }
@@ -75,7 +85,7 @@ export default function LoginPage() {
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
     if (pasted.length === 6) {
       const newCode = pasted.split('')
-      setCode(newCode)
+      updateCode(newCode)
       codeRefs.current[5]?.focus()
       handleVerifyCode(pasted)
     }
@@ -110,7 +120,7 @@ export default function LoginPage() {
     if (!result || result.error) {
       setError(result?.error || 'Invalid code')
       toast.error(result?.error || 'Invalid code')
-      setCode(['', '', '', '', '', ''])
+      updateCode(['', '', '', '', '', ''])
       codeRefs.current[0]?.focus()
       setLoading(false)
       return
@@ -118,7 +128,7 @@ export default function LoginPage() {
 
     if ('requiresTwoFactor' in result && result.requiresTwoFactor) {
       setStep('two-factor')
-      setCode(['', '', '', '', '', ''])
+      updateCode(['', '', '', '', '', ''])
       setLoading(false)
       return
     }
@@ -137,7 +147,7 @@ export default function LoginPage() {
     await sendCode(email.toLowerCase().trim())
     setLoading(false)
     setResendCooldown(60)
-    setCode(['', '', '', '', '', ''])
+    updateCode(['', '', '', '', '', ''])
     toast.success('New code sent to your email')
     codeRefs.current[0]?.focus()
   }
@@ -260,7 +270,7 @@ export default function LoginPage() {
                   onClick={() => {
                     setStep('email')
                     setError('')
-                    setCode(['', '', '', '', '', ''])
+                    updateCode(['', '', '', '', '', ''])
                   }}
                   className="flex items-center text-slate-600 hover:text-slate-900 transition-colors"
                 >

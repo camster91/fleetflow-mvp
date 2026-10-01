@@ -1,6 +1,7 @@
 /**
  * Deployment-wide provider settings that a platform admin can enter in /admin/settings instead of the
- * environment: Stripe billing, Google Maps + QuickBooks, the AI provider and the cron secret.
+ * environment: Stripe billing, Google Maps + QuickBooks, the AI provider, the cron secret, the operations
+ * alert address and the Coolify redeploy hook.
  *
  * - Each value is stored AES-256-GCM encrypted (key derived from EMAIL_CONFIG_ENCRYPTION_KEY) and bound
  *   to its setting name, so a stored value cannot be moved to another setting.
@@ -12,7 +13,7 @@ import crypto from 'crypto'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 
-export type SettingGroup = 'billing' | 'integrations' | 'ai' | 'operations'
+export type SettingGroup = 'billing' | 'integrations' | 'ai' | 'operations' | 'deploy'
 
 export interface SettingDefinition {
   key: string
@@ -25,6 +26,19 @@ export interface SettingDefinition {
 }
 
 const token = (pattern: RegExp, message: string) => z.string().trim().max(1024).regex(pattern, message)
+const httpsUrl = (message: string) =>
+  z
+    .string()
+    .trim()
+    .max(1024)
+    .refine((value) => {
+      try {
+        const url = new URL(value)
+        return url.protocol === 'https:' && !url.username && !url.password && !url.hash
+      } catch {
+        return false
+      }
+    }, message)
 const integerAmount = token(/^\d{1,9}$/, 'Enter a whole number in the smallest currency unit (cents)')
 
 export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
@@ -118,18 +132,7 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     label: 'QuickBooks redirect URI',
     help: 'https://<your domain>/api/integrations/quickbooks/callback — also registered in the Intuit app.',
     secret: false,
-    schema: z
-      .string()
-      .trim()
-      .max(1024)
-      .refine((value) => {
-        try {
-          const url = new URL(value)
-          return url.protocol === 'https:' && !url.username && !url.password && !url.hash
-        } catch {
-          return false
-        }
-      }, 'Must be an https URL'),
+    schema: httpsUrl('Must be an https URL'),
   },
   {
     key: 'AI_PROVIDER',
@@ -162,6 +165,35 @@ export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
     help: 'Bearer token scheduled jobs send. Update the scheduler in Coolify when you change it.',
     secret: true,
     schema: token(/^\S{32,512}$/, 'Must be at least 32 characters with no spaces'),
+  },
+  {
+    key: 'OPS_ALERT_EMAIL',
+    group: 'operations',
+    label: 'Alert email',
+    help: 'Receives an email when a scheduled job fails or a server request crashes (at most one per problem every 30 minutes).',
+    secret: false,
+    schema: z
+      .string()
+      .trim()
+      .max(254)
+      .toLowerCase()
+      .regex(/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/, 'Must be one email address'),
+  },
+  {
+    key: 'COOLIFY_DEPLOY_WEBHOOK',
+    group: 'deploy',
+    label: 'Coolify deploy webhook',
+    help: 'Coolify → your application → Webhooks → Deploy webhook (https://…/api/v1/deploy?uuid=…).',
+    secret: false,
+    schema: httpsUrl('Must be an https URL'),
+  },
+  {
+    key: 'COOLIFY_API_TOKEN',
+    group: 'deploy',
+    label: 'Coolify API token',
+    help: 'Coolify → Keys & Tokens → API tokens, with deploy permission.',
+    secret: true,
+    schema: token(/^[A-Za-z0-9|._-]{16,512}$/, 'Must be a Coolify API token'),
   },
 ]
 
@@ -230,6 +262,11 @@ function state(): OverlayState {
 export function environmentValue(key: string): string | undefined {
   const overlay = state()
   return overlay.original.has(key) ? overlay.original.get(key) : process.env[key]
+}
+
+/** Whether the current process.env value of `key` was entered by an admin rather than the environment. */
+export function isAdminValue(key: string): boolean {
+  return state().original.has(key)
 }
 
 /** Make process.env reflect `values` (admin wins), restoring the environment for keys not in it. */

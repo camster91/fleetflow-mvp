@@ -5,7 +5,7 @@ A fleet management SaaS app, branded **Fleetvera** in everything users see (the 
 
 ## How people get in
 - Invitation-only beta. The first platform admin is created with `create-admin.js`; admins invite customers at `/admin/users`; customers create their team at `/team` and invite teammates.
-- Provider secrets (Stripe, Maps, QuickBooks, AI, cron) can be set by platform admins at `/admin/settings` (see `lib/platformSettings.ts`); Mailgun at `/admin/email-delivery`.
+- Provider secrets (Stripe, Maps, QuickBooks, AI, cron) can be set by platform admins at `/admin/settings` (see `lib/platformSettings.ts`); Mailgun at `/admin/email-delivery`. `/admin/launch` (`lib/launchReadiness.ts`) shows live go-live checks, records backup/monitoring evidence and the go/no-go decision (`OpsRecord`), sends a test alert and triggers a Coolify redeploy. Failed cron jobs and unhandled request errors email `OPS_ALERT_EMAIL` (`lib/opsAlerts.ts`, throttled, content-free).
 - Plans: `FLEETVERA_RELEASE_MODE=pilot` is the free beta (no enforcement); `public` enables trials, read-only lapsed workspaces and retention (`lib/entitlements.ts`, `lib/workspaceRetention.ts`, `docs/runbooks/stripe-launch.md`).
 
 ## Stack

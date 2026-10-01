@@ -7,7 +7,7 @@ import { useSession } from '@/lib/session'
 type Source = 'admin' | 'environment' | 'unset' | 'unreadable'
 type Setting = {
   key: string
-  group: 'billing' | 'integrations' | 'ai' | 'operations'
+  group: 'billing' | 'integrations' | 'ai' | 'operations' | 'deploy'
   label: string
   help: string
   secret: boolean
@@ -26,7 +26,16 @@ const GROUPS: Array<{ id: Setting['group']; title: string; intro: string }> = [
   },
   { id: 'integrations', title: 'Google Maps and QuickBooks', intro: 'Server credentials for workspace integrations.' },
   { id: 'ai', title: 'AI provider', intro: 'The assistant stays off until a provider, key and model are set.' },
-  { id: 'operations', title: 'Scheduled jobs', intro: 'Secret that cron requests must present.' },
+  {
+    id: 'operations',
+    title: 'Scheduled jobs and alerts',
+    intro: 'Secret that cron requests must present, and where failure alerts are emailed.',
+  },
+  {
+    id: 'deploy',
+    title: 'Redeploy',
+    intro: 'Lets the Redeploy button on the launch page ask Coolify to build and deploy again.',
+  },
 ]
 
 const SOURCE_LABEL: Record<Source, string> = {
@@ -190,6 +199,12 @@ export default function PlatformSettingsPage() {
             className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-blue-700 underline"
           >
             Transactional email (Mailgun) is configured separately
+          </a>
+          <a
+            href="/admin/launch"
+            className="mt-2 ml-4 inline-flex min-h-11 items-center text-sm font-medium text-blue-700 underline"
+          >
+            Launch readiness
           </a>
         </header>
         {loadError ? (

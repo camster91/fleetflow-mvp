@@ -56,6 +56,9 @@ beforeEach(() => {
     'STRIPE_PRICE_YEARLY',
     'CRON_SECRET',
     'INTEGRATION_ENCRYPTION_KEYS',
+    'OPS_ALERT_EMAIL',
+    'COOLIFY_DEPLOY_WEBHOOK',
+    'COOLIFY_API_TOKEN',
   ])
     delete process.env[key]
   delete (globalThis as { __fleetveraPlatformSettings?: unknown }).__fleetveraPlatformSettings
@@ -132,6 +135,20 @@ describe('/api/admin/settings', () => {
     expect(
       (await call('PUT', { body: { key: 'QUICKBOOKS_CLIENT_ID', value: 'ABcdefghij12345' } }))._getStatusCode()
     ).toBe(200)
+  })
+
+  it.each([
+    ['OPS_ALERT_EMAIL', 'not an email', 400],
+    ['OPS_ALERT_EMAIL', 'a@b.co, c@d.co', 400],
+    ['OPS_ALERT_EMAIL', ' Ops@Example.com ', 200],
+    ['COOLIFY_DEPLOY_WEBHOOK', 'http://coolify.example.com/api/v1/deploy?uuid=a', 400],
+    ['COOLIFY_DEPLOY_WEBHOOK', 'https://coolify.example.com/api/v1/deploy?uuid=a', 200],
+    ['COOLIFY_API_TOKEN', 'short', 400],
+    ['COOLIFY_API_TOKEN', '3|' + 'a'.repeat(40), 200],
+  ])('validates operations setting %s = %p', async (key, value, status) => {
+    const res = await call('PUT', { body: { key, value } })
+    expect(res._getStatusCode()).toBe(status)
+    if (status === 200 && key === 'OPS_ALERT_EMAIL') expect(process.env.OPS_ALERT_EMAIL).toBe('ops@example.com')
   })
 
   it('returns 503 without an encryption key', async () => {

@@ -833,6 +833,39 @@ ${APP_URL}
   })
 }
 
+/**
+ * Operations alert for the address set in /admin/settings. `facts` must be content-free (route
+ * templates, job names, error class names): never request bodies, error messages or customer data.
+ */
+export async function sendOpsAlertEmail(
+  to: string,
+  title: string,
+  facts: Array<[string, string]>
+): Promise<{ success: boolean; error?: string }> {
+  const rows = facts
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding: 4px 12px 4px 0; color: #64748b;">${escapeHtml(label)}</td><td style="padding: 4px 0;"><span class="code">${escapeHtml(value)}</span></td></tr>`
+    )
+    .join('')
+  const launchUrl = `${APP_URL}/admin/launch`
+  const html = getBaseEmailTemplate(`
+    <h2 style="margin-top: 0; color: #1e293b;">${escapeHtml(title)}</h2>
+    <table style="border-collapse: collapse; font-size: 14px;">${rows}</table>
+    <p>Check the server logs and Sentry for details. Repeats of this alert are held back for 30 minutes.</p>
+    <div style="text-align: center; margin: 24px 0;">
+      <a href="${launchUrl}" class="button">Open launch readiness</a>
+    </div>
+  `)
+  const text = `${title}
+
+${facts.map(([label, value]) => `${label}: ${value}`).join('\n')}
+
+Check the server logs and Sentry for details. Repeats of this alert are held back for 30 minutes.
+${launchUrl}`
+  return sendEmail({ to, subject: safeEmailSubject(`[${APP_NAME} alert] ${title}`), html, text })
+}
+
 // Re-export for convenience
 export async function sendTeamInvitationEmail(
   email: string,

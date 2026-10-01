@@ -1195,3 +1195,20 @@ model WorkspaceRetention {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
+
+/// Evidence a platform admin records on /admin/launch: backup and restore drills, monitoring tests
+/// and go/no-go decisions. Never holds dumps, credentials or customer data, only references to them.
+model OpsRecord {
+  id             String   @id @default(cuid())
+  kind           String // backup_drill | restore_drill | monitoring_test | go_no_go
+  outcome        String // pass | fail (drills and tests) or go | no_go (decisions)
+  performedAt    DateTime
+  summary        String
+  evidenceUrl    String?
+  reference      String? // backup checksum, provider job ID or alert/event ID
+  recordedById   String
+  recordedByName String?
+  createdAt      DateTime @default(now())
+
+  @@index([kind, performedAt])
+}
