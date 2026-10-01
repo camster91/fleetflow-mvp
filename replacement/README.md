@@ -31,8 +31,17 @@ least 32 characters and closes after the first user. Session cookies remain
 HttpOnly, Secure, SameSite Strict and expire after 12 hours. Local QA may disable
 Secure cookies only with `LOCAL_QA=true`; staging/production must leave it unset.
 
+Maintenance records support planned -> in progress -> completed, or cancellation
+of nonterminal records. Owners/dispatchers/mechanics track services, due dates,
+notes and completed costs in integer minor units with an explicit currency.
+An active service blocks dispatch; completion/cancellation releases the vehicle.
+Active deliveries block service start. Both changes and audits commit together.
+Owner/dispatcher operational reports show scoped status counts, overdue planned
+services and completed costs grouped by currency, using a consistent snapshot.
+Reports accept asOf calendar dates; their default is the current UTC date.
+
 This is an incomplete rebuild. Team invitations, workspace management,
-maintenance, reporting, browser UI, persistent
+browser UI, persistent
 Coolify candidate, restart/recovery QA, checked immutable releases and live
 handoff remain required. Billing/AI/provider integrations are later scope.
 

@@ -1,5 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {email,text,uuid} from './security.mjs';
+import {mountMaintenanceRoutes} from './maintenance-routes.mjs';
 export class Problem extends Error {
   constructor(status,code){super(code);this.status=status;this.code=code;}
 }
@@ -29,6 +30,7 @@ export function mountFleetRoutes({app,pool,requireAuth,route}) {
     }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
   }
   const path='/api/workspaces/:workspaceId';
+  mountMaintenanceRoutes({app,pool,requireAuth,route,access,mutate,Problem});
   app.get(path+'/vehicles',requireAuth,route(async(req,res)=>{
     await access(pool,req.params.workspaceId,req.user.id);
     const result=await pool.query('SELECT id,registration,label,status FROM fleetvera_rebuild.vehicles WHERE workspace_id=$1 ORDER BY registration,id',[req.params.workspaceId]);

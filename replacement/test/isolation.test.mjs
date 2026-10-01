@@ -5,6 +5,7 @@ import pg from 'pg';
 import {createApp} from '../src/app.mjs';
 import {hashPassword} from '../src/security.mjs';
 import {deliveryLifecycle} from './delivery-qa.mjs';
+import {maintenanceLifecycle} from './maintenance-qa.mjs';
 
 test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/client roles',async()=>{
   const connection=process.env.DATABASE_URL;
@@ -61,3 +62,4 @@ test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/cli
 // Top-level tests in this file run sequentially: bootstrap needs an empty DB
 // before the delivery fixtures intentionally add their separate workspaces.
 test('Delivery lifecycle, scoped assignments, driver access, concurrency and transactional audit',deliveryLifecycle);
+test('Maintenance lifecycle, vehicle dispatch interlock, scoped reports and audit rollback',maintenanceLifecycle);
