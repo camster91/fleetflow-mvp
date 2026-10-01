@@ -65,8 +65,13 @@ export function canViewReports(role: TeamRole): boolean {
 /**
  * Check if a role can manage billing and subscriptions
  */
+/**
+ * Subscriptions belong to the workspace owner's own account and cover all of their workspaces, so
+ * only the owner may check out, cancel or open the payment portal; a team admin must not change
+ * billing for the owner's other workspaces or see their payment details.
+ */
 export function canManageBilling(role: TeamRole): boolean {
-  return ['OWNER', 'ADMIN'].includes(role)
+  return role === 'OWNER'
 }
 
 /**

@@ -35,6 +35,17 @@ describe('POST /api/subscription/cancel', () => {
     ;(cancelSubscription as jest.Mock).mockResolvedValue({ id: 'sub_123', cancel_at_period_end: true })
   })
 
+  it("refuses a team admin: the subscription covers the owner's other workspaces too", async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', name: 'Admin' } })
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'ADMIN' }] },
+    ])
+    const { req, res } = request()
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(403)
+    expect(cancelSubscription).not.toHaveBeenCalled()
+  })
+
   it('serializes, persists, and audits a scheduled cancellation', async () => {
     const { req, res } = request()
     await handler(req, res)
