@@ -53,4 +53,8 @@ class CheckedImage(unittest.TestCase):
   self.fixture()
   with patch.object(module.subprocess,'run') as run:
    self.assertRaises(ValueError,module.publish,self.directory);run.assert_not_called()
+ def test_publication_tags_keep_both_checked_attempts_addressable(self):
+  receipt,_=self.fixture();first=module.publication_tag(receipt);receipt['workflow_run_attempt']='2';second=module.publication_tag(receipt)
+  self.assertNotEqual(first,second);self.assertTrue(first.endswith('-run-42-attempt-1'));self.assertTrue(second.endswith('-run-42-attempt-2'))
+  receipt['workflow_run_id']='foreign';self.assertRaises(ValueError,module.publication_tag,receipt)
 if __name__=='__main__':unittest.main()

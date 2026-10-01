@@ -99,6 +99,13 @@ def export(image, directory):
     return verify(directory)
 
 
+def publication_tag(receipt):
+    run, attempt = receipt.get("workflow_run_id", ""), receipt.get("workflow_run_attempt", "")
+    if not re.fullmatch(r"[0-9]+", run or "") or not re.fullmatch(r"[0-9]+", attempt or ""):
+        raise ValueError("Publishing requires a complete workflow identity")
+    return KINDS[KIND]["registry"] + ":" + receipt["revision"] + "-run-" + run + "-attempt-" + attempt
+
+
 def publish(directory):
     receipt = verify(directory)
     if os.environ.get("GITHUB_EVENT_NAME") != "push" or os.environ.get("GITHUB_REF") != "refs/heads/main":
@@ -108,7 +115,7 @@ def publish(directory):
     subprocess.run(["docker", "image", "load", "--input", str(directory / "runtime-image.tar")], check=True)
     image = verify_loaded(directory, receipt)
     registry = KINDS[KIND]["registry"]
-    tag = registry + ":" + receipt["revision"]
+    tag = publication_tag(receipt)
     subprocess.run(["docker", "image", "tag", image["Id"], tag], check=True)
     subprocess.run(["docker", "image", "push", tag], check=True)
     pushed = json.loads(subprocess.check_output(["docker", "image", "inspect", tag], text=True))[0]

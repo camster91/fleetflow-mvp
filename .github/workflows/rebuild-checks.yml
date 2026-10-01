@@ -38,6 +38,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: python3 test/checked-image.test.py
       - run: node --test deploy/test/release.test.mjs
+      - run: node --test deploy/test/preserve-receipts.test.mjs
       - run: python3 deploy/test/test_ci_backup.py
       - run: npm run migrate && npm run migrate
       - run: npm test
@@ -135,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
+      contents: write
       actions: read
       packages: write
     defaults:
@@ -160,6 +161,11 @@ jobs:
         run: |
           python3 deploy/checked-image.py publish --kind runtime --directory checked-images/runtime
           python3 deploy/checked-image.py publish --kind role-init --directory checked-images/role-init
+      - name: Preserve and refetch durable draft receipt records
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node deploy/preserve-receipts.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: fleetvera-release-receipts-${{ github.sha }}-attempt-${{ github.run_attempt }}
