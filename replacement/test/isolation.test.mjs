@@ -6,6 +6,7 @@ import {createApp} from '../src/app.mjs';
 import {hashPassword} from '../src/security.mjs';
 import {deliveryLifecycle} from './delivery-qa.mjs';
 import {maintenanceLifecycle} from './maintenance-qa.mjs';
+import {teamLifecycle} from './team-qa.mjs';
 
 test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/client roles',async()=>{
   const connection=process.env.DATABASE_URL;
@@ -42,7 +43,7 @@ test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/cli
     const hash=await hashPassword(fixture.password);
     await pool.query('INSERT INTO fleetvera_rebuild.workspaces(id,name) VALUES($1,$2)',[foreignId,'Foreign Fleet']);
     for(const [id,address] of [[foreignUser,'foreign@example.invalid'],[driver,'driver@example.invalid']])await pool.query('INSERT INTO fleetvera_rebuild.users(id,email,display_name,password_hash) VALUES($1,$2,$3,$4)',[id,address,'QA fixture',hash]);
-    await pool.query("INSERT INTO fleetvera_rebuild.memberships VALUES($1,$2,'owner'),($3,$4,'driver')",[foreignId,foreignUser,workspaceId,driver]);
+    await pool.query("INSERT INTO fleetvera_rebuild.memberships(workspace_id,user_id,role) VALUES($1,$2,'owner'),($3,$4,'driver')",[foreignId,foreignUser,workspaceId,driver]);
     assert.equal((await request('/api/workspaces/'+foreignId+'/vehicles',{cookie})).status,404);
     assert.equal((await request('/api/workspaces/'+foreignId+'/clients',{method:'POST',body:{name:'Forbidden',contactEmail:'blocked@example.invalid'},cookie})).status,404);
     const login=await request('/api/auth/login',{method:'POST',body:{email:'driver@example.invalid',password:fixture.password}});assert.equal(login.status,200);
@@ -63,3 +64,4 @@ test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/cli
 // before the delivery fixtures intentionally add their separate workspaces.
 test('Delivery lifecycle, scoped assignments, driver access, concurrency and transactional audit',deliveryLifecycle);
 test('Maintenance lifecycle, vehicle dispatch interlock, scoped reports and audit rollback',maintenanceLifecycle);
+test('Team invitations, workspace administration, access revocation and last-owner races',teamLifecycle);

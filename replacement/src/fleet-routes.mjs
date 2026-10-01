@@ -1,19 +1,20 @@
 import {randomUUID} from 'node:crypto';
 import {email,text,uuid} from './security.mjs';
+import {mountTeamRoutes} from './team-routes.mjs';
 import {mountMaintenanceRoutes} from './maintenance-routes.mjs';
 export class Problem extends Error {
   constructor(status,code){super(code);this.status=status;this.code=code;}
 }
-export function mountFleetRoutes({app,pool,requireAuth,route}) {
+export function mountFleetRoutes({app,pool,requireAuth,route,issueSession}) {
   async function access(client,workspace,userId,lock=false) {
     if(!uuid(workspace))throw new Problem(404,'NOT_FOUND');
-    let result=await client.query('SELECT m.role FROM fleetvera_rebuild.workspaces w JOIN fleetvera_rebuild.memberships m ON m.workspace_id=w.id WHERE w.id=$1 AND m.user_id=$2',[workspace,userId]);
+    let result=await client.query('SELECT m.role FROM fleetvera_rebuild.workspaces w JOIN fleetvera_rebuild.memberships m ON m.workspace_id=w.id WHERE w.id=$1 AND m.user_id=$2 AND m.revoked_at IS NULL',[workspace,userId]);
     if(!result.rowCount)throw new Problem(404,'NOT_FOUND');
     if(lock){
       // Lock the workspace before any membership so assignment cannot deadlock
       // with a driver's status change; recheck the role after obtaining locks.
       await client.query('SELECT id FROM fleetvera_rebuild.workspaces WHERE id=$1 FOR UPDATE',[workspace]);
-      result=await client.query('SELECT role FROM fleetvera_rebuild.memberships WHERE workspace_id=$1 AND user_id=$2 FOR UPDATE',[workspace,userId]);
+      result=await client.query('SELECT role FROM fleetvera_rebuild.memberships WHERE workspace_id=$1 AND user_id=$2 AND revoked_at IS NULL FOR UPDATE',[workspace,userId]);
       if(!result.rowCount)throw new Problem(404,'NOT_FOUND');
     }
     return result.rows[0];
@@ -31,6 +32,7 @@ export function mountFleetRoutes({app,pool,requireAuth,route}) {
   }
   const path='/api/workspaces/:workspaceId';
   mountMaintenanceRoutes({app,pool,requireAuth,route,access,mutate,Problem});
+  mountTeamRoutes({app,pool,requireAuth,route,access,mutate,Problem,issueSession});
   app.get(path+'/vehicles',requireAuth,route(async(req,res)=>{
     await access(pool,req.params.workspaceId,req.user.id);
     const result=await pool.query('SELECT id,registration,label,status FROM fleetvera_rebuild.vehicles WHERE workspace_id=$1 ORDER BY registration,id',[req.params.workspaceId]);
@@ -93,7 +95,7 @@ export function mountFleetRoutes({app,pool,requireAuth,route}) {
     if(current.version!==version(req))throw new Problem(409,'STALE_VERSION');
     const driverId=req.body?.driverId,vehicleId=req.body?.vehicleId;
     if(!uuid(driverId)||!uuid(vehicleId))throw new Problem(400,'INVALID_INPUT');
-    const driver=await client.query("SELECT user_id FROM fleetvera_rebuild.memberships WHERE workspace_id=$1 AND user_id=$2 AND role='driver' FOR UPDATE",[req.params.workspaceId,driverId]);
+    const driver=await client.query("SELECT user_id FROM fleetvera_rebuild.memberships WHERE workspace_id=$1 AND user_id=$2 AND role='driver' AND revoked_at IS NULL FOR UPDATE",[req.params.workspaceId,driverId]);
     const vehicle=await client.query('SELECT status FROM fleetvera_rebuild.vehicles WHERE workspace_id=$1 AND id=$2 FOR UPDATE',[req.params.workspaceId,vehicleId]);
     if(!driver.rowCount||!vehicle.rowCount)throw new Problem(404,'NOT_FOUND');
     if(vehicle.rows[0].status!=='available')throw new Problem(409,'VEHICLE_UNAVAILABLE');

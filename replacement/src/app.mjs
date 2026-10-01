@@ -38,7 +38,7 @@ export function createApp({ pool, origin, setupToken, revision, secureCookies = 
   };
   app.get('/api/health/ready', route(async (_req, res) => {
     const result=await pool.query('SELECT version FROM public.fleetvera_rebuild_migrations ORDER BY version');
-    if(result.rows.map(row=>row.version).join(',')!=='1,2,3')throw new Error('Required migration missing');
+    if(result.rows.map(row=>row.version).join(',')!=='1,2,3,4')throw new Error('Required migration missing');
     res.json({ status: 'ok', database: 'ok', revision });
   }));
   app.post('/api/auth/bootstrap', route(async (req, res) => {
@@ -53,7 +53,7 @@ export function createApp({ pool, origin, setupToken, revision, secureCookies = 
       const userId=randomUUID(), workspaceId=randomUUID();
       await client.query('INSERT INTO fleetvera_rebuild.users(id,email,display_name,password_hash) VALUES($1,$2,$3,$4)',[userId,address,name,hash]);
       await client.query('INSERT INTO fleetvera_rebuild.workspaces(id,name) VALUES($1,$2)',[workspaceId,workspace]);
-      await client.query("INSERT INTO fleetvera_rebuild.memberships VALUES($1,$2,'owner')",[workspaceId,userId]);
+      await client.query("INSERT INTO fleetvera_rebuild.memberships(workspace_id,user_id,role) VALUES($1,$2,'owner')",[workspaceId,userId]);
       await client.query("INSERT INTO fleetvera_rebuild.audit_events(workspace_id,actor_id,action,target_id) VALUES($1,$2,'workspace.created',$1)",[workspaceId,userId]);
       await issueSession(client,res,userId);
       await client.query('COMMIT');
@@ -74,10 +74,10 @@ export function createApp({ pool, origin, setupToken, revision, secureCookies = 
     cookie(res,'',0);res.json({ status:'ok' });
   }));
   app.get('/api/me', requireAuth, route(async(req,res) => {
-    const memberships=await pool.query('SELECT o.id,o.name,m.role FROM fleetvera_rebuild.memberships m JOIN fleetvera_rebuild.workspaces o ON o.id=m.workspace_id WHERE m.user_id=$1 ORDER BY o.name',[req.user.id]);
+    const memberships=await pool.query('SELECT o.id,o.name,m.role FROM fleetvera_rebuild.memberships m JOIN fleetvera_rebuild.workspaces o ON o.id=m.workspace_id WHERE m.user_id=$1 AND m.revoked_at IS NULL ORDER BY o.name',[req.user.id]);
     res.json({ user:req.user, workspaces:memberships.rows });
   }));
-  mountFleetRoutes({app,pool,requireAuth,route});
+  mountFleetRoutes({app,pool,requireAuth,route,issueSession});
   app.use((_req,res)=>res.status(404).json({error:'NOT_FOUND'}));
   app.use((error,_req,res,_next)=>{
     if(error instanceof Problem)return res.status(error.status).json({error:error.code});

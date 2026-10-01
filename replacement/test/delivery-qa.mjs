@@ -29,7 +29,7 @@ export async function deliveryLifecycle(){
       const id=randomUUID(),address=role.toLowerCase()+'-'+workspace+'@example.invalid';accounts[role]=id;
       await pool.query('INSERT INTO fleetvera_rebuild.users(id,email,display_name,password_hash) VALUES($1,$2,$3,$4)',[id,address,'QA '+role,hash]);
       const membership=role==='otherDriver'||role==='foreignDriver'?'driver':role;
-      await pool.query('INSERT INTO fleetvera_rebuild.memberships VALUES($1,$2,$3)',[role==='foreignDriver'?foreign:workspace,id,membership]);
+      await pool.query('INSERT INTO fleetvera_rebuild.memberships(workspace_id,user_id,role) VALUES($1,$2,$3)',[role==='foreignDriver'?foreign:workspace,id,membership]);
       const login=await request('/api/auth/login',{method:'POST',body:{email:address,password:fixturePassword}});assert.equal(login.status,200);
       cookies[role]=login.headers.get('set-cookie').split(';')[0];
     }

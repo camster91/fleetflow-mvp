@@ -24,7 +24,7 @@ export async function maintenanceLifecycle(){
     for(const role of ['owner','dispatcher','mechanic','driver']){
       const id=randomUUID(),email=role+'-'+workspace+'@example.invalid';accounts[role]=id;
       await pool.query('INSERT INTO fleetvera_rebuild.users(id,email,display_name,password_hash) VALUES($1,$2,$3,$4)',[id,email,'QA '+role,hash]);
-      await pool.query('INSERT INTO fleetvera_rebuild.memberships VALUES($1,$2,$3)',[workspace,id,role]);
+      await pool.query('INSERT INTO fleetvera_rebuild.memberships(workspace_id,user_id,role) VALUES($1,$2,$3)',[workspace,id,role]);
       const login=await request('/api/auth/login',{method:'POST',body:{email,password}});assert.equal(login.status,200);cookies[role]=login.headers.get('set-cookie').split(';')[0];
     }
     const vehicle=randomUUID(),spare=randomUUID(),foreignVehicle=randomUUID(),clientId=randomUUID(),foreignTask=randomUUID();

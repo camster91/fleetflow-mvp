@@ -40,7 +40,18 @@ Owner/dispatcher operational reports show scoped status counts, overdue planned
 services and completed costs grouped by currency, using a consistent snapshot.
 Reports accept asOf calendar dates; their default is the current UTC date.
 
-This is an incomplete rebuild. Team invitations, workspace management,
+Owners can create/rename workspaces, issue or revoke seven-day single-use
+invitations, and manage team roles/access with optimistic membership versions.
+Invitation tokens are returned once for manual sharing, stored only as hashes,
+and never emailed automatically. Reissuing invalidates older outstanding links.
+New accounts set a password; existing accounts must prove their current password.
+Invitations stop working if their issuer loses owner access. Workspace locks
+serialize acceptance and role changes; the last active owner cannot be removed.
+Drivers with active deliveries cannot be demoted/revoked until that work ends.
+Revocation preserves historical delivery references while subsequent authorization
+checks deny workspace access; access to other memberships remains intact.
+
+This is an incomplete rebuild. Browser UI,
 browser UI, persistent
 Coolify candidate, restart/recovery QA, checked immutable releases and live
 handoff remain required. Billing/AI/provider integrations are later scope.
