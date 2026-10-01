@@ -45,14 +45,14 @@ describe('POST /api/stripe/portal-session', () => {
     expect(createCustomerPortalSession).not.toHaveBeenCalled()
   })
 
-  it.each(['MANAGER', 'DRIVER', 'VIEWER'])('forbids %s', async (role) => {
+  it.each(['ADMIN', 'MANAGER', 'DRIVER', 'VIEWER'])('forbids %s', async (role) => {
     asRole(role)
     expect((await post())._getStatusCode()).toBe(403)
     expect(createCustomerPortalSession).not.toHaveBeenCalled()
   })
 
   it("opens the owner's Stripe portal and returns to billing", async () => {
-    asRole('ADMIN')
+    asRole('OWNER')
     const res = await post()
     expect(res._getStatusCode()).toBe(200)
     expect(res._getJSONData()).toEqual({ url: 'https://billing.stripe.test/s' })

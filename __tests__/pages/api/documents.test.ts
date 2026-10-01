@@ -95,6 +95,41 @@ describe('document APIs', () => {
     expect(res._getStatusCode()).toBe(404)
   })
 
+  test.each(['DRIVER', 'DISPATCHER'])('%s cannot list or download workspace documents', async (role) => {
+    ;(requireTenantContext as jest.Mock).mockResolvedValue({ ...context, tenant: { ...context.tenant, role } })
+    const { req, res } = createMocks({ method: 'GET', headers: { host: 'fleetvera.test' } })
+    await uploadHandler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(403)
+    expect(prisma.documentUpload.findFirst).not.toHaveBeenCalled()
+  })
+
+  test('an expense draft must use the selected, workspace-checked vehicle', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      query: { id: 'd1' },
+      headers: { host: 'fleetvera.test' },
+      body: {
+        action: 'preview',
+        revision: 1,
+        draft: {
+          kind: 'expense',
+          vehicleId: 'v-own',
+          values: {
+            vehicleId: 'v-other-workspace',
+            vendor: 'Garage',
+            date: '2026-09-01',
+            category: 'parts',
+            total: 10,
+            description: 'Brake pads',
+          },
+        },
+      },
+    })
+    await extractHandler(req as never, res as never)
+    expect(res._getStatusCode()).toBe(400)
+    expect(prisma.documentUpload.findFirst).not.toHaveBeenCalled()
+  })
+
   test('viewer cannot upload, extract, edit, preview, or confirm', async () => {
     ;(requireTenantContext as jest.Mock).mockResolvedValue({
       ...context,

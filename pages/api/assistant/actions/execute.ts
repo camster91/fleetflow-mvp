@@ -360,6 +360,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     if (payload.ownerId !== context.tenant.ownerId || payload.teamId !== context.tenant.teamId)
       return res.status(403).json({ error: 'Workspace mismatch' })
+    // Only the person who reviewed the preview may confirm it; a leaked preview token is useless to others.
+    if (payload.proposerId !== context.session.user.id)
+      return res.status(403).json({ error: 'Only the person who previewed this action can confirm it' })
     if (!canUse(payload.action, context.tenant.role)) return res.status(403).json({ error: 'Insufficient permissions' })
     if (
       payload.sourceFindingId &&

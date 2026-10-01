@@ -3,7 +3,7 @@ import { createHash, createHmac, randomUUID } from 'crypto'
 import path from 'path'
 import { Prisma } from '@prisma/client'
 import { assertSameOrigin, requireTenantContext } from '@/lib/apiAuth'
-import { canManageMaintenance, canViewMaintenance } from '@/lib/permissions'
+import { canManageMaintenance, canViewBusinessData } from '@/lib/permissions'
 import { rateLimitMiddleware } from '@/lib/rateLimit'
 import { prisma } from '@/lib/prisma'
 import {
@@ -100,7 +100,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const context = await requireTenantContext(req, res)
   if (!context) return
   const { tenant, session } = context
-  if (!canViewMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+  // Receipts and invoices cover the whole workspace: drivers and dispatchers, who only see their
+  // own work elsewhere, cannot list or download them.
+  if (!canManageMaintenance(tenant.role) && !canViewBusinessData(tenant.role))
+    return res.status(403).json({ error: 'Forbidden' })
   if (!(await rateLimitMiddleware(req, res, 'api', `documents:${session.user.id}`))) return
 
   if (req.method === 'GET') {

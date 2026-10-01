@@ -31,7 +31,7 @@ describe('GET /api/subscription/entitlement', () => {
     expect((await get('POST'))._getStatusCode()).toBe(405)
   })
 
-  it('reports the owner-scoped state to every member, offering billing only to managers', async () => {
+  it('reports the owner-scoped state to every member, offering billing only to the owner', async () => {
     ;(getWorkspaceEntitlement as jest.Mock).mockResolvedValue({
       enforced: true,
       access: 'READ_ONLY',
@@ -43,7 +43,7 @@ describe('GET /api/subscription/entitlement', () => {
     })
     for (const [role, canManageBilling] of [
       ['OWNER', true],
-      ['ADMIN', true],
+      ['ADMIN', false],
       ['DRIVER', false],
       ['VIEWER', false],
     ] as const) {

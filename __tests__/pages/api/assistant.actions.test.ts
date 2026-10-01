@@ -126,6 +126,33 @@ describe('/api/assistant/actions/execute', () => {
     expect(res._getStatusCode()).toBe(404)
   })
 
+  it('lets only the person who previewed an action confirm it', async () => {
+    ;(prisma.intelligenceFinding.findFirst as jest.Mock).mockResolvedValue(finding())
+    let mocks = createMocks({
+      method: 'POST',
+      body: {
+        action: {
+          type: 'update_delivery_status',
+          deliveryId: 'd1',
+          values: { status: 'delivered' },
+          expectedUpdatedAt: delivery.updatedAt.toISOString(),
+        },
+        sourceFindingId: 'f1',
+      },
+    })
+    await handler(mocks.req as never, mocks.res as never)
+    const token = mocks.res._getJSONData().token
+    expect(token).toEqual(expect.any(String))
+    ;(requireTenantContext as jest.Mock).mockResolvedValueOnce({
+      ...context,
+      session: { user: { id: 'manager-2', name: 'Other manager' } },
+    })
+    mocks = createMocks({ method: 'POST', body: { previewToken: token, confirm: true } })
+    await handler(mocks.req as never, mocks.res as never)
+    expect(mocks.res._getStatusCode()).toBe(403)
+    expect(prisma.$transaction).not.toHaveBeenCalled()
+  })
+
   it('revalidates finding state inside the write transaction', async () => {
     ;(prisma.intelligenceFinding.findFirst as jest.Mock).mockResolvedValue(finding())
     let mocks = createMocks({
