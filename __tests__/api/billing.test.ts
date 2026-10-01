@@ -173,15 +173,26 @@ describe('POST /api/stripe/checkout-session', () => {
     expect(mocks.res._getStatusCode()).toBe(405)
   })
 
-  it('bills the team owner and denies viewers', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1' } })
+  it('bills the team owner and denies admins and viewers', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'owner-1' } })
     ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
-      { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'ADMIN' }] },
+      { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'OWNER' }] },
     ])
     let mocks = request('monthly', { 'x-team-id': 'team-1' })
     await handler(mocks.req, mocks.res)
     expect(mocks.res._getStatusCode()).toBe(200)
     expect(prisma.user.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'owner-1' } }))
+
+    // The subscription covers the owner's other workspaces too, so a team admin cannot change it.
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1' } })
+    ;(prisma.team.findMany as jest.Mock).mockResolvedValue([
+      { id: 'team-1', ownerId: 'owner-1', members: [{ role: 'ADMIN' }] },
+    ])
+    mocks = request('monthly', { 'x-team-id': 'team-1' })
+    await handler(mocks.req, mocks.res)
+    expect(mocks.res._getStatusCode()).toBe(403)
+    expect(prisma.$transaction).not.toHaveBeenCalled()
 
     jest.clearAllMocks()
     ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'viewer-1' } })

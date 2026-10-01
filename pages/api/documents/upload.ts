@@ -3,7 +3,7 @@ import { createHash, createHmac, randomUUID } from 'crypto'
 import path from 'path'
 import { Prisma } from '@prisma/client'
 import { assertSameOrigin, requireTenantContext } from '@/lib/apiAuth'
-import { canManageMaintenance, canViewMaintenance } from '@/lib/permissions'
+import { canManageMaintenance, canViewBusinessData } from '@/lib/permissions'
 import { rateLimitMiddleware } from '@/lib/rateLimit'
 import { prisma } from '@/lib/prisma'
 import {
@@ -85,6 +85,12 @@ function storageKey(contentHash: string, scopeKey: string) {
   return `${opaque.slice(0, 2)}/${opaque}`
 }
 
+/** ASCII fallback plus an RFC 5987 UTF-8 name, so non-Latin file names download instead of failing. */
+export function contentDisposition(name: string): string {
+  const ascii = name.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '') || 'document'
+  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) {
     res.setHeader('Allow', 'GET, POST, DELETE')
@@ -94,7 +100,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const context = await requireTenantContext(req, res)
   if (!context) return
   const { tenant, session } = context
-  if (!canViewMaintenance(tenant.role)) return res.status(403).json({ error: 'Forbidden' })
+  // Receipts and invoices cover the whole workspace: drivers and dispatchers, who only see their
+  // own work elsewhere, cannot list or download them.
+  if (!canManageMaintenance(tenant.role) && !canViewBusinessData(tenant.role))
+    return res.status(403).json({ error: 'Forbidden' })
   if (!(await rateLimitMiddleware(req, res, 'api', `documents:${session.user.id}`))) return
 
   if (req.method === 'GET') {
@@ -106,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!row || row.expiresAt <= new Date()) return res.status(404).json({ error: 'Document not found' })
       const bytes = await storage().read(row.storageKey)
       res.setHeader('Content-Type', row.mimeType)
-      res.setHeader('Content-Disposition', `inline; filename="${row.originalName.replace(/["\\]/g, '')}"`)
+      res.setHeader('Content-Disposition', contentDisposition(row.originalName))
       res.setHeader('Cache-Control', 'private, no-store')
       res.setHeader('X-Content-Type-Options', 'nosniff')
       res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'")

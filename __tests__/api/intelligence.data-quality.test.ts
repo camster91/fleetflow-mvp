@@ -32,6 +32,20 @@ describe('GET /api/intelligence/data-quality', () => {
     expect(requireTenantContext).not.toHaveBeenCalled()
   })
 
+  it.each(['DRIVER', 'DISPATCHER', 'TECHNICIAN'])(
+    'forbids %s, who may not read every workspace record',
+    async (role) => {
+      ;(requireTenantContext as jest.Mock).mockResolvedValue({
+        session: { user: { id: 'member-1' } },
+        tenant: { ownerId: 'owner-1', teamId: 'team-1', role, resourceWhere: { teamId: 'team-1' } },
+      })
+      const { req, res } = createMocks({ method: 'GET' })
+      await handler(req as never, res as never)
+      expect(res._getStatusCode()).toBe(403)
+      for (const model of models) expect(model.findMany).not.toHaveBeenCalled()
+    }
+  )
+
   it('includes a selected team owner’s legacy null-team rows through the internal compatibility scope', async () => {
     const resourceWhere = { OR: [{ teamId: 'team-1' }, { ownerId: 'owner-1', teamId: null }] }
     ;(requireTenantContext as jest.Mock).mockResolvedValue({

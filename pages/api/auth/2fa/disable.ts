@@ -6,10 +6,13 @@ import { decryptSecret } from '../../../../lib/cryptoSecrets'
 import speakeasy from 'speakeasy'
 import bcrypt from 'bcryptjs'
 import { assertSameOrigin } from '../../../../lib/apiAuth'
+import { rateLimitMiddleware } from '../../../../lib/rateLimit'
+import { isAccountLocked, notLockedWhere, recordFailedAttempt } from '../../../../lib/loginLockout'
 
 const TOTP_CODE_PATTERN = /^\d{6}$/
 // Matches generateBackupCodes() in lib/tokens.ts (XXXX-XXXX-XXXX digits).
 const BACKUP_CODE_PATTERN = /^\d{4}-\d{4}-\d{4}$/
+const TOTP_STEP_SECONDS = 30
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -23,6 +26,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!session?.user?.id) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    // Same guessing budget as the 2FA sign-in step: a stolen session must not get unlimited
+    // attempts at the code that removes 2FA.
+    const allowed = await rateLimitMiddleware(req, res, 'twoFactor', `user:${session.user.id}`)
+    if (!allowed) return
 
     const { code } = req.body
 
@@ -47,21 +55,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    if (isAccountLocked(user)) {
+      return res.status(423).json({ error: 'Too many wrong codes. Try again in 15 minutes.' })
+    }
+
     const input = code.trim()
-    const invalidCode = () =>
-      res.status(400).json({
+    // Wrong codes count toward the account lockout, like wrong sign-in codes.
+    const invalidCode = async () => {
+      await recordFailedAttempt(prisma, userId)
+      return res.status(400).json({
         error: 'Invalid verification code',
         code: 'INVALID_CODE',
       })
+    }
 
     if (TOTP_CODE_PATTERN.test(input)) {
-      const verified = speakeasy.totp.verify({
+      const nowSeconds = Date.now() / 1000
+      const match = speakeasy.totp.verifyDelta({
         secret: decryptSecret(user.twoFactorSecret),
         encoding: 'base32',
         token: input,
         window: 2,
+        time: nowSeconds,
       })
-      if (!verified) return invalidCode()
+      if (!match) return invalidCode()
+      // Each TOTP time step is accepted once (shared with sign-in), so an observed code cannot be replayed.
+      const step = Math.floor(nowSeconds / TOTP_STEP_SECONDS) + match.delta
+      const accepted = await prisma.user.updateMany({
+        where: {
+          id: userId,
+          twoFactorEnabled: true,
+          ...notLockedWhere(),
+          AND: [{ OR: [{ lastTotpStep: null }, { lastTotpStep: { lt: step } }] }],
+        },
+        data: { lastTotpStep: step },
+      })
+      if (accepted.count !== 1) return invalidCode()
     } else if (BACKUP_CODE_PATTERN.test(input)) {
       // Only well-formed backup codes reach bcrypt, and hashing runs async so
       // a burst of guesses cannot block the event loop.

@@ -21,7 +21,8 @@ const FEATURES = {
   reports: ROLES('OWNER', 'ADMIN', 'MANAGER'),
   intelligence: ROLES('OWNER', 'ADMIN', 'MANAGER', 'VIEWER'),
   workspaceSettings: ROLES('OWNER', 'ADMIN'),
-  checkout: ROLES('OWNER', 'ADMIN'),
+  // The subscription belongs to the owner's account and covers all of their workspaces.
+  checkout: ROLES('OWNER'),
 }
 
 const sameOrigin = (baseURL: string) => ({ origin: baseURL, referer: `${baseURL}/dashboard` })
