@@ -31,13 +31,14 @@ services:
     build:
       context: ./replacement
       target: db-init
+      args:
+        SOURCE_COMMIT: ${SOURCE_COMMIT:?required}
     environment:
       PGHOST: postgres
       PGDATABASE: fleetvera_rebuild_staging
       PGUSER: fleetvera_owner
       PGPASSWORD: ${POSTGRES_PASSWORD}
       RUNTIME_PASSWORD: ${RUNTIME_DATABASE_PASSWORD}
-    command: [sh, -ec, 'psql -v ON_ERROR_STOP=1 -v runtime_password="$$RUNTIME_PASSWORD" -f /runtime-role.sql']
     tmpfs:
       - /var/lib/postgresql/data
     depends_on:

@@ -16,4 +16,12 @@ USER node
 EXPOSE 3001
 CMD ["node","src/server.mjs"]
 FROM postgres:16-alpine AS db-init
+ARG SOURCE_COMMIT
+ENV RELEASE_SHA=$SOURCE_COMMIT
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
 COPY deploy/runtime-role.sql /runtime-role.sql
+COPY deploy/provision-runtime-role.sh /provision-runtime-role.sh
+RUN chmod 755 /provision-runtime-role.sh
+USER postgres
+ENTRYPOINT ["/provision-runtime-role.sh"]
+CMD []

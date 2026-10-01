@@ -1,0 +1,41 @@
+import hashlib,importlib.util,io,json,os,pathlib,tarfile,tempfile,unittest
+from unittest.mock import patch
+spec=importlib.util.spec_from_file_location('checked_image',pathlib.Path(__file__).parents[1]/'deploy/checked-image.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+REVISION='a'*40
+class CheckedImage(unittest.TestCase):
+ def setUp(self):
+  self.temp=tempfile.TemporaryDirectory();self.directory=pathlib.Path(self.temp.name);self.env=patch.dict(os.environ,{'RELEASE_SHA':REVISION,'GITHUB_RUN_ID':'42','GITHUB_RUN_ATTEMPT':'1'},clear=True);self.env.start();module.KIND='runtime'
+ def tearDown(self):self.env.stop();self.temp.cleanup()
+ def fixture(self,kind='runtime',user=None,command=None,tag=None):
+  module.KIND=kind;settings={'User':user or module.KINDS[kind]['user'],'Labels':{'org.opencontainers.image.revision':REVISION},'Env':['RELEASE_SHA='+REVISION],'Cmd':(['node','src/server.mjs'] if kind=='runtime' else None),'Entrypoint':(['docker-entrypoint.sh'] if kind=='runtime' else ['/provision-runtime-role.sh'])}
+  if command is not None:settings['Cmd']=command
+  config={'config':settings,'architecture':'amd64','os':'linux','rootfs':{'type':'layers','diff_ids':['sha256:'+hashlib.sha256(b'layer').hexdigest()]}};raw=json.dumps(config).encode();image='sha256:'+hashlib.sha256(raw).hexdigest()
+  with tarfile.open(self.directory/'runtime-image.tar','w') as bundle:
+   for name,data in [('manifest.json',json.dumps([{'Config':'config.json','RepoTags':[tag or module.import_tag(REVISION)],'Layers':['layer.tar']}]).encode()),('config.json',raw),('layer.tar',b'layer')]:
+    entry=tarfile.TarInfo(name);entry.size=len(data);bundle.addfile(entry,io.BytesIO(data))
+  receipt={'schema':1,'repository':module.REPOSITORY,'revision':REVISION,'kind':kind,'image_id':image,'archive_sha256':module.digest(self.directory/'runtime-image.tar'),'workflow_run_id':'42','workflow_run_attempt':'1'};self.write(receipt);return receipt,config
+ def write(self,receipt):(self.directory/'receipt.json').write_text(json.dumps(receipt))
+ def test_accepts_both_distinct_image_kinds(self):
+  for kind in module.KINDS:
+   receipt,_=self.fixture(kind);self.assertEqual(module.verify(self.directory),receipt)
+ def test_rejects_tampered_archive_before_import(self):
+  self.fixture();(self.directory/'runtime-image.tar').write_bytes(b'changed');self.assertRaises(ValueError,module.verify,self.directory)
+ def test_rejects_wrong_repository_revision_kind_and_run(self):
+  for field,value in [('repository','foreign/repo'),('revision','b'*40),('kind','role-init'),('workflow_run_id','99'),('workflow_run_attempt','2')]:
+   receipt,_=self.fixture();receipt[field]=value;self.write(receipt);self.assertRaises(ValueError,module.verify,self.directory)
+ def test_rejects_privileged_user_command_and_wrong_import_tag(self):
+  for args in [{'user':'root'},{'command':['sh']},{'tag':'fleetvera:latest'}]:
+   self.fixture(**args);self.assertRaises(ValueError,module.verify,self.directory)
+  self.fixture(kind='role-init',command=['postgres']);self.assertRaises(ValueError,module.verify,self.directory)
+ def test_rejects_forged_configuration_identity(self):
+  receipt,_=self.fixture();receipt['image_id']='sha256:'+'f'*64;self.write(receipt);self.assertRaises(ValueError,module.verify,self.directory)
+ def test_loaded_identity_allows_engine_manifest_ids_but_checks_contents(self):
+  receipt,config=self.fixture();loaded={'Id':'sha256:'+'b'*64,'Config':config['config'],'RootFS':{'Layers':config['rootfs']['diff_ids']},'Architecture':'amd64','Os':'linux'}
+  with patch.object(module.subprocess,'check_output',return_value=json.dumps([loaded])):self.assertEqual(module.verify_loaded(self.directory,receipt),loaded)
+  loaded['RootFS']['Layers']=['sha256:'+'c'*64]
+  with patch.object(module.subprocess,'check_output',return_value=json.dumps([loaded])):self.assertRaises(ValueError,module.verify_loaded,self.directory,receipt)
+ def test_publishing_requires_a_checked_main_push(self):
+  self.fixture()
+  with patch.object(module.subprocess,'run') as run:
+   self.assertRaises(ValueError,module.publish,self.directory);run.assert_not_called()
+if __name__=='__main__':unittest.main()

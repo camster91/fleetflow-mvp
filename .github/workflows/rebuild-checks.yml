@@ -9,6 +9,7 @@ permissions:
 jobs:
   fresh-rebuild:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -23,6 +24,7 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:qa-disposable-only@localhost:5432/fleetvera_rebuild_qa_ci
       REBUILD_DATABASE_NAME: fleetvera_rebuild_qa_ci
+      RELEASE_SHA: ${{ github.sha }}
     defaults:
       run:
         working-directory: replacement
@@ -34,12 +36,34 @@ jobs:
           cache: npm
           cache-dependency-path: replacement/package-lock.json
       - run: npm ci --ignore-scripts
+      - run: python3 test/checked-image.test.py
       - run: npm run migrate && npm run migrate
       - run: npm test
       - run: docker build --target runtime --build-arg SOURCE_COMMIT=${{ github.sha }} -t fleetvera-rebuild-ci .
-      - run: docker build --target db-init -t fleetvera-role-init-ci .
+      - run: docker build --target db-init --build-arg SOURCE_COMMIT=${{ github.sha }} -t fleetvera-role-init-ci .
+      - name: Exercise the actual unprivileged runtime image
+        run: |
+          docker exec "${{ job.services.postgres.id }}" createdb -U postgres fleetvera_rebuild_qa_runtime_ci
+          runtime_url=postgres://postgres:qa-disposable-only@localhost:5432/fleetvera_rebuild_qa_runtime_ci
+          for attempt in 1 2; do
+            docker run --rm --network host -e DATABASE_URL="$runtime_url" -e REBUILD_DATABASE_NAME=fleetvera_rebuild_qa_runtime_ci fleetvera-rebuild-ci node src/migrate.mjs
+          done
+          docker run --rm --network host -e DATABASE_URL="$runtime_url" -e REBUILD_DATABASE_NAME=fleetvera_rebuild_qa_runtime_ci -v "$PWD/test:/app/test:ro" fleetvera-rebuild-ci npm test
+      - name: Preserve the tested release images
+        run: |
+          python3 deploy/checked-image.py export --kind runtime --image fleetvera-rebuild-ci --directory checked-images/runtime
+          python3 deploy/checked-image.py export --kind role-init --image fleetvera-role-init-ci --directory checked-images/role-init
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fleetvera-checked-images-${{ github.sha }}
+          path: replacement/checked-images/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: ${{ github.ref == 'refs/heads/main' && 30 || 7 }}
   browser-rebuild:
+    needs: fresh-rebuild
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -52,13 +76,8 @@ jobs:
           --health-cmd "pg_isready -U postgres -d fleetvera_rebuild_qa_browser_ci"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
-      DATABASE_URL: postgres://postgres:qa-disposable-only@localhost:5432/fleetvera_rebuild_qa_browser_ci
-      REBUILD_DATABASE_NAME: fleetvera_rebuild_qa_browser_ci
-      APP_ORIGIN: http://127.0.0.1:19391
-      PORT: '19391'
-      LOCAL_QA: 'true'
-      SETUP_TOKEN: browser-qa-disposable-only-token-20261001
-      RELEASE_SHA: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      RELEASE_SHA: ${{ github.sha }}
+      BROWSER_QA_REVISION: ${{ github.sha }}
     defaults:
       run:
         working-directory: replacement
@@ -71,21 +90,33 @@ jobs:
           cache-dependency-path: replacement/package-lock.json
       - run: npm ci --ignore-scripts
       - run: npx playwright install --with-deps chromium
-      - name: Exercise the fresh browser application
+      - uses: actions/download-artifact@v4
+        with:
+          name: fleetvera-checked-images-${{ github.sha }}
+          path: replacement/checked-images/
+      - name: Verify and import the preserved images
         run: |
-          npm run migrate
-          npm run migrate
-          sed 's/fleetvera_rebuild_staging/fleetvera_rebuild_qa_browser_ci/g' deploy/runtime-role.sql | docker exec -i "${{ job.services.postgres.id }}" psql -U postgres -d fleetvera_rebuild_qa_browser_ci -v ON_ERROR_STOP=1 -v runtime_password=qa-disposable-runtime-only
-          export DATABASE_URL=postgres://fleetvera_runtime:qa-disposable-runtime-only@localhost:5432/fleetvera_rebuild_qa_browser_ci
-          node src/server.mjs > /tmp/fleetvera-browser.log 2>&1 &
-          qa_pid=$!
-          trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
+          python3 deploy/checked-image.py load --kind runtime --directory checked-images/runtime
+          python3 deploy/checked-image.py load --kind role-init --directory checked-images/role-init
+      - name: Exercise the preserved browser and role images
+        run: |
+          runtime_image=fleetvera-checked-runtime:$RELEASE_SHA
+          role_image=fleetvera-checked-role-init:$RELEASE_SHA
+          owner_url=postgres://postgres:qa-disposable-only@localhost:5432/fleetvera_rebuild_qa_browser_ci
+          runtime_password=$(printf 'b%.0s' {1..64})
+          for attempt in 1 2; do
+            docker run --rm --network host -e DATABASE_URL="$owner_url" -e REBUILD_DATABASE_NAME=fleetvera_rebuild_qa_browser_ci "$runtime_image" node src/migrate.mjs
+            docker run --rm --network host --tmpfs /var/lib/postgresql/data -e PGHOST=127.0.0.1 -e PGDATABASE=fleetvera_rebuild_qa_browser_ci -e PGUSER=postgres -e PGPASSWORD=qa-disposable-only -e RUNTIME_PASSWORD="$runtime_password" "$role_image"
+          done
+          docker run -d --name fleetvera-browser-runtime --network host -e DATABASE_URL="postgres://fleetvera_runtime:$runtime_password@localhost:5432/fleetvera_rebuild_qa_browser_ci" -e REBUILD_DATABASE_NAME=fleetvera_rebuild_qa_browser_ci -e APP_ORIGIN=http://127.0.0.1:19391 -e PORT=19391 -e LOCAL_QA=true -e SETUP_TOKEN=browser-qa-disposable-only-token-20261001 "$runtime_image"
+          trap 'docker rm -f fleetvera-browser-runtime >/dev/null 2>&1 || true' EXIT
           node -e 'for(let i=0;i<40;i++){try{const r=await fetch("http://127.0.0.1:19391/api/health/ready");if(r.ok)process.exit(0);}catch{}await new Promise(r=>setTimeout(r,500));}process.exit(1);' --input-type=module
           node test/browser-qa.cjs
+          before=$(docker inspect --format '{{.State.StartedAt}}' fleetvera-browser-runtime)
           docker restart "${{ job.services.postgres.id }}"
           node -e 'for(let i=0;i<40;i++){try{const r=await fetch("http://127.0.0.1:19391/api/health/ready");if(r.ok)process.exit(0);}catch{}await new Promise(r=>setTimeout(r,500));}process.exit(1);' --input-type=module
-          kill -0 "$qa_pid"
-          echo 'Database restart recovered without application process restart'
+          test "$(docker inspect --format '{{.State.StartedAt}}' fleetvera-browser-runtime)" = "$before"
+          test "$(docker inspect --format '{{.RestartCount}}' fleetvera-browser-runtime)" = 0
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -96,3 +127,42 @@ jobs:
             replacement/fleetvera-browser-mobile.png
             replacement/fleetvera-browser-failure.png
           retention-days: 14
+  publish-images:
+    needs: [fresh-rebuild, browser-rebuild]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FLEETVERA_IMMUTABLE_RELEASE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    defaults:
+      run:
+        working-directory: replacement
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: fleetvera-checked-images-${{ github.sha }}
+          path: replacement/checked-images/
+      - name: Authenticate image publication
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+      - name: Publish both checked images without rebuilding
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          python3 deploy/checked-image.py publish --kind runtime --directory checked-images/runtime
+          python3 deploy/checked-image.py publish --kind role-init --directory checked-images/role-init
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fleetvera-release-receipts-${{ github.sha }}
+          path: replacement/checked-images/*/release-receipt.json
+          if-no-files-found: error
+          retention-days: 30
+      - if: always()
+        run: docker logout ghcr.io
