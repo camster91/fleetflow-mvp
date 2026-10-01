@@ -27,6 +27,12 @@ class BackupTests(unittest.TestCase):
         settings['database'] = 'fleetvera_rebuild_production'; settings['resource_uuid'] = '../foreign'
         self.assertRaises(ValueError, backup.configuration, settings)
 
+    def test_running_failed_or_unknown_setup_is_not_a_recovery_source(self):
+        valid = {'migrate': {'State': {'Running': False, 'Status': 'exited', 'ExitCode': 0}}, 'runtime-role': {'State': {'Running': False, 'Status': 'exited', 'ExitCode': 0}}}
+        backup.completed_setup(valid)
+        for state in [{'Running': True, 'Status': 'running', 'ExitCode': 0}, {'Running': False, 'Status': 'exited', 'ExitCode': 1}, {}]:
+            services = dict(valid); services['migrate'] = {'State': state}; self.assertRaises(ValueError, backup.completed_setup, services)
+
     def bundle(self, source, mode='valid'):
         entries = {name: b'fixture' for name in backup.FILES}
         entries['release.json'] = json.dumps({'database': 'fleetvera_rebuild_production', 'revision': 'a' * 40, 'resource_uuid': 'b' * 24, 'snapshotConsistent': True, 'rehearsal': False}).encode()

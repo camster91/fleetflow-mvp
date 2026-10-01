@@ -41,6 +41,12 @@ def configuration(settings, rehearsal=False):
         raise ValueError('Reviewed dedicated resource configuration required')
     return settings
 
+def completed_setup(services):
+    for name in ('migrate', 'runtime-role'):
+        state = services.get(name, {}).get('State', {})
+        if state.get('Running') is not False or state.get('Status') != 'exited' or state.get('ExitCode') != 0:
+            raise ValueError('Setup tasks must have completed successfully')
+
 SNAPSHOT = r"""
 import pg from 'pg';const client=new pg.Client({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:5000,statement_timeout:60000});await client.connect();await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
 const snapshot=(await client.query('SELECT pg_export_snapshot() AS snapshot')).rows[0].snapshot;
@@ -146,7 +152,7 @@ def create_backup(settings, sha, nonce, workflow, rehearsal=False):
     app, db = services['app'], services['postgres']; env = dict(v.split('=', 1) for v in app['Config']['Env'])
     revision = env.get('RELEASE_SHA', '')
     if not re.fullmatch('[a-f0-9]{40}', revision) or env.get('REBUILD_DATABASE_NAME') != dbname or env.get('LOCAL_QA') or app['Mounts'] or app['State'].get('Health', {}).get('Status') != 'healthy' or db['State'].get('Health', {}).get('Status') != 'healthy': raise ValueError('Unsafe or unhealthy recovery source')
-    if services['migrate']['State']['ExitCode'] != 0 or services['runtime-role']['State']['ExitCode'] != 0: raise ValueError('Incomplete setup tasks')
+    completed_setup(services)
     url = urlparse(env.get('DATABASE_URL', '')); db_env = dict(v.split('=', 1) for v in db['Config']['Env'])
     if url.hostname != 'postgres' or url.username != 'fleetvera_runtime' or url.path != '/' + dbname or not re.fullmatch('[a-f0-9]{64}', url.password or '') or db_env.get('POSTGRES_DB') != dbname or db_env.get('POSTGRES_USER') != 'fleetvera_owner': raise ValueError('Dedicated database connection required')
     volumes = [mount for mount in db['Mounts'] if mount['Destination'] == '/var/lib/postgresql/data' and mount['Type'] == 'volume']
