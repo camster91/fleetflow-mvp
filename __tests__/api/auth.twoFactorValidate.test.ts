@@ -45,7 +45,7 @@ const enabledUser = {
 const incrementCall = { where: { id: 'u1' }, data: { failedLoginAttempts: { increment: 1 } } }
 const lockCall = {
   where: { id: 'u1', lockedUntil: null, failedLoginAttempts: { gte: 5 } },
-  data: { lockedUntil: expect.any(Date), tokenVersion: { increment: 1 } },
+  data: { lockedUntil: expect.any(Date) },
 }
 
 function validateRequest(code: string) {

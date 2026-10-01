@@ -73,8 +73,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Success writes only land while the account is unlocked and the challenge's
-    // token version is current (a concurrent lock bumps it), so a stale request
+    // Success writes only land while the account is unlocked (re-checked in the
+    // database) and the challenge's token version is current, so a stale request
     // can never clear a lock set after the snapshot above.
     const successGuard = {
       id: userId,
