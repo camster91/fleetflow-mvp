@@ -17,7 +17,7 @@ jest.mock('@/lib/documents/storage', () => ({
 }))
 
 import extractHandler from '@/pages/api/documents/[id]/extract'
-import uploadHandler from '@/pages/api/documents/upload'
+import uploadHandler, { contentDisposition } from '@/pages/api/documents/upload'
 import { requireTenantContext } from '@/lib/apiAuth'
 import { assertSameOrigin } from '@/lib/apiAuth'
 import { rateLimitMiddleware } from '@/lib/rateLimit'
@@ -332,5 +332,14 @@ describe('document APIs', () => {
     expect(prisma.auditLog.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ entityType: 'document', entityId: 'd1' }) })
     )
+  })
+})
+
+describe('contentDisposition', () => {
+  test('keeps non-Latin names downloadable with an ASCII fallback', () => {
+    expect(contentDisposition('請求書 "2026".pdf')).toBe(
+      `inline; filename="___ 2026.pdf"; filename*=UTF-8''${encodeURIComponent('請求書 "2026".pdf')}`
+    )
+    expect(() => new Headers({ 'content-disposition': contentDisposition('請求書.pdf') })).not.toThrow()
   })
 })

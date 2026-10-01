@@ -3,7 +3,8 @@ export function downloadCSV(filename: string, rows: Array<Record<string, unknown
   const keys = Object.keys(rows[0])
   const escape = (v: unknown) => {
     const text = String(v ?? '')
-    const literal = /^[\t\r\n ]*[=+\-@]/.test(text) ? `'${text}` : text
+    // Spreadsheet apps evaluate cells starting with = + - @ (also after leading whitespace, or | and tab/CR).
+    const literal = /^[\t\r\n ]*[=+\-@|]/.test(text) ? `'${text}` : text
     return '"' + literal.replace(/"/g, '""') + '"'
   }
   const csv = [keys.map(escape).join(','), ...rows.map((r) => keys.map((k) => escape(r[k])).join(','))].join('\n')

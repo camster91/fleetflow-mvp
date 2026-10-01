@@ -148,7 +148,12 @@ export function inspectDocument(bytes: Buffer, mime: string, options: { authorit
   if (!bytes.length || bytes.length > DOCUMENT_MAX_BYTES)
     throw new Error('Document size is outside the supported range')
   if (mime === 'application/pdf') {
-    const text = bytes.toString('latin1')
+    // PDF names may hide characters as #xx escapes (/J#61vaScript is /JavaScript), so decode them
+    // before looking for active content or counting pages. Over-decoding elsewhere only makes the
+    // checks stricter.
+    const text = bytes
+      .toString('latin1')
+      .replace(/#([0-9a-fA-F]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)))
     if (
       !text.startsWith('%PDF-') ||
       !/%%EOF\s*$/.test(text) ||

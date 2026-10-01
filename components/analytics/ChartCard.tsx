@@ -1,5 +1,6 @@
 import React from 'react'
 import { Card } from '../ui/Card'
+import { downloadCSV } from '../../lib/csvExport'
 import { Button } from '../ui/Button'
 import { DateRangePicker } from '../ui/DateRangePicker'
 import { Download, MoreHorizontal, FileSpreadsheet, FileImage } from 'lucide-react'
@@ -73,21 +74,9 @@ export const ChartCard: React.FC<ChartCardProps> = ({
     setShowExportMenu(false)
   }
 
-  const exportToCSV = () => {
-    if (!data.length) return
-
-    const headers = Object.keys(data[0]).join(',')
-    const rows = data.map((row) => Object.values(row).join(','))
-    const csv = [headers, ...rows].join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${title.toLowerCase().replace(/\s+/g, '-')}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  // Chart labels include user-entered names (vehicles, maintenance types), so cells are quoted and
+  // formula-escaped by the shared helper rather than joined raw.
+  const exportToCSV = () => downloadCSV(title.toLowerCase().replace(/\s+/g, '-'), data)
 
   const renderChart = () => {
     if (loading) {
