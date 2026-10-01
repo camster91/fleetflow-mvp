@@ -45,6 +45,10 @@ class CheckedImage(unittest.TestCase):
   for field,value in [('User','root'),('Env',['RELEASE_SHA='+REVISION,'EVIL=1']),('Cmd',['sh']),('Entrypoint',['sh']),('Labels',{}),('Volumes',{'/app':{}}),('Healthcheck',{'Test':['NONE']})]:
    changed=copy.deepcopy(loaded);changed['Config'][field]=value
    with patch.object(module.subprocess,'check_output',return_value=json.dumps([changed])):self.assertRaises(ValueError,module.verify_loaded,self.directory,receipt)
+ def test_documented_empty_or_nil_fields_match_absent_but_nonempty_remain(self):
+  settings={'Volumes':None,'OnBuild':None,'Cmd':[],'Labels':{},'WorkingDir':''}
+  self.assertEqual(module.comparable_configuration(settings),{})
+  self.assertEqual(module.comparable_configuration({'Volumes':{'/data':{}},'OnBuild':['RUN evil'],'Cmd':['sh']}),{'Volumes':{'/data':{}},'OnBuild':['RUN evil'],'Cmd':['sh']})
  def test_publishing_requires_a_checked_main_push(self):
   self.fixture()
   with patch.object(module.subprocess,'run') as run:

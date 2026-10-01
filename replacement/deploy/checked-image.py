@@ -136,6 +136,13 @@ def comparable_configuration(settings):
             if type(result[field]) is not type(default) or result[field] != default:
                 raise ValueError("Unexpected non-default legacy inspect field: " + field)
             del result[field]
+    # Docker v29 omits empty/nil image fields that older APIs return explicitly.
+    empty_fields = {"Cmd": [], "Entrypoint": [], "Env": [], "Labels": {},
+                    "OnBuild": [], "User": "", "Volumes": {}, "WorkingDir": ""}
+    for field, empty in empty_fields.items():
+        if field in result and (result[field] is None or
+                                (type(result[field]) is type(empty) and result[field] == empty)):
+            del result[field]
     return result
 
 
@@ -146,7 +153,9 @@ def verify_loaded(directory, receipt):
         manifest = json.load(bundle.extractfile("manifest.json"))
         config = json.load(bundle.extractfile(manifest[0]["Config"]))
     if comparable_configuration(image["Config"]) != comparable_configuration(config["config"]) or image["RootFS"]["Layers"] != config["rootfs"]["diff_ids"]:
-        fields = sorted(key for key in set(image["Config"]) | set(config["config"]) if image["Config"].get(key) != config["config"].get(key))
+        loaded_config, saved_config = comparable_configuration(image["Config"]), comparable_configuration(config["config"])
+        missing = object()
+        fields = sorted(key for key in set(loaded_config) | set(saved_config) if loaded_config.get(key, missing) != saved_config.get(key, missing))
         raise ValueError("Loaded runtime configuration or filesystem differs from checked image; configuration fields=" + ",".join(fields) + "; layers_equal=" + str(image["RootFS"]["Layers"] == config["rootfs"]["diff_ids"]))
     if image["Architecture"] != config["architecture"] or image["Os"] != config["os"]:
         raise ValueError("Loaded image platform differs from checked image")
