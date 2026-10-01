@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requirePlatformAdmin } from '@/lib/platformAdmin'
+import { isAdminValue } from '@/lib/platformSettings'
 
 const DEPLOY_TIMEOUT_MS = 15_000
 const bodySchema = z.object({ confirm: z.literal(true) }).strict()
@@ -27,6 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (!url || url.protocol !== 'https:' || !token)
     return res.status(409).json({ error: 'Set the Coolify deploy webhook and API token in Platform settings first' })
+  // A token from the deployment environment is only ever sent to the webhook from that same environment,
+  // so an admin-entered URL can never redirect an operator-held token to another host.
+  if (isAdminValue('COOLIFY_API_TOKEN') !== isAdminValue('COOLIFY_DEPLOY_WEBHOOK'))
+    return res.status(409).json({
+      error:
+        'Set the Coolify deploy webhook and API token in the same place (both in Platform settings or both in the environment)',
+    })
 
   let status = 0
   let deploymentId: string | undefined

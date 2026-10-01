@@ -51,6 +51,13 @@ describe('notifyOps', () => {
     send.mockRejectedValue(new Error('boom'))
     expect(await notifyOps('k2', 'Title', [])).toBe('failed')
   })
+
+  it('does not hold back the next attempt after a failed send', async () => {
+    send.mockResolvedValueOnce({ success: false })
+    expect(await notifyOps('k', 'Title', [], { now: 1_000 })).toBe('failed')
+    expect(await notifyOps('k', 'Title', [], { now: 2_000 })).toBe('sent')
+    expect(await notifyOps('k', 'Title', [], { now: 3_000 })).toBe('throttled')
+  })
 })
 
 describe('errorLabel', () => {
@@ -112,5 +119,10 @@ describe('reportRequestError', () => {
       ['Time (UTC)', expect.any(String)],
     ])
     expect(JSON.stringify(send.mock.calls)).not.toContain('secret token')
+  })
+
+  it('leaves cron routes to withCronAlerts so one crash sends one email', async () => {
+    await reportRequestError(new Error('x'), { method: 'POST' }, { routePath: '/api/cron/ai-retention' })
+    expect(send).not.toHaveBeenCalled()
   })
 })

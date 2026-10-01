@@ -264,6 +264,11 @@ export function environmentValue(key: string): string | undefined {
   return overlay.original.has(key) ? overlay.original.get(key) : process.env[key]
 }
 
+/** Whether the current process.env value of `key` was entered by an admin rather than the environment. */
+export function isAdminValue(key: string): boolean {
+  return state().original.has(key)
+}
+
 /** Make process.env reflect `values` (admin wins), restoring the environment for keys not in it. */
 export function applySettings(values: Map<string, string>): void {
   const overlay = state()

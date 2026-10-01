@@ -25,6 +25,7 @@ import { requireTenantContext } from '@/lib/apiAuth'
 import { launchChecks } from '@/lib/launchReadiness'
 import { notifyOps } from '@/lib/opsAlerts'
 import { prisma } from '@/lib/prisma'
+import { applySettings } from '@/lib/platformSettings'
 
 const db = prisma as unknown as {
   opsRecord: { findMany: jest.Mock; create: jest.Mock }
@@ -70,6 +71,7 @@ beforeEach(() => {
   delete process.env.COOLIFY_DEPLOY_WEBHOOK
   delete process.env.COOLIFY_API_TOKEN
   delete process.env.OPS_ALERT_EMAIL
+  delete (globalThis as { __fleetveraPlatformSettings?: unknown }).__fleetveraPlatformSettings
   asRole('admin')
   ;(launchChecks as jest.Mock).mockResolvedValue(passing)
   db.opsRecord.findMany.mockResolvedValue([])
@@ -254,6 +256,22 @@ describe('/api/admin/deploy', () => {
         data: expect.objectContaining({ action: 'DEPLOY_TRIGGERED', entityId: 'dep-123' }),
       })
       expect(JSON.stringify(db.auditLog.create.mock.calls)).not.toContain(TOKEN)
+    })
+
+    it('never sends an environment token to an admin-entered webhook', async () => {
+      applySettings(new Map([['COOLIFY_DEPLOY_WEBHOOK', 'https://attacker.example.com/x']]))
+      const res = await call(deployHandler, 'POST', { body: { confirm: true } })
+      expect(res._getStatusCode()).toBe(409)
+      expect(res._getJSONData().error).toMatch(/same place/)
+      expect(fetchMock).not.toHaveBeenCalled()
+      applySettings(
+        new Map([
+          ['COOLIFY_DEPLOY_WEBHOOK', 'https://coolify.example.com/x'],
+          ['COOLIFY_API_TOKEN', TOKEN],
+        ])
+      )
+      fetchMock.mockResolvedValue({ status: 200, json: async () => ({}) })
+      expect((await call(deployHandler, 'POST', { body: { confirm: true } }))._getStatusCode()).toBe(202)
     })
 
     it('reports a refusal or an unreachable Coolify without echoing the token', async () => {

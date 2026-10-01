@@ -56,10 +56,15 @@ export async function notifyOps(
       // An unref'd timer: a pending timeout must not keep the process (or a test worker) alive.
       { timeoutMs: 10_000, sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms).unref()) }
     )
-    return delivery.status === 'delivered' && delivery.value.success ? 'sent' : 'failed'
+    if (delivery.status === 'delivered' && delivery.value.success) return 'sent'
   } catch {
-    return 'failed'
+    // Fall through: a failed send must not silence the next attempt.
   }
+  if (sent.get(key) === now) {
+    if (previous === undefined) sent.delete(key)
+    else sent.set(key, previous)
+  }
+  return 'failed'
 }
 
 /** Wrap a cron handler so a thrown error or a 5xx response emails the alert address. */
@@ -94,6 +99,8 @@ export async function reportRequestError(
   context: RequestErrorContext
 ): Promise<AlertResult> {
   const route = typeof context.routePath === 'string' ? context.routePath.slice(0, 200) : 'unknown route'
+  // Cron routes alert through withCronAlerts; reporting the re-thrown error again would send a second email.
+  if (route.startsWith('/api/cron/')) return 'throttled'
   const method = /^[A-Z]{3,7}$/.test(request.method ?? '') ? (request.method as string) : 'unknown'
   const label = errorLabel(error)
   return notifyOps(`request:${method}:${route}:${label}`, `Server error on ${route}`, [

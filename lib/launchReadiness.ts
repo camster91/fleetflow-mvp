@@ -1,9 +1,10 @@
 /**
- * Live go-live checks for /admin/launch. Every detail is a setting name, a status or a date; no
- * configuration value is ever returned.
+ * Live go-live checks for /admin/launch. Details are setting names, statuses, dates and the
+ * non-secret alert address and Mailgun domain; no secret value is ever returned.
  */
 import { prisma } from '@/lib/prisma'
 import { configuredMailgun } from '@/lib/emailConfig'
+import { isAdminValue } from '@/lib/platformSettings'
 import { burnedSecretNames, evaluateEnvironment } from '@/scripts/verify-production-readiness.cjs'
 
 export type CheckStatus = 'pass' | 'warn' | 'fail'
@@ -200,21 +201,34 @@ async function databaseCheck(): Promise<LaunchCheck> {
 }
 
 function deployCheck(env: NodeJS.ProcessEnv): LaunchCheck {
-  const configured = present(env, 'COOLIFY_DEPLOY_WEBHOOK') && present(env, 'COOLIFY_API_TOKEN')
-  return {
+  const base = {
     id: 'deploy',
     label: 'Redeploy from this page',
     issue: 155,
-    status: configured ? 'pass' : 'warn',
-    detail: configured
-      ? 'Coolify webhook and token are set.'
-      : 'Optional: add the Coolify webhook and token to use the Redeploy button.',
     action: { href: '/admin/settings', label: 'Platform settings' },
   }
+  if (!present(env, 'COOLIFY_DEPLOY_WEBHOOK') || !present(env, 'COOLIFY_API_TOKEN'))
+    return {
+      ...base,
+      status: 'warn',
+      detail: 'Optional: add the Coolify webhook and token to use the Redeploy button.',
+    }
+  return deployConfigured(env)
+    ? { ...base, status: 'pass', detail: 'Coolify webhook and token are set.' }
+    : {
+        ...base,
+        status: 'warn',
+        detail: 'Set the Coolify webhook and token in the same place (both here or both in the environment).',
+      }
 }
 
+/** Both set, and from the same source (see pages/api/admin/deploy.ts). */
 export function deployConfigured(env: NodeJS.ProcessEnv = process.env): boolean {
-  return present(env, 'COOLIFY_DEPLOY_WEBHOOK') && present(env, 'COOLIFY_API_TOKEN')
+  return (
+    present(env, 'COOLIFY_DEPLOY_WEBHOOK') &&
+    present(env, 'COOLIFY_API_TOKEN') &&
+    isAdminValue('COOLIFY_DEPLOY_WEBHOOK') === isAdminValue('COOLIFY_API_TOKEN')
+  )
 }
 
 const evidenceSelect = { outcome: true, performedAt: true, recordedByName: true } as const

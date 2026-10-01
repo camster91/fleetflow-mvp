@@ -409,7 +409,7 @@ export default function LaunchReadinessPage() {
           <h1 className="text-2xl font-bold text-slate-900">Launch readiness</h1>
           <p className="mt-1 text-sm text-slate-600">
             Live checks of this deployment, evidence of backups and monitoring, and the go/no-go decision. Platform
-            administrators only. No setting value is shown here.
+            administrators only. No secret is shown here.
           </p>
         </header>
         {loadError ? (
