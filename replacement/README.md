@@ -51,8 +51,16 @@ Drivers with active deliveries cannot be demoted/revoked until that work ends.
 Revocation preserves historical delivery references while subsequent authorization
 checks deny workspace access; access to other memberships remains intact.
 
-This is an incomplete rebuild. Browser UI,
-browser UI, persistent
+The browser application provides owner setup, sign-in, invitation acceptance,
+workspace selection, vehicle/client creation, delivery planning/assignment/status,
+maintenance tracking, reports and owner team administration. Role-specific controls
+match server permissions. Invitation links use a fragment and are removed from the
+address bar after reading; session credentials are never stored in browser storage.
+Untrusted values render as text. Service costs use normal currency amounts with
+currency-specific decimal precision; large report totals preserve exact digits.
+Checked browser CI exercises these flows using fresh PostgreSQL and fictional data.
+
+This is an incomplete rebuild. Persistent
 Coolify candidate, restart/recovery QA, checked immutable releases and live
 handoff remain required. Billing/AI/provider integrations are later scope.
 

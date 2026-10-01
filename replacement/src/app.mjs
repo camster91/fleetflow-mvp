@@ -1,5 +1,6 @@
 import { mountFleetRoutes, Problem } from './fleet-routes.mjs';
 import express from 'express';
+import {fileURLToPath} from 'node:url';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import { randomBytes, randomUUID } from 'node:crypto';
@@ -78,6 +79,7 @@ export function createApp({ pool, origin, setupToken, revision, secureCookies = 
     res.json({ user:req.user, workspaces:memberships.rows });
   }));
   mountFleetRoutes({app,pool,requireAuth,route,issueSession});
+  app.use(express.static(fileURLToPath(new URL('./public/',import.meta.url)),{maxAge:0}));
   app.use((_req,res)=>res.status(404).json({error:'NOT_FOUND'}));
   app.use((error,_req,res,_next)=>{
     if(error instanceof Problem)return res.status(error.status).json({error:error.code});

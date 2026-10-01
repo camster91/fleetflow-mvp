@@ -33,6 +33,12 @@ export function mountFleetRoutes({app,pool,requireAuth,route,issueSession}) {
   const path='/api/workspaces/:workspaceId';
   mountMaintenanceRoutes({app,pool,requireAuth,route,access,mutate,Problem});
   mountTeamRoutes({app,pool,requireAuth,route,access,mutate,Problem,issueSession});
+  app.get(path+'/drivers',requireAuth,route(async(req,res)=>{
+    const member=await access(pool,req.params.workspaceId,req.user.id);
+    if(!['owner','dispatcher'].includes(member.role))throw new Problem(403,'ROLE_REJECTED');
+    const result=await pool.query("SELECT u.id,u.display_name FROM fleetvera_rebuild.memberships m JOIN fleetvera_rebuild.users u ON u.id=m.user_id WHERE m.workspace_id=$1 AND m.role='driver' AND m.revoked_at IS NULL ORDER BY u.display_name,u.id",[req.params.workspaceId]);
+    res.json({drivers:result.rows});
+  }));
   app.get(path+'/vehicles',requireAuth,route(async(req,res)=>{
     await access(pool,req.params.workspaceId,req.user.id);
     const result=await pool.query('SELECT id,registration,label,status FROM fleetvera_rebuild.vehicles WHERE workspace_id=$1 ORDER BY registration,id',[req.params.workspaceId]);

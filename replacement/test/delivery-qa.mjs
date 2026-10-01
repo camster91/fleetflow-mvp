@@ -33,6 +33,12 @@ export async function deliveryLifecycle(){
       const login=await request('/api/auth/login',{method:'POST',body:{email:address,password:fixturePassword}});assert.equal(login.status,200);
       cookies[role]=login.headers.get('set-cookie').split(';')[0];
     }
+    const choices=await (await request(path+'/drivers',{role:'dispatcher'})).json();
+    assert.deepEqual(choices.drivers.map(row=>row.id).sort(),[accounts.driver,accounts.otherDriver].sort());
+    assert.ok(choices.drivers.every(row=>Object.keys(row).sort().join(',')==='display_name,id'));
+    assert.equal((await request(path+'/drivers',{role:'driver'})).status,403);
+    assert.equal((await request(path+'/drivers',{role:'mechanic'})).status,403);
+    assert.equal((await request('/api/workspaces/'+foreign+'/drivers')).status,404);
     const customer=randomUUID(),foreignCustomer=randomUUID(),vehicle=randomUUID(),foreignVehicle=randomUUID(),maintenanceVehicle=randomUUID();
     await pool.query('INSERT INTO fleetvera_rebuild.clients(id,workspace_id,name,contact_email) VALUES($1,$2,$3,$4),($5,$6,$7,$8)',[customer,workspace,'QA Client','private@example.invalid',foreignCustomer,foreign,'Foreign Client','foreign@example.invalid']);
     await pool.query('INSERT INTO fleetvera_rebuild.vehicles(id,workspace_id,registration,label,status) VALUES($1,$2,$3,$4,$5),($6,$2,$7,$8,$9),($10,$11,$12,$13,$5)',[vehicle,workspace,'DELIVERY-VAN','QA Van','available',maintenanceVehicle,'SHOP-VAN','QA Maintenance','maintenance',foreignVehicle,foreign,'FOREIGN-VAN','Foreign Van']);

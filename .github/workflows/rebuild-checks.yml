@@ -37,3 +37,55 @@ jobs:
       - run: npm run migrate && npm run migrate
       - run: npm test
       - run: docker build --target runtime --build-arg SOURCE_COMMIT=${{ github.sha }} -t fleetvera-rebuild-ci .
+  browser-rebuild:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: qa-disposable-only
+          POSTGRES_DB: fleetvera_rebuild_qa_browser_ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fleetvera_rebuild_qa_browser_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgres://postgres:qa-disposable-only@localhost:5432/fleetvera_rebuild_qa_browser_ci
+      REBUILD_DATABASE_NAME: fleetvera_rebuild_qa_browser_ci
+      APP_ORIGIN: http://127.0.0.1:19391
+      PORT: '19391'
+      LOCAL_QA: 'true'
+      SETUP_TOKEN: browser-qa-disposable-only-token-20261001
+      RELEASE_SHA: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    defaults:
+      run:
+        working-directory: replacement
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: replacement/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise the fresh browser application
+        run: |
+          npm run migrate
+          npm run migrate
+          node src/server.mjs > /tmp/fleetvera-browser.log 2>&1 &
+          qa_pid=$!
+          trap 'kill "$qa_pid" 2>/dev/null || true' EXIT
+          node -e 'for(let i=0;i<40;i++){try{const r=await fetch("http://127.0.0.1:19391/api/health/ready");if(r.ok)process.exit(0);}catch{}await new Promise(r=>setTimeout(r,500));}process.exit(1);' --input-type=module
+          node test/browser-qa.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fleetvera-browser-qa
+          path: |
+            replacement/fleetvera-browser-verification.json
+            replacement/fleetvera-browser-report.png
+            replacement/fleetvera-browser-mobile.png
+            replacement/fleetvera-browser-failure.png
+          retention-days: 14
