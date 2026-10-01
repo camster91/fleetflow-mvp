@@ -44,7 +44,7 @@ jobs:
       - uses: actions/download-artifact@v4
         if: steps.source.outputs.current == 'true'
         with:
-          name: fleetvera-release-receipts-${{ github.event.workflow_run.head_sha }}
+          name: fleetvera-release-receipts-${{ github.event.workflow_run.head_sha }}-attempt-${{ github.event.workflow_run.run_attempt }}
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
           path: replacement/checked-receipts/
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.source.outputs.current == 'true'
         with:
-          name: fleetvera-pre-release-backup-${{ github.event.workflow_run.head_sha }}
+          name: fleetvera-pre-release-backup-${{ github.event.workflow_run.head_sha }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/fleetvera-release-backup/
           if-no-files-found: error
           compression-level: 0
