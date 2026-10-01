@@ -105,10 +105,7 @@
         "args": {
           "SOURCE_COMMIT": "${SOURCE_COMMIT}"
         }
-      },
-      "ports": [
-        "127.0.0.1:3097:3001"
-      ]
+      }
     }
   },
   "volumes": {
