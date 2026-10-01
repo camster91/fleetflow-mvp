@@ -130,8 +130,50 @@ jobs:
             replacement/fleetvera-browser-mobile.png
             replacement/fleetvera-browser-failure.png
           retention-days: 14
+  production-tls-rebuild:
+    needs: fresh-rebuild
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ github.sha }}
+      BROWSER_QA_REVISION: ${{ github.sha }}
+      FLEETVERA_QA_PROJECT: fleetvera-tls-qa-${{ github.run_id }}-${{ github.run_attempt }}
+      FLEETVERA_QA_RUNTIME_IMAGE: fleetvera-checked-runtime:${{ github.sha }}
+      FLEETVERA_QA_ROLE_IMAGE: fleetvera-checked-role-init:${{ github.sha }}
+    defaults:
+      run:
+        working-directory: replacement
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: replacement/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: fleetvera-checked-images-${{ github.sha }}-attempt-${{ github.run_attempt }}
+          path: replacement/checked-images/
+      - name: Import the exact preserved images
+        run: |
+          python3 deploy/checked-image.py load --kind runtime --directory checked-images/runtime
+          python3 deploy/checked-image.py load --kind role-init --directory checked-images/role-init
+      - name: Exercise production Compose, secure cookies and restart persistence
+        run: python3 test/production-compose-qa.py run
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fleetvera-production-tls-qa-attempt-${{ github.run_attempt }}
+          path: |
+            replacement/fleetvera-browser-verification.json
+            replacement/fleetvera-browser-report.png
+            replacement/fleetvera-browser-mobile.png
+            replacement/fleetvera-browser-failure.png
+          retention-days: 14
   publish-images:
-    needs: [fresh-rebuild, browser-rebuild]
+    needs: [fresh-rebuild, browser-rebuild, production-tls-rebuild]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FLEETVERA_IMMUTABLE_RELEASE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
