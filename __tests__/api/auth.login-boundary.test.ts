@@ -4,7 +4,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() },
-    verificationToken: { findFirst: jest.fn(), deleteMany: jest.fn() },
+    verificationToken: { findFirst: jest.fn(), deleteMany: jest.fn(), count: jest.fn() },
     $transaction: jest.fn(),
   },
 }))
@@ -48,6 +48,7 @@ describe('POST /api/auth/login boundary', () => {
       })
     })
     ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.verificationToken.count as jest.Mock).mockResolvedValue(1)
   })
 
   it('rejects cross-origin login before rate limit or database work', async () => {
@@ -142,11 +143,56 @@ describe('POST /api/auth/login boundary', () => {
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)
 
-    // The lock is a conditional write on the stored count, and revokes sessions.
+    // The lock is a conditional write on the stored count. It blocks new sign-ins without
+    // revoking existing sessions, so a stranger cannot log the owner out everywhere.
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: { id: 'u1', lockedUntil: null, failedLoginAttempts: { gte: 5 } },
-      data: { lockedUntil: expect.any(Date), tokenVersion: { increment: 1 } },
+      data: { lockedUntil: expect.any(Date) },
     })
+  })
+
+  it('does not count junk codes when no code is outstanding for the address', async () => {
+    ;(prisma.verificationToken.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.verificationToken.count as jest.Mock).mockResolvedValue(0)
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(401)
+    expect(prisma.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('answers an unknown address, a wrong code and a locked account identically', async () => {
+    const bodies: unknown[] = []
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null)
+    for (const setup of [
+      () => undefined,
+      () => (prisma.verificationToken.findFirst as jest.Mock).mockResolvedValueOnce(null),
+      () =>
+        (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({
+          ...user,
+          lockedUntil: new Date(Date.now() + 60_000),
+        }),
+    ]) {
+      setup()
+      const { req, res } = request('https://fleetvera.example')
+      await handler(req, res)
+      bodies.push([res._getStatusCode(), res._getJSONData()])
+    }
+    expect(bodies[0]).toEqual(bodies[1])
+    expect(bodies[1]).toEqual(bodies[2])
+    expect(bodies[0]).toEqual([401, { error: expect.stringContaining('did not work') }])
+  })
+
+  it('leaves the failure count to the 2FA step for accounts with 2FA', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ ...user, twoFactorEnabled: true, twoFactorSecret: 'x' })
+    const updateMany = jest.fn().mockResolvedValue({ count: 1 })
+    ;(prisma.$transaction as jest.Mock).mockImplementationOnce(async (operation) =>
+      operation({ verificationToken: { deleteMany: jest.fn().mockResolvedValue({ count: 1 }) }, user: { updateMany } })
+    )
+    const { req, res } = request('https://fleetvera.example')
+    await handler(req, res)
+    expect(res._getStatusCode()).toBe(200)
+    expect(updateMany.mock.calls[0][0].data).not.toHaveProperty('failedLoginAttempts')
+    expect(updateMany.mock.calls[0][0].data).not.toHaveProperty('lastLoginAt')
   })
 
   it('refuses the session when the account was locked after the snapshot', async () => {
@@ -161,7 +207,7 @@ describe('POST /api/auth/login boundary', () => {
         where: { id: 'u1', OR: [{ lockedUntil: null }, { lockedUntil: { lte: expect.any(Date) } }] },
       })
     )
-    expect(res._getStatusCode()).toBe(423)
+    expect(res._getStatusCode()).toBe(401)
     expect(signToken).not.toHaveBeenCalled()
   })
 
@@ -173,7 +219,8 @@ describe('POST /api/auth/login boundary', () => {
     })
     const { req, res } = request('https://fleetvera.example')
     await handler(req, res)
-    expect(res._getStatusCode()).toBe(423)
+    expect(res._getStatusCode()).toBe(401)
+    expect(prisma.verificationToken.findFirst).not.toHaveBeenCalled()
   })
 })
 

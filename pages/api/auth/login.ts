@@ -10,6 +10,12 @@ import { isAccountLocked, notLockedWhere, recordFailedAttempt } from '../../../l
 class LoginCodeAlreadyConsumedError extends Error {}
 class AccountLockedError extends Error {}
 
+// One response for an unknown email, a wrong or expired code and a locked account, so the
+// endpoint never reveals whether an account exists or is locked.
+const INVALID_LOGIN = {
+  error: 'That code did not work. Request a new code; after several wrong codes, sign-in pauses for 15 minutes.',
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -30,21 +36,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const normalizedEmail = email.toLowerCase().trim()
 
-  // Per-email rate limiting: 5 attempts per 15 minutes
-  const emailAllowed = await rateLimitMiddleware(req, res, 'loginEmail', normalizedEmail)
+  // Per-email rate limiting: 5 attempts per 15 minutes, counted separately from code requests so
+  // requesting codes for someone's address cannot use up their own sign-in attempts.
+  const emailAllowed = await rateLimitMiddleware(req, res, 'loginEmail', `verify:${normalizedEmail}`)
   if (!emailAllowed) return
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
   })
 
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid email or code' })
-  }
-
-  // Check account lockout
-  if (isAccountLocked(user)) {
-    return res.status(423).json({ error: 'Account temporarily locked. Try again later.' })
+  if (!user || isAccountLocked(user)) {
+    return res.status(401).json(INVALID_LOGIN)
   }
 
   // Look up hashed login code (email:code)
@@ -56,13 +58,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   })
 
   if (!tokenRecord || new Date(tokenRecord.expires) < new Date()) {
-    // Invalid or expired code: count the failure atomically in the database
-    // (never from the stale snapshot above) and discard an expired code.
-    await recordFailedAttempt(prisma, user.id)
+    // A wrong guess only counts toward the lockout while a code is outstanding for this address:
+    // with nothing to guess, junk codes from a stranger must not lock the account. Counted
+    // atomically in the database (never from the stale snapshot above); an expired code is discarded.
+    const outstanding = await prisma.verificationToken.count({
+      where: { identifier: `login:${normalizedEmail}`, expires: { gte: new Date() } },
+    })
+    if (outstanding > 0) await recordFailedAttempt(prisma, user.id)
     if (tokenRecord) {
       await prisma.verificationToken.deleteMany({ where: { identifier: `login:${normalizedEmail}` } })
     }
-    return res.status(401).json({ error: 'Invalid or expired code' })
+    return res.status(401).json(INVALID_LOGIN)
   }
 
   // Atomically consume this exact unexpired code before issuing a session.
@@ -80,24 +86,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (consumed.count !== 1) throw new LoginCodeAlreadyConsumedError()
 
       // Only clear the counter while the account is still unlocked; a lock set
-      // concurrently after the snapshot above must win.
+      // concurrently after the snapshot above must win. With 2FA, sign-in completes (and the
+      // counter resets) only in /api/auth/2fa/validate, so a fresh email code cannot reset the
+      // count of wrong 2FA codes.
+      const twoFactor = Boolean(user.twoFactorEnabled && user.twoFactorSecret)
       const signedIn = await tx.user.updateMany({
         where: { id: user.id, ...notLockedWhere() },
         data: {
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-          lastLoginAt: new Date(),
+          ...(twoFactor ? {} : { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() }),
           emailVerified: user.emailVerified ?? new Date(),
         },
       })
       if (signedIn.count !== 1) throw new AccountLockedError()
     })
   } catch (error) {
-    if (error instanceof LoginCodeAlreadyConsumedError) {
-      return res.status(401).json({ error: 'Invalid or expired code' })
-    }
-    if (error instanceof AccountLockedError) {
-      return res.status(423).json({ error: 'Account temporarily locked. Try again later.' })
+    if (error instanceof LoginCodeAlreadyConsumedError || error instanceof AccountLockedError) {
+      return res.status(401).json(INVALID_LOGIN)
     }
     throw error
   }

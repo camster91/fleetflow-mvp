@@ -8,7 +8,8 @@ jest.mock('@/lib/prisma', () => ({
   prisma: { user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() } },
 }))
 jest.mock('@/lib/cryptoSecrets', () => ({ decryptSecret: jest.fn(() => 'SECRET') }))
-jest.mock('speakeasy', () => ({ totp: { verify: jest.fn(() => true) } }))
+jest.mock('speakeasy', () => ({ totp: { verifyDelta: jest.fn(() => ({ delta: 0 })) } }))
+jest.mock('@/lib/rateLimit', () => ({ rateLimitMiddleware: jest.fn(async () => true) }))
 jest.mock('bcryptjs', () => ({ compare: jest.fn(async () => false), compareSync: jest.fn(() => false) }))
 jest.mock('@/lib/apiAuth', () => ({ assertSameOrigin: jest.fn(() => true) }))
 
@@ -17,9 +18,14 @@ import { getUserFromRequest, signToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import speakeasy from 'speakeasy'
 import bcrypt from 'bcryptjs'
+import { rateLimitMiddleware } from '@/lib/rateLimit'
 
 describe('passwordless 2FA disable', () => {
-  beforeEach(() => jest.clearAllMocks())
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(speakeasy.totp.verifyDelta as jest.Mock).mockReturnValue({ delta: 0 })
+    ;(prisma.user.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+  })
 
   it('disables 2FA with a valid authenticator code when no password exists', async () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
@@ -53,7 +59,7 @@ describe('passwordless 2FA disable', () => {
 
   it('does not disable 2FA when a backup code was consumed concurrently', async () => {
     ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
-    ;(speakeasy.totp.verify as jest.Mock).mockReturnValue(false)
+    ;(speakeasy.totp.verifyDelta as jest.Mock).mockReturnValue(null)
     ;(bcrypt.compare as jest.Mock).mockResolvedValue(true)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
       id: 'user-1',
@@ -87,7 +93,7 @@ describe('passwordless 2FA disable', () => {
 
     await handler(req as never, res as never)
 
-    expect(speakeasy.totp.verify).not.toHaveBeenCalled()
+    expect(speakeasy.totp.verifyDelta).not.toHaveBeenCalled()
     expect(bcrypt.compareSync).not.toHaveBeenCalled()
     expect(prisma.user.updateMany).toHaveBeenCalledWith({
       where: { id: 'user-1', backupCodes: '["h1","h2"]', twoFactorEnabled: true },
@@ -100,7 +106,7 @@ describe('passwordless 2FA disable', () => {
     'rejects %s without hashing when it is not a valid code',
     async (code) => {
       ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
-      ;(speakeasy.totp.verify as jest.Mock).mockReturnValue(false)
+      ;(speakeasy.totp.verifyDelta as jest.Mock).mockReturnValue(null)
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
         id: 'user-1',
         twoFactorEnabled: true,
@@ -117,4 +123,59 @@ describe('passwordless 2FA disable', () => {
       expect(prisma.user.update).not.toHaveBeenCalled()
     }
   )
+
+  const enrolled = {
+    id: 'user-1',
+    twoFactorEnabled: true,
+    twoFactorSecret: 'encrypted',
+    backupCodes: null,
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+  }
+  const call = async (code = '123456') => {
+    ;(getUserFromRequest as jest.Mock).mockResolvedValue({ user: { id: 'user-1' } })
+    const { req, res } = createMocks({ method: 'POST', body: { code } })
+    await handler(req as never, res as never)
+    return res
+  }
+
+  it('limits guesses per user', async () => {
+    ;(rateLimitMiddleware as jest.Mock).mockImplementationOnce(async (_req, res) => {
+      res.status(429).json({ error: 'Too many requests' })
+      return false
+    })
+    expect((await call())._getStatusCode()).toBe(429)
+    expect(rateLimitMiddleware).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'twoFactor', 'user:user-1')
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
+  })
+
+  it('counts a wrong code toward the account lockout', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(enrolled)
+    ;(speakeasy.totp.verifyDelta as jest.Mock).mockReturnValue(null)
+    expect((await call())._getStatusCode()).toBe(400)
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { failedLoginAttempts: { increment: 1 } },
+    })
+  })
+
+  it('refuses while the account is locked', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      ...enrolled,
+      lockedUntil: new Date(Date.now() + 60_000),
+    })
+    expect((await call())._getStatusCode()).toBe(423)
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
+
+  it('rejects an authenticator code whose time step was already used', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(enrolled)
+    ;(prisma.user.updateMany as jest.Mock).mockResolvedValueOnce({ count: 0 })
+    expect((await call())._getStatusCode()).toBe(400)
+    expect((prisma.user.updateMany as jest.Mock).mock.calls[0][0]).toMatchObject({
+      where: { id: 'user-1', AND: [{ OR: [{ lastTotpStep: null }, { lastTotpStep: { lt: expect.any(Number) } }] }] },
+      data: { lastTotpStep: expect.any(Number) },
+    })
+    expect(prisma.user.update).not.toHaveBeenCalled()
+  })
 })

@@ -48,7 +48,7 @@ describe('recordFailedAttempt', () => {
     expect(db.row).toEqual({ id: 'u1', failedLoginAttempts: 3, lockedUntil: null, tokenVersion: 0 })
   })
 
-  it('counts every concurrent failure and locks exactly once, revoking sessions', async () => {
+  it('counts every concurrent failure and locks exactly once, without revoking sessions', async () => {
     const db = fakeDb({ id: 'u1', failedLoginAttempts: 0, lockedUntil: null, tokenVersion: 3 })
     const results = await Promise.all(
       Array.from({ length: LOGIN_MAX_FAILED_ATTEMPTS + 2 }, () => recordFailedAttempt(db as never, 'u1', now))
@@ -56,7 +56,7 @@ describe('recordFailedAttempt', () => {
     expect(db.row.failedLoginAttempts).toBe(LOGIN_MAX_FAILED_ATTEMPTS + 2)
     expect(db.row.lockedUntil).toEqual(new Date(now.getTime() + 15 * 60 * 1000))
     expect(results.filter((r) => r.locked)).toHaveLength(1)
-    expect(db.row.tokenVersion).toBe(4)
+    expect(db.row.tokenVersion).toBe(3)
   })
 
   it('never clears or extends an active lock', async () => {

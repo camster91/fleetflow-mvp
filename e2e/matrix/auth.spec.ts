@@ -89,7 +89,7 @@ test('wrong code: rejected without a session, then the real code still works', a
   const code = await requestLoginCode(page, user.email)
   const wrong = String((Number(code) + 1) % 1_000_000).padStart(6, '0')
   await enterLoginCode(page, wrong)
-  await expect(page.getByText('Invalid or expired code').first()).toBeVisible()
+  await expect(page.getByText('That code did not work', { exact: false }).first()).toBeVisible()
   await expect(page).toHaveURL(/\/auth\/login/)
   await expectStatus(await me(page), 401)
 
