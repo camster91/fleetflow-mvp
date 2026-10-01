@@ -130,7 +130,8 @@ def verify_loaded(directory, receipt):
         manifest = json.load(bundle.extractfile("manifest.json"))
         config = json.load(bundle.extractfile(manifest[0]["Config"]))
     if image["Config"] != config["config"] or image["RootFS"]["Layers"] != config["rootfs"]["diff_ids"]:
-        raise ValueError("Loaded runtime configuration or filesystem differs from checked image")
+        fields = sorted(key for key in set(image["Config"]) | set(config["config"]) if image["Config"].get(key) != config["config"].get(key))
+        raise ValueError("Loaded runtime configuration or filesystem differs from checked image; configuration fields=" + ",".join(fields) + "; layers_equal=" + str(image["RootFS"]["Layers"] == config["rootfs"]["diff_ids"]))
     if image["Architecture"] != config["architecture"] or image["Os"] != config["os"]:
         raise ValueError("Loaded image platform differs from checked image")
     image_configuration({"config": image["Config"]}, receipt["revision"])
