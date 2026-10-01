@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { productionCompose, validateReceipts, validateBackupProof, verifiedBackup, release } from '../coolify-release.mjs';
+import { validateServerProof, verifyCopy } from '../production-backup.mjs';
 
 const sha = 'a'.repeat(40);
 function fixture() {
@@ -82,6 +83,18 @@ test('backup verifier rereads encrypted bytes and rejects a changed copy', async
     await writeFile(path.join(directory, 'proof.json'), JSON.stringify(f.proof)); const file = path.join(directory, path.basename(f.proof.archive)); await writeFile(file, 'abc');
     assert.equal((await verifiedBackup(f.env)).sha256, f.proof.sha256); await writeFile(file, 'xyz'); await assert.rejects(verifiedBackup(f.env), /changed/);
   } finally { await rm(temporary, { recursive: true, force: true }); }
+});
+test('server recovery proof cannot substitute rehearsal, old nonce or foreign workflow', () => {
+  const f = fixture(), proof = { ...f.proof, rehearsal: false, sourceRevision: 'e'.repeat(40) }; delete proof.offServerCopyVerified;
+  validateServerProof(proof, f.env);
+  for (const [key, value] of [['rehearsal', true], ['sourceRevision', 'unknown'], ['nonce', 'e'.repeat(32)], ['workflowRunId', 'foreign'], ['contentRestoreVerified', false]]) assert.throws(() => validateServerProof({ ...proof, [key]: value }, f.env));
+});
+test('off-server transfer verifier checks both checksum and length', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'fleetvera-transfer-test-'));
+  try {
+    const file = path.join(directory, 'encrypted.age'); await writeFile(file, 'abc'); const proof = { bytes: 3, sha256: createHash('sha256').update('abc').digest('hex') };
+    await verifyCopy(file, proof); await assert.rejects(verifyCopy(file, { ...proof, bytes: 4 })); await writeFile(file, 'xyz'); await assert.rejects(verifyCopy(file, proof));
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 test('successful consumer pins both images, preserves secrets and verifies same deployment/public revision', async () => {
   const f = fixture(), result = await release(f.env, f.options);

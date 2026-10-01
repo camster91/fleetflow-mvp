@@ -1,0 +1,97 @@
+name: Checked Fleetvera Coolify release
+on:
+  workflow_run:
+    workflows: [Rebuild checks]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: fleetvera-rebuild-production-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: >-
+      vars.FLEETVERA_COOLIFY_RELEASE_ENABLED == 'true' &&
+      vars.FLEETVERA_IMMUTABLE_RELEASE_ENABLED == 'true' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    defaults:
+      run:
+        working-directory: replacement
+    steps:
+      - name: Select successful current main build
+        id: source
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            if (!/^[a-f0-9]{40}$/.test(run.head_sha)) throw new Error('Invalid checked source');
+            const ref = await github.rest.git.getRef({...context.repo,ref:'heads/main'});
+            core.setOutput('current',String(ref.data.object.sha===run.head_sha));
+            if(ref.data.object.sha!==run.head_sha)core.notice('Superseded build skipped; current main needs its own successful checks');
+      - uses: actions/checkout@v4
+        if: steps.source.outputs.current == 'true'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        if: steps.source.outputs.current == 'true'
+        with:
+          name: fleetvera-release-receipts-${{ github.event.workflow_run.head_sha }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: replacement/checked-receipts/
+      - uses: actions/setup-node@v4
+        if: steps.source.outputs.current == 'true'
+        with:
+          node-version: '22'
+      - name: Verify release and transport gates
+        if: steps.source.outputs.current == 'true'
+        run: node --test deploy/test/release.test.mjs
+      - name: Produce restored encrypted backup and verify runner copy
+        if: steps.source.outputs.current == 'true'
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          FLEETVERA_BACKUP_SSH_KEY: ${{ secrets.FLEETVERA_BACKUP_SSH_KEY }}
+          FLEETVERA_VPS_KNOWN_HOSTS: ${{ vars.FLEETVERA_VPS_KNOWN_HOSTS }}
+        run: node deploy/production-backup.mjs
+      - uses: actions/upload-artifact@v4
+        if: steps.source.outputs.current == 'true'
+        with:
+          name: fleetvera-pre-release-backup-${{ github.event.workflow_run.head_sha }}
+          path: ${{ runner.temp }}/fleetvera-release-backup/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Recheck current main after recovery
+        id: latest
+        if: steps.source.outputs.current == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = await github.rest.git.getRef({...context.repo,ref:'heads/main'});
+            core.setOutput('current',String(ref.data.object.sha===context.payload.workflow_run.head_sha));
+            if(ref.data.object.sha!==context.payload.workflow_run.head_sha)core.notice('Main changed during backup; checked newer build owns the next release');
+      - name: Promote paired checked images and observe public readiness
+        if: steps.latest.outputs.current == 'true'
+        env:
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_BRANCH: main
+          CHECKED_RUN_ID: ${{ github.event.workflow_run.id }}
+          CHECKED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          FLEETVERA_COOLIFY_RELEASE_ENABLED: ${{ vars.FLEETVERA_COOLIFY_RELEASE_ENABLED }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL }}
+          COOLIFY_TOKEN: ${{ secrets.FLEETVERA_COOLIFY_TOKEN }}
+          COOLIFY_APP_UUID: ${{ vars.FLEETVERA_PRODUCTION_APP_UUID }}
+          COOLIFY_ENVIRONMENT_UUID: ${{ vars.FLEETVERA_PRODUCTION_ENVIRONMENT_UUID }}
+          COOLIFY_SERVER_UUID: ${{ vars.FLEETVERA_PRODUCTION_SERVER_UUID }}
+          COOLIFY_DESTINATION_UUID: ${{ vars.FLEETVERA_PRODUCTION_DESTINATION_UUID }}
+          PUBLIC_ORIGIN: ${{ vars.FLEETVERA_PUBLIC_ORIGIN }}
+        run: node deploy/coolify-release.mjs

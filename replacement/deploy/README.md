@@ -49,8 +49,45 @@ anonymous private-API denial. Failure/timeout never queues a replacement.
 
 Consumer tests use simulated API responses and temporary encrypted-copy fixtures;
 they do not establish real Coolify promotion or production recovery. The backup
-producer/transport for this production proof is still required. No consumer
-workflow is enabled or wired to deployment yet. It is intentionally unable to
+producer/transport is prepared in `server/ci-backup.py` and
+`production-backup.mjs`, but production enrollment and its real proof remain
+required. The workflow `rebuild-coolify-release.yml` is wired but disabled by both
+activation variables. It is intentionally unable to
 use a staging backup or deploy a source-built staging resource. Production setup
 must choose the reviewed canonical route, preserve the established proxy owner,
 enroll registry/backup access and verify the actual deployment before activation.
+
+The server helper must be installed as root-owned code with a separate restricted
+deployment key and root-private `/etc/fleetvera-ci-backup.json` containing exactly
+the reviewed `resource_uuid` and `database=fleetvera_rebuild_production`. Never
+reuse or copy the operator key. Its forced command accepts only
+`fleetvera-backup <40-hex-release> <32-hex-nonce> <numeric-workflow-id>` and SCP
+downloads of verified encrypted production archives. Uploads, shells, arbitrary
+paths and staging archives are denied. Future authorized-key enrollment must use
+OpenSSH restrictions, including disabled forwarding/PTY/user-rc, and the fixed
+root-owned helper command. No key enrollment is performed by this source change.
+
+Capture verifies dedicated runtime/volume, current image/source and role-init
+parity, then holds a read-only exported snapshot for table content fingerprints
+and `pg_dump`. Configuration and all running app/migration/role/PostgreSQL images
+are encrypted together. The archive is privately decrypted, manifest checked and
+restored into an internal network with fresh credentials and temporary storage.
+All table fingerprints must match; the exact archived runtime must pass database
+readiness, revision, anonymous denial and restricted-role checks without changing
+recovered contents. Temporary resources/plaintext are cleaned. This verifies
+database/image recovery, not original password sessions, external-host recovery
+or independent key custody. Restore capacity is currently bounded by a 512MiB
+temporary database filesystem; larger data requires a separately reviewed limit.
+
+The client uses pinned host keys, asks the restricted helper for a fresh
+nonce/workflow-bound proof, copies only the encrypted archive and streams its
+checksum/length. It writes the validated copy/proof into the runner-private
+backup directory. The disabled release workflow uploads the encrypted backup,
+rechecks main after recovery, then consumes paired checked image receipts. Backup
+failure, tampered bytes or stale proofs fail before release pins change.
+
+Operator-only rehearsal explicitly selects the existing staging resource and
+marks the result as staging. Such a proof cannot pass the production consumer or
+be downloaded through the production forced-command protocol. Staging's older
+source-built migration image can differ in ID while sharing the same verified
+revision; production requires the migration/app image ID to match.
