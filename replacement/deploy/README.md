@@ -24,8 +24,8 @@ digest. App/migration and role-init digests must be released together.
 
 The activation variable is currently false. The repository still defaults to
 `master`; no branch settings or legacy deployment were changed by this preparation.
-Registry publication and the production release consumer have not been exercised.
-The consumer, reviewed production Compose/target, fresh production database,
+Registry publication and actual production promotion have not been exercised.
+The reviewed production target, fresh production database,
 off-server pre-release backup gate, registry read access, protected main merge
 policy and public/authenticated acceptance remain required before live auto-deploys.
 
@@ -33,3 +33,24 @@ The staging Compose now uses the versioned role-image entrypoint; it validates a
 dedicated rebuild database and a 64-hex runtime password, supplies the database
 identifier safely to psql and suppresses secret-bearing failure details. Existing
 staging remains on its previously verified source until explicitly updated.
+
+`coolify-release.mjs` prepares the production consumer and
+`docker-compose.rebuild-production.json` defines its image-only Compose contract.
+App and migration share the checked runtime digest; role provisioning uses the
+paired checked role digest. PostgreSQL uses a separate production database and
+volume. The consumer verifies production environment/server/destination identity,
+disabled competing triggers, exact Compose/route, owner/runtime credential
+separation and secure-cookie configuration before any write. It requires same-run
+main release receipts and a fresh, nonce-bound production recovery proof with
+manifest/content/runtime restore checks and a checksum-verified encrypted runner
+copy. It refetches both image pins and unchanged settings before queueing once,
+observes that exact handle, then verifies public database readiness, revision and
+anonymous private-API denial. Failure/timeout never queues a replacement.
+
+Consumer tests use simulated API responses and temporary encrypted-copy fixtures;
+they do not establish real Coolify promotion or production recovery. The backup
+producer/transport for this production proof is still required. No consumer
+workflow is enabled or wired to deployment yet. It is intentionally unable to
+use a staging backup or deploy a source-built staging resource. Production setup
+must choose the reviewed canonical route, preserve the established proxy owner,
+enroll registry/backup access and verify the actual deployment before activation.
