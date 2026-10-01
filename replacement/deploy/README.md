@@ -106,9 +106,15 @@ complete workflow rerun creates separately named evidence for its new attempt.
 GitHub removes the prior run attempt's Actions artifacts during a full rerun;
 attempt naming does not provide durable retention. Published image tags include
 source/run/attempt so a later publish does not replace the earlier attempt's tag.
-Receipt pairs need durable storage outside Actions artifacts; the first two
-published pairs have operator-saved draft release assets and local copies, while
-automated durable receipt storage is still required. Browser/publication jobs consume the same checked build attempt, and
+The publisher now stores validated receipt pairs as draft release assets outside
+Actions artifacts, then downloads and byte-verifies the asset before succeeding.
+`preserve-receipts.mjs` uses exact source/run/attempt identity, preserves existing
+records without overwriting, strips unknown receipt fields and rejects changed
+assets. GitHub credentials are never forwarded to the asset download host.
+The first two published pairs also have operator-saved draft assets and local
+copies. These records contain image metadata, not production data or credentials,
+and stay drafts; they do not announce a public release or prove a deployment.
+Browser/publication jobs consume the same checked build attempt, and
 the release workflow selects the exact completed producer attempt. Rerun the
 complete Rebuild checks workflow when retrying image/browser/publication work; a
 partial rerun cannot silently substitute another attempt's checked images.
