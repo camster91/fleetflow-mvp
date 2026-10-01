@@ -15,3 +15,5 @@ ENV NODE_ENV=production PORT=3001
 USER node
 EXPOSE 3001
 CMD ["node","src/server.mjs"]
+FROM postgres:16-alpine AS db-init
+COPY deploy/runtime-role.sql /runtime-role.sql

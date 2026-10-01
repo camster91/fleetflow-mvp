@@ -60,6 +60,12 @@ Untrusted values render as text. Service costs use normal currency amounts with
 currency-specific decimal precision; large report totals preserve exact digits.
 Checked browser CI exercises these flows using fresh PostgreSQL and fictional data.
 
+The private staging Compose uses a dedicated persistent PostgreSQL volume and
+separate migration-owner/runtime credentials. A post-migration role step grants
+the runtime application scoped-schema data access without superuser, role/database
+creation, public DDL or migration-table writes. Runtime audit rows allow insert/read,
+not update/delete. No staging service publishes ports or configures a public route.
+
 This is an incomplete rebuild. Persistent
 Coolify candidate, restart/recovery QA, checked immutable releases and live
 handoff remain required. Billing/AI/provider integrations are later scope.

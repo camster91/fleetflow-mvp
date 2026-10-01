@@ -37,6 +37,7 @@ jobs:
       - run: npm run migrate && npm run migrate
       - run: npm test
       - run: docker build --target runtime --build-arg SOURCE_COMMIT=${{ github.sha }} -t fleetvera-rebuild-ci .
+      - run: docker build --target db-init -t fleetvera-role-init-ci .
   browser-rebuild:
     runs-on: ubuntu-latest
     services:
