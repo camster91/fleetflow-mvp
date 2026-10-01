@@ -79,4 +79,14 @@ describe('GET /api/team/invite-details', () => {
     await handler(req as any, res as any)
     expect(res._getStatusCode()).toBe(410)
   })
+
+  it('never reveals the inviter email when the inviter has no name', async () => {
+    ;(prisma.teamMember.findFirst as jest.Mock).mockResolvedValue(baseMember)
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({ name: null, email: 'admin@fleet.com' })
+    const { req, res } = createMocks({ method: 'GET', query: { token: 'member-1' } })
+    await handler(req as any, res as any)
+    expect(res._getStatusCode()).toBe(200)
+    expect(res._getJSONData().invite.invitedBy).toBe('A team admin')
+    expect(res._getData()).not.toContain('admin@fleet.com')
+  })
 })

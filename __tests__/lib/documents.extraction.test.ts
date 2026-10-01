@@ -64,6 +64,19 @@ describe('document intelligence boundaries', () => {
     ['malformed PDF', Buffer.from('%PDF-1.7 no trailer'), 'application/pdf'],
   ])('rejects %s', (_name, bytes, mime) => expect(() => inspectDocument(bytes, mime)).toThrow())
 
+  test.each([
+    ['/J#61vaScript', '%PDF-1.7\n/J#61vaScript (alert)\n%%EOF'],
+    ['/OpenA#63tion', '%PDF-1.7\n/OpenA#63tion 3 0 R\n%%EOF'],
+    ['/#4Aavascript', '%PDF-1.7\n/#4AavaScript (x)\n%%EOF'],
+  ])('rejects active content hidden with name escapes (%s)', (_name, pdf) =>
+    expect(() => inspectDocument(Buffer.from(pdf), 'application/pdf')).toThrow(/active/i)
+  )
+
+  test('counts pages hidden with name escapes', () =>
+    expect(() =>
+      inspectDocument(Buffer.from(`%PDF-1.7\n${'/Ty#70e /Page\n'.repeat(26)}%%EOF`), 'application/pdf')
+    ).toThrow(/page limit/i))
+
   test('rejects active PDF actions', () =>
     expect(() =>
       inspectDocument(Buffer.from('%PDF-1.7\n/JavaScript (alert)\nstartxref\n1\n%%EOF'), 'application/pdf')

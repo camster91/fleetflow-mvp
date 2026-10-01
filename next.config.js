@@ -35,6 +35,10 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       `connect-src ${connectSources.join(' ')}`,
       "frame-ancestors 'none'",
+      // No plugins, no <base> hijacking and no form posts to other origins.
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
     ].join('; '),
   },
 ]

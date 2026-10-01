@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { prisma } from '../../../lib/prisma'
 import { isTeamInviteExpired, TEAM_INVITE_TTL_MS } from '../../../lib/apiAuth'
+import { getClientIP, rateLimitMiddleware } from '../../../lib/rateLimit'
 
 function maskEmail(email: string | null | undefined): string | null {
   if (!email || !email.includes('@')) return null
@@ -13,6 +14,9 @@ function maskEmail(email: string | null | undefined): string | null {
 /** GET /api/team/invite-details?token=[teamMemberId] -- public, no auth */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
+
+  // Public endpoint: limit probing of invitation ids.
+  if (!(await rateLimitMiddleware(req, res, 'api', `invite-details:${getClientIP(req)}`))) return
 
   const { token } = req.query
   if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' })
@@ -40,7 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: { name: true, email: true },
       })
       .catch(() => null)
-    inviterName = inviter?.name || inviter?.email || 'A team admin'
+    // Never the inviter's email address: this endpoint needs no sign-in.
+    inviterName = inviter?.name?.trim() || 'A team admin'
   }
 
   const expiresAt = new Date(member.invitedAt.getTime() + TEAM_INVITE_TTL_MS)
