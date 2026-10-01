@@ -45,7 +45,8 @@ Platform administration pages (role `admin` only):
 | Page | Purpose |
 | --- | --- |
 | `/admin/users` | Invite customers, change platform roles, remove accounts |
-| `/admin/settings` | Stripe, Google Maps, QuickBooks, AI provider and cron secret, encrypted, overriding the environment |
+| `/admin/launch` | Launch readiness: live go-live checks (leaked secrets, configuration, email, monitoring, backups, billing), backup/monitoring evidence, go/no-go decision, test alert and Redeploy |
+| `/admin/settings` | Stripe, Google Maps, QuickBooks, AI provider, cron secret, alert email and Coolify redeploy hook, encrypted, overriding the environment |
 | `/admin/email-delivery` | Mailgun credentials for login codes and invitations |
 | `/admin/pilot` | Controlled pilot enrollment and metrics |
 | `/admin/ai-health` | AI provider status and controls |

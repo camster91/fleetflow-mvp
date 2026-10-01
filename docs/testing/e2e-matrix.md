@@ -13,6 +13,7 @@ disposable Postgres 16 database that is migrated and seeded with
 | Specs: auth flows (email code, 2FA, logout, log out everywhere) | `e2e/matrix/auth.spec.ts` |
 | Specs: free-beta billing state | `e2e/matrix/billing.spec.ts` |
 | Specs: customer onboarding (admin invite → sign in → create team → invite → accept) | `e2e/matrix/onboarding.spec.ts` |
+| Specs: launch readiness (admin records evidence and a no-go; non-admins get 403) | `e2e/matrix/launch.spec.ts` |
 | Specs: SOPs, vending, reports, intelligence, documents, notifications, settings, idempotency | `e2e/matrix/features.spec.ts` |
 | Test-only outbound mail capture (server side / spec side) | `lib/emailCapture.ts` / `e2e/support/mail-capture.ts` |
 | Nightly cross-browser run | `.github/workflows/e2e-nightly.yml` |

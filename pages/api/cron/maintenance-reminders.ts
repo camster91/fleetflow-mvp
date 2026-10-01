@@ -1,3 +1,4 @@
+import { withCronAlerts } from '@/lib/opsAlerts'
 import { NextApiRequest, NextApiResponse } from 'next'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../../../lib/prisma'
@@ -119,7 +120,7 @@ async function zoneGroupsByToday(now: Date) {
   }))
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -215,3 +216,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }
+
+export default withCronAlerts('maintenance-reminders', handler)
