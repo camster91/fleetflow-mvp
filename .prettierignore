@@ -15,3 +15,5 @@ package-lock.json
 *.html
 *.css
 *.svg
+# The Fleetvera rebuild is a separate app with its own tooling and checks (.github/workflows/rebuild-checks.yml).
+replacement
