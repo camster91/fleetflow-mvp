@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { canViewBusinessData } from '@/lib/permissions'
 import { requireTenantContext } from '@/lib/apiAuth'
 import { prisma } from '@/lib/prisma'
 import {
@@ -57,11 +58,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const context = await requireTenantContext(req, res)
   if (!context) return
+  // It lists issues across every vehicle, delivery, maintenance task and client in the workspace,
+  // so only roles that may read all business records see it (not drivers, dispatchers or technicians).
+  if (!canViewBusinessData(context.tenant.role)) return res.status(403).json({ error: 'Forbidden' })
 
-  // Keep this internal dashboard assessment consistent with the existing
-  // resource APIs: selected teams include their owner's legacy null-team rows.
-  // Public API keys remain exact-team scoped. This compatibility scope can be
-  // tightened only after an explicit legacy-row backfill/migration.
   const where = context.tenant.resourceWhere
   const take = DATA_QUALITY_SOURCE_LIMIT + 1
 

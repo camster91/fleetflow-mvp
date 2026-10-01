@@ -30,7 +30,12 @@ const draftSchema = z.union([
     .strict(),
   z
     .object({ kind: z.literal('expense'), vehicleId: z.string().min(1).max(64), values: expenseCreateValuesSchema })
-    .strict(),
+    .strict()
+    // The expense must be for the vehicle that was checked against the workspace and shown to the reviewer.
+    .refine((draft) => draft.values.vehicleId === draft.vehicleId, {
+      message: 'Expense vehicle must match the selected vehicle',
+      path: ['values', 'vehicleId'],
+    }),
 ])
 const previewRequest = z
   .object({ action: z.literal('preview'), revision: z.number().int().positive(), draft: draftSchema })
@@ -126,6 +131,8 @@ async function confirmWrite(
           const row = await tx.expenseRecord.create({
             data: {
               ...values,
+              // Always the vehicle verified against this workspace above, never a value from the draft.
+              vehicleId: vehicle.id,
               date: new Date(`${values.date}T00:00:00.000Z`),
               ownerId: payload.ownerId,
               teamId: payload.teamId,
