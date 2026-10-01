@@ -22,8 +22,9 @@ image and browser jobs, verifies/loads the same archives, and pushes their exist
 image IDs to GHCR without rebuilding. Each receipt records an immutable registry
 digest. App/migration and role-init digests must be released together.
 
-The activation variable is currently false. The repository still defaults to
-`master`; no branch settings or legacy deployment were changed by this preparation.
+Both activation variables are currently false. A new `main` branch has been
+prepared from the verified replacement source; the repository still defaults to
+`master` during transition. Existing legacy deployment remains unchanged.
 Registry publication and actual production promotion have not been exercised.
 The reviewed production target, fresh production database,
 off-server pre-release backup gate, registry read access, protected main merge
@@ -66,6 +67,13 @@ downloads of verified encrypted production archives. Uploads, shells, arbitrary
 paths and staging archives are denied. Future authorized-key enrollment must use
 OpenSSH restrictions, including disabled forwarding/PTY/user-rc, and the fixed
 root-owned helper command. No key enrollment is performed by this source change.
+
+The verified live route is `https://fleetflow.ashbi.ca`, currently owned by the
+existing Traefik file `/opt/traefik/dynamic/fleetflow.yml` and legacy upstream
+`127.0.0.1:3096`. Production preparation must preserve this hostname and explicitly
+hand routing ownership to the new Coolify resource after private acceptance.
+Do not create competing routers or infer `fleet.ashbi.ca` is already live from
+the legacy repository notes. The production environment is presently empty.
 
 Capture verifies dedicated runtime/volume, current image/source and role-init
 parity, then holds a read-only exported snapshot for table content fingerprints
