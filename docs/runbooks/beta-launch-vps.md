@@ -122,7 +122,9 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 | `pilot-retention` | Daily |
 | `workspace-retention` | Daily. A no-op during the beta; after going public it warns, then deletes lapsed workspaces (dry run until `WORKSPACE_DELETION_ENABLED=true`, see `stripe-launch.md`) |
 
-- [ ] Each job alerts on a non-2xx response (see `docs/runbooks/monitoring.md`).
+- [ ] Set **Alert email** in `/admin/settings` and press **Send test alert** on `/admin/launch`. A job
+      that throws or answers 5xx then emails that address (at most once per 30 minutes per problem);
+      also alert on non-2xx in the scheduler itself (see `docs/runbooks/monitoring.md`).
 
 ## 6. Email
 
@@ -134,6 +136,8 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 
 - [ ] Confirm the approved CI check is green on the exact `master` SHA.
 - [ ] Run the **Deploy to Coolify** workflow with that full SHA (`docs/runbooks/deploy-and-rollback.md`).
+      Alternatively, once the Coolify deploy webhook and API token are saved in `/admin/settings`,
+      press **Redeploy** on `/admin/launch`. It does not check CI, so confirm the green check first.
 - [ ] Watch the entrypoint logs: the preflight passes, then `migrate deploy` applies the pending migrations,
       then the app starts. The container health check allows a 60s start period.
 
@@ -162,6 +166,9 @@ HTTPS to the canonical origin. Schedule each one (a Coolify scheduled task or ho
 
 ## 10. Go / no-go
 
+- [ ] Open `/admin/launch`: every check must be green or an accepted warning. Record the verified
+      backup, restore drill and monitoring test there ("Record evidence"), then record **Go** in the
+      go/no-go section, which stays disabled while any check fails.
 - [ ] Record the SHA, image digest, deploy time, backup ID, smoke-test results, and approver in #76.
 - [ ] Invite the first beta customers from `/admin/users` ("Invite a customer"). Each creates their
       own team at `/team` and invites their people. For a tracked pilot cohort, also follow

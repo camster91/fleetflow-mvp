@@ -195,4 +195,4 @@ if (require.main === module) {
   process.exitCode = result.ready ? 0 : 1
 }
 
-module.exports = { evaluateEnvironment, BURNED_SECRET_SHA256 }
+module.exports = { evaluateEnvironment, burnedSecretNames, BURNED_SECRET_SHA256 }

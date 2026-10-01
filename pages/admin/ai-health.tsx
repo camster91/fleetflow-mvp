@@ -140,6 +140,12 @@ export default function AiHealthPage() {
             >
               Platform settings and API keys
             </a>
+            <a
+              href="/admin/launch"
+              className="inline-flex min-h-11 items-center text-sm font-medium text-blue-700 underline"
+            >
+              Launch readiness
+            </a>
           </div>
         </div>
         <div className="rounded-lg border bg-white p-4">

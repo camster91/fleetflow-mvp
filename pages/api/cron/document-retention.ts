@@ -1,3 +1,4 @@
+import { withCronAlerts } from '@/lib/opsAlerts'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import path from 'path'
 import { randomUUID } from 'crypto'
@@ -6,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { isAuthorizedCronRequest } from '@/lib/cronAuth'
 import { storageFromEnv } from '@/lib/documents/storage'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
   if (!isAuthorizedCronRequest(req)) return res.status(401).json({ error: 'Unauthorized' })
   const configured = process.env.DOCUMENT_STORAGE_PATH
@@ -98,3 +99,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   return res.status(200).json({ deleted })
 }
+
+export default withCronAlerts('document-retention', handler)
