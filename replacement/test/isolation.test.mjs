@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import pg from 'pg';
 import {createApp} from '../src/app.mjs';
 import {hashPassword} from '../src/security.mjs';
+import {deliveryLifecycle} from './delivery-qa.mjs';
 
 test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/client roles',async()=>{
   const connection=process.env.DATABASE_URL;
@@ -56,3 +57,7 @@ test('Fresh Fleetvera owner, authentication, workspace isolation and vehicle/cli
     assert.equal((await request('/api/me',{cookie})).status,401);
   }finally{await new Promise(resolve=>server.close(resolve));await pool.end();}
 });
+
+// Top-level tests in this file run sequentially: bootstrap needs an empty DB
+// before the delivery fixtures intentionally add their separate workspaces.
+test('Delivery lifecycle, scoped assignments, driver access, concurrency and transactional audit',deliveryLifecycle);
