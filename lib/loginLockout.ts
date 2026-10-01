@@ -40,9 +40,10 @@ export async function resetExpiredLock(db: LockoutDb, userId: string, now: Date 
 /**
  * Record one failed login/2FA attempt without trusting a previously read
  * snapshot: the counter is incremented in the database, and the lock is set by
- * a conditional update once the stored count reaches the limit. Locking also
- * bumps tokenVersion so every session issued before the lock is revoked. An
- * existing active lock is never cleared or extended.
+ * a conditional update once the stored count reaches the limit. The lock blocks
+ * new sign-ins only: it does not revoke existing sessions, which would let anyone
+ * who knows an address log its owner out of every device. An existing active
+ * lock is never cleared or extended.
  */
 export async function recordFailedAttempt(
   db: LockoutDb,
@@ -56,10 +57,7 @@ export async function recordFailedAttempt(
   })
   const locked = await db.user.updateMany({
     where: { id: userId, lockedUntil: null, failedLoginAttempts: { gte: LOGIN_MAX_FAILED_ATTEMPTS } },
-    data: {
-      lockedUntil: new Date(now.getTime() + LOGIN_LOCK_DURATION_MS),
-      tokenVersion: { increment: 1 },
-    },
+    data: { lockedUntil: new Date(now.getTime() + LOGIN_LOCK_DURATION_MS) },
   })
   return { locked: locked.count === 1 }
 }

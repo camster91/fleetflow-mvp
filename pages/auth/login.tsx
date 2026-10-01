@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { signIn, sendCode } from '@/lib/session'
+import { safeCallbackPath } from '@/lib/safeRedirect'
 import { Mail, ArrowRight, ArrowLeft, AlertCircle, KeyRound } from 'lucide-react'
 import { AuthLayout } from '../../components/layouts/AuthLayout'
 import { Button } from '../../components/ui/Button'
@@ -134,7 +135,8 @@ export default function LoginPage() {
     }
 
     toast.success('Welcome back!')
-    const callbackUrl = (router.query.callbackUrl as string) || '/dashboard'
+    // Same-site paths only: a crafted link must not redirect off-site or run a javascript: URL.
+    const callbackUrl = safeCallbackPath(router.query.callbackUrl)
     // A full navigation lets the session provider initialize with the new
     // authentication cookie instead of briefly rendering placeholder identity.
     window.location.assign(callbackUrl)
