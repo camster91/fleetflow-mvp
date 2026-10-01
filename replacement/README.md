@@ -60,6 +60,17 @@ Untrusted values render as text. Service costs use normal currency amounts with
 currency-specific decimal precision; large report totals preserve exact digits.
 Checked browser CI exercises these flows using fresh PostgreSQL and fictional data.
 
+The `production-tls-rebuild` check imports the same preserved runtime and role-init
+images into the production Compose template under a unique disposable project.
+Only its fixture TLS proxy publishes a loopback port. A one-day self-signed
+certificate tests HTTPS while the application leaves `LOCAL_QA` unset. Browser QA
+checks Secure/HttpOnly/SameSite Strict cookies and the complete owner/driver/mechanic
+workflows, then holds the authenticated browser open while PostgreSQL and the app
+restart. The same session must still show persisted deliveries and report totals.
+The test removes and verifies removal of its own containers, network and volume.
+Image publication requires this check as well as source and ordinary browser QA.
+This disposable test does not prove live DNS, public certificates or Coolify routing.
+
 The private staging Compose uses a dedicated persistent PostgreSQL volume and
 separate migration-owner/runtime credentials. A post-migration role step grants
 the runtime application scoped-schema data access without superuser, role/database
