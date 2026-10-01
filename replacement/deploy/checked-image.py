@@ -123,13 +123,29 @@ def publish(directory):
     return release
 
 
+def comparable_configuration(settings):
+    # Older inspect APIs synthesize these non-image fields with type defaults.
+    # Only remove exact defaults; a non-default value must still fail closed.
+    # https://docs.docker.com/engine/deprecated/#non-standard-fields-in-image-inspect
+    defaults = {"Hostname": "", "Domainname": "", "Image": "",
+                "AttachStdin": False, "AttachStdout": False, "AttachStderr": False,
+                "Tty": False, "OpenStdin": False, "StdinOnce": False}
+    result = dict(settings)
+    for field, default in defaults.items():
+        if field in result:
+            if type(result[field]) is not type(default) or result[field] != default:
+                raise ValueError("Unexpected non-default legacy inspect field: " + field)
+            del result[field]
+    return result
+
+
 def verify_loaded(directory, receipt):
     tag = import_tag(receipt["revision"])
     image = json.loads(subprocess.check_output(["docker", "image", "inspect", tag], text=True))[0]
     with tarfile.open(directory / "runtime-image.tar") as bundle:
         manifest = json.load(bundle.extractfile("manifest.json"))
         config = json.load(bundle.extractfile(manifest[0]["Config"]))
-    if image["Config"] != config["config"] or image["RootFS"]["Layers"] != config["rootfs"]["diff_ids"]:
+    if comparable_configuration(image["Config"]) != comparable_configuration(config["config"]) or image["RootFS"]["Layers"] != config["rootfs"]["diff_ids"]:
         fields = sorted(key for key in set(image["Config"]) | set(config["config"]) if image["Config"].get(key) != config["config"].get(key))
         raise ValueError("Loaded runtime configuration or filesystem differs from checked image; configuration fields=" + ",".join(fields) + "; layers_equal=" + str(image["RootFS"]["Layers"] == config["rootfs"]["diff_ids"]))
     if image["Architecture"] != config["architecture"] or image["Os"] != config["os"]:

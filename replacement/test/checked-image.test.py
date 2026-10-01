@@ -1,4 +1,4 @@
-import hashlib,importlib.util,io,json,os,pathlib,tarfile,tempfile,unittest
+import copy,hashlib,importlib.util,io,json,os,pathlib,tarfile,tempfile,unittest
 from unittest.mock import patch
 spec=importlib.util.spec_from_file_location('checked_image',pathlib.Path(__file__).parents[1]/'deploy/checked-image.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 REVISION='a'*40
@@ -34,6 +34,17 @@ class CheckedImage(unittest.TestCase):
   with patch.object(module.subprocess,'check_output',return_value=json.dumps([loaded])):self.assertEqual(module.verify_loaded(self.directory,receipt),loaded)
   loaded['RootFS']['Layers']=['sha256:'+'c'*64]
   with patch.object(module.subprocess,'check_output',return_value=json.dumps([loaded])):self.assertRaises(ValueError,module.verify_loaded,self.directory,receipt)
+ def test_loaded_legacy_inspect_defaults_are_equivalent_to_absent_fields(self):
+  receipt,config=self.fixture();loaded={'Id':'sha256:'+'b'*64,'Config':dict(config['config'],Hostname='',Domainname='',Image='',AttachStdin=False,AttachStdout=False,AttachStderr=False,Tty=False,OpenStdin=False,StdinOnce=False),'RootFS':{'Layers':config['rootfs']['diff_ids']},'Architecture':'amd64','Os':'linux'}
+  with patch.object(module.subprocess,'check_output',return_value=json.dumps([loaded])):self.assertEqual(module.verify_loaded(self.directory,receipt),loaded)
+  for field,value in [('Hostname','changed'),('AttachStdin',True),('AttachStdin',0),('Image',None)]:
+   changed=copy.deepcopy(loaded);changed['Config'][field]=value
+   with patch.object(module.subprocess,'check_output',return_value=json.dumps([changed])):self.assertRaises(ValueError,module.verify_loaded,self.directory,receipt)
+ def test_loaded_runtime_configuration_changes_remain_rejected(self):
+  receipt,config=self.fixture();loaded={'Config':config['config'],'RootFS':{'Layers':config['rootfs']['diff_ids']},'Architecture':'amd64','Os':'linux'}
+  for field,value in [('User','root'),('Env',['RELEASE_SHA='+REVISION,'EVIL=1']),('Cmd',['sh']),('Entrypoint',['sh']),('Labels',{}),('Volumes',{'/app':{}}),('Healthcheck',{'Test':['NONE']})]:
+   changed=copy.deepcopy(loaded);changed['Config'][field]=value
+   with patch.object(module.subprocess,'check_output',return_value=json.dumps([changed])):self.assertRaises(ValueError,module.verify_loaded,self.directory,receipt)
  def test_publishing_requires_a_checked_main_push(self):
   self.fixture()
   with patch.object(module.subprocess,'run') as run:
