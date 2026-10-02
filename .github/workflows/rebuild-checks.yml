@@ -1,9 +1,9 @@
 name: Rebuild checks
 on:
   pull_request:
-    branches: [master, main]
+    branches: [main]
   push:
-    branches: [master, main, codex/fresh-rebuild]
+    branches: [main, codex/fresh-rebuild]
 permissions:
   contents: read
 jobs:
