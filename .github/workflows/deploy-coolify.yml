@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 10
     environment: production
     steps:
-      # main is the production branch (master is kept only as a mirror until it is retired).
+      # main is the production branch.
       - name: Verify approved SHA is current main
         env:
           GH_TOKEN: ${{ github.token }}
