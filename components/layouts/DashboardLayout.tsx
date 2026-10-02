@@ -25,6 +25,7 @@ import {
   Building,
   ClipboardList,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { PlanBanner } from '@/components/PlanBanner'
@@ -60,6 +61,21 @@ const navItems: NavItem[] = [
   { id: 'reports', label: 'Reports', icon: ClipboardList, href: '/reports' },
   { id: 'analytics', label: 'Analytics', icon: BarChart3, href: '/analytics' },
 ]
+
+/** Platform administration, shown only to platform admins (user role "admin"), never to team roles. */
+const adminNavItem: NavItem = {
+  id: 'admin',
+  label: 'Admin',
+  icon: ShieldCheck,
+  children: [
+    { id: 'admin-launch', label: 'Launch readiness', href: '/admin/launch' },
+    { id: 'admin-users', label: 'Customers & users', href: '/admin/users' },
+    { id: 'admin-settings', label: 'Platform settings', href: '/admin/settings' },
+    { id: 'admin-email', label: 'Email delivery', href: '/admin/email-delivery' },
+    { id: 'admin-ai', label: 'AI health', href: '/admin/ai-health' },
+    { id: 'admin-pilot', label: 'Pilot', href: '/admin/pilot' },
+  ],
+}
 
 interface BottomTabBarProps {
   role: string | undefined
@@ -191,7 +207,12 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   const { data: session } = useSession()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<string[]>(['vehicles'])
+  // Open the Admin section when an admin page is showing, so the current page stays visible in the menu.
+  const [expandedSections, setExpandedSections] = useState<string[]>(() =>
+    router.asPath.startsWith('/admin') ? ['vehicles', 'admin'] : ['vehicles']
+  )
+  const isPlatformAdmin = String(session?.user?.role ?? '').toLowerCase() === 'admin'
+  const visibleNavItems = isPlatformAdmin ? [...navItems, adminNavItem] : navItems
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -298,7 +319,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           <div className="space-y-1">
-            {navItems.map((item) => {
+            {visibleNavItems.map((item) => {
               const Icon = item.icon
               const active = isActive(item)
               const hasChildren = !!item.children?.length
@@ -376,14 +397,15 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               }}
               className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              <div className="h-10 w-10 rounded-full bg-blue-900 flex items-center justify-center">
+              <div className="h-10 w-10 shrink-0 rounded-full bg-blue-900 flex items-center justify-center">
                 <span className="text-white font-medium">{session?.user?.name?.charAt(0) || 'U'}</span>
               </div>
-              <div className="flex-1 text-left">
+              {/* min-w-0 lets long names and emails truncate inside the sidebar instead of spilling over the page. */}
+              <div className="min-w-0 flex-1 text-left">
                 <p className="text-sm font-medium text-slate-900 truncate">{session?.user?.name || 'User'}</p>
-                <p className="text-xs text-slate-500 truncate">{session?.user?.email || 'user@example.com'}</p>
+                {session?.user?.email ? <p className="text-xs text-slate-500 truncate">{session.user.email}</p> : null}
               </div>
-              <ChevronDown className="h-4 w-4 text-slate-400" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
             </button>
             {userMenuOpen && (
               <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1">
