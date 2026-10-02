@@ -1,5 +1,8 @@
 # CLAUDE.md — Fleetvera (repo: fleetflow-mvp)
 
+The owner's rules for how to build (for every person and agent) are in AGENTS.md; follow them:
+@AGENTS.md
+
 ## What This Is
 A fleet management SaaS app, branded **Fleetvera** in everything users see (the repo and some internal identifiers keep the old FleetFlow name). Intended host: fleet.ashbi.ca (Coolify on the Ashbi VPS). Next.js with pages router (not app router).
 
