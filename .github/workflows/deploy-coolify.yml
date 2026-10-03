@@ -34,7 +34,7 @@ jobs:
             echo "Confirmed SHA does not match current main."
             exit 1
           fi
-      - name: Verify Ashbi Local CI succeeded for approved SHA
+      - name: Verify CI quality gate succeeded for approved SHA
         env:
           GH_TOKEN: ${{ github.token }}
           CONFIRMED_SHA: ${{ inputs.confirmed_sha }}
@@ -42,7 +42,7 @@ jobs:
           gh api --method GET "repos/${{ github.repository }}/commits/$CONFIRMED_SHA/check-runs" \
             | jq --exit-status --arg sha "$CONFIRMED_SHA" \
               'any(.check_runs[];
-                .name == "Ashbi Local CI"
+                .name == "Audit, lint, typecheck, test, and build"
                 and .head_sha == $sha
                 and .status == "completed"
                 and .conclusion == "success")'
