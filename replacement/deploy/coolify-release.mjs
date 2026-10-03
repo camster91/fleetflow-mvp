@@ -68,6 +68,22 @@ export async function release(env, { receipts, fetchImpl = fetch, backup = verif
   if (!['https://fleet.ashbi.ca', 'https://fleetflow.ashbi.ca'].includes(env.PUBLIC_ORIGIN)) throw new Error('Reviewed Fleetvera public origin required');
   receipts ??= await Promise.all(['runtime', 'role-init'].map(async kind => JSON.parse(await readFile(`checked-receipts/${kind}/release-receipt.json`, 'utf8'))));
   const images = validateReceipts(receipts, env), uuid = env.COOLIFY_APP_UUID;
+  if (!env.GITHUB_TOKEN) throw new Error('Read access to current main is required');
+  async function currentMain() {
+    const response = await fetchImpl('https://api.github.com/repos/' + repository + '/git/ref/heads/main', {
+      method: 'GET', redirect: 'error', signal: AbortSignal.timeout(15000),
+      headers: { Authorization: 'Bearer ' + env.GITHUB_TOKEN, Accept: 'application/vnd.github+json', 'Cache-Control': 'no-cache' },
+    });
+    if (!response.ok) throw new Error('Cannot verify current main');
+    const ref = await response.json();
+    if (ref.ref !== 'refs/heads/main' || ref.object?.type !== 'commit' || !/^[a-f0-9]{40}$/.test(ref.object.sha || '')) throw new Error('Unexpected current-main reference');
+    return ref.object.sha === env.RELEASE_SHA;
+  }
+  function superseded(imagePinsChanged = false) {
+    log('Superseded checked build skipped; no deployment queued' + (imagePinsChanged ? '; persisted pins require inspection' : ''));
+    return { revision: env.RELEASE_SHA, skipped: 'superseded', imagePinsChanged, deploymentQueued: false };
+  }
+  if (!(await currentMain())) return superseded();
   async function api(endpoint, method = 'GET', body) {
     const response = await fetchImpl(new URL('/api/v1' + endpoint, origin), { method, redirect: 'error', signal: AbortSignal.timeout(30000), headers: { Authorization: 'Bearer ' + env.COOLIFY_TOKEN, 'Content-Type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
     if (!response.ok) throw new Error('Coolify request failed: HTTP ' + response.status);
@@ -103,12 +119,14 @@ export async function release(env, { receipts, fetchImpl = fetch, backup = verif
   const previous = settings(variables);
   const proof = validateBackupProof(await backup(env), env);
   if (proof.offServerCopyVerified !== true) throw new Error('Off-server backup missing');
+  if (!(await currentMain())) return superseded();
   await api('/applications/' + uuid + '/envs/bulk', 'PATCH', { data: [ ['FLEETVERA_RUNTIME_IMAGE', images.runtime], ['FLEETVERA_ROLE_IMAGE', images['role-init']] ].map(([key, value]) => ({ key, value, is_preview: false, is_literal: true, is_runtime: true, is_buildtime: false })) });
   await api('/applications/' + uuid, 'PATCH', { git_commit_sha: env.RELEASE_SHA });
   const pinned = await api('/applications/' + uuid); resource(pinned);
   const finalSettings = settings(await api('/applications/' + uuid + '/envs'));
   if (pinned.git_commit_sha !== env.RELEASE_SHA || finalSettings.get('FLEETVERA_RUNTIME_IMAGE') !== images.runtime || finalSettings.get('FLEETVERA_ROLE_IMAGE') !== images['role-init']) throw new Error('Checked release pins did not persist');
   for (const [key, value] of previous) if (!['FLEETVERA_RUNTIME_IMAGE', 'FLEETVERA_ROLE_IMAGE'].includes(key) && finalSettings.get(key) !== value) throw new Error('Unrelated production setting drifted');
+  if (!(await currentMain())) return superseded(true);
   const queued = await api('/deploy', 'POST', { uuid });
   const deployment = queued.deployments?.find(item => item.resource_uuid === uuid);
   if (!/^[a-zA-Z0-9]+$/.test(deployment?.deployment_uuid || '')) throw new Error('Matching deployment handle missing');
