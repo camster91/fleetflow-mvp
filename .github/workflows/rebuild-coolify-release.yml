@@ -84,6 +84,7 @@ jobs:
         env:
           RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
           RELEASE_BRANCH: main
+          GITHUB_TOKEN: ${{ github.token }}
           CHECKED_RUN_ID: ${{ github.event.workflow_run.id }}
           CHECKED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
           FLEETVERA_COOLIFY_RELEASE_ENABLED: ${{ vars.FLEETVERA_COOLIFY_RELEASE_ENABLED }}

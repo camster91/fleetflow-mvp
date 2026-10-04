@@ -10,6 +10,7 @@ import { validateServerProof, verifyCopy } from '../production-backup.mjs';
 const sha = 'a'.repeat(40);
 function fixture() {
   const env = { RELEASE_SHA: sha, CHECKED_RUN_ID: '123', CHECKED_RUN_ATTEMPT: '2', GITHUB_RUN_ID: '456', BACKUP_NONCE: 'b'.repeat(32), RELEASE_BRANCH: 'main', FLEETVERA_COOLIFY_RELEASE_ENABLED: 'true', COOLIFY_APP_UUID: 'target', COOLIFY_ENVIRONMENT_UUID: 'production', COOLIFY_SERVER_UUID: 'server', COOLIFY_DESTINATION_UUID: 'destination', COOLIFY_TOKEN: 'private-test-token', COOLIFY_URL: 'https://coolify.example', PUBLIC_ORIGIN: 'https://fleet.ashbi.ca' };
+  env.GITHUB_TOKEN = 'readonly-github-test-token';
   const receipts = ['runtime', 'role-init'].map((kind, index) => ({ schema: 1, repository: 'camster91/fleetflow-mvp', kind, revision: sha, workflow_run_id: '123', workflow_run_attempt: '2', image_id: 'sha256:' + 'c'.repeat(64), archive_sha256: 'd'.repeat(64), registry_image: `ghcr.io/camster91/fleetvera${index ? '-role-init' : ''}@sha256:${String(index + 1).repeat(64)}` }));
   const app = { uuid: 'target', name: 'fleetvera-rebuild-production', build_pack: 'dockercompose', environment: { uuid: 'production' }, destination: { uuid: 'destination', server: { uuid: 'server' } }, git_repository: 'camster91/fleetflow-mvp', git_branch: 'main', git_commit_sha: 'e'.repeat(40), docker_compose_location: '/docker-compose.rebuild-production.json', settings: { is_auto_deploy_enabled: false, is_preview_deployments_enabled: false }, ports_mappings: '', fqdn: null, docker_compose_raw: JSON.stringify(productionCompose()), docker_compose_domains: JSON.stringify({ app: { domain: env.PUBLIC_ORIGIN } }) };
   const values = { APP_ORIGIN: env.PUBLIC_ORIGIN, POSTGRES_PASSWORD: 'f'.repeat(64), RUNTIME_DATABASE_PASSWORD: 'a'.repeat(64), SETUP_TOKEN: 'b'.repeat(64), DATABASE_URL: `postgres://fleetvera_runtime:${'a'.repeat(64)}@postgres:5432/fleetvera_rebuild_production`, DATABASE_OWNER_URL: `postgres://fleetvera_owner:${'f'.repeat(64)}@postgres:5432/fleetvera_rebuild_production`, FLEETVERA_RUNTIME_IMAGE: 'ghcr.io/camster91/fleetvera@sha256:' + 'e'.repeat(64), FLEETVERA_ROLE_IMAGE: 'ghcr.io/camster91/fleetvera-role-init@sha256:' + 'f'.repeat(64) };
@@ -18,6 +19,13 @@ function fixture() {
   const fetchImpl = async (url, options = {}) => {
     url = new URL(url); calls.push({ url: url.href, ...options });
     const reply = (data, code = 200) => new Response(JSON.stringify(data), { status: code, headers: { 'Content-Type': 'application/json' } });
+    if (url.origin === 'https://api.github.com') {
+      assert.equal(url.pathname, '/repos/camster91/fleetflow-mvp/git/ref/heads/main');
+      assert.equal(options.headers.Authorization, 'Bearer ' + env.GITHUB_TOKEN);
+      assert.equal(options.redirect, 'error');
+      return reply({ ref: 'refs/heads/main', object: { type: 'commit', sha } });
+    }
+    assert.notEqual(options.headers?.Authorization, 'Bearer ' + env.GITHUB_TOKEN);
     if (url.origin === env.PUBLIC_ORIGIN) {
       assert.equal(options.headers?.Authorization, undefined);
       if (url.pathname === '/api/me') return reply({}, 401);
@@ -33,6 +41,31 @@ function fixture() {
   return { env, receipts, app, values, proof, calls, fetchImpl, setStatus(value) { status = value; }, options: { receipts, fetchImpl, backup: async () => proof, sleep: async () => {}, log: () => {} } };
 }
 function mutations(f) { return f.calls.filter(call => ['PATCH', 'POST'].includes(call.method)); }
+
+test('main advancing before access, during backup or after pinning never queues a stale release', async () => {
+  for (const changedAt of [1, 2, 3]) {
+    const f = fixture(), actual = f.fetchImpl; let reads = 0;
+    f.options.fetchImpl = (url, options) => {
+      if (String(url).startsWith('https://api.github.com/') && ++reads >= changedAt) return Promise.resolve(new Response(JSON.stringify({ ref: 'refs/heads/main', object: { type: 'commit', sha: 'e'.repeat(40) } })));
+      return actual(url, options);
+    };
+    const result = await release(f.env, f.options);
+    assert.equal(result.skipped, 'superseded');
+    assert.equal(result.deploymentQueued, false);
+    assert.equal(result.imagePinsChanged, changedAt === 3);
+    assert.equal(mutations(f).length, changedAt === 3 ? 2 : 0);
+    assert.equal(f.calls.filter(call => call.url.endsWith('/api/v1/deploy')).length, 0);
+  }
+});
+
+test('missing GitHub access, API errors and malformed current-main responses fail before production writes', async () => {
+  const missing = fixture(); delete missing.env.GITHUB_TOKEN;
+  await assert.rejects(release(missing.env, missing.options)); assert.equal(missing.calls.length, 0);
+  for (const response of [new Response('{}', { status: 403 }), new Response('{'), new Response(JSON.stringify({ ref: 'refs/heads/master', object: { type: 'commit', sha } })), new Response(JSON.stringify({ ref: 'refs/heads/main', object: { type: 'tag', sha } }))]) {
+    const f = fixture(); f.options.fetchImpl = async () => response;
+    await assert.rejects(release(f.env, f.options)); assert.equal(mutations(f).length, 0);
+  }
+});
 
 test('tracked production Compose matches the reviewed image-only isolated database contract', async () => {
   const compose = JSON.parse(await readFile(new URL('../../../docker-compose.rebuild-production.json', import.meta.url), 'utf8'));
