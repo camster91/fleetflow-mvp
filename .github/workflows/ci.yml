@@ -81,7 +81,7 @@ jobs:
           --shadow-database-url "$SHADOW_DATABASE_URL"
           --exit-code
       - name: Run mandatory release gate
-        # Same `npm run ci` as Ashbi Local CI; ai:evaluate persists its run to the migrated database.
+        # Mandatory `npm run ci` gate (also verified by deploy-coolify.yml); ai:evaluate persists its run to the migrated database.
         run: npm run ci
 
   e2e:

@@ -201,7 +201,10 @@ describe('release quality gates', () => {
     expect(deploy).toContain('environment: production')
     expect(deploy).toContain('checks: read')
     expect(deploy).toContain('commits/$CONFIRMED_SHA/check-runs')
-    expect(deploy).toContain('.name == "Ashbi Local CI"')
+    // Deploy waits for the CI quality job, so the two names must stay in step.
+    const qualityJob = 'Audit, lint, typecheck, test, and build'
+    expect(ci).toContain(`name: ${qualityJob}`)
+    expect(deploy).toContain(`.name == "${qualityJob}"`)
     expect(deploy).toContain('.head_sha == $sha')
     expect(deploy).toContain('.status == "completed"')
     expect(deploy).toContain('conclusion == "success"')
