@@ -243,7 +243,7 @@ export default function BillingPage() {
 
         {/* Current subscription info */}
         {sub && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-100 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-slate-900">Current Plan</h2>
               <StatusBadge status={sub.status} cancelAtPeriodEnd={sub.cancelAtPeriodEnd} />
@@ -314,7 +314,7 @@ export default function BillingPage() {
 
         {/* Pricing cards */}
         {showPricing && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 text-center">
+          <div className="bg-white rounded-2xl shadow-xs border border-slate-100 p-8 text-center">
             <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-blue-50 mb-5">
               <CreditCard className="h-8 w-8 text-blue-900" />
             </div>

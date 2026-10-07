@@ -47,7 +47,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           <p className="text-sm font-medium text-slate-500">{title}</p>
           <div className="mt-2 flex items-baseline gap-1">
             {loading ? (
-              <div className="h-8 w-24 bg-slate-200 rounded animate-pulse" />
+              <div className="h-8 w-24 bg-slate-200 rounded-sm animate-pulse" />
             ) : (
               <>
                 {prefix && <span className="text-2xl font-semibold text-slate-400">{prefix}</span>}

@@ -70,7 +70,7 @@ export function FtueWizard({ firstName = 'there', onComplete, onAddVehicle, dryR
   const progressPercent = (step / TOTAL_STEPS) * 100
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[var(--fleetvera-mist)] via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+    <div className="min-h-screen flex flex-col bg-linear-to-b from-(--fleetvera-mist) via-white to-emerald-50/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
       <div className="border-b border-emerald-900/10 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto max-w-2xl px-4 py-4">
           <div className="mb-2 flex items-center justify-between">
@@ -96,7 +96,7 @@ export function FtueWizard({ firstName = 'there', onComplete, onAddVehicle, dryR
             aria-label="Onboarding progress"
           >
             <div
-              className="h-full rounded-full bg-[var(--fleetvera-evergreen)] transition-all duration-500 ease-out"
+              className="h-full rounded-full bg-(--fleetvera-evergreen) transition-all duration-500 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -107,7 +107,7 @@ export function FtueWizard({ firstName = 'there', onComplete, onAddVehicle, dryR
         <div className="w-full max-w-lg">
           {step === 1 && (
             <FadeIn>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-[var(--fleetvera-shadow)] sm:p-8 dark:border-slate-700 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-(--fleetvera-shadow) sm:p-8 dark:border-slate-700 dark:bg-slate-900">
                 <div className="mb-8 text-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800 dark:text-emerald-400">
                     Fleetvera
@@ -137,7 +137,7 @@ export function FtueWizard({ firstName = 'there', onComplete, onAddVehicle, dryR
 
           {step === 2 && (
             <FadeIn>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-[var(--fleetvera-shadow)] sm:p-8 dark:border-slate-700 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-(--fleetvera-shadow) sm:p-8 dark:border-slate-700 dark:bg-slate-900">
                 <div className="mb-6 text-center">
                   <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
                     How Fleetvera helps
@@ -190,7 +190,7 @@ export function FtueWizard({ firstName = 'there', onComplete, onAddVehicle, dryR
 
           {step === 3 && (
             <FadeIn>
-              <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-[var(--fleetvera-shadow)] sm:p-8 dark:border-slate-700 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-6 shadow-(--fleetvera-shadow) sm:p-8 dark:border-slate-700 dark:bg-slate-900">
                 <div className="mb-6 text-center">
                   <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                     {vehicleAdded ? (

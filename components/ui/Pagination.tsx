@@ -16,7 +16,7 @@ export interface PaginationProps {
 
 const buttonClass =
   'min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 ' +
-  'hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-900 disabled:opacity-40 disabled:cursor-not-allowed ' +
+  'hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-blue-900 disabled:opacity-40 disabled:cursor-not-allowed ' +
   'dark:bg-slate-900 dark:border-slate-600 dark:text-slate-200'
 
 /**

@@ -86,7 +86,7 @@ export default function ActivityFeed({ limit = 10, showFilter = true }: Activity
   ]
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border">
+    <div className="bg-white rounded-xl shadow-xs border">
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
           <Clock className="h-5 w-5 text-gray-500" />
@@ -111,7 +111,7 @@ export default function ActivityFeed({ limit = 10, showFilter = true }: Activity
           )}
           <button
             onClick={fetchActivities}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded"
+            className="p-1 text-gray-400 hover:text-gray-600 rounded-sm"
             aria-label="Refresh activity"
           >
             <RefreshCw className="h-4 w-4" />
@@ -142,7 +142,7 @@ export default function ActivityFeed({ limit = 10, showFilter = true }: Activity
                 style={{ animationDelay: `${idx * 30}ms` }}
               >
                 <div
-                  className={`flex-shrink-0 w-9 h-9 rounded-lg ${typeStyle.bg} ${typeStyle.color} flex items-center justify-center`}
+                  className={`shrink-0 w-9 h-9 rounded-lg ${typeStyle.bg} ${typeStyle.color} flex items-center justify-center`}
                 >
                   {typeStyle.icon}
                 </div>

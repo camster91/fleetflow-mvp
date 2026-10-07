@@ -90,7 +90,7 @@ export default function AssistantPage() {
       breadcrumbs={[{ label: 'Dashboard', href: '/dashboard' }, { label: 'Ask Fleetvera' }]}
     >
       <div className="mx-auto w-full max-w-3xl space-y-6 overflow-hidden">
-        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-blue-950 p-5 text-white sm:p-7">
+        <div className="rounded-2xl bg-linear-to-br from-slate-900 to-blue-950 p-5 text-white sm:p-7">
           <h2 className="text-xl font-semibold">What would you like to check?</h2>
           <p className="mt-2 text-sm text-blue-100">
             Fleetvera answers only from records you can access and shows a source for every fact.
@@ -105,7 +105,7 @@ export default function AssistantPage() {
               maxLength={500}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
-              className="w-full resize-y rounded-xl border border-white/20 bg-white p-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="w-full resize-y rounded-xl border border-white/20 bg-white p-3 text-base text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-blue-300"
               placeholder="Ask a fleet question"
             />
             <fieldset className="grid gap-2 rounded-xl border border-white/20 p-3 sm:grid-cols-2">
@@ -205,7 +205,7 @@ export default function AssistantPage() {
                 key={prompt}
                 type="button"
                 onClick={() => void ask(prompt)}
-                className="min-h-11 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-700"
+                className="min-h-11 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm text-slate-700 hover:border-blue-300 focus:outline-hidden focus:ring-2 focus:ring-blue-700"
               >
                 {prompt}
               </button>

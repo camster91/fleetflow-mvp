@@ -76,11 +76,11 @@ export default function EmailDeliveryPage() {
           </p>
         </header>
         {message ? (
-          <p role="status" className="rounded border bg-slate-50 p-3 text-sm text-slate-700">
+          <p role="status" className="rounded-sm border bg-slate-50 p-3 text-sm text-slate-700">
             {message}
           </p>
         ) : null}
-        <form onSubmit={save} className="space-y-4 rounded border bg-white p-5">
+        <form onSubmit={save} className="space-y-4 rounded-sm border bg-white p-5">
           <p className="text-sm text-slate-600">
             Status:{' '}
             {config?.configured
@@ -95,7 +95,7 @@ export default function EmailDeliveryPage() {
               autoComplete="new-password"
               value={apiKey}
               onChange={(event) => setApiKey(event.target.value)}
-              className="mt-1 block min-h-11 w-full rounded border px-3"
+              className="mt-1 block min-h-11 w-full rounded-sm border px-3"
             />
           </label>
           <label className="block text-sm font-medium">
@@ -105,7 +105,7 @@ export default function EmailDeliveryPage() {
               value={domain}
               onChange={(event) => setDomain(event.target.value)}
               placeholder="mg.example.com"
-              className="mt-1 block min-h-11 w-full rounded border px-3"
+              className="mt-1 block min-h-11 w-full rounded-sm border px-3"
             />
           </label>
           <label className="block text-sm font-medium">
@@ -114,7 +114,7 @@ export default function EmailDeliveryPage() {
               required
               value={verifiedDomain}
               onChange={(event) => setVerifiedDomain(event.target.value)}
-              className="mt-1 block min-h-11 w-full rounded border px-3"
+              className="mt-1 block min-h-11 w-full rounded-sm border px-3"
             />
           </label>
           <label className="block text-sm font-medium">
@@ -124,12 +124,12 @@ export default function EmailDeliveryPage() {
               value={fromEmail}
               onChange={(event) => setFromEmail(event.target.value)}
               placeholder="Fleetvera <notifications@mg.example.com>"
-              className="mt-1 block min-h-11 w-full rounded border px-3"
+              className="mt-1 block min-h-11 w-full rounded-sm border px-3"
             />
           </label>
           <button
             disabled={saving}
-            className="min-h-11 rounded bg-blue-700 px-4 font-medium text-white disabled:opacity-60"
+            className="min-h-11 rounded-sm bg-blue-700 px-4 font-medium text-white disabled:opacity-60"
           >
             {saving ? 'Saving...' : 'Save encrypted configuration'}
           </button>

@@ -38,7 +38,7 @@ export default function UiPolishSandboxPage() {
       <Head>
         <title>UI polish sandbox · Fleetvera</title>
       </Head>
-      <main className="min-h-screen bg-[var(--fleetvera-mist)] px-4 py-10 dark:bg-slate-950">
+      <main className="min-h-screen bg-(--fleetvera-mist) px-4 py-10 dark:bg-slate-950">
         <div className="mx-auto max-w-2xl space-y-8">
           <FadeIn>
             <header>

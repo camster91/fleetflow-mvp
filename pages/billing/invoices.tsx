@@ -67,7 +67,7 @@ export default function InvoicesPage() {
       ]}
     >
       <PageHeader title="Invoices" subtitle="Payment history synchronized from Stripe" />
-      <div className="max-w-3xl mx-auto rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+      <div className="max-w-3xl mx-auto rounded-2xl border border-slate-100 bg-white shadow-xs overflow-hidden">
         {loading && (
           <div className="flex justify-center p-16">
             <Loader2 aria-label="Loading invoices" className="h-7 w-7 animate-spin text-slate-400" />

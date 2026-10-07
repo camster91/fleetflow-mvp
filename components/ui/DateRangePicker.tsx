@@ -99,7 +99,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChang
                       label: 'Custom',
                     })
                   }
-                  className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 py-1 text-sm border border-slate-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <input
                   type="date"
@@ -111,7 +111,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({ value, onChang
                       label: 'Custom',
                     })
                   }
-                  className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-2 py-1 text-sm border border-slate-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>

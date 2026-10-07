@@ -144,7 +144,7 @@ function RecordForm({
       }}
     >
       {error ? (
-        <p id={errorId} role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <p id={errorId} role="alert" className="rounded-sm border border-red-200 bg-red-50 p-3 text-sm text-red-800">
           {error.message}
         </p>
       ) : null}
@@ -157,7 +157,7 @@ function RecordForm({
             id={fieldId('kind')}
             value={kind}
             onChange={(event) => setKind(event.target.value as OpsRecord['kind'])}
-            className="mt-1 block min-h-11 w-full rounded border border-slate-300 px-3 text-sm"
+            className="mt-1 block min-h-11 w-full rounded-sm border border-slate-300 px-3 text-sm"
             {...invalid('kind')}
           >
             <option value="backup_drill">Encrypted backup verified (npm run verify:backup-restore)</option>
@@ -199,7 +199,7 @@ function RecordForm({
           required
           value={performedAt}
           onChange={(event) => setPerformedAt(event.target.value)}
-          className="mt-1 block min-h-11 w-full rounded border border-slate-300 px-3 text-sm sm:w-72"
+          className="mt-1 block min-h-11 w-full rounded-sm border border-slate-300 px-3 text-sm sm:w-72"
           {...invalid('performedAt')}
         />
       </div>
@@ -214,7 +214,7 @@ function RecordForm({
           maxLength={1000}
           value={summary}
           onChange={(event) => setSummary(event.target.value)}
-          className="mt-1 block w-full rounded border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1 block w-full rounded-sm border border-slate-300 px-3 py-2 text-sm"
           {...invalid('summary')}
         />
       </div>
@@ -230,7 +230,7 @@ function RecordForm({
               maxLength={128}
               spellCheck={false}
               onChange={(event) => setReference(event.target.value)}
-              className="mt-1 block min-h-11 w-full rounded border border-slate-300 px-3 font-mono text-sm"
+              className="mt-1 block min-h-11 w-full rounded-sm border border-slate-300 px-3 font-mono text-sm"
               {...invalid('reference')}
             />
           </div>
@@ -244,7 +244,7 @@ function RecordForm({
               value={evidenceUrl}
               maxLength={500}
               onChange={(event) => setEvidenceUrl(event.target.value)}
-              className="mt-1 block min-h-11 w-full rounded border border-slate-300 px-3 text-sm"
+              className="mt-1 block min-h-11 w-full rounded-sm border border-slate-300 px-3 text-sm"
               {...invalid('evidenceUrl')}
             />
           </div>
@@ -257,7 +257,7 @@ function RecordForm({
         <button
           type="submit"
           disabled={busy}
-          className="min-h-11 rounded bg-blue-700 px-4 text-sm font-medium text-white disabled:opacity-60"
+          className="min-h-11 rounded-sm bg-blue-700 px-4 text-sm font-medium text-white disabled:opacity-60"
         >
           {busy ? 'Saving…' : decision ? 'Record decision' : 'Record evidence'}
         </button>
@@ -331,7 +331,7 @@ function OperationsActions({ deployConfigured }: { deployConfigured: boolean }) 
           type="button"
           onClick={() => void sendTestAlert()}
           disabled={alertState.busy}
-          className="min-h-11 rounded border border-slate-300 px-4 text-sm font-medium text-slate-800 disabled:opacity-60"
+          className="min-h-11 rounded-sm border border-slate-300 px-4 text-sm font-medium text-slate-800 disabled:opacity-60"
         >
           {alertState.busy ? 'Sending…' : 'Send test alert'}
         </button>
@@ -352,7 +352,7 @@ function OperationsActions({ deployConfigured }: { deployConfigured: boolean }) 
               type="button"
               onClick={() => void redeploy()}
               disabled={!confirmed || deployState.busy}
-              className="min-h-11 rounded bg-blue-700 px-4 text-sm font-medium text-white disabled:opacity-60"
+              className="min-h-11 rounded-sm bg-blue-700 px-4 text-sm font-medium text-white disabled:opacity-60"
             >
               {deployState.busy ? 'Redeploying…' : 'Redeploy'}
             </button>
@@ -413,7 +413,7 @@ export default function LaunchReadinessPage() {
           </p>
         </header>
         {loadError ? (
-          <div role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             {loadError}{' '}
             <button type="button" onClick={load} className="ml-2 min-h-11 font-medium underline">
               Try again
@@ -448,7 +448,7 @@ export default function LaunchReadinessPage() {
                 <button
                   type="button"
                   onClick={load}
-                  className="min-h-11 rounded border border-slate-300 px-4 text-sm font-medium text-slate-800"
+                  className="min-h-11 rounded-sm border border-slate-300 px-4 text-sm font-medium text-slate-800"
                 >
                   Re-run checks
                 </button>

@@ -168,7 +168,7 @@ export default function APISettingsPage() {
                     <p className="mt-1 text-sm text-amber-700">Generate a replacement key to use the read API.</p>
                   )}
                   <div className="flex items-center gap-2 mt-1">
-                    <code className="text-sm bg-slate-100 px-2 py-0.5 rounded">{MASKED_API_KEY}</code>
+                    <code className="text-sm bg-slate-100 px-2 py-0.5 rounded-sm">{MASKED_API_KEY}</code>
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
                     <span>Created {formatDistanceToNow(new Date(apiKey.createdAt))} ago</span>
@@ -192,7 +192,7 @@ export default function APISettingsPage() {
         )}
 
         <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-amber-900">Security Notice</p>
             <p className="text-sm text-amber-700 mt-1">

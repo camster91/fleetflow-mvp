@@ -258,7 +258,7 @@ export default function InvitePage() {
 
           {/* Tips */}
           <div className="mt-6 flex items-start gap-3 text-sm text-slate-500">
-            <Users className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <Users className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
               <p className="font-medium text-slate-700">Tip:</p>
               <p>

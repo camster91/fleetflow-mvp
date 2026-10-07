@@ -284,7 +284,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   return (
     <div
       className={`
-        fixed z-[100] flex flex-col gap-3
+        fixed z-100 flex flex-col gap-3
         ${positionStyles[position]}
         ${position.includes('center') ? 'items-center' : position.includes('right') ? 'items-end' : 'items-start'}
         ${className}

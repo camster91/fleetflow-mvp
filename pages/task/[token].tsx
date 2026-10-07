@@ -102,7 +102,7 @@ export default function MechanicTaskPage() {
   }
 
   const inputCls =
-    'w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-none transition'
+    'w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-900 focus:border-transparent outline-hidden transition'
 
   return (
     <>
@@ -134,7 +134,7 @@ export default function MechanicTaskPage() {
             )}
 
             {error && (
-              <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6 text-center">
+              <div className="bg-white rounded-2xl shadow-xs border border-red-100 p-6 text-center">
                 <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <AlertTriangle className="h-6 w-6 text-red-500" />
                 </div>
@@ -146,7 +146,7 @@ export default function MechanicTaskPage() {
             {!loading && !error && task && (
               <div className="space-y-4">
                 {/* Task card */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-xs border border-slate-100 overflow-hidden">
                   <div
                     className={`px-5 py-4 border-b ${
                       task.completed
@@ -215,7 +215,7 @@ export default function MechanicTaskPage() {
 
                 {/* Submission area */}
                 {submitted ? (
-                  <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 text-center">
+                  <div className="bg-white rounded-2xl shadow-xs border border-emerald-100 p-6 text-center">
                     <div className="h-14 w-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                       <CheckCircle className="h-7 w-7 text-emerald-600" />
                     </div>
@@ -229,7 +229,7 @@ export default function MechanicTaskPage() {
                     </p>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 space-y-4">
+                  <div className="bg-white rounded-2xl shadow-xs border border-slate-100 p-5 space-y-4">
                     <h3 className="font-semibold text-slate-900">Submit Work Report</h3>
 
                     <div>
@@ -266,7 +266,7 @@ export default function MechanicTaskPage() {
                         type="checkbox"
                         checked={form.markComplete}
                         onChange={(e) => setForm((f) => ({ ...f, markComplete: e.target.checked }))}
-                        className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        className="h-5 w-5 rounded-sm border-slate-300 text-emerald-600 focus:ring-emerald-500"
                       />
                       <div>
                         <p className="text-sm font-medium text-slate-900">Mark task as complete</p>

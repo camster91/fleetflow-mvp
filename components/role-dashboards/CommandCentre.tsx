@@ -75,7 +75,7 @@ export function Exceptions({
   const blocked = availability.deliveries ? deliveries.filter((i) => i.status === 'cancelled') : []
   const due = availability.maintenance ? maintenance.filter((i) => !i.completed) : []
   return (
-    <section aria-labelledby="attention-heading" className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm">
+    <section aria-labelledby="attention-heading" className="rounded-xl border border-amber-200 bg-white p-4 shadow-xs">
       <h2 id="attention-heading" className="text-lg font-semibold">
         Needs attention
       </h2>

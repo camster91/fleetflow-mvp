@@ -115,7 +115,7 @@ export function PlanBanner() {
           type="button"
           onClick={() => setDismissed(true)}
           aria-label="Dismiss plan notice"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:opacity-70 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
