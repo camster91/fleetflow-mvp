@@ -34,7 +34,7 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <section className="mx-auto mt-12 max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
+          <section className="mx-auto mt-12 max-w-3xl rounded-3xl border border-slate-200 bg-white p-8 shadow-xs sm:p-10">
             <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-start">
               <div>
                 <h2 className="text-2xl font-bold text-slate-950">Fleetvera Pro</h2>

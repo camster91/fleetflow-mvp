@@ -10,7 +10,7 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className={`fixed top-0 inset-x-0 z-[100] px-4 py-2 text-center text-sm font-medium ${
+      className={`fixed top-0 inset-x-0 z-100 px-4 py-2 text-center text-sm font-medium ${
         !isOnline ? 'bg-red-700 text-white' : 'bg-amber-500 text-slate-900'
       }`}
     >

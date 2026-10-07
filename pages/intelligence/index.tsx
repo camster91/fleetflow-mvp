@@ -155,7 +155,7 @@ export default function IntelligencePage() {
           <select
             value={status}
             onChange={(event) => setStatus(event.target.value as StatusFilter)}
-            className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
           >
             <option value="OPEN">Open</option>
             <option value="DISMISSED">Dismissed</option>
@@ -188,7 +188,7 @@ export default function IntelligencePage() {
           <div
             id="intelligence-empty"
             tabIndex={-1}
-            className="rounded-xl border border-dashed border-slate-300 p-8 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="rounded-xl border border-dashed border-slate-300 p-8 text-center focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
           >
             <p className="font-semibold text-slate-900">No {status.toLowerCase()} findings</p>
             <p className="mt-1 text-sm text-slate-600">Try another status or return after the next refresh.</p>

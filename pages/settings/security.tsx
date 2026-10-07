@@ -222,7 +222,7 @@ export default function SecuritySettingsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             {/* 2FA */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
                 <div className="flex items-center space-x-3">
                   <Smartphone className="h-5 w-5 text-slate-600" />
@@ -282,7 +282,7 @@ export default function SecuritySettingsPage() {
             </div>
 
             {/* Login History */}
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -320,7 +320,7 @@ export default function SecuritySettingsPage() {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
                 <h2 className="text-lg font-semibold text-slate-900">Security Status</h2>
               </div>
@@ -349,7 +349,7 @@ export default function SecuritySettingsPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-lg shadow-xs border border-slate-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
                 <h2 className="text-lg font-semibold text-slate-900">Sessions</h2>
               </div>
@@ -390,7 +390,7 @@ export default function SecuritySettingsPage() {
             </div>
             <div className="bg-slate-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-slate-600 mb-2">Can&apos;t scan? Enter this code manually:</p>
-              <code className="block bg-slate-100 rounded px-3 py-2 text-sm font-mono break-all">
+              <code className="block bg-slate-100 rounded-sm px-3 py-2 text-sm font-mono break-all">
                 {twoFASetup.secret}
               </code>
             </div>
@@ -404,7 +404,7 @@ export default function SecuritySettingsPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {twoFASetup.backupCodes.map((code, index) => (
-                  <div key={index} className="bg-slate-50 rounded px-2 py-1 text-xs font-mono text-center">
+                  <div key={index} className="bg-slate-50 rounded-sm px-2 py-1 text-xs font-mono text-center">
                     {code}
                   </div>
                 ))}
@@ -420,7 +420,7 @@ export default function SecuritySettingsPage() {
                 value={twoFACode}
                 onChange={(e) => setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="000000"
-                className="w-full px-4 py-2 text-center text-2xl font-mono tracking-widest border-2 border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 text-center text-2xl font-mono tracking-widest border-2 border-slate-300 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 maxLength={6}
               />
             </div>

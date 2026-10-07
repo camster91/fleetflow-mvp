@@ -16,7 +16,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 bg-gradient-to-br from-emerald-950 via-emerald-900 to-teal-800 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 bg-linear-to-br from-emerald-950 via-emerald-900 to-teal-800 relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">

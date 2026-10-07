@@ -46,7 +46,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-white text-slate-900">
         <Navbar />
         <main>
-          <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50 via-white to-white px-4 pb-24 pt-36 text-center sm:px-6">
+          <section className="relative overflow-hidden bg-linear-to-b from-emerald-50 via-white to-white px-4 pb-24 pt-36 text-center sm:px-6">
             <div className="pointer-events-none absolute left-1/2 top-20 h-80 w-80 -translate-x-1/2 rounded-full bg-teal-200/30 blur-3xl" />
             <div className="mx-auto max-w-4xl">
               <p className="relative mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
@@ -88,7 +88,7 @@ export default function HomePage() {
                 {features.map(({ title, description, icon: Icon }) => (
                   <article
                     key={title}
-                    className="rounded-2xl border border-emerald-950/10 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                    className="rounded-2xl border border-emerald-950/10 bg-white p-6 shadow-xs transition hover:-translate-y-0.5 hover:shadow-lg"
                   >
                     <div className="inline-flex rounded-xl bg-emerald-50 p-3">
                       <Icon className="h-6 w-6 text-emerald-800" />

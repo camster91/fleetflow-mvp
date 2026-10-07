@@ -1,7 +1,178 @@
-@import './brand.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import './brand.css' layer(base);
+@import 'tailwindcss' source(none);
+
+/* Same scan paths as the old tailwind.config.js content list; replacement/ is a separate app. */
+@source '../pages';
+@source '../components';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-primary-50: #effcf7;
+  --color-primary-100: #d8f7e9;
+  --color-primary-200: #b4edd6;
+  --color-primary-300: #7bddba;
+  --color-primary-400: #42d6a4;
+  --color-primary-500: #1bb887;
+  --color-primary-600: #0e936c;
+  --color-primary-700: #107558;
+  --color-primary-800: #115e4a;
+  --color-primary-900: #123c36;
+  --color-primary-950: #082b27;
+
+  --color-secondary-50: #f8fafc;
+  --color-secondary-100: #f1f5f9;
+  --color-secondary-200: #e2e8f0;
+  --color-secondary-300: #cbd5e1;
+  --color-secondary-400: #94a3b8;
+  --color-secondary-500: #64748b;
+  --color-secondary-600: #475569;
+  --color-secondary-700: #334155;
+  --color-secondary-800: #1e293b;
+  --color-secondary-900: #0f172a;
+
+  --font-sans:
+    Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+    sans-serif;
+
+  --animate-fade-in: fadeIn 0.3s ease-out;
+  --animate-slide-in: slideIn 0.3s ease-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-slide-in-top: slideInTop 0.3s ease-out;
+  --animate-slide-in-bottom: slideInBottom 0.3s ease-out;
+  --animate-slide-out-top: slideOutTop 0.3s ease-in;
+  --animate-slide-out-bottom: slideOutBottom 0.3s ease-in;
+  --animate-zoom-in-95: zoomIn95 0.2s ease-out;
+
+  /* v3 defaulted rings without a colour to blue-500 at 50%; v4 uses currentcolor. */
+  --default-ring-color: color-mix(in oklab, var(--color-blue-500) 50%, transparent);
+
+  --shadow-soft:
+    0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+  --shadow-card:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-elevated:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  @keyframes fadeIn {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes slideIn {
+    0% {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideUp {
+    0% {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes slideInTop {
+    0% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideInBottom {
+    0% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideOutTop {
+    0% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+  }
+  @keyframes slideOutBottom {
+    0% {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+  @keyframes zoomIn95 {
+    0% {
+      transform: scale(0.95);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* v4 placeholders default to the text colour at half opacity; v3 used gray-400. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+
+  /* v4 buttons default to the arrow cursor; v3 showed the pointer. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 :root {
   --foreground-rgb: 15, 23, 42;
@@ -247,7 +418,7 @@ body {
 
 /* Input styles */
 .input-modern {
-  @apply block w-full rounded-lg border-slate-300 shadow-sm focus:border-blue-900 focus:ring-blue-900 sm:text-sm transition-colors;
+  @apply block w-full rounded-lg border-slate-300 shadow-xs focus:border-blue-900 focus:ring-blue-900 sm:text-sm transition-colors;
 }
 
 /* Page transitions */
@@ -340,7 +511,7 @@ body {
 
 /* Focus ring utilities */
 .focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-900 focus:ring-offset-2;
+  @apply focus:outline-hidden focus:ring-2 focus:ring-blue-900 focus:ring-offset-2;
 }
 
 /* Disabled state utilities */
