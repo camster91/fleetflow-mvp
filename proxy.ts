@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
+import { demoEnabled, demoRouteAllowed, DEMO_DISABLED_MESSAGE } from './lib/demo/policy'
 
 // Must match getJwtSecret in lib/auth.ts: JWT_SECRET only, trimmed, and at
 // least 32 characters in production.
@@ -73,6 +74,13 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   const method = req.method.toUpperCase()
 
+  if (demoEnabled() && pathname.startsWith('/api/') && !demoRouteAllowed(pathname, method)) {
+    return NextResponse.json({ error: DEMO_DISABLED_MESSAGE, code: 'DEMO_PROTECTED' }, { status: 403 })
+  }
+  if (demoEnabled() && (pathname === '/' || pathname.startsWith('/auth'))) {
+    return NextResponse.redirect(new URL('/demo', req.url))
+  }
+
   // CSRF: block cross-origin mutating API calls that rely on cookie auth
   const csrfExempt = pathname.startsWith('/api/stripe/webhook') || pathname.startsWith('/api/cron/')
 
@@ -117,6 +125,8 @@ export async function proxy(req: NextRequest) {
 
   // Let auth API and static files pass through
   if (
+    pathname === '/demo' ||
+    pathname.startsWith('/api/demo/') ||
     PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/brand') ||

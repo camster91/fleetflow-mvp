@@ -1,0 +1,63 @@
+name: fleetvera-demo
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fleetvera_demo
+      POSTGRES_USER: fleetvera_demo
+      POSTGRES_PASSWORD: ${DEMO_DATABASE_PASSWORD:?required}
+    volumes:
+      - demo_database:/var/lib/postgresql/data
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleetvera_demo -d fleetvera_demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fleetvera-demo:${DEMO_REVISION:?required}
+    environment:
+      FLEETVERA_DEMO_MODE: 'true'
+      FLEETVERA_RELEASE_MODE: pilot
+      DATABASE_URL: postgresql://fleetvera_demo:${DEMO_DATABASE_PASSWORD:?required}@postgres:5432/fleetvera_demo
+      NEXTAUTH_URL: https://${DEMO_HOST:?required}
+      JWT_SECRET: ${DEMO_JWT_SECRET:?required}
+      API_CURSOR_SECRET: ${DEMO_CURSOR_SECRET:?required}
+      EMAIL_CONFIG_ENCRYPTION_KEY: ${DEMO_EMAIL_SECRET:?required}
+      TOKEN_ENCRYPTION_KEY: ${DEMO_TOKEN_SECRET:?required}
+      ACTION_PREVIEW_KEYS: ${DEMO_ACTION_KEYS:?required}
+      ACTION_PREVIEW_CURRENT_KID: demo-v1
+      AI_PROVIDER: disabled
+      TRUSTED_PROXY_HOPS: '1'
+      WORKSPACE_DELETION_ENABLED: 'false'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [private, coolify]
+    restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: coolify
+      traefik.http.routers.fleetvera-demo.rule: Host(`${DEMO_HOST:?required}`)
+      traefik.http.routers.fleetvera-demo.entrypoints: https
+      traefik.http.routers.fleetvera-demo.tls.certresolver: letsencrypt
+      traefik.http.routers.fleetvera-demo.middlewares: fleetvera-demo-limit,fleetvera-demo-privacy
+      traefik.http.middlewares.fleetvera-demo-privacy.headers.customResponseHeaders.X-Robots-Tag: noindex, nofollow
+      traefik.http.middlewares.fleetvera-demo-limit.ratelimit.average: '10'
+      traefik.http.middlewares.fleetvera-demo-limit.ratelimit.burst: '25'
+      traefik.http.services.fleetvera-demo.loadbalancer.server.port: '3000'
+networks:
+  private:
+    internal: true
+  coolify:
+    external: true
+volumes:
+  demo_database:
