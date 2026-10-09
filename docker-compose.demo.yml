@@ -51,7 +51,15 @@ services:
       traefik.http.routers.fleetvera-demo.rule: Host(`${DEMO_HOST:?required}`)
       traefik.http.routers.fleetvera-demo.entrypoints: https
       traefik.http.routers.fleetvera-demo.tls.certresolver: letsencrypt
-      traefik.http.routers.fleetvera-demo.middlewares: fleetvera-demo-limit,fleetvera-demo-privacy
+      traefik.http.routers.fleetvera-demo.middlewares: fleetvera-demo-privacy
+      traefik.http.routers.fleetvera-demo.service: fleetvera-demo
+      traefik.http.routers.fleetvera-demo.priority: '10'
+      traefik.http.routers.fleetvera-demo-api.rule: Host(`${DEMO_HOST:?required}`) && PathPrefix(`/api/`)
+      traefik.http.routers.fleetvera-demo-api.entrypoints: https
+      traefik.http.routers.fleetvera-demo-api.tls.certresolver: letsencrypt
+      traefik.http.routers.fleetvera-demo-api.middlewares: fleetvera-demo-limit,fleetvera-demo-privacy
+      traefik.http.routers.fleetvera-demo-api.service: fleetvera-demo
+      traefik.http.routers.fleetvera-demo-api.priority: '20'
       traefik.http.middlewares.fleetvera-demo-privacy.headers.customResponseHeaders.X-Robots-Tag: noindex, nofollow
       traefik.http.middlewares.fleetvera-demo-limit.ratelimit.average: '10'
       traefik.http.middlewares.fleetvera-demo-limit.ratelimit.burst: '25'
