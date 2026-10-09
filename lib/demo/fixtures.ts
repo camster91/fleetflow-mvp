@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { randomUUID, createHash } from 'crypto'
 import { DEMO_ROLES, DEMO_DURATION_SECONDS } from './policy'
+import { sampleInvoicePdf } from './sampleInvoice'
 
 export async function seedDemoWorkspace(tx: Prisma.TransactionClient, now = new Date()) {
   const id = randomUUID()
@@ -196,7 +197,7 @@ export async function seedDemoWorkspace(tx: Prisma.TransactionClient, now = new 
       uploadedBySnapshot: owner.email,
       originalName: 'Sample service invoice.pdf',
       mimeType: 'application/pdf',
-      byteSize: 1240,
+      byteSize: sampleInvoicePdf().length,
       contentSha256: createHash('sha256').update(id).digest('hex'),
       storageKey: `demo/${id}`,
       status: 'EXTRACTED',
