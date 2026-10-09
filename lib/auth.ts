@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { parse } from 'cookie'
+import { assertDemoEnvironment, demoEnabled } from './demo/policy'
 
 function getJwtSecret(): string {
   const configured = process.env.JWT_SECRET?.trim()
@@ -27,6 +28,7 @@ export interface TokenPayload {
   purpose?: 'session' | 'two-factor'
   /** User.tokenVersion at issue time. Tokens issued before this claim existed count as 0. */
   tv?: number
+  demoSessionId?: string
   iat?: number
   exp?: number
 }
@@ -43,6 +45,7 @@ export interface SessionUser {
 export interface Session {
   user: SessionUser
   expires?: string
+  demoSessionId?: string
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -105,6 +108,13 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   const payload = await verifyToken(token)
   if (!payload?.sub || payload.purpose !== 'session') return null
 
+  if (demoEnabled()) {
+    assertDemoEnvironment()
+    if (!payload.demoSessionId) return null
+    const demo = await prisma.demoSession.findUnique({ where: { id: payload.demoSessionId } })
+    if (!demo || demo.expiresAt <= new Date() || !demo.userIds.includes(payload.sub)) return null
+  } else if (payload.demoSessionId) return null
+
   // Check if password was changed after token was issued (invalidate old tokens)
   const dbUser = await prisma.user.findUnique({
     where: { id: payload.sub },
@@ -129,6 +139,7 @@ export async function getUserFromRequest(req: NextApiRequest): Promise<Session |
   }
 
   return {
+    ...(payload.demoSessionId ? { demoSessionId: payload.demoSessionId } : {}),
     expires: payload.exp ? new Date(payload.exp * 1000).toISOString() : undefined,
     user: {
       id: payload.sub,
