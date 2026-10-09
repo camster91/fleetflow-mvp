@@ -8,7 +8,9 @@ services:
       POSTGRES_PASSWORD: ${DEMO_DATABASE_PASSWORD:?required}
     volumes:
       - demo_database:/var/lib/postgresql/data
-    networks: [private]
+    networks:
+      private:
+        aliases: [fleetvera-demo-db]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fleetvera_demo -d fleetvera_demo"]
       interval: 5s
@@ -25,7 +27,7 @@ services:
     environment:
       FLEETVERA_DEMO_MODE: 'true'
       FLEETVERA_RELEASE_MODE: pilot
-      DATABASE_URL: postgresql://fleetvera_demo:${DEMO_DATABASE_PASSWORD:?required}@postgres:5432/fleetvera_demo
+      DATABASE_URL: postgresql://fleetvera_demo:${DEMO_DATABASE_PASSWORD:?required}@fleetvera-demo-db:5432/fleetvera_demo
       NEXTAUTH_URL: https://${DEMO_HOST:?required}
       JWT_SECRET: ${DEMO_JWT_SECRET:?required}
       API_CURSOR_SECRET: ${DEMO_CURSOR_SECRET:?required}
