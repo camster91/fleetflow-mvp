@@ -91,12 +91,22 @@ def export(image, directory):
     tag = import_tag(revision)
     subprocess.run(["docker", "image", "tag", images[0]["Id"], tag], check=True)
     subprocess.run(["docker", "image", "save", "--output", str(archive), tag], check=True)
+    # Receipt identity is always the saved configuration digest. With the
+    # containerd image store, inspect.Id identifies the manifest/index instead.
+    # Bind the saved configuration and rootfs to the tested image below as well.
+    with tarfile.open(archive, "r") as bundle:
+        manifest = json.load(bundle.extractfile("manifest.json"))
+        if len(manifest) != 1:
+            raise ValueError("Expected exactly one checked runtime image")
+        config_bytes = bundle.extractfile(manifest[0]["Config"]).read()
     receipt = {"schema": 1, "repository": REPOSITORY, "revision": revision, "kind": KIND,
-               "image_id": images[0]["Id"], "archive_sha256": digest(archive),
+               "image_id": "sha256:" + hashlib.sha256(config_bytes).hexdigest(), "archive_sha256": digest(archive),
                "workflow_run_id": os.environ.get("GITHUB_RUN_ID"),
                "workflow_run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT")}
     (directory / "receipt.json").write_text(json.dumps(receipt, sort_keys=True) + "\n")
-    return verify(directory)
+    verify(directory)
+    verify_loaded(directory, receipt, images[0])
+    return receipt
 
 
 def publication_tag(receipt):
@@ -153,9 +163,10 @@ def comparable_configuration(settings):
     return result
 
 
-def verify_loaded(directory, receipt):
-    tag = import_tag(receipt["revision"])
-    image = json.loads(subprocess.check_output(["docker", "image", "inspect", tag], text=True))[0]
+def verify_loaded(directory, receipt, image=None):
+    if image is None:
+        tag = import_tag(receipt["revision"])
+        image = json.loads(subprocess.check_output(["docker", "image", "inspect", tag], text=True))[0]
     with tarfile.open(directory / "runtime-image.tar") as bundle:
         manifest = json.load(bundle.extractfile("manifest.json"))
         config = json.load(bundle.extractfile(manifest[0]["Config"]))
