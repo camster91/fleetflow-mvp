@@ -54,7 +54,7 @@ export default function InviteCustomerForm({ onInvited }: Props) {
     <form
       onSubmit={submit}
       aria-labelledby="invite-customer-title"
-      className="rounded-xl border bg-white p-5 shadow-sm"
+      className="rounded-xl border bg-white p-5 shadow-xs"
     >
       <h3 id="invite-customer-title" className="text-lg font-semibold text-gray-900">
         Invite a customer

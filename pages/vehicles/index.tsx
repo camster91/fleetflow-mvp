@@ -208,7 +208,7 @@ export default function VehiclesPage() {
           {stats.map((stat) => (
             <div
               key={stat.title}
-              className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4"
+              className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-xs border border-slate-100 p-4"
             >
               <div className={`inline-flex p-2 rounded-lg ${stat.iconBgColor} mb-2`}>{stat.icon}</div>
               <p className="text-xl font-bold text-slate-900">{stat.value}</p>

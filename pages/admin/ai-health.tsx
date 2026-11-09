@@ -154,7 +154,7 @@ export default function AiHealthPage() {
           >
             {health.status[0].toUpperCase() + health.status.slice(1)}
           </span>
-          <p className="mt-2 break-words text-sm text-slate-700">
+          <p className="mt-2 wrap-break-word text-sm text-slate-700">
             {health.provider} / {health.modelVersion} / config v{health.configVersion}
           </p>
         </div>
@@ -179,7 +179,7 @@ export default function AiHealthPage() {
             <select
               name="retentionDays"
               defaultValue={health.retentionDays ?? 30}
-              className="mt-1 block min-h-11 w-full rounded border px-3 sm:max-w-xs"
+              className="mt-1 block min-h-11 w-full rounded-sm border px-3 sm:max-w-xs"
             >
               <option value="7">7 days</option>
               <option value="30">30 days</option>
@@ -188,7 +188,7 @@ export default function AiHealthPage() {
           </label>
           <button
             disabled={saving}
-            className="min-h-11 rounded bg-blue-700 px-4 py-2 font-medium text-white disabled:opacity-60"
+            className="min-h-11 rounded-sm bg-blue-700 px-4 py-2 font-medium text-white disabled:opacity-60"
           >
             {saving ? 'Saving...' : 'Save AI controls'}
           </button>

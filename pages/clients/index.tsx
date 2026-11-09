@@ -136,7 +136,7 @@ export default function ClientsPage() {
           {stats.map((s) => (
             <div
               key={s.title}
-              className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-sm border border-slate-100 p-4"
+              className="snap-start shrink-0 w-40 bg-white rounded-xl shadow-xs border border-slate-100 p-4"
             >
               <div className={`inline-flex p-2 rounded-lg ${s.iconBgColor} mb-2`}>{s.icon}</div>
               <p className="text-xl font-bold text-slate-900">{s.value}</p>

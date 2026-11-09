@@ -186,7 +186,7 @@ export default function ProfileSettingsPage() {
                 type="checkbox"
                 checked={profile.isPublic}
                 onChange={(e) => setProfile({ ...profile, isPublic: e.target.checked })}
-                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                className="rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-slate-700">Make my profile visible to other organizations</span>
             </label>

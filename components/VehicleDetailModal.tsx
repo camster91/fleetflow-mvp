@@ -115,7 +115,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
             <div className="absolute top-0 right-0 pt-4 pr-4">
               <button
                 onClick={onClose}
-                className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
+                className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-hidden"
               >
                 <X className="h-6 w-6" />
               </button>
@@ -277,9 +277,9 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
                         >
                           <div className="flex items-center space-x-3">
                             {task.completed ? (
-                              <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                              <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
                             ) : (
-                              <Clock className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              <Clock className="h-4 w-4 text-gray-400 shrink-0" />
                             )}
                             <div>
                               <h5
@@ -400,7 +400,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
             <button
               type="button"
               onClick={onClose}
-              className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition"
+              className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-xs px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-hidden sm:ml-3 sm:w-auto sm:text-sm transition"
             >
               Close
             </button>
@@ -408,7 +408,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
               <button
                 type="button"
                 onClick={onEdit}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition"
+                className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-xs px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition"
               >
                 Edit Vehicle
               </button>
@@ -417,7 +417,7 @@ export default function VehicleDetailModal({ isOpen, onClose, vehicle, onEdit, o
               <button
                 type="button"
                 onClick={onDelete}
-                className="mt-3 w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition"
+                className="mt-3 w-full inline-flex justify-center rounded-lg border border-transparent shadow-xs px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition"
               >
                 Delete Vehicle
               </button>

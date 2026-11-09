@@ -134,7 +134,7 @@ export default function NotificationSettingsPage() {
                       type="checkbox"
                       checked={pref.email}
                       onChange={(e) => updatePreference(pref.type, 'email', e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <Mail className="h-3.5 w-3.5 text-slate-400" />
                     <span>Email</span>
@@ -147,7 +147,7 @@ export default function NotificationSettingsPage() {
                       type="checkbox"
                       checked={pref.push}
                       onChange={(e) => updatePreference(pref.type, 'push', e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <Smartphone className="h-3.5 w-3.5 text-slate-400" />
                     <span>Push</span>
@@ -160,7 +160,7 @@ export default function NotificationSettingsPage() {
                       type="checkbox"
                       checked={pref.inApp}
                       onChange={(e) => updatePreference(pref.type, 'inApp', e.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                     />
                     <Bell className="h-3.5 w-3.5 text-slate-400" />
                     <span>In-App</span>
@@ -172,19 +172,19 @@ export default function NotificationSettingsPage() {
                     type="checkbox"
                     checked={pref.email}
                     onChange={(e) => updatePreference(pref.type, 'email', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <input
                     type="checkbox"
                     checked={pref.push}
                     onChange={(e) => updatePreference(pref.type, 'push', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <input
                     type="checkbox"
                     checked={pref.inApp}
                     onChange={(e) => updatePreference(pref.type, 'inApp', e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                 </div>
               </div>

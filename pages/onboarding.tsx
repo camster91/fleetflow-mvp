@@ -9,7 +9,7 @@ export default function OnboardingPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-[var(--fleetvera-mist)] dark:bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-(--fleetvera-mist) dark:bg-slate-950 flex items-center justify-center">
         <div
           className="h-10 w-10 rounded-full border-2 border-emerald-800 border-t-transparent animate-spin"
           role="status"

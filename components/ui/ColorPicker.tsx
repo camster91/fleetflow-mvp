@@ -32,7 +32,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, label
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:border-slate-400 transition-colors bg-white"
         >
-          <div className="w-6 h-6 rounded border border-slate-200" style={{ backgroundColor: value }} />
+          <div className="w-6 h-6 rounded-sm border border-slate-200" style={{ backgroundColor: value }} />
           <span className="text-sm text-slate-700 uppercase">{value}</span>
           <Palette className="h-4 w-4 text-slate-400 ml-2" />
         </button>
@@ -65,13 +65,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ value, onChange, label
                     type="color"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-8 h-8 p-0 border-0 rounded cursor-pointer"
+                    className="w-8 h-8 p-0 border-0 rounded-sm cursor-pointer"
                   />
                   <input
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-20 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-20 px-2 py-1 text-sm border border-slate-300 rounded-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="#000000"
                   />
                 </label>

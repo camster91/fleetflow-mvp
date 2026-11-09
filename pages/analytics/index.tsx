@@ -164,7 +164,7 @@ export default function AnalyticsPage() {
 
       <section
         aria-labelledby="maintenance-risk-heading"
-        className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:p-5"
       >
         <div className="mb-3">
           <h2 id="maintenance-risk-heading" className="font-semibold text-slate-950">
@@ -238,7 +238,7 @@ export default function AnalyticsPage() {
           loading={isLoading}
         />
         {/* Delivery status breakdown */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-100 p-5">
           <h3 className="font-semibold text-slate-900 mb-1">Delivery Status Breakdown</h3>
           <p className="text-sm text-slate-500 mb-4">Current pipeline overview</p>
           {isLoading ? (
@@ -294,7 +294,7 @@ export default function AnalyticsPage() {
 
       {/* Upcoming maintenance */}
       {(s?.maintenance?.upcoming?.length ?? 0) > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+        <div className="bg-white rounded-2xl shadow-xs border border-slate-100 p-5">
           <h3 className="font-semibold text-slate-900 mb-3">Upcoming Maintenance</h3>
           <div className="divide-y divide-slate-50">
             {s?.maintenance.upcoming.map((item, i) => (

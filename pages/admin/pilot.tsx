@@ -93,7 +93,7 @@ export default function PilotOperationsPage() {
           </p>
         </header>
         {error ? (
-          <div role="alert" className="rounded border border-red-200 bg-red-50 p-4 text-red-800">
+          <div role="alert" className="rounded-sm border border-red-200 bg-red-50 p-4 text-red-800">
             {error}{' '}
             <button className="ml-2 underline" onClick={() => void load()}>
               Retry
@@ -104,7 +104,7 @@ export default function PilotOperationsPage() {
           <>
             <form
               onSubmit={saveEnrollment}
-              className="rounded border bg-white p-4"
+              className="rounded-sm border bg-white p-4"
               aria-labelledby="pilot-enrollment-title"
             >
               <h2 id="pilot-enrollment-title" className="font-semibold text-slate-900">
@@ -115,7 +115,7 @@ export default function PilotOperationsPage() {
                 <select
                   value={enrollmentStatus}
                   onChange={(event) => setEnrollmentStatus(event.target.value)}
-                  className="mt-1 block min-h-11 w-full rounded border px-3 sm:max-w-xs"
+                  className="mt-1 block min-h-11 w-full rounded-sm border px-3 sm:max-w-xs"
                 >
                   <option value="INVITED">Invited</option>
                   <option value="ACTIVE">Active</option>
@@ -138,7 +138,7 @@ export default function PilotOperationsPage() {
               </p>
               <button
                 disabled={saving}
-                className="mt-3 min-h-11 rounded bg-blue-700 px-4 font-medium text-white disabled:opacity-60"
+                className="mt-3 min-h-11 rounded-sm bg-blue-700 px-4 font-medium text-white disabled:opacity-60"
               >
                 {saving ? 'Saving...' : 'Save enrollment'}
               </button>
@@ -148,7 +148,7 @@ export default function PilotOperationsPage() {
               <Metric label="Operators" value={String(metrics.members)} />
               <Metric label="First useful actions" value={String(metrics.signals.firstUsefulActions)} />
             </section>
-            <section className="rounded border bg-white p-4">
+            <section className="rounded-sm border bg-white p-4">
               <h2 className="font-semibold text-slate-900">Weekly adoption</h2>
               <ul className="mt-3 space-y-2">
                 {metrics.weekly.map((week) => (
@@ -161,7 +161,7 @@ export default function PilotOperationsPage() {
                 ))}
               </ul>
             </section>
-            <section className="rounded border bg-white p-4">
+            <section className="rounded-sm border bg-white p-4">
               <h2 className="font-semibold text-slate-900">Safety and support</h2>
               <p className="mt-2 text-sm text-slate-700">
                 Median time to first useful action:{' '}
@@ -183,7 +183,7 @@ export default function PilotOperationsPage() {
             </section>
           </>
         ) : (
-          <div role="status" className="rounded border bg-white p-4 text-slate-600">
+          <div role="status" className="rounded-sm border bg-white p-4 text-slate-600">
             Loading pilot metrics...
           </div>
         )}
@@ -194,7 +194,7 @@ export default function PilotOperationsPage() {
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <section className="rounded border bg-white p-4">
+    <section className="rounded-sm border bg-white p-4">
       <p className="text-sm text-slate-600">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-slate-900">{value}</p>
     </section>

@@ -57,7 +57,7 @@ export default function HelpPage() {
             </div>
             <div className="mt-12 grid gap-6 md:grid-cols-2">
               {topics.map((topic) => (
-                <section key={topic.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <section key={topic.title} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
                   <h2 className="text-xl font-semibold text-slate-950">{topic.title}</h2>
                   <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
                     {topic.steps.map((step, index) => (

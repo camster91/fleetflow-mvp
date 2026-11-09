@@ -55,7 +55,7 @@ export function WorkspaceSwitcher() {
       value={activeTeamId}
       disabled={switching}
       onChange={(event) => selectWorkspace(event.target.value)}
-      className="max-w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 disabled:opacity-60"
+      className="max-w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-200 disabled:opacity-60"
     >
       {workspaces.length > 1 && !activeTeamId && <option value="">Select workspace</option>}
       {workspaces.map((workspace) => (

@@ -71,7 +71,7 @@ export const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
     }
 
     const variantClasses = {
-      text: 'rounded',
+      text: 'rounded-sm',
       circle: 'rounded-full',
       rect: 'rounded-none',
       rounded: 'rounded-lg',

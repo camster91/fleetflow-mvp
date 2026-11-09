@@ -126,12 +126,12 @@ function SettingRow({ setting, onChange }: { setting: Setting; onChange: (settin
           onChange={(event) => setValue(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
-          className="block min-h-11 w-full rounded border border-slate-300 px-3 font-mono text-sm"
+          className="block min-h-11 w-full rounded-sm border border-slate-300 px-3 font-mono text-sm"
         />
         <button
           type="submit"
           disabled={busy}
-          className="min-h-11 shrink-0 rounded bg-blue-700 px-4 text-sm font-medium text-white disabled:opacity-60"
+          className="min-h-11 shrink-0 rounded-sm bg-blue-700 px-4 text-sm font-medium text-white disabled:opacity-60"
         >
           {busy ? 'Saving…' : 'Save'}
         </button>
@@ -140,7 +140,7 @@ function SettingRow({ setting, onChange }: { setting: Setting; onChange: (settin
             type="button"
             disabled={busy}
             onClick={() => void send('DELETE')}
-            className="min-h-11 shrink-0 rounded border border-slate-300 px-4 text-sm font-medium text-slate-800 disabled:opacity-60"
+            className="min-h-11 shrink-0 rounded-sm border border-slate-300 px-4 text-sm font-medium text-slate-800 disabled:opacity-60"
           >
             {setting.environmentFallback ? 'Use environment value' : 'Remove'}
           </button>
@@ -208,7 +208,7 @@ export default function PlatformSettingsPage() {
           </a>
         </header>
         {loadError ? (
-          <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          <p role="alert" className="rounded-sm border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             {loadError}
           </p>
         ) : null}

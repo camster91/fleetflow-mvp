@@ -78,7 +78,7 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
       ref={cardRef}
       tabIndex={-1}
       data-testid="finding-card"
-      className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-xs focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
@@ -88,12 +88,12 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
             <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
             {urgency}
           </p>
-          <h3 className="mt-2 break-words text-base font-semibold text-slate-950">{finding.title}</h3>
-          <p className="mt-1 break-words text-sm text-slate-600">{finding.explanation}</p>
+          <h3 className="mt-2 wrap-break-word text-base font-semibold text-slate-950">{finding.title}</h3>
+          <p className="mt-1 wrap-break-word text-sm text-slate-600">{finding.explanation}</p>
         </div>
         {finding.actionUrl && (
           <Link
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-emerald-900 px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg bg-emerald-900 px-4 py-2 text-sm font-medium text-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             href={finding.actionUrl}
           >
             {finding.action || 'Review record'}
@@ -106,7 +106,7 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
         aria-expanded={expanded}
         aria-controls={disclosureId}
         onClick={() => setExpanded((value) => !value)}
-        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
       >
         Why am I seeing this?
         <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
@@ -122,7 +122,7 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
           ) : (
             <ul className="space-y-2">
               {finding.evidence.map((item, index) => (
-                <li key={`${item.entityType}:${item.entityId}:${item.field}:${index}`} className="break-words">
+                <li key={`${item.entityType}:${item.entityId}:${item.field}:${index}`} className="wrap-break-word">
                   <span className="font-medium text-slate-800">{item.field}:</span>{' '}
                   <span className="text-slate-600">{presentValue(item.value)}</span>{' '}
                   <Link
@@ -208,7 +208,7 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
                 <select
                   value={deliveryStatus}
                   onChange={(event) => setDeliveryStatus(event.target.value as typeof deliveryStatus)}
-                  className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
                 >
                   <option value="pending">Pending</option>
                   <option value="in-transit">In transit</option>
@@ -235,7 +235,7 @@ export function FindingCard({ finding, canManage, canFeedback, busy = false, onA
                   value={maintenanceType}
                   maxLength={200}
                   onChange={(event) => setMaintenanceType(event.target.value)}
-                  className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                  className="mt-1 min-h-11 w-full rounded-lg border border-slate-300 px-3 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-emerald-600"
                 />
               </label>
               {maintenanceType.trim() && (

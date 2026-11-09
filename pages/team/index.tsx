@@ -249,7 +249,7 @@ export default function TeamPage() {
               ].map((s) => (
                 <div
                   key={s.title}
-                  className="snap-start shrink-0 w-36 bg-white rounded-xl shadow-sm border border-slate-100 p-4"
+                  className="snap-start shrink-0 w-36 bg-white rounded-xl shadow-xs border border-slate-100 p-4"
                 >
                   <div className={`inline-flex p-2 rounded-lg ${s.bg} mb-2`}>{s.icon}</div>
                   <p className="text-xl font-bold text-slate-900">{s.value}</p>
@@ -372,7 +372,7 @@ export default function TeamPage() {
                                 aria-label={`Role for ${member.user?.name || member.user?.email || 'member'}`}
                                 value={member.role}
                                 onChange={(e) => handleChangeRole(member.id, e.target.value as TeamRole)}
-                                className="appearance-none bg-slate-100 pr-6 pl-2 py-1 text-xs font-medium text-slate-700 rounded cursor-pointer"
+                                className="appearance-none bg-slate-100 pr-6 pl-2 py-1 text-xs font-medium text-slate-700 rounded-sm cursor-pointer"
                               >
                                 {roleOptions(member).map((option) => (
                                   <option key={option} value={option}>

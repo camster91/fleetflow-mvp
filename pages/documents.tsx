@@ -283,7 +283,7 @@ export default function DocumentsPage() {
           ref={uploadRegionRef}
           tabIndex={-1}
           aria-labelledby="document-upload-label"
-          className="rounded-xl border bg-white p-4 focus:outline-none focus:ring-2 focus:ring-blue-700"
+          className="rounded-xl border bg-white p-4 focus:outline-hidden focus:ring-2 focus:ring-blue-700"
         >
           <label id="document-upload-label" className="block font-semibold" htmlFor="document-upload">
             Private PDF, JPEG, or PNG
@@ -510,7 +510,7 @@ export default function DocumentsPage() {
                     <h3 id="document-confirm-title" className="font-semibold">
                       Confirm exact proposed {pending.kind}
                     </h3>
-                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 text-xs">
+                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-sm bg-slate-50 p-3 text-xs">
                       {JSON.stringify(pending.after, null, 2)}
                     </pre>
                     <div className="mt-3 flex gap-2">

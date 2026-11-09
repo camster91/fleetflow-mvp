@@ -145,7 +145,7 @@ export const Input = React.forwardRef<HTMLDivElement, InputProps>(
               block rounded-lg border bg-white
               transition-colors duration-200
               placeholder:text-slate-400
-              focus:outline-none focus:ring-2 focus:ring-offset-0
+              focus:outline-hidden focus:ring-2 focus:ring-offset-0
               disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
               ${sizeStyles[size]}
               ${leftIconToUse ? 'pl-10' : ''}
@@ -164,7 +164,7 @@ export const Input = React.forwardRef<HTMLDivElement, InputProps>(
             <button
               type="button"
               onClick={handleTogglePassword}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none focus:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-hidden focus:text-slate-600"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
             >
@@ -271,7 +271,7 @@ export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
             block rounded-lg border bg-white
             transition-colors duration-200
             placeholder:text-slate-400 resize-y min-h-[80px]
-            focus:outline-none focus:ring-2 focus:ring-offset-0
+            focus:outline-hidden focus:ring-2 focus:ring-offset-0
             disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
             ${sizeStyles[size]}
             ${fullWidth ? 'w-full' : ''}
@@ -372,7 +372,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           className={`
             block rounded-lg border bg-white
             transition-colors duration-200
-            focus:outline-none focus:ring-2 focus:ring-offset-0
+            focus:outline-hidden focus:ring-2 focus:ring-offset-0
             disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed
             ${sizeStyles[size]}
             ${fullWidth ? 'w-full' : ''}

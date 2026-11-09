@@ -67,7 +67,7 @@ export function MaintenanceRiskBadge({ risk }: { risk: MaintenanceRiskResult }) 
     <article data-testid="maintenance-risk-badge" className={`w-full min-w-0 rounded-xl border ${styles[risk.band]}`}>
       <button
         type="button"
-        className="flex min-h-11 w-full flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
+        className="flex min-h-11 w-full flex-wrap items-center justify-between gap-2 rounded-xl px-3 py-2 text-left focus:outline-hidden focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
         aria-expanded={open}
         aria-controls={detailId}
         aria-describedby={tooltipId}

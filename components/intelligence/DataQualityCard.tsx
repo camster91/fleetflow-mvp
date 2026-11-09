@@ -101,7 +101,7 @@ export function DataQualityCard() {
           <button
             type="button"
             onClick={() => void load()}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             aria-label="Check data quality again"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
@@ -164,7 +164,7 @@ export function DataQualityCard() {
                 <li key={item.id} className={`rounded-lg border border-slate-200 border-l-4 ${style.border}`}>
                   <a
                     href={item.actionUrl}
-                    className="flex min-h-16 items-center justify-between gap-3 rounded-lg p-3 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                    className="flex min-h-16 items-center justify-between gap-3 rounded-lg p-3 hover:bg-slate-50 focus:outline-hidden focus:ring-2 focus:ring-inset focus:ring-blue-500"
                     aria-label={`Fix ${item.entityType} record: ${item.message}`}
                   >
                     <span className="min-w-0">
