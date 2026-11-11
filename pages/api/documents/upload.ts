@@ -14,6 +14,8 @@ import {
 } from '@/lib/documents/extraction'
 import { extractionResultSchema } from '@/lib/documents/extraction'
 import { runMalwareScan, scannerFromEnv, storageFromEnv } from '@/lib/documents/storage'
+import { demoEnabled } from '@/lib/demo/policy'
+import { sampleInvoicePdf } from '@/lib/demo/sampleInvoice'
 
 export const config = { api: { bodyParser: false } }
 const root = () => {
@@ -113,7 +115,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id, ...whereScope(tenant.ownerId, tenant.teamId), deletedAt: null },
       })
       if (!row || row.expiresAt <= new Date()) return res.status(404).json({ error: 'Document not found' })
-      const bytes = await storage().read(row.storageKey)
+      const bytes =
+        demoEnabled() && row.storageKey.startsWith('demo/') ? sampleInvoicePdf() : await storage().read(row.storageKey)
       res.setHeader('Content-Type', row.mimeType)
       res.setHeader('Content-Disposition', contentDisposition(row.originalName))
       res.setHeader('Cache-Control', 'private, no-store')

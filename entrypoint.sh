@@ -26,7 +26,11 @@ esac
 
 # Validate the exact runtime configuration before any database mutation.
 echo "Verifying ${FLEETVERA_RELEASE_MODE} release configuration..."
-node ./verify-production-readiness.cjs
+if [ "${FLEETVERA_DEMO_MODE:-}" = "true" ]; then
+  node ./verify-demo-config.cjs
+else
+  node ./verify-production-readiness.cjs
+fi
 echo "Release configuration verified."
 
 # Run Prisma migrations (idempotent)

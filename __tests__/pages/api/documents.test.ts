@@ -50,6 +50,31 @@ const document = {
 }
 
 describe('document APIs', () => {
+  test('demo invoice preview works without private storage after tenant authorization', async () => {
+    const previous = process.env.FLEETVERA_DEMO_MODE
+    process.env.FLEETVERA_DEMO_MODE = 'true'
+    try {
+      ;(requireTenantContext as jest.Mock).mockResolvedValue(context)
+      ;(prisma.documentUpload.findFirst as jest.Mock).mockResolvedValue({ ...document, storageKey: 'demo/sample' })
+      ;(storageFromEnv as jest.Mock).mockClear()
+      const { req, res } = createMocks({ method: 'GET', query: { id: 'd1' } })
+      await uploadHandler(req as never, res as never)
+      expect(res._getStatusCode()).toBe(200)
+      expect(res._getData().toString()).toContain('Fictional service invoice')
+      expect(res._getHeaders()['content-type']).toBe('application/pdf')
+      expect(storageFromEnv).not.toHaveBeenCalled()
+      expect(prisma.documentUpload.findFirst).toHaveBeenCalledWith({
+        where: { id: 'd1', ownerId: 'o1', teamId: 't1', deletedAt: null },
+      })
+      ;(prisma.documentUpload.findFirst as jest.Mock).mockResolvedValue(null)
+      const foreign = createMocks({ method: 'GET', query: { id: 'foreign' } })
+      await uploadHandler(foreign.req as never, foreign.res as never)
+      expect(foreign.res._getStatusCode()).toBe(404)
+    } finally {
+      if (previous === undefined) delete process.env.FLEETVERA_DEMO_MODE
+      else process.env.FLEETVERA_DEMO_MODE = previous
+    }
+  })
   beforeEach(() => {
     jest.clearAllMocks()
     ;(prisma.documentUpload.findFirst as jest.Mock).mockReset()

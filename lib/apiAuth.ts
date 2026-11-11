@@ -10,6 +10,7 @@ import { parse as parseCookie } from 'cookie'
 import { constantTimeCompare, hashToken } from './tokens'
 import { consumePublicApiQuota } from './apiRateLimit'
 import { getWorkspaceEntitlement, isWriteSubjectToEntitlement, READ_ONLY_MESSAGE } from './entitlements'
+import { demoEnabled } from './demo/policy'
 
 export type AuthedSession = Session & { user: Session['user'] & { id: string } }
 
@@ -223,6 +224,31 @@ export async function requireTenantContext(
   const selectedTeamId = headerTeamId || parseCookie(req.headers.cookie || '').fleetflow_team
   try {
     const tenant = await resolveTenantContext(session.user.id, selectedTeamId)
+    if (demoEnabled()) {
+      const demo = session.demoSessionId
+        ? await prisma.demoSession.findUnique({ where: { id: session.demoSessionId } })
+        : null
+      if (!demo || demo.expiresAt <= new Date() || tenant.teamId !== demo.teamId || tenant.ownerId !== demo.ownerId) {
+        res.status(403).json({ error: 'This workspace is outside your demo session' })
+        return null
+      }
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method || 'GET')) {
+        const counts = await Promise.all([
+          prisma.vehicle.count({ where: { teamId: demo.teamId } }),
+          prisma.delivery.count({ where: { teamId: demo.teamId } }),
+          prisma.maintenanceTask.count({ where: { teamId: demo.teamId } }),
+          prisma.client.count({ where: { teamId: demo.teamId } }),
+          prisma.sOPCategory.count({ where: { teamId: demo.teamId } }),
+          prisma.vendingMachine.count({ where: { teamId: demo.teamId } }),
+        ])
+        if (counts.some((count) => count >= 100)) {
+          res
+            .status(429)
+            .json({ error: 'This sample workspace has reached its limit. Reset sample data to keep exploring.' })
+          return null
+        }
+      }
+    }
     // Plan entitlements (#150): a lapsed workspace is read-only. Only writes pay for the lookup.
     if (isWriteSubjectToEntitlement(req, tenant.role)) {
       const entitlement = await getWorkspaceEntitlement(tenant.ownerId)
@@ -252,6 +278,14 @@ export async function requireSession(req: NextApiRequest, res: NextApiResponse):
   if (!session?.user?.id) {
     res.status(401).json({ error: 'Unauthorized' })
     return null
+  }
+  if (demoEnabled()) {
+    const quota = await consumePublicApiQuota(prisma, `demo-session:${session.demoSessionId}`)
+    if (!quota.allowed) {
+      res.setHeader('Retry-After', String(quota.retryAfter))
+      res.status(429).json({ error: 'Please slow down and try again in a minute.' })
+      return null
+    }
   }
   return session as AuthedSession
 }

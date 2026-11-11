@@ -30,6 +30,9 @@ import {
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { PlanBanner } from '@/components/PlanBanner'
 import { WorkspaceSwitcher } from '@/components/WorkspaceSwitcher'
+import { DemoToolbar } from '@/components/demo/DemoToolbar'
+import { useWorkspaceRole } from '@/hooks/useWorkspaceRole'
+import { resolveDashboardRole } from '@/lib/dashboardRoles'
 
 interface NavItem {
   id: string
@@ -92,7 +95,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ role, currentPath, onOpenSi
       { href: '/maintenance', icon: Wrench, label: 'Inspect' },
       { href: '#more', icon: MoreHorizontal, label: 'More' },
     ],
-    dispatch: [
+    dispatcher: [
       { href: '/dashboard', icon: LayoutDashboard, label: 'Home' },
       { href: '/clients', icon: Building, label: 'Clients' },
       { href: '/vehicles', icon: Car, label: 'Vehicles' },
@@ -205,6 +208,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   breadcrumbs,
 }) => {
   const { data: session } = useSession()
+  const { role: workspaceRole } = useWorkspaceRole()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   // Open the Admin section when an admin page is showing, so the current page stays visible in the menu.
@@ -431,13 +435,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 
       {/* Mobile bottom tab bar */}
       <BottomTabBar
-        role={session?.user?.role as string | undefined}
+        role={workspaceRole ? resolveDashboardRole(workspaceRole) : undefined}
         currentPath={router.asPath}
         onOpenSidebar={() => setSidebarOpen(true)}
       />
 
       {/* Main content */}
       <div className="lg:ml-72 min-h-screen flex flex-col">
+        <DemoToolbar />
         <PlanBanner />
         {/* Top header */}
         <header className="sticky top-0 z-30 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
