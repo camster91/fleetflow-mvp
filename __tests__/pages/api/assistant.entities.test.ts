@@ -20,7 +20,7 @@ describe('/api/assistant/entities', () => {
     const { req, res } = createMocks({ method: 'GET', query: { type: 'vehicle', q: 'van' } })
     await handler(req as never, res as never)
     expect(prisma.vehicle.findMany).toHaveBeenCalledWith({
-      where: { AND: [resourceWhere, { name: { contains: 'van', mode: 'insensitive' } }] },
+      where: { AND: [resourceWhere, { name: { contains: 'van' } }] },
       select: { id: true, name: true },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],
       take: 20,

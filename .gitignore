@@ -97,3 +97,8 @@ ONE-COMMAND-FIX.sh
 docker-compose-new.yml
 docker-compose-final.yml
 docker-compose.coolify.yml
+
+# OpenNext / Wrangler
+.open-next
+.wrangler
+.dev.vars

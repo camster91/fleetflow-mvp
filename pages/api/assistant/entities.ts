@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (parsed.data.type === 'vehicle') {
       const rows = await prisma.vehicle.findMany({
         where: parsed.data.q
-          ? { AND: [context.tenant.resourceWhere, { name: { contains: parsed.data.q, mode: 'insensitive' } }] }
+          ? { AND: [context.tenant.resourceWhere, { name: { contains: parsed.data.q } }] }
           : context.tenant.resourceWhere,
         select: { id: true, name: true },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
@@ -39,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (parsed.data.type === 'delivery') {
       const rows = await prisma.delivery.findMany({
         where: parsed.data.q
-          ? { AND: [context.tenant.resourceWhere, { customer: { contains: parsed.data.q, mode: 'insensitive' } }] }
+          ? { AND: [context.tenant.resourceWhere, { customer: { contains: parsed.data.q } }] }
           : context.tenant.resourceWhere,
         select: { id: true, customer: true },
         orderBy: [{ customer: 'asc' }, { id: 'asc' }],
@@ -53,10 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             AND: [
               context.tenant.resourceWhere,
               {
-                OR: [
-                  { businessName: { contains: parsed.data.q, mode: 'insensitive' } },
-                  { name: { contains: parsed.data.q, mode: 'insensitive' } },
-                ],
+                OR: [{ businessName: { contains: parsed.data.q } }, { name: { contains: parsed.data.q } }],
               },
             ],
           }

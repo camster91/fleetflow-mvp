@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { PrismaClient } from '@prisma/client'
+import { createSqliteClient } from '../lib/prisma'
 import { SignJWT } from 'jose'
 import http from 'http'
 import { decryptCredentialEnvelope } from '../lib/integrations/oauth'
@@ -8,7 +8,7 @@ import { syncIdempotencyKey } from '../lib/integrations/sync'
 
 test.setTimeout(90_000)
 
-const db = new PrismaClient()
+const db = createSqliteClient()
 const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
 const ownerId = `integration-owner-${suffix}`,
   viewerId = `integration-viewer-${suffix}`,

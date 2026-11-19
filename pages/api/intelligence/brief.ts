@@ -57,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return { rows: findings, totalOpen: count, run: latestRun }
       },
       {
-        isolationLevel: 'RepeatableRead',
+        isolationLevel: 'Serializable',
         maxWait: BRIEF_TRANSACTION_MAX_WAIT_MS,
         timeout: BRIEF_TRANSACTION_TIMEOUT_MS,
       }

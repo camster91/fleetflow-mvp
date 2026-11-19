@@ -60,16 +60,16 @@ describe('parseListQuery', () => {
     expect(conditions).toEqual([
       {
         OR: [
-          { name: { contains: 'Van 7', mode: 'insensitive' } },
-          { driver: { contains: 'Van 7', mode: 'insensitive' } },
-          { location: { contains: 'Van 7', mode: 'insensitive' } },
-          { licensePlate: { contains: 'Van 7', mode: 'insensitive' } },
-          { vehicleType: { contains: 'Van 7', mode: 'insensitive' } },
+          { name: { contains: 'Van 7' } },
+          { driver: { contains: 'Van 7' } },
+          { location: { contains: 'Van 7' } },
+          { licensePlate: { contains: 'Van 7' } },
+          { vehicleType: { contains: 'Van 7' } },
         ],
       },
     ])
     const maintenance = ok({ q: 'brake' }, MAINTENANCE_LIST_SPEC).conditions[0] as { OR: unknown[] }
-    expect(maintenance.OR).toContainEqual({ vehicle: { is: { name: { contains: 'brake', mode: 'insensitive' } } } })
+    expect(maintenance.OR).toContainEqual({ vehicle: { is: { name: { contains: 'brake' } } } })
   })
 
   it('ignores a blank search and rejects oversized or repeated ones', () => {

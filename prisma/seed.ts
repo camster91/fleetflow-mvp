@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { createSqliteClient } from '../lib/prisma'
 import bcrypt from 'bcryptjs'
 import {
   MATRIX_CLIENTS,
@@ -11,7 +11,7 @@ import {
   matrixUser,
 } from './matrix-fixtures'
 
-const prisma = new PrismaClient()
+const prisma = createSqliteClient()
 
 async function main() {
   console.log('Seeding database...')

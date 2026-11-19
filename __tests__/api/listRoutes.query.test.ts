@@ -101,7 +101,7 @@ describe('GET list routes: search, filters, sort and pagination', () => {
     const call = db.vehicle.findMany.mock.calls[0][0]
     expect(call.where.AND[0]).toEqual(TEAM)
     expect(call.where.AND).toContainEqual({ status: 'delayed' })
-    expect(call.where.AND[1].OR).toContainEqual({ name: { contains: 'van', mode: 'insensitive' } })
+    expect(call.where.AND[1].OR).toContainEqual({ name: { contains: 'van' } })
     expect(call.orderBy).toEqual([{ name: 'desc' }, { id: 'desc' }])
     expect(call).toMatchObject({ skip: 25, take: 25 })
     // total counts the filtered set, not the whole fleet.

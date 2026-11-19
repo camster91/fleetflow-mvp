@@ -72,8 +72,18 @@ function encryptWithKey(plaintext, key) {
 async function main() {
   const apply = process.argv.includes('--apply')
   const keys = loadKeys()
-  const { PrismaClient } = require('@prisma/client')
-  const prisma = new PrismaClient()
+
+  function createSqliteClient() {
+    const { PrismaClient } = require('@prisma/client')
+    const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
+    const fs = require('fs')
+    const path = require('path')
+    const url = process.env.DATABASE_URL || 'file:./dev.db'
+    const dbPath = url.startsWith('file:') ? path.resolve(url.slice('file:'.length)) : path.resolve('dev.db')
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+    return new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: dbPath }) })
+  }
+  const prisma = createSqliteClient()
   const counts = { scanned: 0, current: 0, reencrypted: 0, failed: 0 }
   try {
     const users = await prisma.user.findMany({

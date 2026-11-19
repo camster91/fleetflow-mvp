@@ -11,8 +11,17 @@ async function main() {
     throw new Error('Set CONFIRM_ADMIN_BOOTSTRAP=yes to confirm this one-time operation.')
   }
 
-  const { PrismaClient } = require('@prisma/client')
-  const prisma = new PrismaClient()
+  function createSqliteClient() {
+    const { PrismaClient } = require('@prisma/client')
+    const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
+    const fs = require('fs')
+    const path = require('path')
+    const url = process.env.DATABASE_URL || 'file:./dev.db'
+    const dbPath = url.startsWith('file:') ? path.resolve(url.slice('file:'.length)) : path.resolve('dev.db')
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+    return new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: dbPath }) })
+  }
+  const prisma = createSqliteClient()
   try {
     const userCount = await prisma.user.count()
     if (userCount !== 0) {
