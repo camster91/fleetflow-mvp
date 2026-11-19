@@ -11,6 +11,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Only used by a separately deployed demo database. Never stores real customer data.
+model DemoSession {
+  id        String   @id
+  ownerId   String   @unique
+  teamId    String   @unique
+  userIds   String[]
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique

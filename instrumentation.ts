@@ -5,6 +5,11 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return
+  if (process.env.FLEETVERA_DEMO_MODE === 'true') {
+    const { assertDemoEnvironment } = await import('./lib/demo/policy')
+    assertDemoEnvironment()
+    return
+  }
   await import('./sentry.server.config')
   const { refreshPlatformSettings, REFRESH_INTERVAL_MS } = await import('./lib/platformSettings')
   const refresh = () =>
