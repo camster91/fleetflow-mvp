@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { PrismaClient } from '@prisma/client'
+import { createSqliteClient } from '../lib/prisma'
 import { SignJWT } from 'jose'
-const db = new PrismaClient()
+const db = createSqliteClient()
 const ids = {
   owner: 'qa-owner',
   a: 'qa-driver-a111111',
@@ -33,28 +33,28 @@ async function auth(page: import('@playwright/test').Page, id: string, role: str
   ])
 }
 test.beforeAll(async () => {
-  await db.user.createMany({
-    data: [
-      {
-        id: ids.owner,
-        email: 'qa-owner@test.invalid',
-        name: 'Owner',
-        role: 'fleet_manager',
-        onboardingCompleted: true,
-      },
-      { id: ids.a, email: 'qa-a@test.invalid', name: 'Alex Driver', role: 'driver', onboardingCompleted: true },
-      { id: ids.b, email: 'qa-b@test.invalid', name: 'Alex Driver', role: 'driver', onboardingCompleted: true },
-      { id: ids.viewer, email: 'qa-viewer@test.invalid', name: 'Viewer', role: 'viewer', onboardingCompleted: true },
-      {
-        id: ids.dispatch,
-        email: 'qa-dispatch@test.invalid',
-        name: 'Dispatch',
-        role: 'dispatcher',
-        onboardingCompleted: true,
-      },
-    ],
-    skipDuplicates: true,
-  })
+  // sqlite/D1 has no createMany skipDuplicates; upsert keeps this seed idempotent.
+  for (const user of [
+    {
+      id: ids.owner,
+      email: 'qa-owner@test.invalid',
+      name: 'Owner',
+      role: 'fleet_manager',
+      onboardingCompleted: true,
+    },
+    { id: ids.a, email: 'qa-a@test.invalid', name: 'Alex Driver', role: 'driver', onboardingCompleted: true },
+    { id: ids.b, email: 'qa-b@test.invalid', name: 'Alex Driver', role: 'driver', onboardingCompleted: true },
+    { id: ids.viewer, email: 'qa-viewer@test.invalid', name: 'Viewer', role: 'viewer', onboardingCompleted: true },
+    {
+      id: ids.dispatch,
+      email: 'qa-dispatch@test.invalid',
+      name: 'Dispatch',
+      role: 'dispatcher',
+      onboardingCompleted: true,
+    },
+  ]) {
+    await db.user.upsert({ where: { id: user.id }, update: {}, create: user })
+  }
   await db.team.upsert({
     where: { id: ids.team },
     update: {},

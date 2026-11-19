@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { PrismaClient } from '@prisma/client'
+import { createSqliteClient } from '../lib/prisma'
 import { SignJWT } from 'jose'
 import { access } from 'fs/promises'
 import path from 'path'
 
-const db = new PrismaClient()
+const db = createSqliteClient()
 const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`
 const ownerId = `doc-owner-${suffix}`,
   managerId = `doc-manager-${suffix}`,

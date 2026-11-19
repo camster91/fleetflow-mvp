@@ -53,11 +53,11 @@ type Parsed<T> = { ok: true; value: T } | { ok: false; error: string }
 
 const single = (raw: string | string[] | undefined): string | undefined | null => (Array.isArray(raw) ? null : raw)
 
-/** Case-insensitive `contains` condition for a string column. */
+/** `contains` condition for a string column. Prisma sqlite/D1 has no `mode: 'insensitive'`. */
 export const containsInsensitive =
   (field: string) =>
   (q: string): Where => ({
-    [field]: { contains: q, mode: 'insensitive' },
+    [field]: { contains: q },
   })
 
 /** Parse a `YYYY-MM-DD` calendar day into UTC midnight, or null. */
@@ -186,7 +186,7 @@ export const MAINTENANCE_LIST_SPEC: ListQuerySpec = {
   search: [
     containsInsensitive('title'),
     containsInsensitive('vehicleName'),
-    (q) => ({ vehicle: { is: { name: { contains: q, mode: 'insensitive' } } } }),
+    (q) => ({ vehicle: { is: { name: { contains: q } } } }),
   ],
   filters: {
     state: {

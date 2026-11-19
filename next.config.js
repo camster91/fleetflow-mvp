@@ -45,9 +45,13 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
+  serverExternalPackages: ['@prisma/adapter-d1', '@prisma/adapter-better-sqlite3', 'better-sqlite3'],
   turbopack: {
     root: __dirname,
+    resolveAlias: {
+      'better-sqlite3': './lib/better-sqlite3-stub.ts',
+      '@prisma/adapter-better-sqlite3': './lib/better-sqlite3-stub.ts',
+    },
   },
 
   // Ensure static files in public are served

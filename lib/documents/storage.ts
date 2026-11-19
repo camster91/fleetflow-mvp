@@ -36,10 +36,19 @@ export const documentScannerRegistry = new AdapterRegistry<MalwareScanner>().reg
     return { status: 'SKIPPED' }
   },
 }))
-export const documentStorageRegistry = new AdapterRegistry<DocumentStorage>().register('filesystem', (env) => {
-  if (!env.DOCUMENT_STORAGE_PATH) throw new Error('DOCUMENT_STORAGE_PATH is required')
-  return new PrivateDocumentStorage(env.DOCUMENT_STORAGE_PATH)
-})
+export const documentStorageRegistry = new AdapterRegistry<DocumentStorage>()
+  .register('filesystem', (env) => {
+    if (!env.DOCUMENT_STORAGE_PATH) throw new Error('DOCUMENT_STORAGE_PATH is required')
+    return new PrivateDocumentStorage(env.DOCUMENT_STORAGE_PATH)
+  })
+  .register('r2', () => {
+    const { getCloudflareContext } = require('@opennextjs/cloudflare') as {
+      getCloudflareContext: () => { env?: { MEDIA?: R2DocumentBucket } }
+    }
+    const bucket = getCloudflareContext().env?.MEDIA
+    if (!bucket) throw new Error('R2 binding MEDIA is missing')
+    return new R2DocumentStorage(bucket)
+  })
 
 export function scannerFromEnv(env: Record<string, string | undefined>): MalwareScanner {
   return documentScannerRegistry.create(env.DOCUMENT_SCANNER_PROVIDER || 'disabled', env)
@@ -124,6 +133,39 @@ export class PrivateDocumentStorage {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     }
+  }
+}
+
+type R2DocumentBucket = {
+  put(key: string, value: Buffer): Promise<unknown>
+  get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>
+  delete(key: string): Promise<unknown>
+}
+
+export class R2DocumentStorage implements DocumentStorage {
+  constructor(private readonly bucket: R2DocumentBucket) {}
+
+  private key(storageKey: string) {
+    if (!/^[a-f0-9]{2}\/[a-f0-9]{32,128}$/.test(storageKey)) throw new Error('Invalid storage key')
+    return storageKey
+  }
+
+  async put(storageKey: string, bytes: Buffer) {
+    await this.bucket.put(this.key(storageKey), bytes)
+  }
+
+  async read(storageKey: string) {
+    const object = await this.bucket.get(this.key(storageKey))
+    if (!object) {
+      const error = new Error('Document not found') as NodeJS.ErrnoException
+      error.code = 'ENOENT'
+      throw error
+    }
+    return Buffer.from(await object.arrayBuffer())
+  }
+
+  async delete(storageKey: string) {
+    await this.bucket.delete(this.key(storageKey))
   }
 }
 

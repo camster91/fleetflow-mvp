@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fleetvera",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-11-19",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "DOCUMENT_STORAGE_PROVIDER": "r2"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fleetvera",
+      "database_id": "6bddbeca-403e-482f-a38d-d7d2fd6ae7aa",
+      "migrations_dir": "d1/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "fleetvera-documents"
+    }
+  ],
+  "alias": {
+    "better-sqlite3": "./lib/better-sqlite3-stub.ts",
+    "@prisma/adapter-better-sqlite3": "./lib/better-sqlite3-stub.ts"
+  }
+}

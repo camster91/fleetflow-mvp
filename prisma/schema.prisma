@@ -6,10 +6,12 @@ generator client {
   binaryTargets = ["native", "linux-musl", "linux-musl-openssl-3.0.x"]
 }
 
+// The connection URL lives in prisma.config.ts (Prisma 7). Production uses
+// the D1 driver adapter in lib/prisma.ts; local and tests use sqlite.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
 }
+
 
 model User {
   id            String    @id @default(cuid())

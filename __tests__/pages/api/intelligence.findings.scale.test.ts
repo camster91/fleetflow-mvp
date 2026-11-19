@@ -171,8 +171,12 @@ describe('finding regeneration scale', () => {
     expect(secondTx.intelligenceFinding.createMany).not.toHaveBeenCalled()
     expect(secondTx.$executeRaw).toHaveBeenCalledTimes(1)
     const query = secondTx.$executeRaw.mock.calls[0][0] as { strings: string[] }
-    expect(query.strings.join('')).toContain('::timestamp(3)')
-    expect(query.strings.join('')).toContain('::double precision')
+    const sql = query.strings.join('')
+    expect(sql).toContain('UPDATE "IntelligenceFinding"')
+    expect(sql).toContain('IS NOT DISTINCT FROM')
+    expect(sql).toContain('expectedStatus')
+    expect(sql).not.toContain('::timestamp(3)')
+    expect(sql).not.toContain('::double precision')
     expect(secondTx.auditLog.createMany).toHaveBeenCalledTimes(1)
   })
 

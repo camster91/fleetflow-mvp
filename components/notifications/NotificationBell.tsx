@@ -3,7 +3,7 @@ import { useSession } from '@/lib/session'
 import { Bell, Check, Trash2, Settings, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
-import { getNotificationMeta, NotificationType } from '../../lib/notifications'
+import { getNotificationMeta, NotificationType } from '../../lib/notificationMeta'
 import { formatDistanceToNow } from 'date-fns'
 import { useRouter } from 'next/router'
 

@@ -2,8 +2,6 @@
  * Onboarding utilities for tracking user progress
  */
 
-import { prisma } from './prisma'
-
 const ONBOARDING_STORAGE_KEY = 'fleetflow_onboarding'
 
 export interface OnboardingProgress {
@@ -18,7 +16,7 @@ export interface OnboardingProgress {
   }
 }
 
-const defaultProgress: OnboardingProgress = {
+export const defaultProgress: OnboardingProgress = {
   completed: false,
   currentStep: 0,
   checklist: {
@@ -106,64 +104,12 @@ export function resetOnboardingProgress(): void {
 }
 
 /**
- * Get onboarding progress from database
+ * Mark onboarding as complete. The browser persists locally and then calls the
+ * authenticated API; Prisma stays on the server so this module can load in the client bundle.
  */
-export async function getDatabaseOnboardingProgress(userId: string): Promise<OnboardingProgress> {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        onboardingCompleted: true,
-        onboardingStep: true,
-      },
-    })
-
-    if (!user) return defaultProgress
-
-    return {
-      ...defaultProgress,
-      completed: user.onboardingCompleted,
-      currentStep: user.onboardingStep,
-    }
-  } catch (error) {
-    console.error('Failed to get database onboarding progress:', error)
-    return defaultProgress
-  }
-}
-
-/**
- * Update onboarding progress in database
- */
-export async function updateDatabaseOnboardingProgress(
-  userId: string,
-  progress: Partial<OnboardingProgress>
-): Promise<void> {
-  try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        onboardingCompleted: progress.completed ?? false,
-        onboardingStep: progress.currentStep ?? 0,
-      },
-    })
-  } catch (error) {
-    console.error('Failed to update database onboarding progress:', error)
-    throw error
-  }
-}
-
-/**
- * Sync local progress with database
- */
-export async function syncOnboardingProgress(userId: string): Promise<void> {
-  const local = getLocalOnboardingProgress()
-  await updateDatabaseOnboardingProgress(userId, local)
-}
-
-/**
- * Mark onboarding as complete
- */
-export async function completeOnboarding(userId: string): Promise<void> {
+export async function completeOnboarding(_userId: string): Promise<void> {
   saveLocalOnboardingProgress({ completed: true })
-  await updateDatabaseOnboardingProgress(userId, { completed: true })
+  if (typeof window === 'undefined') return
+  const response = await fetch('/api/auth/complete-onboarding', { method: 'POST', credentials: 'same-origin' })
+  if (!response.ok) throw new Error('Failed to complete onboarding')
 }

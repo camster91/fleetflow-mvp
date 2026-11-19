@@ -1,5 +1,5 @@
 import { expect, type APIResponse, type Page } from '@playwright/test'
-import { PrismaClient } from '@prisma/client'
+import { createSqliteClient } from '../../lib/prisma'
 import { signToken } from '../../lib/auth'
 import { MATRIX_OWNER_ID, MATRIX_TEAM, matrixUser, type MatrixRole } from '../../prisma/matrix-fixtures'
 
@@ -11,7 +11,7 @@ import { MATRIX_OWNER_ID, MATRIX_TEAM, matrixUser, type MatrixRole } from '../..
  * works against a server that shares this process's JWT_SECRET and database,
  * i.e. the local CI server started by playwright.config.ts.
  */
-const db = new PrismaClient()
+const db = createSqliteClient()
 
 export async function signIn(page: Page, role: MatrixRole, baseURL: string) {
   await signInUser(page, matrixUser(role).id, baseURL, MATRIX_TEAM.id)

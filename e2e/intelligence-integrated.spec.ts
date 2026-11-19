@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { PrismaClient } from '@prisma/client'
+import { createSqliteClient } from '../lib/prisma'
 import { SignJWT } from 'jose'
 
 test.describe('intelligence brief with disposable PostgreSQL', () => {
   test.skip(process.env.PLAYWRIGHT_INTEGRATED_DB !== '1', 'Requires the disposable PostgreSQL harness')
-  const prisma = new PrismaClient()
+  const prisma = createSqliteClient()
   const now = new Date()
 
   test.beforeAll(async () => {

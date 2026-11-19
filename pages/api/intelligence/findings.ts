@@ -347,16 +347,16 @@ type FindingUpdate = { id: string; expected: ExistingFinding; data: FindingWrite
 function bulkUpdateSql(updates: readonly FindingUpdate[], tenant: TenantContext): Prisma.Sql {
   const values = updates.map(
     (update) => Prisma.sql`(
-    ${update.id}::text, ${update.data.type}::text, ${update.data.severity}::text,
-    ${update.data.confidence}::double precision, ${update.data.score}::integer,
-    ${update.data.ruleVersion}::text, ${update.data.title}::text,
-    ${update.data.explanation}::text, ${update.data.evidence}::text,
-    ${update.data.action}::text, ${update.data.actionUrl}::text,
-    ${update.data.status}::text, ${update.data.feedback}::text,
-    ${update.data.generatedAt}::timestamp(3), ${update.data.expiresAt}::timestamp(3),
-    ${update.data.resolvedAt}::timestamp(3), ${update.expected.status}::text,
-    ${update.expected.feedback}::text, ${update.expected.expiresAt}::timestamp(3),
-    ${update.expected.resolvedAt}::timestamp(3)
+    ${update.id}, ${update.data.type}, ${update.data.severity},
+    ${update.data.confidence}, ${update.data.score},
+    ${update.data.ruleVersion}, ${update.data.title},
+    ${update.data.explanation}, ${update.data.evidence},
+    ${update.data.action}, ${update.data.actionUrl},
+    ${update.data.status}, ${update.data.feedback},
+    ${update.data.generatedAt}, ${update.data.expiresAt},
+    ${update.data.resolvedAt}, ${update.expected.status},
+    ${update.expected.feedback}, ${update.expected.expiresAt},
+    ${update.expected.resolvedAt}
   )`
   )
   return Prisma.sql`
@@ -376,8 +376,8 @@ function bulkUpdateSql(updates: readonly FindingUpdate[], tenant: TenantContext)
       "expectedFeedback", "expectedExpiresAt", "expectedResolvedAt"
     )
     WHERE target."id" = data."id"
-      AND target."ownerId" = ${tenant.ownerId}::text
-      AND target."teamId" IS NOT DISTINCT FROM ${tenant.teamId}::text
+      AND target."ownerId" = ${tenant.ownerId}
+      AND target."teamId" IS NOT DISTINCT FROM ${tenant.teamId}
       AND target."status" = data."expectedStatus"
       AND target."feedback" IS NOT DISTINCT FROM data."expectedFeedback"
       AND target."expiresAt" IS NOT DISTINCT FROM data."expectedExpiresAt"

@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  const [setupNeeded, setSetupNeeded] = useState(false)
   const codeRefs = useRef<(HTMLInputElement | null)[]>([])
   // The latest digits, updated synchronously: digits that arrive faster than React re-renders (quick
   // typing, one-time-code autofill) must build on each other instead of on a stale render's state.
@@ -33,12 +34,47 @@ export default function LoginPage() {
     return () => clearTimeout(timer)
   }, [resendCooldown])
 
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/auth/setup')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body) => {
+        if (!cancelled && body?.needed) setSetupNeeded(true)
+      })
+      .catch(() => {
+        /* Fail soft: the normal login form remains available. */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const result = await sendCode(email.toLowerCase().trim())
+    const normalized = email.toLowerCase().trim()
+    if (setupNeeded) {
+      const response = await fetch('/api/auth/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalized }),
+      })
+      const body = await response.json().catch(() => ({}))
+      setLoading(false)
+      if (!response.ok) {
+        const message = body.error || 'Could not create the first administrator'
+        setError(message)
+        toast.error(message)
+        return
+      }
+      toast.success('Administrator created')
+      window.location.assign(safeCallbackPath(router.query.callbackUrl))
+      return
+    }
+
+    const result = await sendCode(normalized)
     setLoading(false)
 
     if (result.error) {
@@ -159,8 +195,14 @@ export default function LoginPage() {
       {step === 'email' ? (
         <>
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-slate-900">Sign in to your account</h2>
-            <p className="mt-2 text-sm text-slate-600">Enter your email and we&apos;ll send you a login code</p>
+            <h2 className="text-2xl font-bold text-slate-900">
+              {setupNeeded ? 'Create the first administrator' : 'Sign in to your account'}
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              {setupNeeded
+                ? 'This database is empty. Enter the administrator email to create the first account and sign in.'
+                : "Enter your email and we'll send you a login code"}
+            </p>
           </div>
 
           <form onSubmit={handleSendCode} className="space-y-5">
@@ -190,7 +232,7 @@ export default function LoginPage() {
               loading={loading}
               iconRight={!loading ? <ArrowRight className="h-4 w-4" /> : undefined}
             >
-              Send Login Code
+              {setupNeeded ? 'Create administrator' : 'Send Login Code'}
             </Button>
           </form>
         </>

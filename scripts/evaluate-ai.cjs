@@ -78,7 +78,18 @@ async function main() {
   let mode = 'offline-stdout'
   if (persist) {
     const { PrismaClient } = require('@prisma/client')
-    const db = new PrismaClient()
+
+    function createSqliteClient() {
+      const { PrismaClient } = require('@prisma/client')
+      const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
+      const fs = require('fs')
+      const path = require('path')
+      const url = process.env.DATABASE_URL || 'file:./dev.db'
+      const dbPath = url.startsWith('file:') ? path.resolve(url.slice('file:'.length)) : path.resolve('dev.db')
+      fs.mkdirSync(path.dirname(dbPath), { recursive: true })
+      return new PrismaClient({ adapter: new PrismaBetterSqlite3({ url: dbPath }) })
+    }
+    const db = createSqliteClient()
     try {
       await db.aiEvaluationRun.create({
         data: {
